@@ -1,0 +1,45 @@
+version: "3.7"
+services:
+  envoy:
+    image: envoyproxy/envoy:v1.13.1
+    networks:
+      - envoymesh
+    ports:
+      - "8080:8080"
+      - "9901:9901"
+    expose:
+      - "8080"
+      - "9901"
+    volumes:
+      - ${PWD}/example/envoy-config.yaml:/etc/envoy/config.yaml
+      - ${PWD}/certs/envoy-client.crt:/etc/envoy/tls/envoy-client.crt
+      - ${PWD}/certs/envoy-client.key:/etc/envoy/tls/envoy-client.key
+    command:
+      - envoy
+      - -c
+      - /etc/envoy/config.yaml
+      # - bash
+      # - -c
+      # - "sleep 3600"
+  mariner:
+    image: quay.io/roivaz/marin3r:v0.0.0
+    networks:
+      envoymesh:
+        aliases:
+          - marin3r
+    ports:
+      - "18000:18000"
+      - "19001:19001"
+    expose:
+      - "18000"
+      - "19001"
+    environment:
+      - KUBECONFIG=/kubeconfig
+    volumes:
+      - ${HOME}/.kube/config:/kubeconfig
+      - ${PWD}/certs/marin3r-server.crt:/certs/marin3r-server.crt
+      - ${PWD}/certs/marin3r-server.key:/certs/marin3r-server.key
+      - ${PWD}/certs/ca.crt:/certs/ca.crt
+
+networks:
+  envoymesh: {}

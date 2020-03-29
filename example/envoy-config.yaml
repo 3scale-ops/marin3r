@@ -1,0 +1,72 @@
+admin:
+  access_log_path: /dev/null
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 9901
+node:
+  cluster: test-cluster
+  id: test-id
+dynamic_resources:
+  lds_config:
+    ads: {}
+  cds_config:
+    ads: {}
+  ads_config:
+    api_type: GRPC
+    grpc_services:
+      envoy_grpc:
+        cluster_name: marin3r
+static_resources:
+  clusters:
+    - name: marin3r
+      connect_timeout: 1s
+      type: strict_dns
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: marin3r
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: marin3r
+                      port_value: 18000
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext
+          common_tls_context:
+            tls_certificates:
+              - certificate_chain:
+                  filename: /etc/envoy/tls/envoy-client.crt
+                private_key:
+                  filename: /etc/envoy/tls/envoy-client.key
+  listeners:
+    - name: web
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+        - transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext
+              common_tls_context:
+                tls_certificate_sds_secret_configs:
+                  - name: server_cert
+                    sds_config:
+                      api_config_source:
+                        api_type: GRPC
+                        grpc_services:
+                          envoy_grpc:
+                            cluster_name: xds_server
+                # validation_context_sds_secret_config:
+                #   name: validation_context
+                #   sds_config:
+                #     api_config_source:
+                #       api_type: GRPC
+                #       grpc_services:
+                #         envoy_grpc:
+                #           cluster_name: xds_server
