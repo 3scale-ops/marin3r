@@ -130,12 +130,16 @@ func (xdss *XdsServer) RunManagementGateway() {
 	}
 }
 
-func (envoyXdsServer *XdsServer) SetSnapshot(snapshot *cache.Snapshot, nodeID string) error {
-	err := envoyXdsServer.snapshotCache.SetSnapshot(nodeID, *snapshot)
+// func (xdss *XdsServer) SetSnapshot(snapshot *cache.Snapshot, nodeID string) error {
+// 	err := xdss.snapshotCache.SetSnapshot(nodeID, *snapshot)
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	return nil
+// 	return nil
+// }
+
+func (xdss *XdsServer) GetSnapshotCache() *cache.SnapshotCache {
+	return &xdss.snapshotCache
 }

@@ -26,6 +26,7 @@ import (
 	"syscall"
 
 	"github.com/roivaz/marin3r/pkg/envoy"
+	"github.com/roivaz/marin3r/pkg/generator"
 	"go.uber.org/zap"
 )
 
@@ -44,6 +45,82 @@ func NewController() error {
 	defer lg.Sync() // flushes buffer, if any
 	logger := lg.Sugar()
 
+	ctx, stopper := runSignalWatcher(logger)
+
+	// -------------------------
+	// ---- Init components ----
+	// -------------------------
+
+	// Init the xDS server
+	xdss := envoy.NewXdsServer(
+		ctx,
+		gatewayPort,
+		managementPort,
+		&tls.Config{
+			// TODO: mechanism to reload server certificate when renewed
+			// Probably the easieast way is to have a goroutine force server
+			// graceful shutdown when it detects the certificate has changed
+			// The goroutine needs to receive both the context and the stopper channel
+			// and close all other subroutines the same way as when a os signal is received
+			Certificates: []tls.Certificate{getCertificate(tlsCertificatePath, tlsKeyPath, logger)},
+			ClientAuth:   tls.RequireAndVerifyClientCert,
+			ClientCAs:    getCA(tlsCAPath, logger),
+		},
+		&envoy.Callbacks{Logger: logger},
+		logger,
+	)
+
+	// Init the generator worker
+	generator := generator.NewCacheWorker(xdss.GetSnapshotCache(), stopper, logger)
+
+	// Init the secret reconciler
+	secretReconciler := NewSecretReconciler(generator.Queue, ctx, logger, stopper)
+
+	// ------------------------
+	// ---- Run components ----
+	// ------------------------
+
+	// Start CacheWorker
+	var waitCacheWorker sync.WaitGroup
+	waitCacheWorker.Add(1)
+	go func() {
+		defer waitCacheWorker.Done()
+		generator.RunCacheWorker()
+	}()
+
+	// Start reconcilers
+	var waitReconcilers sync.WaitGroup
+	waitReconcilers.Add(1)
+	go func() {
+		defer waitReconcilers.Done()
+		secretReconciler.RunSecretReconciler()
+	}()
+
+	// Finally start the servers
+	var waitServers sync.WaitGroup
+	waitServers.Add(1)
+	go func() {
+		defer waitServers.Done()
+		xdss.RunManagementServer()
+	}()
+
+	waitServers.Add(1)
+	go func() {
+		defer waitServers.Done()
+		xdss.RunManagementGateway()
+	}()
+
+	// Stop in order
+	waitReconcilers.Wait()
+	waitCacheWorker.Wait()
+	waitServers.Wait()
+
+	logger.Infof("Controller has shut down")
+
+	return nil
+}
+
+func runSignalWatcher(logger *zap.SugaredLogger) (context.Context, chan struct{}) {
 	// Create a context and cancel it when proper
 	// signals are received
 	sigc := make(chan os.Signal, 1)
@@ -65,11 +142,18 @@ func NewController() error {
 		cancel()
 	}()
 
-	// Init the xDS server with mTLS
+	return ctx, stopper
+}
+
+func getCertificate(certPath, keyPath string, logger *zap.SugaredLogger) tls.Certificate {
 	certificate, err := tls.LoadX509KeyPair(tlsCertificatePath, tlsKeyPath)
 	if err != nil {
-		logger.Panicf("Could not load server certificate: '%s'", tlsCertificatePath, tlsKeyPath, err)
+		logger.Fatalf("Could not load server certificate: '%s'", tlsCertificatePath, tlsKeyPath, err)
 	}
+	return certificate
+}
+
+func getCA(caPath string, logger *zap.SugaredLogger) *x509.CertPool {
 	certPool := x509.NewCertPool()
 	if bs, err := ioutil.ReadFile(tlsCAPath); err != nil {
 		log.Fatalf("Failed to read client ca cert: %s", err)
@@ -79,53 +163,5 @@ func NewController() error {
 			log.Fatal("failed to append client certs")
 		}
 	}
-
-	envoyXdsServer := envoy.NewXdsServer(
-		ctx,
-		gatewayPort,
-		managementPort,
-		&tls.Config{
-			// TODO: mechanism to reload server certificate when renewed
-			// Probably the easieast way is to have a goroutine force server
-			// graceful shutdown when it detects the certificate has changed
-			// The goroutine needs to receive both the context and the stopper channel
-			// and close all other subroutines the same way as when a os signal is received
-			Certificates: []tls.Certificate{certificate},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    certPool,
-		},
-		&envoy.Callbacks{Logger: logger},
-		logger,
-	)
-
-	var wg sync.WaitGroup
-	wg.Add(3)
-
-	// Start the secret reconciler
-	secretReconciler := NewSecretReconciler(
-		ctx,
-		envoyXdsServer,
-		logger,
-		stopper,
-	)
-
-	go func() {
-		defer wg.Done()
-		secretReconciler.RunSecretReconciler()
-	}()
-
-	go func() {
-		defer wg.Done()
-		envoyXdsServer.RunManagementServer()
-	}()
-
-	go func() {
-		defer wg.Done()
-		envoyXdsServer.RunManagementGateway()
-	}()
-
-	wg.Wait()
-	logger.Infof("Controller has shut down")
-
-	return nil
+	return certPool
 }

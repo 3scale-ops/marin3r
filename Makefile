@@ -14,7 +14,7 @@ docker-build: build/$(NAME)_amd64_$(RELEASE)
 certs:
 	example/gen-certs.sh $(EASYRSA_VERSION)
 
-compose:
+compose: docker-build
 	docker-compose -f example/compose.yaml up
 
 clean:
@@ -28,7 +28,7 @@ envoy:
 		-v $$(pwd)/certs:/etc/envoy/tls \
 		-v $$(pwd)/example:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config/envoy-config.yaml
+		envoy -c /config/envoy-config.yaml $(ARGS)
 
 start:
 	KUBECONFIG=$(HOME)/.kube/config go run cmd/main.go

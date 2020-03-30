@@ -7,16 +7,16 @@ admin:
 node:
   cluster: test-cluster
   id: test-id
-dynamic_resources:
-  lds_config:
-    ads: {}
-  cds_config:
-    ads: {}
-  ads_config:
-    api_type: GRPC
-    grpc_services:
-      envoy_grpc:
-        cluster_name: marin3r
+# dynamic_resources:
+#   lds_config:
+#     ads: {}
+#   cds_config:
+#     ads: {}
+#   ads_config:
+#     api_type: GRPC
+#     grpc_services:
+#       envoy_grpc:
+#         cluster_name: marin3r
 static_resources:
   clusters:
     # The xDS cluster
