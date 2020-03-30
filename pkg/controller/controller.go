@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-package control
+package controller
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"syscall"
 
 	"github.com/roivaz/marin3r/pkg/envoy"
-	"github.com/roivaz/marin3r/pkg/generator"
+	"github.com/roivaz/marin3r/pkg/reconciler"
 	"go.uber.org/zap"
 )
 
@@ -70,11 +70,11 @@ func NewController() error {
 		logger,
 	)
 
-	// Init the generator worker
-	generator := generator.NewCacheWorker(xdss.GetSnapshotCache(), stopper, logger)
+	// Init the cache worker
+	xds_cache := envoy.NewCacheWorker(xdss.GetSnapshotCache(), stopper, logger)
 
 	// Init the secret reconciler
-	secretReconciler := NewSecretReconciler(generator.Queue, ctx, logger, stopper)
+	secretReconciler := reconciler.NewSecretReconciler(xds_cache.Queue, ctx, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----
@@ -85,7 +85,7 @@ func NewController() error {
 	waitCacheWorker.Add(1)
 	go func() {
 		defer waitCacheWorker.Done()
-		generator.RunCacheWorker()
+		xds_cache.RunCacheWorker()
 	}()
 
 	// Start reconcilers

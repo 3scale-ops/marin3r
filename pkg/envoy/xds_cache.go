@@ -1,11 +1,24 @@
-package generator
+// Copyright 2020 rvazquez@redhat.com
+//
+//   Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+
+package envoy
 
 import (
 	"fmt"
 
 	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
-	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -86,7 +99,7 @@ func (cw *CacheWorker) makeSnapshot() {
 	cw.logger.Infof(">>>>>>>>>>>>>>>>>>> creating snapshot Version " + fmt.Sprint(cw.version))
 	snap := cache.NewSnapshot(fmt.Sprint(cw.version), nil, nil, nil, nil, nil)
 	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", cw.version), secrets)
-	// ID should not be hardcoded, probably a worker per configured ID would be cool
+	// ID should not be hardcoded, probably a worker per configured ID would be nice
 	// snapshotCache.ClearSnapshot("test-id")
 	snapshotCache.SetSnapshot("test-id", snap)
 }
@@ -101,7 +114,7 @@ func NewCaches() *Caches {
 	}
 }
 func (c *Caches) AddSecret(key string, s *corev1.Secret) {
-	c.secrets[key] = envoy.NewSecret(
+	c.secrets[key] = NewSecret(
 		key,
 		string(s.Data["tls.key"]),
 		string(s.Data["tls.crt"]),

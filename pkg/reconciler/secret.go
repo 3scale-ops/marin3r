@@ -1,16 +1,28 @@
-package control
+// Copyright 2020 rvazquez@redhat.com
+//
+//   Licensed under the Apache License, Version 2.0 (the "License");
+//   you may not use this file except in compliance with the License.
+//   You may obtain a copy of the License at
+//
+//       http://www.apache.org/licenses/LICENSE-2.0
+//
+//   Unless required by applicable law or agreed to in writing, software
+//   distributed under the License is distributed on an "AS IS" BASIS,
+//   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//   See the License for the specific language governing permissions and
+//   limitations under the License.
+
+package reconciler
 
 import (
 	"context"
 	"fmt"
 	"os"
 
-	"github.com/roivaz/marin3r/pkg/generator"
+	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
-
-	"k8s.io/apimachinery/pkg/util/runtime"
-
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -22,7 +34,7 @@ const (
 )
 
 type SecretReconciler struct {
-	queue   chan *generator.WorkerJob
+	queue   chan *envoy.WorkerJob
 	ctx     context.Context
 	logger  *zap.SugaredLogger
 	stopper chan struct{}
@@ -30,7 +42,7 @@ type SecretReconciler struct {
 
 var version int32
 
-func NewSecretReconciler(queue chan *generator.WorkerJob, ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretReconciler {
+func NewSecretReconciler(queue chan *envoy.WorkerJob, ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretReconciler {
 
 	return &SecretReconciler{
 		queue:   queue,
@@ -67,12 +79,12 @@ func (sr *SecretReconciler) RunSecretReconciler() {
 }
 
 // On and sends jobs to the queue when events on secrets holding certificates occur
-func onAdd(obj interface{}, queue chan *generator.WorkerJob, logger *zap.SugaredLogger) {
+func onAdd(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogger) {
 	secret := obj.(*corev1.Secret)
 	// TODO: make the annotation to look for configurable so not just
 	// cert-manager provided certs are supported
 	if cn, ok := secret.GetAnnotations()["cert-manager.io/common-name"]; ok {
 		logger.Infof("Certificate '%s/%s' added", secret.GetNamespace(), secret.GetName())
-		generator.SendSecretJob(cn, secret, queue)
+		envoy.SendSecretJob(cn, secret, queue)
 	}
 }

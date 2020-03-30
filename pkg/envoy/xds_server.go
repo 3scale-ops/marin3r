@@ -21,15 +21,14 @@ import (
 	"net"
 	"net/http"
 
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	secretservice "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -57,7 +56,8 @@ func (h hasher) ID(node *core.Node) string {
 	return node.Id
 }
 
-func NewXdsServer(ctx context.Context, gatewayPort uint, managementPort uint, tlsConfig *tls.Config, callbacks xds.Callbacks, logger *zap.SugaredLogger) *XdsServer {
+func NewXdsServer(ctx context.Context, gatewayPort uint, managementPort uint,
+	tlsConfig *tls.Config, callbacks xds.Callbacks, logger *zap.SugaredLogger) *XdsServer {
 	snapshotCache := cache.NewSnapshotCache(true, hasher{}, nil)
 	srv := xds.NewServer(ctx, snapshotCache, callbacks)
 
@@ -109,7 +109,6 @@ func (xdss *XdsServer) RunManagementServer() {
 }
 
 // RunManagementGateway starts an HTTP gateway to an xDS server.
-// TOD: mTLS support -> https://smallstep.com/hello-mtls/doc/server/go
 func (xdss *XdsServer) RunManagementGateway() {
 	xdss.logger.Infof("Starting HTTP/1.1 gateway on Port %d\n", xdss.gatewayPort)
 	httpServer := &http.Server{
@@ -129,16 +128,6 @@ func (xdss *XdsServer) RunManagementGateway() {
 		xdss.logger.Error(err)
 	}
 }
-
-// func (xdss *XdsServer) SetSnapshot(snapshot *cache.Snapshot, nodeID string) error {
-// 	err := xdss.snapshotCache.SetSnapshot(nodeID, *snapshot)
-
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	return nil
-// }
 
 func (xdss *XdsServer) GetSnapshotCache() *cache.SnapshotCache {
 	return &xdss.snapshotCache

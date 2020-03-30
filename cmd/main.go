@@ -15,11 +15,11 @@
 package main
 
 import (
-	"github.com/roivaz/marin3r/pkg/control"
+	"github.com/roivaz/marin3r/pkg/controller"
 )
 
 func main() {
-	if err := control.NewController(); err != nil {
+	if err := controller.NewController(); err != nil {
 		panic(err)
 	}
 }
