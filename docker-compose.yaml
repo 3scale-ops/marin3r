@@ -21,8 +21,10 @@ services:
       # - bash
       # - -c
       # - "sleep 3600"
-  mariner:
-    image: quay.io/roivaz/marin3r:v0.0.0
+  marin3r:
+    build:
+      context: ./
+      args: [RELEASE]
     networks:
       envoymesh:
         aliases:
