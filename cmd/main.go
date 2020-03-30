@@ -19,16 +19,45 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	kubeconfig         string
+	tlsCertificatePath string
+	tlsKeyPath         string
+	tlsCAPath          string
+	logLevel           string
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "marin3r",
 	Short: "marin3r, the simple envoy control plane",
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := controller.NewController(); err != nil {
-			panic(err)
-		}
-	},
+	Run:   run,
+}
+
+func init() {
+	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
+	rootCmd.Flags().StringVar(&tlsCertificatePath, "certificate", "", "Server certificate")
+	rootCmd.Flags().StringVar(&tlsKeyPath, "private-key", "", "The private key of the server certificate")
+	rootCmd.Flags().StringVar(&tlsCAPath, "ca", "", "The CA of the server certificate")
+	rootCmd.Flags().StringVar(&logLevel, "log-level", "info", "One of debug, info, warn, error")
+
+	rootCmd.MarkFlagRequired("certificate")
+	rootCmd.MarkFlagRequired("private-key")
+	rootCmd.MarkFlagRequired("ca")
 }
 
 func main() {
+
 	rootCmd.Execute()
+}
+
+func run(cmd *cobra.Command, args []string) {
+	err := controller.NewController(
+		tlsCertificatePath,
+		tlsKeyPath,
+		tlsCAPath,
+		logLevel,
+	)
+	if err != nil {
+		panic(err)
+	}
 }

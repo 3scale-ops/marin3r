@@ -43,4 +43,8 @@ envoy: certs
 
 start: ## starts the marin3r contrl plane
 start: certs
-	KUBECONFIG=$(HOME)/.kube/config go run cmd/main.go
+	KUBECONFIG=$(HOME)/.kube/config go run cmd/main.go \
+		--certificate certs/marin3r-server.crt \
+		--private-key certs/marin3r-server.key \
+		--ca certs/ca.crt \
+		--log-level info

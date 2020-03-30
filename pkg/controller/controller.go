@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"os"
@@ -38,12 +39,9 @@ const (
 	tlsCAPath          = "./certs/ca.crt"
 )
 
-func NewController() error {
+func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel string) error {
 
-	// Create the logger
-	lg, _ := zap.NewProduction()
-	defer lg.Sync() // flushes buffer, if any
-	logger := lg.Sugar()
+	logger := newLogger(logLevel)
 
 	ctx, stopper := runSignalWatcher(logger)
 
@@ -164,4 +162,43 @@ func getCA(caPath string, logger *zap.SugaredLogger) *x509.CertPool {
 		}
 	}
 	return certPool
+}
+
+func newLogger(logLevel string) *zap.SugaredLogger {
+
+	rawJSON := []byte(`{
+		"level": "info",
+		"outputPaths": ["stdout"],
+		"errorOutputPaths": ["stderr"],
+		"encoding": "json",
+		"encoderConfig": {
+			"messageKey": "message",
+			"levelKey": "level",
+			"levelEncoder": "lowercase"
+		}
+	}`)
+
+	var cfg zap.Config
+	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
+		panic(err)
+	}
+
+	logger, err := cfg.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	if logLevel != "info" {
+		switch logLevel {
+		case "debug":
+			cfg.Level.SetLevel(zap.DebugLevel)
+		case "warn":
+			cfg.Level.SetLevel(zap.WarnLevel)
+		case "error":
+			cfg.Level.SetLevel(zap.ErrorLevel)
+		}
+	}
+
+	defer logger.Sync() // flushes buffer, if any
+	return logger.Sugar()
 }
