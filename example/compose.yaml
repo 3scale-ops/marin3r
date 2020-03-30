@@ -5,10 +5,10 @@ services:
     networks:
       - envoymesh
     ports:
-      - "8080:8080"
+      - "8443:8443"
       - "9901:9901"
     expose:
-      - "8080"
+      - "8443"
       - "9901"
     volumes:
       - ${PWD}/example/envoy-config.yaml:/etc/envoy/config.yaml

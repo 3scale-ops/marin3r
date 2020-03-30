@@ -3,14 +3,15 @@ package control
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
+	"sync/atomic"
 
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
 
+	envoycache "github.com/envoyproxy/go-control-plane/pkg/cache"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -28,6 +29,8 @@ type SecretReconciler struct {
 	logger         *zap.SugaredLogger
 	stopper        chan struct{}
 }
+
+var version int32
 
 func NewSecretReconciler(ctx context.Context, envoyXdsServer *envoy.XdsServer, logger *zap.SugaredLogger, stopper chan struct{}) *SecretReconciler {
 
@@ -55,7 +58,7 @@ func (sr *SecretReconciler) RunSecretReconciler() {
 	informer := factory.Core().V1().Secrets().Informer()
 	defer runtime.HandleCrash()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: onAdd,
+		AddFunc: func(obj interface{}) { onAdd(obj, sr) },
 	})
 	go informer.Run(sr.stopper)
 	if !cache.WaitForCacheSync(sr.stopper, informer.HasSynced) {
@@ -65,9 +68,26 @@ func (sr *SecretReconciler) RunSecretReconciler() {
 	<-sr.stopper
 }
 
-func onAdd(obj interface{}) {
+func onAdd(obj interface{}, sr *SecretReconciler) {
 	secret := obj.(*corev1.Secret)
 	name := secret.GetName()
 	namespace := secret.GetNamespace()
-	log.Printf("Secret '%s/%s' added", namespace, name)
+
+	if cn, ok := secret.GetAnnotations()["cert-manager.io/common-name"]; ok {
+		sr.logger.Infof("Certificate '%s/%s' added", namespace, name)
+		// This is a small thing to test serving a certificate through sds api
+		privateKey := string(secret.Data["tls.key"])
+		certificate := string(secret.Data["tls.crt"])
+		secrets := []envoycache.Resource{
+			envoy.NewSecret(cn, privateKey, certificate),
+		}
+
+		// This shouldn't be used, use the sync package or channels instead
+		// This is just a dirty test
+		atomic.AddInt32(&version, 1)
+		sr.logger.Infof(">>>>>>>>>>>>>>>>>>> creating snapshot Version " + fmt.Sprint(version))
+		snap := envoycache.NewSnapshot(fmt.Sprint(version), nil, nil, nil, nil, nil)
+		snap.Resources[envoycache.Secret] = envoycache.NewResources(fmt.Sprintf("%v", version), secrets)
+		sr.envoyXdsServer.SetSnapshot(&snap, "test-id") // config.SetSnapshot(nodeId, snap)
+	}
 }

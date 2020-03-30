@@ -20,6 +20,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/davecgh/go-spew/spew"
 	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 )
 
@@ -38,7 +39,6 @@ func (cb *Callbacks) OnStreamClosed(id int64) {
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 	cb.Logger.Infof("Request for id %v", id)
-	// spew.Dump(req)
 
 	if req.ErrorDetail != nil {
 		cb.Logger.Infof("OnStreamRequest error pushing snapshot to gateway: code: %v message %s", req.ErrorDetail.Code, req.ErrorDetail.Message)
@@ -52,6 +52,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 
 // OnStreamResponse is called immediately prior to sending a response on a stream.
 func (cb *Callbacks) OnStreamResponse(i int64, request *v2.DiscoveryRequest, response *v2.DiscoveryResponse) {
+	cb.Logger.Infof("%s", spew.Sprint(response))
 }
 
 // OnFetchRequest is called for each Fetch request. Returning an error will end processing of the
