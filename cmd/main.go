@@ -16,10 +16,19 @@ package main
 
 import (
 	"github.com/roivaz/marin3r/pkg/controller"
+	"github.com/spf13/cobra"
 )
 
+var rootCmd = &cobra.Command{
+	Use:   "marin3r",
+	Short: "marin3r, the simple envoy control plane",
+	Run: func(cmd *cobra.Command, args []string) {
+		if err := controller.NewController(); err != nil {
+			panic(err)
+		}
+	},
+}
+
 func main() {
-	if err := controller.NewController(); err != nil {
-		panic(err)
-	}
+	rootCmd.Execute()
 }
