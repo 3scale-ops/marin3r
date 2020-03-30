@@ -17,7 +17,6 @@ package reconciler
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
@@ -26,7 +25,6 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 const (
@@ -34,37 +32,32 @@ const (
 )
 
 type SecretReconciler struct {
-	queue   chan *envoy.WorkerJob
-	ctx     context.Context
-	logger  *zap.SugaredLogger
-	stopper chan struct{}
+	clientset *kubernetes.Clientset
+	queue     chan *envoy.WorkerJob
+	ctx       context.Context
+	logger    *zap.SugaredLogger
+	stopper   chan struct{}
 }
 
 var version int32
 
-func NewSecretReconciler(queue chan *envoy.WorkerJob, ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretReconciler {
+func NewSecretReconciler(
+	clientset *kubernetes.Clientset, queue chan *envoy.WorkerJob,
+	ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretReconciler {
 
 	return &SecretReconciler{
-		queue:   queue,
-		ctx:     ctx,
-		logger:  logger,
-		stopper: stopper,
+		clientset: clientset,
+		queue:     queue,
+		ctx:       ctx,
+		logger:    logger,
+		stopper:   stopper,
 	}
 }
 
 func (sr *SecretReconciler) RunSecretReconciler() {
 	sr.logger.Info("Shared Informer app started")
-	kubeconfig := os.Getenv("KUBECONFIG")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		sr.logger.Panic(err.Error())
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		sr.logger.Panic(err.Error())
-	}
 
-	factory := informers.NewSharedInformerFactoryWithOptions(clientset, 0, informers.WithNamespace(namespace))
+	factory := informers.NewSharedInformerFactoryWithOptions(sr.clientset, 0, informers.WithNamespace(namespace))
 	informer := factory.Core().V1().Secrets().Informer()
 	defer runtime.HandleCrash()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{

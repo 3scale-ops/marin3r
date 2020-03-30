@@ -47,4 +47,5 @@ start: certs
 		--certificate certs/marin3r-server.crt \
 		--private-key certs/marin3r-server.key \
 		--ca certs/ca.crt \
-		--log-level info
+		--log-level debug \
+		--out-of-cluster

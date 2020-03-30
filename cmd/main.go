@@ -25,6 +25,7 @@ var (
 	tlsKeyPath         string
 	tlsCAPath          string
 	logLevel           string
+	ooCluster          bool
 )
 
 var rootCmd = &cobra.Command{
@@ -34,11 +35,11 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.Flags().StringVar(&kubeconfig, "kubeconfig", "", "Path to the kubeconfig file")
 	rootCmd.Flags().StringVar(&tlsCertificatePath, "certificate", "", "Server certificate")
 	rootCmd.Flags().StringVar(&tlsKeyPath, "private-key", "", "The private key of the server certificate")
 	rootCmd.Flags().StringVar(&tlsCAPath, "ca", "", "The CA of the server certificate")
 	rootCmd.Flags().StringVar(&logLevel, "log-level", "info", "One of debug, info, warn, error")
+	rootCmd.Flags().BoolVar(&ooCluster, "out-of-cluster", false, "Use this flag if running outside of the cluster")
 
 	rootCmd.MarkFlagRequired("certificate")
 	rootCmd.MarkFlagRequired("private-key")
@@ -56,6 +57,7 @@ func run(cmd *cobra.Command, args []string) {
 		tlsKeyPath,
 		tlsCAPath,
 		logLevel,
+		ooCluster,
 	)
 	if err != nil {
 		panic(err)

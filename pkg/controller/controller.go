@@ -29,6 +29,7 @@ import (
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"github.com/roivaz/marin3r/pkg/reconciler"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -39,7 +40,7 @@ const (
 	tlsCAPath          = "./certs/ca.crt"
 )
 
-func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel string) error {
+func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel string, ooCluster bool) error {
 
 	logger := newLogger(logLevel)
 
@@ -72,7 +73,20 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel string) e
 	xds_cache := envoy.NewCacheWorker(xdss.GetSnapshotCache(), stopper, logger)
 
 	// Init the secret reconciler
-	secretReconciler := reconciler.NewSecretReconciler(xds_cache.Queue, ctx, logger, stopper)
+	var clientset *kubernetes.Clientset
+	var err error
+	if ooCluster {
+		clientset, err = outOfClusterClient()
+		if err != nil {
+			return err
+		}
+	} else {
+		clientset, err = inClusterClient()
+		if err != nil {
+			return err
+		}
+	}
+	secretReconciler := reconciler.NewSecretReconciler(clientset, xds_cache.Queue, ctx, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----
