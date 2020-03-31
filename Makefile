@@ -18,7 +18,6 @@ tmp:
 kind-create: export KUBECONFIG=tmp/kubeconfig
 kind-create: certs tmp
 	$(KIND) create cluster --wait 5m
-	kubectl create ns 3scale
 	kubectl create secret tls certificate --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key
 	kubectl annotate secret certificate cert-manager.io/common-name=envoy-server
 

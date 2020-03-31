@@ -27,6 +27,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
+const (
+	// TODO: make the annotation to look for configurable so not just
+	// cert-manager provided certs are supported
+	certificateAnnotation = "cert-manager.io/common-name"
+)
+
 type SecretReconciler struct {
 	clientset *kubernetes.Clientset
 	namespace string
@@ -59,7 +65,9 @@ func (sr *SecretReconciler) RunSecretReconciler() {
 	informer := factory.Core().V1().Secrets().Informer()
 	defer runtime.HandleCrash()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) { onAdd(obj, sr.queue, sr.logger) },
+		AddFunc:    func(obj interface{}) { onAdd(obj, sr.queue, sr.logger) },
+		UpdateFunc: func(oldObj, newObj interface{}) { onUpdate(newObj, sr.queue, sr.logger) },
+		DeleteFunc: func(obj interface{}) { onDelete(obj, sr.queue, sr.logger) },
 	})
 	go informer.Run(sr.stopper)
 	if !cache.WaitForCacheSync(sr.stopper, informer.HasSynced) {
@@ -69,13 +77,31 @@ func (sr *SecretReconciler) RunSecretReconciler() {
 	<-sr.stopper
 }
 
-// On and sends jobs to the queue when events on secrets holding certificates occur
 func onAdd(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogger) {
 	secret := obj.(*corev1.Secret)
-	// TODO: make the annotation to look for configurable so not just
-	// cert-manager provided certs are supported
-	if cn, ok := secret.GetAnnotations()["cert-manager.io/common-name"]; ok {
-		logger.Infof("Certificate '%s/%s' added", secret.GetNamespace(), secret.GetName())
-		envoy.SendSecretJob(cn, secret, queue)
+	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
+		logger.Infof("Certificate '%s/%s' 'CN=%s' added", secret.GetNamespace(), secret.GetName(), cn)
+		envoy.SendSecretJob(cn, "add", secret, queue)
+	}
+}
+
+// WARNING: onUpdate can be the first time we see a given certificate. Example:
+//	- The secret is created in the cluster
+//  - The secret is then annotated with the proper annotation that marks it as relevan for marin3r
+//  - The informer event will be a "onUpdate" because it is an update from the point of view of k8s
+//  - We need to watch for this casuistic
+func onUpdate(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogger) {
+	secret := obj.(*corev1.Secret)
+	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
+		logger.Infof("Certificate '%s/%s' 'CN=%s' updated", secret.GetNamespace(), secret.GetName(), cn)
+		envoy.SendSecretJob(cn, "update", secret, queue)
+	}
+}
+
+func onDelete(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogger) {
+	secret := obj.(*corev1.Secret)
+	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
+		logger.Infof("Certificate '%s/%s' 'CN=%s' deleted", secret.GetNamespace(), secret.GetName(), cn)
+		envoy.SendSecretJob(cn, "delete", secret, queue)
 	}
 }

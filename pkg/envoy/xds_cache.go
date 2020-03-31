@@ -28,18 +28,22 @@ const (
 )
 
 type WorkerJob struct {
-	jobType string
-	name    string
-	payload interface{}
+	jobType   string
+	operation string
+	name      string
+	payload   interface{}
 }
 
 type CacheWorker struct {
 	version       int
 	caches        *Caches
 	snapshotCache *cache.SnapshotCache
-	Queue         chan *WorkerJob
-	logger        *zap.SugaredLogger
-	stopper       chan struct{}
+	// TODO: do not go passing the channel around so freely,
+	// create a queue object with a channel inside, not public,
+	// and a set of public functions to access the channel
+	Queue   chan *WorkerJob
+	logger  *zap.SugaredLogger
+	stopper chan struct{}
 }
 
 func NewCacheWorker(snapshotCache *cache.SnapshotCache, stopper chan struct{}, logger *zap.SugaredLogger) *CacheWorker {
@@ -65,7 +69,7 @@ func (cw *CacheWorker) RunCacheWorker() {
 		if more {
 			switch job.jobType {
 			case "secret":
-				cw.caches.AddSecret(job.name, (job.payload).(*corev1.Secret))
+				cw.caches.Secret(job.name, job.operation, (job.payload).(*corev1.Secret))
 			default:
 				cw.logger.Warn("Received an unknown type of job, discarding ...")
 			}
@@ -80,11 +84,12 @@ func (cw *CacheWorker) RunCacheWorker() {
 	}
 }
 
-func SendSecretJob(name string, payload *corev1.Secret, queue chan *WorkerJob) {
+func SendSecretJob(name, operation string, payload *corev1.Secret, queue chan *WorkerJob) {
 	j := &WorkerJob{
-		jobType: "secret",
-		name:    name,
-		payload: payload,
+		jobType:   "secret",
+		operation: operation,
+		name:      name,
+		payload:   payload,
 	}
 	queue <- j
 }
@@ -115,10 +120,17 @@ func NewCaches() *Caches {
 		secrets: map[string]*auth.Secret{},
 	}
 }
-func (c *Caches) AddSecret(key string, s *corev1.Secret) {
-	c.secrets[key] = NewSecret(
-		key,
-		string(s.Data["tls.key"]),
-		string(s.Data["tls.crt"]),
-	)
+func (c *Caches) Secret(key, op string, s *corev1.Secret) {
+
+	// TODO: do not always update the envoy secret. Not all object
+	// updates in kubernetes mean an update of the envoy secret object
+	if op == "add" || op == "update" {
+		c.secrets[key] = NewSecret(
+			key,
+			string(s.Data["tls.key"]),
+			string(s.Data["tls.crt"]),
+		)
+	} else {
+		delete(c.secrets, key)
+	}
 }
