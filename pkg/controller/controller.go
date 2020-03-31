@@ -33,14 +33,11 @@ import (
 )
 
 const (
-	gatewayPort        = 19001
-	managementPort     = 18000
-	tlsCertificatePath = "./certs/marin3r-server.crt"
-	tlsKeyPath         = "./certs/marin3r-server.key"
-	tlsCAPath          = "./certs/ca.crt"
+	gatewayPort    = 19001
+	managementPort = 18000
 )
 
-func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel string, ooCluster bool) error {
+func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespace string, ooCluster bool) error {
 
 	logger := newLogger(logLevel)
 
@@ -86,7 +83,7 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel string, o
 			return err
 		}
 	}
-	secretReconciler := reconciler.NewSecretReconciler(clientset, xds_cache.Queue, ctx, logger, stopper)
+	secretReconciler := reconciler.NewSecretReconciler(clientset, namespace, xds_cache.Queue, ctx, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----
@@ -158,16 +155,16 @@ func runSignalWatcher(logger *zap.SugaredLogger) (context.Context, chan struct{}
 }
 
 func getCertificate(certPath, keyPath string, logger *zap.SugaredLogger) tls.Certificate {
-	certificate, err := tls.LoadX509KeyPair(tlsCertificatePath, tlsKeyPath)
+	certificate, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
-		logger.Fatalf("Could not load server certificate: '%s'", tlsCertificatePath, tlsKeyPath, err)
+		logger.Fatalf("Could not load server certificate: '%s'", certPath, keyPath, err)
 	}
 	return certificate
 }
 
 func getCA(caPath string, logger *zap.SugaredLogger) *x509.CertPool {
 	certPool := x509.NewCertPool()
-	if bs, err := ioutil.ReadFile(tlsCAPath); err != nil {
+	if bs, err := ioutil.ReadFile(caPath); err != nil {
 		log.Fatalf("Failed to read client ca cert: %s", err)
 	} else {
 		ok := certPool.AppendCertsFromPEM(bs)

@@ -23,6 +23,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	nodeID = "envoy-tls-sidecar"
+)
+
 type WorkerJob struct {
 	jobType string
 	name    string
@@ -88,7 +92,6 @@ func SendSecretJob(name string, payload *corev1.Secret, queue chan *WorkerJob) {
 func (cw *CacheWorker) makeSnapshot() {
 	cw.version++
 	snapshotCache := *(cw.snapshotCache)
-	// spew.Dump(snapshotCache.GetSnapshot("test-id"))
 	secrets := make([]cache.Resource, len(cw.caches.secrets))
 	i := 0
 	for _, secret := range cw.caches.secrets {
@@ -100,8 +103,7 @@ func (cw *CacheWorker) makeSnapshot() {
 	snap := cache.NewSnapshot(fmt.Sprint(cw.version), nil, nil, nil, nil, nil)
 	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", cw.version), secrets)
 	// ID should not be hardcoded, probably a worker per configured ID would be nice
-	// snapshotCache.ClearSnapshot("test-id")
-	snapshotCache.SetSnapshot("test-id", snap)
+	snapshotCache.SetSnapshot(nodeID, snap)
 }
 
 type Caches struct {

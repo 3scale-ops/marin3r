@@ -26,24 +26,24 @@ var (
 	tlsCAPath          string
 	logLevel           string
 	ooCluster          bool
+	namespace          string
+
+	rootCmd = &cobra.Command{
+		Use:   "marin3r",
+		Short: "marin3r, the simple envoy control plane",
+		Run:   run,
+	}
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "marin3r",
-	Short: "marin3r, the simple envoy control plane",
-	Run:   run,
-}
-
 func init() {
-	rootCmd.Flags().StringVar(&tlsCertificatePath, "certificate", "", "Server certificate")
-	rootCmd.Flags().StringVar(&tlsKeyPath, "private-key", "", "The private key of the server certificate")
-	rootCmd.Flags().StringVar(&tlsCAPath, "ca", "", "The CA of the server certificate")
+	rootCmd.Flags().StringVar(&tlsCertificatePath, "certificate", "/etc/marin3r/tls/server.crt", "Server certificate")
+	rootCmd.Flags().StringVar(&tlsKeyPath, "private-key", "/etc/marin3r/tls/server.key", "The private key of the server certificate")
+	rootCmd.Flags().StringVar(&tlsCAPath, "ca", "/etc/marin3r/tls/ca.crt", "The CA of the server certificate")
 	rootCmd.Flags().StringVar(&logLevel, "log-level", "info", "One of debug, info, warn, error")
 	rootCmd.Flags().BoolVar(&ooCluster, "out-of-cluster", false, "Use this flag if running outside of the cluster")
+	rootCmd.Flags().StringVar(&namespace, "namespace", "", "Namespace that marin3r is scoped to. Only namespace scope is supported")
 
-	rootCmd.MarkFlagRequired("certificate")
-	rootCmd.MarkFlagRequired("private-key")
-	rootCmd.MarkFlagRequired("ca")
+	rootCmd.MarkFlagRequired("namespace")
 }
 
 func main() {
@@ -57,6 +57,7 @@ func run(cmd *cobra.Command, args []string) {
 		tlsKeyPath,
 		tlsCAPath,
 		logLevel,
+		namespace,
 		ooCluster,
 	)
 	if err != nil {

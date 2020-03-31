@@ -27,12 +27,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-const (
-	namespace = "3scale"
-)
-
 type SecretReconciler struct {
 	clientset *kubernetes.Clientset
+	namespace string
 	queue     chan *envoy.WorkerJob
 	ctx       context.Context
 	logger    *zap.SugaredLogger
@@ -42,11 +39,12 @@ type SecretReconciler struct {
 var version int32
 
 func NewSecretReconciler(
-	clientset *kubernetes.Clientset, queue chan *envoy.WorkerJob,
+	clientset *kubernetes.Clientset, namespace string, queue chan *envoy.WorkerJob,
 	ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretReconciler {
 
 	return &SecretReconciler{
 		clientset: clientset,
+		namespace: namespace,
 		queue:     queue,
 		ctx:       ctx,
 		logger:    logger,
@@ -57,7 +55,7 @@ func NewSecretReconciler(
 func (sr *SecretReconciler) RunSecretReconciler() {
 	sr.logger.Info("Shared Informer app started")
 
-	factory := informers.NewSharedInformerFactoryWithOptions(sr.clientset, 0, informers.WithNamespace(namespace))
+	factory := informers.NewSharedInformerFactoryWithOptions(sr.clientset, 0, informers.WithNamespace(sr.namespace))
 	informer := factory.Core().V1().Secrets().Informer()
 	defer runtime.HandleCrash()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{

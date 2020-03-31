@@ -18,9 +18,6 @@ services:
       - envoy
       - -c
       - /etc/envoy/config.yaml
-      # - bash
-      # - -c
-      # - "sleep 3600"
   marin3r:
     build:
       context: ./
@@ -36,12 +33,19 @@ services:
       - "18000"
       - "19001"
     environment:
-      - KUBECONFIG=/kubeconfig
+      - KUBECONFIG=/etc/marin3r/kubeconfig
     volumes:
-      - ${HOME}/.kube/config:/kubeconfig
-      - ${PWD}/certs/marin3r-server.crt:/certs/marin3r-server.crt
-      - ${PWD}/certs/marin3r-server.key:/certs/marin3r-server.key
-      - ${PWD}/certs/ca.crt:/certs/ca.crt
+      - ${HOME}/.kube/config:/etc/marin3r/kubeconfig
+      - ${PWD}/certs/marin3r-server.crt:/etc/marin3r/tls/server.crt
+      - ${PWD}/certs/marin3r-server.key:/etc/marin3r/tls/server.key
+      - ${PWD}/certs/ca.crt:/etc/marin3r/tls/ca.crt
+    command:
+      - marin3r
+      - --log-level
+      - debug
+      - --namespace
+      - 3scale
+      - --out-of-cluster
 
 networks:
   envoymesh: {}

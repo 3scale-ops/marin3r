@@ -48,4 +48,5 @@ start: certs
 		--private-key certs/marin3r-server.key \
 		--ca certs/ca.crt \
 		--log-level debug \
+		--namespace 3scale \
 		--out-of-cluster
