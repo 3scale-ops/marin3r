@@ -1,6 +1,7 @@
 certs
 build
 bin
+tmp
 
 # Binaries for programs and plugins
 *.exe

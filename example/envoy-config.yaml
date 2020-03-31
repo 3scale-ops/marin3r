@@ -79,7 +79,7 @@ static_resources:
             "@type": type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext
             common_tls_context:
               tls_certificate_sds_secret_configs:
-                - name: "*.stg-saas.3sca.net"
+                - name: envoy-server
                   sds_config:
                     api_config_source:
                       api_type: GRPC

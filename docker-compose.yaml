@@ -14,10 +14,7 @@ services:
       - ${PWD}/example/envoy-config.yaml:/etc/envoy/config.yaml
       - ${PWD}/certs/envoy-client.crt:/etc/envoy/tls/envoy-client.crt
       - ${PWD}/certs/envoy-client.key:/etc/envoy/tls/envoy-client.key
-    command:
-      - envoy
-      - -c
-      - /etc/envoy/config.yaml
+    command: ["envoy", "-c", "/etc/envoy/config.yaml"]
   marin3r:
     build:
       context: ./
@@ -39,13 +36,7 @@ services:
       - ${PWD}/certs/marin3r-server.crt:/etc/marin3r/tls/server.crt
       - ${PWD}/certs/marin3r-server.key:/etc/marin3r/tls/server.key
       - ${PWD}/certs/ca.crt:/etc/marin3r/tls/ca.crt
-    command:
-      - marin3r
-      - --log-level
-      - debug
-      - --namespace
-      - 3scale
-      - --out-of-cluster
+    command: ["marin3r", "--log-level", "debug", "--namespace", "default", "--out-of-cluster"]
 
 networks:
   envoymesh: {}
