@@ -36,7 +36,7 @@ const (
 type SecretReconciler struct {
 	clientset *kubernetes.Clientset
 	namespace string
-	queue     chan *envoy.WorkerJob
+	queue     chan envoy.ReconcileJob
 	ctx       context.Context
 	logger    *zap.SugaredLogger
 	stopper   chan struct{}
@@ -45,7 +45,7 @@ type SecretReconciler struct {
 var version int32
 
 func NewSecretReconciler(
-	clientset *kubernetes.Clientset, namespace string, queue chan *envoy.WorkerJob,
+	clientset *kubernetes.Clientset, namespace string, queue chan envoy.ReconcileJob,
 	ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretReconciler {
 
 	return &SecretReconciler{
@@ -77,11 +77,11 @@ func (sr *SecretReconciler) RunSecretReconciler() {
 	<-sr.stopper
 }
 
-func onAdd(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogger) {
+func onAdd(obj interface{}, queue chan envoy.ReconcileJob, logger *zap.SugaredLogger) {
 	secret := obj.(*corev1.Secret)
 	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
 		logger.Infof("Certificate '%s/%s' 'CN=%s' added", secret.GetNamespace(), secret.GetName(), cn)
-		envoy.SendSecretJob(cn, "add", secret, queue)
+		envoy.NewSecretReconcileJob(cn, envoy.Add, secret).Push(queue)
 	}
 }
 
@@ -90,18 +90,18 @@ func onAdd(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogg
 //  - The secret is then annotated with the proper annotation that marks it as relevan for marin3r
 //  - The informer event will be a "onUpdate" because it is an update from the point of view of k8s
 //  - We need to watch for this casuistic
-func onUpdate(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogger) {
+func onUpdate(obj interface{}, queue chan envoy.ReconcileJob, logger *zap.SugaredLogger) {
 	secret := obj.(*corev1.Secret)
 	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
 		logger.Infof("Certificate '%s/%s' 'CN=%s' updated", secret.GetNamespace(), secret.GetName(), cn)
-		envoy.SendSecretJob(cn, "update", secret, queue)
+		envoy.NewSecretReconcileJob(cn, envoy.Update, secret).Push(queue)
 	}
 }
 
-func onDelete(obj interface{}, queue chan *envoy.WorkerJob, logger *zap.SugaredLogger) {
+func onDelete(obj interface{}, queue chan envoy.ReconcileJob, logger *zap.SugaredLogger) {
 	secret := obj.(*corev1.Secret)
 	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
 		logger.Infof("Certificate '%s/%s' 'CN=%s' deleted", secret.GetNamespace(), secret.GetName(), cn)
-		envoy.SendSecretJob(cn, "delete", secret, queue)
+		envoy.NewSecretReconcileJob(cn, envoy.Delete, secret).Push(queue)
 	}
 }

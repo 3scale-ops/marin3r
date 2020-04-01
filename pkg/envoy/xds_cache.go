@@ -27,12 +27,23 @@ const (
 	nodeID = "envoy-tls-sidecar"
 )
 
-type WorkerJob struct {
-	jobType   string
-	operation string
-	name      string
-	payload   interface{}
+//------------------
+//----- Caches -----
+//------------------
+
+type Caches struct {
+	secrets map[string]*auth.Secret
 }
+
+func NewCaches() *Caches {
+	return &Caches{
+		secrets: map[string]*auth.Secret{},
+	}
+}
+
+// ----------------
+// ---- Worker ----
+// ----------------
 
 type CacheWorker struct {
 	version       int
@@ -41,7 +52,7 @@ type CacheWorker struct {
 	// TODO: do not go passing the channel around so freely,
 	// create a queue object with a channel inside, not public,
 	// and a set of public functions to access the channel
-	Queue   chan *WorkerJob
+	Queue   chan ReconcileJob
 	logger  *zap.SugaredLogger
 	stopper chan struct{}
 }
@@ -50,7 +61,7 @@ func NewCacheWorker(snapshotCache *cache.SnapshotCache, stopper chan struct{}, l
 	return &CacheWorker{
 		caches:        NewCaches(),
 		snapshotCache: snapshotCache,
-		Queue:         make(chan *WorkerJob),
+		Queue:         make(chan ReconcileJob),
 		logger:        logger,
 		stopper:       stopper,
 	}
@@ -67,12 +78,15 @@ func (cw *CacheWorker) RunCacheWorker() {
 	for {
 		job, more := <-cw.Queue
 		if more {
-			switch job.jobType {
-			case "secret":
-				cw.caches.Secret(job.name, job.operation, (job.payload).(*corev1.Secret))
-			default:
-				cw.logger.Warn("Received an unknown type of job, discarding ...")
-			}
+			job.process(cw.caches)
+
+			// if more {
+			// 	switch job.jobType {
+			// 	case "secret":
+			// 		cw.caches.Secret(job.name, job.operation, (job.payload).(*corev1.Secret))
+			// 	default:
+			// 		cw.logger.Warn("Received an unknown type of job, discarding ...")
+			// 	}
 		} else {
 			cw.logger.Info("Received channel close, shutting down worker")
 			return
@@ -82,16 +96,6 @@ func (cw *CacheWorker) RunCacheWorker() {
 		// to buffer events and push them all at the same time
 		cw.makeSnapshot()
 	}
-}
-
-func SendSecretJob(name, operation string, payload *corev1.Secret, queue chan *WorkerJob) {
-	j := &WorkerJob{
-		jobType:   "secret",
-		operation: operation,
-		name:      name,
-		payload:   payload,
-	}
-	queue <- j
 }
 
 func (cw *CacheWorker) makeSnapshot() {
@@ -111,26 +115,60 @@ func (cw *CacheWorker) makeSnapshot() {
 	snapshotCache.SetSnapshot(nodeID, snap)
 }
 
-type Caches struct {
-	secrets map[string]*auth.Secret
+// ------------------------------
+// ---- Reconciler interface ----
+// ------------------------------
+
+type EventType int
+
+const (
+	Add EventType = iota
+	Update
+	Delete
+)
+
+type ReconcileJob interface {
+	process(*Caches)
+	Push(chan ReconcileJob)
 }
 
-func NewCaches() *Caches {
-	return &Caches{
-		secrets: map[string]*auth.Secret{},
-	}
+// ---------------------------
+// ---- Secret reconciler ----
+// ---------------------------
+
+type SecretReconcileJob struct {
+	eventType EventType
+	name      string
+	secret    *corev1.Secret
 }
-func (c *Caches) Secret(key, op string, s *corev1.Secret) {
+
+func (srj SecretReconcileJob) Push(queue chan ReconcileJob) {
+	queue <- srj
+}
+
+func (job SecretReconcileJob) process(c *Caches) {
 
 	// TODO: do not always update the envoy secret. Not all object
 	// updates in kubernetes mean an update of the envoy secret object
-	if op == "add" || op == "update" {
-		c.secrets[key] = NewSecret(
-			key,
-			string(s.Data["tls.key"]),
-			string(s.Data["tls.crt"]),
+	if job.eventType == Add || job.eventType == Update {
+		c.secrets[job.name] = NewSecret(
+			job.name,
+			string(job.secret.Data["tls.key"]),
+			string(job.secret.Data["tls.crt"]),
 		)
 	} else {
-		delete(c.secrets, key)
+		delete(c.secrets, job.name)
 	}
+}
+
+func NewSecretReconcileJob(name string, eventType EventType, secret *corev1.Secret) *SecretReconcileJob {
+	return &SecretReconcileJob{
+		eventType: eventType,
+		name:      name,
+		secret:    secret,
+	}
+}
+
+func (c *Caches) Secret(key, op string, s *corev1.Secret) {
+
 }
