@@ -16,19 +16,20 @@ package reconciler
 
 import (
 	"github.com/roivaz/marin3r/pkg/envoy"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
 
 type SecretReconcileJob struct {
 	eventType EventType
-	name      string
+	cn        string
 	secret    *corev1.Secret
 }
 
-func NewSecretReconcileJob(name string, eventType EventType, secret *corev1.Secret) *SecretReconcileJob {
+func NewSecretReconcileJob(cn string, eventType EventType, secret *corev1.Secret) *SecretReconcileJob {
 	return &SecretReconcileJob{
 		eventType: eventType,
-		name:      name,
+		cn:        cn,
 		secret:    secret,
 	}
 }
@@ -37,17 +38,20 @@ func (srj SecretReconcileJob) Push(queue chan ReconcileJob) {
 	queue <- srj
 }
 
-func (job SecretReconcileJob) process(c *Caches) {
+func (job SecretReconcileJob) process(c *Caches, logger *zap.SugaredLogger) {
 
 	// TODO: do not always update the envoy secret. Not all object
 	// updates in kubernetes mean an update of the envoy secret object
-	if job.eventType == Add || job.eventType == Update {
-		c.secrets[job.name] = envoy.NewSecret(
-			job.name,
+	switch job.eventType {
+
+	case Add, Update:
+		c.secrets[job.cn] = envoy.NewSecret(
+			job.cn,
 			string(job.secret.Data["tls.key"]),
 			string(job.secret.Data["tls.crt"]),
 		)
-	} else {
-		delete(c.secrets, job.name)
+	case Delete:
+		logger.Warnf("The certificate with CN '%s' is about to be deleted", job.cn)
+		delete(c.secrets, job.cn)
 	}
 }
