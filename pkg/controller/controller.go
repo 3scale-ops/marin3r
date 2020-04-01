@@ -27,7 +27,7 @@ import (
 	"syscall"
 
 	"github.com/roivaz/marin3r/pkg/envoy"
-	"github.com/roivaz/marin3r/pkg/reconciler"
+	"github.com/roivaz/marin3r/pkg/events"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 )
@@ -83,7 +83,7 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 			return err
 		}
 	}
-	secretReconciler := reconciler.NewSecretReconciler(clientset, namespace, xds_cache.Queue, ctx, logger, stopper)
+	secretHandler := events.NewSecretHandler(clientset, namespace, xds_cache.Queue, ctx, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----
@@ -102,7 +102,7 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 	waitReconcilers.Add(1)
 	go func() {
 		defer waitReconcilers.Done()
-		secretReconciler.RunSecretReconciler()
+		secretHandler.RunSecretHandler()
 	}()
 
 	// Finally start the servers
