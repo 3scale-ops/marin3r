@@ -63,12 +63,12 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
-		&envoy.Callbacks{Logger: logger},
+		&reconciler.Callbacks{Logger: logger},
 		logger,
 	)
 
 	// Init the cache worker
-	xds_cache := reconciler.NewCacheWorker(xdss.GetSnapshotCache(), stopper, logger)
+	xds_cache := reconciler.NewReconciler(xdss.GetSnapshotCache(), stopper, logger)
 
 	// Init the secret reconciler
 	var clientset *kubernetes.Clientset
@@ -98,7 +98,7 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 	waitReconciler.Add(1)
 	go func() {
 		defer waitReconciler.Done()
-		xds_cache.RunCacheWorker()
+		xds_cache.RunReconciler()
 	}()
 
 	// Start event handlers

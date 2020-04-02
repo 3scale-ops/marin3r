@@ -15,8 +15,6 @@
 package reconciler
 
 import (
-	"fmt"
-
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
@@ -87,7 +85,7 @@ func (c *Caches) makeListenerResources() []cache.Resource {
 // ---- Worker ----
 // ----------------
 
-type CacheWorker struct {
+type Reconciler struct {
 	version       int
 	caches        *Caches
 	snapshotCache *cache.SnapshotCache
@@ -97,54 +95,4 @@ type CacheWorker struct {
 	Queue   chan ReconcileJob
 	logger  *zap.SugaredLogger
 	stopper chan struct{}
-}
-
-func NewCacheWorker(snapshotCache *cache.SnapshotCache, stopper chan struct{}, logger *zap.SugaredLogger) *CacheWorker {
-	return &CacheWorker{
-		caches:        NewCaches(),
-		snapshotCache: snapshotCache,
-		Queue:         make(chan ReconcileJob),
-		logger:        logger,
-		stopper:       stopper,
-	}
-}
-
-func (cw *CacheWorker) RunCacheWorker() {
-
-	// Watch for the call to shutdown the worker
-	go func() {
-		<-cw.stopper
-		close(cw.Queue)
-	}()
-
-	for {
-		job, more := <-cw.Queue
-		if more {
-			job.process(cw.caches, cw.logger)
-		} else {
-			cw.logger.Info("Received channel close, shutting down worker")
-			return
-		}
-
-		// This would create an snapshot per event... we might want
-		// to buffer events and push them all at the same time
-		cw.makeSnapshot()
-	}
-}
-
-func (cw *CacheWorker) makeSnapshot() {
-	cw.version++
-	snapshotCache := *(cw.snapshotCache)
-
-	cw.logger.Infof(">>>>>>>>>>>>>>>>>>> creating snapshot Version " + fmt.Sprint(cw.version))
-	snap := cache.NewSnapshot(fmt.Sprint(cw.version),
-		nil,
-		cw.caches.makeClusterResources(),
-		nil,
-		cw.caches.makeListenerResources(),
-		nil,
-	)
-	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", cw.version), cw.caches.makeSecretResources())
-	// ID should not be hardcoded, probably a worker per configured ID would be nice
-	snapshotCache.SetSnapshot(nodeID, snap)
 }
