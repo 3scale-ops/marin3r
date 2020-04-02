@@ -74,7 +74,7 @@ func (sr *SecretHandler) RunSecretHandler() {
 		return
 	}
 
-	sr.logger.Info("Shared Informer app started")
+	sr.logger.Info("Secret handler started")
 	<-sr.stopper
 }
 
