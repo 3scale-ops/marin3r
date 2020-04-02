@@ -16,13 +16,18 @@ package reconciler
 
 import (
 	"bytes"
+	"fmt"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -43,8 +48,8 @@ func NewConfigMapReconcileJob(nodeID string, eventType EventType, configMap *cor
 	}
 }
 
-func (srj ConfigMapReconcileJob) Push(queue chan ReconcileJob) {
-	queue <- srj
+func (job ConfigMapReconcileJob) Push(queue chan ReconcileJob) {
+	queue <- job
 }
 
 type resFromFile struct {
@@ -59,7 +64,27 @@ func (m *resFromFile) Reset()         { *m = resFromFile{} }
 func (m *resFromFile) String() string { return proto.CompactTextString(m) }
 func (*resFromFile) ProtoMessage()    {}
 
-func (job ConfigMapReconcileJob) process(c *nodeCaches, logger *zap.SugaredLogger) {
+func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clientset, logger *zap.SugaredLogger) ([]string, error) {
+
+	// Check if it's the first time we see this
+	// nodeID, in which case we need to bootstrap
+	// its cache
+	if _, ok := c[job.nodeID]; !ok {
+		c[job.nodeID] = NewNodeCaches()
+		// We need to trigger a reconcile for the secrets
+		// so this new cache gets populated with them
+		secrets, err := job.syncNodeSecrets(clientset)
+		if err != nil {
+			// Delete the node cache so in the
+			// next job it will try to rebuild the
+			// secrets cache again
+			delete(c, job.nodeID)
+			return []string{}, err
+		}
+		c[job.nodeID].secrets = secrets
+
+	}
+	nodeCache := c[job.nodeID]
 
 	switch job.eventType {
 
@@ -68,32 +93,49 @@ func (job ConfigMapReconcileJob) process(c *nodeCaches, logger *zap.SugaredLogge
 		// Clear current cached clusters and listeners, we don't care about
 		// previous values because the yaml in the ConfigMap provider is
 		// expected to be complete
-		c.clusters = map[string]*envoyapi.Cluster{}
-		c.listeners = map[string]*envoyapi.Listener{}
+		nodeCache.clusters = make(map[string]*envoyapi.Cluster)
+		nodeCache.listeners = make(map[string]*envoyapi.Listener)
 		// c.endpoints = map[string]*envoyapi.Listener{}
 
 		j, err := yaml.YAMLToJSON([]byte(job.configMap.Data["config.yaml"]))
 		if err != nil {
 			logger.Errorf("Error converting yaml to json: '%s'", err)
-			return
+			return nil, fmt.Errorf("Error converting yaml to json: '%s'", err)
 		}
 
 		rff := resFromFile{}
 		if err := jsonpb.Unmarshal(bytes.NewReader(j), &rff); err != nil {
-			logger.Errorf("Error unmarshalling config for node-id %s: '%s'", nodeID, err)
-			return
+			logger.Errorf("Error unmarshalling config for node-id %s: '%s'", job.nodeID, err)
+			return nil, fmt.Errorf("Error unmarshalling config for node-id %s: '%s'", job.nodeID, err)
 		}
 
 		for _, cluster := range rff.Clusters {
-			c.clusters[cluster.Name] = cluster
+			nodeCache.clusters[cluster.Name] = cluster
 		}
 
 		for _, lis := range rff.Listeners {
-			c.listeners[lis.Name] = lis
+			nodeCache.listeners[lis.Name] = lis
 		}
 
 	case Delete:
 		// Just warn the user about the deletion of the config
-		logger.Warnf("The config for node-id '%s' is about to be deleted", nodeID)
+		logger.Warnf("The config for node-id '%s' is about to be deleted", job.nodeID)
 	}
+
+	return []string{job.nodeID}, nil
+}
+
+// SyncNodeSecrets synchronously builds/rebuilds the whole secrets cache
+func (job ConfigMapReconcileJob) syncNodeSecrets(clientset *kubernetes.Clientset) (map[string]*envoy_auth.Secret, error) {
+	secrets := map[string]*envoy_auth.Secret{}
+	list, err := clientset.CoreV1().Secrets("").List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	for _, s := range list.Items {
+		if cn, ok := s.GetAnnotations()[certificateAnnotation]; ok {
+			secrets[cn] = envoy.NewSecret(cn, string(s.Data["tls.key"]), string(s.Data["tls.crt"]))
+		}
+	}
+	return secrets, nil
 }

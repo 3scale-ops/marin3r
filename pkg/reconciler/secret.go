@@ -18,6 +18,7 @@ import (
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 type SecretReconcileJob struct {
@@ -38,20 +39,39 @@ func (srj SecretReconcileJob) Push(queue chan ReconcileJob) {
 	queue <- srj
 }
 
-func (job SecretReconcileJob) process(c *nodeCaches, logger *zap.SugaredLogger) {
+func (job SecretReconcileJob) process(c caches, clientset *kubernetes.Clientset, logger *zap.SugaredLogger) ([]string, error) {
 
-	// TODO: do not always update the envoy secret. Not all object
-	// updates in kubernetes mean an update of the envoy secret object
+	// SecretReconcileJob jobs don't have nodeID information because the secrets holding
+	// the certificates in k8s/ocp can be created by other tools (eg cert-manager)
+	// We need inspect the node-ids registered in the cache and publish the secrets to
+	// all of them
+	// TODO: improve this and publish secrets only to those node-ids actually interested
+	// in them
+
+	nodeIDs := make([]string, len(c))
+	i := 0
+	for k := range c {
+		nodeIDs[i] = k
+		i++
+	}
+
 	switch job.eventType {
 
 	case Add, Update:
-		c.secrets[job.cn] = envoy.NewSecret(
-			job.cn,
-			string(job.secret.Data["tls.key"]),
-			string(job.secret.Data["tls.crt"]),
-		)
+		// Copy the secret to all existent node caches
+		for _, nodeID := range nodeIDs {
+			c[nodeID].secrets[job.cn] = envoy.NewSecret(
+				job.cn,
+				string(job.secret.Data["tls.key"]),
+				string(job.secret.Data["tls.crt"]),
+			)
+		}
 	case Delete:
 		logger.Warnf("The certificate with CN '%s' is about to be deleted", job.cn)
-		delete(c.secrets, job.cn)
+		for _, nodeID := range nodeIDs {
+			delete(c[nodeID].secrets, job.cn)
+		}
 	}
+
+	return nodeIDs, nil
 }

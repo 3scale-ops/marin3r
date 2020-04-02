@@ -42,7 +42,8 @@ type XdsServer struct {
 	tlsConfig      *tls.Config
 	server         xds.Server
 	snapshotCache  cache.SnapshotCache
-	logger         *zap.SugaredLogger
+
+	logger *zap.SugaredLogger
 }
 
 // hasher returns node ID as an ID

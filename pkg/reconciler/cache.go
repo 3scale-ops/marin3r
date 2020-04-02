@@ -18,13 +18,20 @@ import (
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
-	"go.uber.org/zap"
 )
 
 //----------------------
 //----- nodeCaches -----
 //----------------------
 
+// The internal in-memory cache of the reconciler
+// "caches" is a map of nodeCaches, indexed by envoy node-id.
+// Each node-id is registered when the id is seen for the first
+// time by the "OnStreamOpen" callback function (see xds_callbacks.go)
+type caches map[string]*nodeCaches
+
+// nodeCaches holds an index of envoy cache Resource
+// objects, indexed by resource name
 type nodeCaches struct {
 	secrets   map[string]*auth.Secret
 	listeners map[string]*envoyapi.Listener
@@ -32,6 +39,7 @@ type nodeCaches struct {
 	endpoint  map[string]*envoyapi.ClusterLoadAssignment
 }
 
+// NewNodeCaches returns a new "nodeCaches" objects
 func NewNodeCaches() *nodeCaches {
 	return &nodeCaches{
 		secrets:   map[string]*auth.Secret{},
@@ -80,19 +88,3 @@ func (c *nodeCaches) makeListenerResources() []cache.Resource {
 // 	}
 // 	return endpoints
 // }
-
-// ----------------
-// ---- Worker ----
-// ----------------
-
-type Reconciler struct {
-	version       int
-	nodeCaches    *nodeCaches
-	snapshotCache *cache.SnapshotCache
-	// TODO: do not go passing the channel around so freely,
-	// create a queue object with a channel inside, not public,
-	// and a set of public functions to access the channel
-	Queue   chan ReconcileJob
-	logger  *zap.SugaredLogger
-	stopper chan struct{}
-}

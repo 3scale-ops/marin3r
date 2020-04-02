@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-package reconciler
+package envoy
 
 import (
 	"context"
@@ -22,6 +22,10 @@ import (
 	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	"go.uber.org/zap"
 )
+
+type Callbacks struct {
+	Logger *zap.SugaredLogger
+}
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
@@ -44,9 +48,6 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 
 	if req.ErrorDetail != nil {
 		cb.Logger.Errorf("OnStreamRequest error pushing snapshot to gateway: code: %v message %s", req.ErrorDetail.Code, req.ErrorDetail.Message)
-		// if cb.OnError != nil {
-		// 	cb.OnError()
-		// }
 		return fmt.Errorf("OnStreamRequest error pushing snapshot to gateway %v", req.ErrorDetail.Message)
 	}
 	return nil
@@ -68,9 +69,4 @@ func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *v2.DiscoveryReques
 // OnFetchRequest implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchResponse is called immediately prior to sending a response.
 func (cb *Callbacks) OnFetchResponse(req *v2.DiscoveryRequest, resp *v2.DiscoveryResponse) {
-}
-
-type Callbacks struct {
-	Logger *zap.SugaredLogger
-	// OnError func()
 }

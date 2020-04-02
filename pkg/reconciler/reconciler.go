@@ -19,10 +19,13 @@ import (
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	"go.uber.org/zap"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	nodeID = "envoy-tls-sidecar"
+	// TODO: make the annotation to look for configurable so not just
+	// cert-manager provided certs are supported
+	certificateAnnotation = "cert-manager.io/common-name"
 )
 
 // ------------------------------
@@ -38,17 +41,30 @@ const (
 )
 
 type ReconcileJob interface {
-	process(*nodeCaches, *zap.SugaredLogger)
+	process(caches, *kubernetes.Clientset, *zap.SugaredLogger) ([]string, error)
 	Push(chan ReconcileJob)
 }
 
 //------------------
 //----- Worker -----
 //------------------
+type Reconciler struct {
+	clientset     *kubernetes.Clientset
+	version       int
+	caches        caches
+	snapshotCache *cache.SnapshotCache
+	// TODO: do not go passing the channel around so freely,
+	// create a queue object with a channel inside, not public,
+	// and a set of public functions to access the channel
+	Queue   chan ReconcileJob
+	logger  *zap.SugaredLogger
+	stopper chan struct{}
+}
 
-func NewReconciler(snapshotCache *cache.SnapshotCache, stopper chan struct{}, logger *zap.SugaredLogger) *Reconciler {
+func NewReconciler(clientset *kubernetes.Clientset, snapshotCache *cache.SnapshotCache, stopper chan struct{}, logger *zap.SugaredLogger) *Reconciler {
 	return &Reconciler{
-		nodeCaches:    NewNodeCaches(),
+		clientset:     clientset,
+		caches:        make(caches),
 		snapshotCache: snapshotCache,
 		Queue:         make(chan ReconcileJob),
 		logger:        logger,
@@ -56,42 +72,48 @@ func NewReconciler(snapshotCache *cache.SnapshotCache, stopper chan struct{}, lo
 	}
 }
 
-func (cw *Reconciler) RunReconciler() {
+func (r *Reconciler) RunReconciler() {
 
 	// Watch for the call to shutdown the worker
-	go func() {
-		<-cw.stopper
-		close(cw.Queue)
-	}()
+	r.runStopWatcher()
 
 	for {
-		job, more := <-cw.Queue
+		job, more := <-r.Queue
 		if more {
-			job.process(cw.nodeCaches, cw.logger)
+			nodeIDs, err := job.process(r.caches, r.clientset, r.logger)
+			if err != nil {
+				break
+			}
+			for _, nodeID := range nodeIDs {
+				r.makeSnapshot(nodeID)
+			}
 		} else {
-			cw.logger.Info("Received channel close, shutting down worker")
+			r.logger.Info("Received channel close, shutting down worker")
 			return
 		}
-
-		// This would create an snapshot per event... we might want
-		// to buffer events and push them all at the same time
-		cw.makeSnapshot()
 	}
 }
 
-func (cw *Reconciler) makeSnapshot() {
-	cw.version++
-	snapshotCache := *(cw.snapshotCache)
+func (r *Reconciler) runStopWatcher() {
+	go func() {
+		<-r.stopper
+		close(r.Queue)
+	}()
+}
 
-	cw.logger.Infof(">>>>>>>>>>>>>>>>>>> creating snapshot Version " + fmt.Sprint(cw.version))
-	snap := cache.NewSnapshot(fmt.Sprint(cw.version),
+func (r *Reconciler) makeSnapshot(nodeID string) {
+	r.version++
+	snapshotCache := *(r.snapshotCache)
+
+	r.logger.Infof(">>> creating snapshot version '%s' for node-id '%s'", fmt.Sprint(r.version), nodeID)
+	snap := cache.NewSnapshot(fmt.Sprint(r.version),
 		nil,
-		cw.nodeCaches.makeClusterResources(),
+		r.caches[nodeID].makeClusterResources(),
 		nil,
-		cw.nodeCaches.makeListenerResources(),
+		r.caches[nodeID].makeListenerResources(),
 		nil,
 	)
-	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", cw.version), cw.nodeCaches.makeSecretResources())
-	// ID should not be hardcoded, probably a worker per configured ID would be nice
+	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", r.version), r.caches[nodeID].makeSecretResources())
+	// Push snapshot to the server for the given node-id
 	snapshotCache.SetSnapshot(nodeID, snap)
 }

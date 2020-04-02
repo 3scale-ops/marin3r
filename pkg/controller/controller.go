@@ -63,14 +63,10 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
-		&reconciler.Callbacks{Logger: logger},
+		&envoy.Callbacks{Logger: logger},
 		logger,
 	)
 
-	// Init the cache worker
-	xds_cache := reconciler.NewReconciler(xdss.GetSnapshotCache(), stopper, logger)
-
-	// Init the secret reconciler
 	var clientset *kubernetes.Clientset
 	var err error
 	if ooCluster {
@@ -85,9 +81,12 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 		}
 	}
 
+	// Init the cache worker
+	rec := reconciler.NewReconciler(clientset, xdss.GetSnapshotCache(), stopper, logger)
+
 	// Init event handlers
-	secretHandler := events.NewSecretHandler(clientset, namespace, xds_cache.Queue, ctx, logger, stopper)
-	configMapHandler := events.NewConfigMapHandler(clientset, namespace, xds_cache.Queue, ctx, logger, stopper)
+	secretHandler := events.NewSecretHandler(clientset, namespace, rec.Queue, ctx, logger, stopper)
+	configMapHandler := events.NewConfigMapHandler(clientset, namespace, rec.Queue, ctx, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----
@@ -98,7 +97,7 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 	waitReconciler.Add(1)
 	go func() {
 		defer waitReconciler.Done()
-		xds_cache.RunReconciler()
+		rec.RunReconciler()
 	}()
 
 	// Start event handlers
