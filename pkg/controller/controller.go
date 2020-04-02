@@ -84,45 +84,50 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 			return err
 		}
 	}
+
+	// Init event handlers
 	secretHandler := events.NewSecretHandler(clientset, namespace, xds_cache.Queue, ctx, logger, stopper)
+	configMapHandler := events.NewConfigMapHandler(clientset, namespace, xds_cache.Queue, ctx, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----
 	// ------------------------
 
-	// Start CacheWorker
-	var waitCacheWorker sync.WaitGroup
-	waitCacheWorker.Add(1)
+	// Start Reconciler
+	var waitReconciler sync.WaitGroup
+	waitReconciler.Add(1)
 	go func() {
-		defer waitCacheWorker.Done()
+		defer waitReconciler.Done()
 		xds_cache.RunCacheWorker()
 	}()
 
-	// Start reconcilers
-	var waitReconcilers sync.WaitGroup
-	waitReconcilers.Add(1)
+	// Start event handlers
+	var waitEventHandlers sync.WaitGroup
+	waitEventHandlers.Add(2)
 	go func() {
-		defer waitReconcilers.Done()
+		defer waitEventHandlers.Done()
 		secretHandler.RunSecretHandler()
+	}()
+	go func() {
+		defer waitEventHandlers.Done()
+		configMapHandler.RunConfigMapHandler()
 	}()
 
 	// Finally start the servers
 	var waitServers sync.WaitGroup
-	waitServers.Add(1)
+	waitServers.Add(2)
 	go func() {
 		defer waitServers.Done()
 		xdss.RunManagementServer()
 	}()
-
-	waitServers.Add(1)
 	go func() {
 		defer waitServers.Done()
 		xdss.RunManagementGateway()
 	}()
 
 	// Stop in order
-	waitReconcilers.Wait()
-	waitCacheWorker.Wait()
+	waitEventHandlers.Wait()
+	waitReconciler.Wait()
 	waitServers.Wait()
 
 	logger.Infof("Controller has shut down")

@@ -14,6 +14,8 @@
 
 package reconciler
 
+import "go.uber.org/zap"
+
 const (
 	nodeID = "envoy-tls-sidecar"
 )
@@ -31,6 +33,6 @@ const (
 )
 
 type ReconcileJob interface {
-	process(*Caches)
+	process(*Caches, *zap.SugaredLogger)
 	Push(chan ReconcileJob)
 }

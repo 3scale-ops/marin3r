@@ -5,6 +5,8 @@ go 1.14
 require (
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.9.4
+	github.com/ghodss/yaml v1.0.0
+	github.com/golang/protobuf v1.4.0-rc.4
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/spf13/cobra v0.0.7
 	go.uber.org/zap v1.14.1

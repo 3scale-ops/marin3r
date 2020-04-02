@@ -55,7 +55,7 @@ envoy: certs
 		-v $$(pwd)/certs:/etc/envoy/tls \
 		-v $$(pwd)/example:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config/envoy-config.yaml $(ARGS)
+		envoy -c /config/envoy-bootstrap.yaml $(ARGS)
 
 start: ## starts the marin3r contrl plane
 start: certs

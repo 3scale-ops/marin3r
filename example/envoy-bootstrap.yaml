@@ -1,0 +1,48 @@
+# Base config for an ADS management server on 18000, admin port on 9901
+admin:
+  access_log_path: /dev/null
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 9901
+node:
+  cluster: test-cluster
+  id: envoy-tls-sidecar
+dynamic_resources:
+  ads_config:
+    api_type: GRPC
+    transport_api_version: V2
+    grpc_services:
+      - envoy_grpc:
+          cluster_name: marin3r
+  cds_config:
+    ads: {}
+  lds_config:
+    ads: {}
+static_resources:
+  clusters:
+    # The xDS cluster
+    - name: marin3r
+      connect_timeout: 1s
+      type: strict_dns
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: marin3r
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: marin3r
+                      port_value: 18000
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext
+          common_tls_context:
+            # mTLS is necessary for sds
+            tls_certificates:
+              - certificate_chain:
+                  filename: /etc/envoy/tls/envoy-client.crt
+                private_key:
+                  filename: /etc/envoy/tls/envoy-client.key
