@@ -28,6 +28,7 @@ import (
 
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"github.com/roivaz/marin3r/pkg/events"
+	"github.com/roivaz/marin3r/pkg/reconciler"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 )
@@ -67,7 +68,7 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 	)
 
 	// Init the cache worker
-	xds_cache := envoy.NewCacheWorker(xdss.GetSnapshotCache(), stopper, logger)
+	xds_cache := reconciler.NewCacheWorker(xdss.GetSnapshotCache(), stopper, logger)
 
 	// Init the secret reconciler
 	var clientset *kubernetes.Clientset

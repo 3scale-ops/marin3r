@@ -12,7 +12,7 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-package envoy
+package reconciler
 
 import (
 	"fmt"
@@ -20,11 +20,6 @@ import (
 	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	"go.uber.org/zap"
-	corev1 "k8s.io/api/core/v1"
-)
-
-const (
-	nodeID = "envoy-tls-sidecar"
 )
 
 //------------------
@@ -79,14 +74,6 @@ func (cw *CacheWorker) RunCacheWorker() {
 		job, more := <-cw.Queue
 		if more {
 			job.process(cw.caches)
-
-			// if more {
-			// 	switch job.jobType {
-			// 	case "secret":
-			// 		cw.caches.Secret(job.name, job.operation, (job.payload).(*corev1.Secret))
-			// 	default:
-			// 		cw.logger.Warn("Received an unknown type of job, discarding ...")
-			// 	}
 		} else {
 			cw.logger.Info("Received channel close, shutting down worker")
 			return
@@ -113,62 +100,4 @@ func (cw *CacheWorker) makeSnapshot() {
 	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", cw.version), secrets)
 	// ID should not be hardcoded, probably a worker per configured ID would be nice
 	snapshotCache.SetSnapshot(nodeID, snap)
-}
-
-// ------------------------------
-// ---- Reconciler interface ----
-// ------------------------------
-
-type EventType int
-
-const (
-	Add EventType = iota
-	Update
-	Delete
-)
-
-type ReconcileJob interface {
-	process(*Caches)
-	Push(chan ReconcileJob)
-}
-
-// ---------------------------
-// ---- Secret reconciler ----
-// ---------------------------
-
-type SecretReconcileJob struct {
-	eventType EventType
-	name      string
-	secret    *corev1.Secret
-}
-
-func (srj SecretReconcileJob) Push(queue chan ReconcileJob) {
-	queue <- srj
-}
-
-func (job SecretReconcileJob) process(c *Caches) {
-
-	// TODO: do not always update the envoy secret. Not all object
-	// updates in kubernetes mean an update of the envoy secret object
-	if job.eventType == Add || job.eventType == Update {
-		c.secrets[job.name] = NewSecret(
-			job.name,
-			string(job.secret.Data["tls.key"]),
-			string(job.secret.Data["tls.crt"]),
-		)
-	} else {
-		delete(c.secrets, job.name)
-	}
-}
-
-func NewSecretReconcileJob(name string, eventType EventType, secret *corev1.Secret) *SecretReconcileJob {
-	return &SecretReconcileJob{
-		eventType: eventType,
-		name:      name,
-		secret:    secret,
-	}
-}
-
-func (c *Caches) Secret(key, op string, s *corev1.Secret) {
-
 }
