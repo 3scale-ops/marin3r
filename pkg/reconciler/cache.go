@@ -21,19 +21,19 @@ import (
 	"go.uber.org/zap"
 )
 
-//------------------
-//----- Caches -----
-//------------------
+//----------------------
+//----- nodeCaches -----
+//----------------------
 
-type Caches struct {
+type nodeCaches struct {
 	secrets   map[string]*auth.Secret
 	listeners map[string]*envoyapi.Listener
 	clusters  map[string]*envoyapi.Cluster
 	endpoint  map[string]*envoyapi.ClusterLoadAssignment
 }
 
-func NewCaches() *Caches {
-	return &Caches{
+func NewNodeCaches() *nodeCaches {
+	return &nodeCaches{
 		secrets:   map[string]*auth.Secret{},
 		listeners: map[string]*envoyapi.Listener{},
 		clusters:  map[string]*envoyapi.Cluster{},
@@ -41,7 +41,7 @@ func NewCaches() *Caches {
 	}
 }
 
-func (c *Caches) makeSecretResources() []cache.Resource {
+func (c *nodeCaches) makeSecretResources() []cache.Resource {
 	secrets := make([]cache.Resource, len(c.secrets))
 	i := 0
 	for _, secret := range c.secrets {
@@ -51,7 +51,7 @@ func (c *Caches) makeSecretResources() []cache.Resource {
 	return secrets
 }
 
-func (c *Caches) makeClusterResources() []cache.Resource {
+func (c *nodeCaches) makeClusterResources() []cache.Resource {
 	clusters := make([]cache.Resource, len(c.clusters))
 	i := 0
 	for _, cluster := range c.clusters {
@@ -61,7 +61,7 @@ func (c *Caches) makeClusterResources() []cache.Resource {
 	return clusters
 }
 
-func (c *Caches) makeListenerResources() []cache.Resource {
+func (c *nodeCaches) makeListenerResources() []cache.Resource {
 	listeners := make([]cache.Resource, len(c.listeners))
 	i := 0
 	for _, listener := range c.listeners {
@@ -71,7 +71,7 @@ func (c *Caches) makeListenerResources() []cache.Resource {
 	return listeners
 }
 
-// func (c *Caches) makeEndpointResources() []cache.Resource {
+// func (c *nodeCaches) makeEndpointResources() []cache.Resource {
 // 	endpoints := make([]cache.Resource, len(c.endpoints))
 // 	i := 0
 // 	for _, endpoint := range c.endpoints {
@@ -87,7 +87,7 @@ func (c *Caches) makeListenerResources() []cache.Resource {
 
 type Reconciler struct {
 	version       int
-	caches        *Caches
+	nodeCaches    *nodeCaches
 	snapshotCache *cache.SnapshotCache
 	// TODO: do not go passing the channel around so freely,
 	// create a queue object with a channel inside, not public,

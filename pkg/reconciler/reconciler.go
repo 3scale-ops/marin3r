@@ -38,13 +38,17 @@ const (
 )
 
 type ReconcileJob interface {
-	process(*Caches, *zap.SugaredLogger)
+	process(*nodeCaches, *zap.SugaredLogger)
 	Push(chan ReconcileJob)
 }
 
+//------------------
+//----- Worker -----
+//------------------
+
 func NewReconciler(snapshotCache *cache.SnapshotCache, stopper chan struct{}, logger *zap.SugaredLogger) *Reconciler {
 	return &Reconciler{
-		caches:        NewCaches(),
+		nodeCaches:    NewNodeCaches(),
 		snapshotCache: snapshotCache,
 		Queue:         make(chan ReconcileJob),
 		logger:        logger,
@@ -63,7 +67,7 @@ func (cw *Reconciler) RunReconciler() {
 	for {
 		job, more := <-cw.Queue
 		if more {
-			job.process(cw.caches, cw.logger)
+			job.process(cw.nodeCaches, cw.logger)
 		} else {
 			cw.logger.Info("Received channel close, shutting down worker")
 			return
@@ -82,12 +86,12 @@ func (cw *Reconciler) makeSnapshot() {
 	cw.logger.Infof(">>>>>>>>>>>>>>>>>>> creating snapshot Version " + fmt.Sprint(cw.version))
 	snap := cache.NewSnapshot(fmt.Sprint(cw.version),
 		nil,
-		cw.caches.makeClusterResources(),
+		cw.nodeCaches.makeClusterResources(),
 		nil,
-		cw.caches.makeListenerResources(),
+		cw.nodeCaches.makeListenerResources(),
 		nil,
 	)
-	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", cw.version), cw.caches.makeSecretResources())
+	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", cw.version), cw.nodeCaches.makeSecretResources())
 	// ID should not be hardcoded, probably a worker per configured ID would be nice
 	snapshotCache.SetSnapshot(nodeID, snap)
 }

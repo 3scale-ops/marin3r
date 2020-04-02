@@ -59,7 +59,7 @@ func (m *resFromFile) Reset()         { *m = resFromFile{} }
 func (m *resFromFile) String() string { return proto.CompactTextString(m) }
 func (*resFromFile) ProtoMessage()    {}
 
-func (job ConfigMapReconcileJob) process(c *Caches, logger *zap.SugaredLogger) {
+func (job ConfigMapReconcileJob) process(c *nodeCaches, logger *zap.SugaredLogger) {
 
 	switch job.eventType {
 

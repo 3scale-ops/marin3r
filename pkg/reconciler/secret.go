@@ -38,7 +38,7 @@ func (srj SecretReconcileJob) Push(queue chan ReconcileJob) {
 	queue <- srj
 }
 
-func (job SecretReconcileJob) process(c *Caches, logger *zap.SugaredLogger) {
+func (job SecretReconcileJob) process(c *nodeCaches, logger *zap.SugaredLogger) {
 
 	// TODO: do not always update the envoy secret. Not all object
 	// updates in kubernetes mean an update of the envoy secret object

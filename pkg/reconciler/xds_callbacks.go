@@ -23,17 +23,20 @@ import (
 	"go.uber.org/zap"
 )
 
+// OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) error {
 	cb.Logger.Debugf("OnStreamOpen for id %v", id)
 	return nil
 }
 
+// OnStreamClosed implements go-control-plane/pkg/server/Callbacks.OnStreamClosed
 // OnStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
 func (cb *Callbacks) OnStreamClosed(id int64) {
 	cb.Logger.Debugf("OnStreamClosed for id %v", id)
 }
 
+// OnStreamRequest implements go-control-plane/pkg/server/Callbacks.OnStreamRequest
 // OnStreamRequest is called once a request is received on a stream.
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
@@ -49,17 +52,20 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 	return nil
 }
 
+// OnStreamResponse implements go-control-plane/pkg/server/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
 func (cb *Callbacks) OnStreamResponse(i int64, request *v2.DiscoveryRequest, response *v2.DiscoveryResponse) {
 	cb.Logger.Debug("OnStreamResponse: %s", spew.Sprint(response))
 }
 
+// OnFetchRequest implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchRequest is called for each Fetch request. Returning an error will end processing of the
 // request and respond with an error.
 func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *v2.DiscoveryRequest) error {
 	return nil
 }
 
+// OnFetchRequest implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchResponse is called immediately prior to sending a response.
 func (cb *Callbacks) OnFetchResponse(req *v2.DiscoveryRequest, resp *v2.DiscoveryResponse) {
 }
