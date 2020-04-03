@@ -1,0 +1,159 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: marin3r
+  namespace: default
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marin3r
+  namespace: default
+  labels:
+    app: marin3r
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marin3r
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: marin3r
+    spec:
+      serviceAccountName: marin3r
+      containers:
+        - name: marin3r
+          image: localhost:5000/marin3r:test
+          imagePullPolicy: Always
+          # command: ["bash"]
+          # args: ["-c", "sleep 3600"]
+          args:
+            - --certificate=/etc/marin3r/tls/server/tls.crt
+            - --private-key=/etc/marin3r/tls/server/tls.key
+            - --ca=/etc/marin3r/tls/ca/tls.crt
+            - --log-level=debug
+            - --namespace=default
+          ports:
+            - name: mgmt-server
+              containerPort: 18000
+              protocol: TCP
+            - name: mgmt-gateway
+              containerPort: 19001
+              protocol: TCP
+          volumeMounts:
+            - name: envoy-bootstrap
+              mountPath: /etc/marin3r/envoy/
+              subPath: bootstrap.yaml
+            - name: server-cert
+              mountPath: /etc/marin3r/tls/server/
+            - name: ca-cert
+              mountPath: /etc/marin3r/tls/ca/
+      volumes:
+        - name: envoy-bootstrap
+          configMap:
+            name: envoy-bootstrap
+        - name: server-cert
+          secret:
+            secretName: marin3r-server-cert
+        - name: ca-cert
+          secret:
+            secretName: marin3r-ca-cert
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marin3r
+  namespace: default
+  labels:
+    app: marin3r
+spec:
+  type: ClusterIP
+  ports:
+    - name: mgmt-server
+      port: 18000
+      targetPort: mgmt-server
+    - name: mgmt-gateway
+      port: 19001
+      targetPort: mgmt-gateway
+  selector:
+    app: marin3r
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-bootstrap
+  namespace: default
+data:
+  config.yaml: |
+    dynamic_resources:
+      ads_config:
+        api_type: GRPC
+        transport_api_version: V2
+        grpc_services:
+          - envoy_grpc:
+              cluster_name: ads_cluster
+      cds_config:
+        ads: {}
+      lds_config:
+        ads: {}
+    static_resources:
+      clusters:
+        - name: ads_cluster
+          connect_timeout: 1s
+          type: strict_dns
+          http2_protocol_options: {}
+          load_assignment:
+            cluster_name: ads_cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: marin3r
+                          port_value: 18000
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext
+              common_tls_context:
+                # mTLS is necessary for sds
+                tls_certificates:
+                  - certificate_chain:
+                      filename: /etc/envoy/tls/client/tls.crt
+                    private_key:
+                      filename: /etc/envoy/tls/client/tls.key
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: marin3r
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "watch", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: marin3r
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: marin3r
+subjects:
+  - kind: ServiceAccount
+    name: marin3r
+    namespace: default

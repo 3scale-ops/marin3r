@@ -5,7 +5,7 @@ RELEASE := 0.0.0
 CURRENT_GIT_REF := $(shell git describe --always --dirty)
 KIND_VERSION := v0.7.0
 KIND := bin/kind
-.PHONY: clean kind-create kind-delete build docker-build compose envoy start
+.PHONY: clean kind-create kind-delete docker-build compose envoy start
 
 $(KIND):
 	mkdir -p $$(dirname $@)
@@ -15,27 +15,47 @@ $(KIND):
 tmp:
 	mkdir -p $@
 
+kind-create: export KIND_BIN=$(KIND)
 kind-create: export KUBECONFIG=tmp/kubeconfig
-kind-create: certs tmp
-	$(KIND) create cluster --wait 5m
-	kubectl create secret tls certificate --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key
-	kubectl annotate secret certificate cert-manager.io/common-name=envoy-server
-	kubectl apply -f example/envoy-configmap.yaml
+kind-create: tmp $(KIND)
+	script/kind-with-registry.sh
 
-kind-delete:
+kind-marin3r: export KUBECONFIG=tmp/kubeconfig
+kind-start-marin3r: certs docker-build
+	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r-server.crt --key=certs/marin3r-server.key
+	kubectl create secret tls marin3r-ca-cert --cert=certs/ca.crt --key=certs/ca.key
+	kubectl create secret tls envoy-client-cert --cert=certs/envoy-client.crt --key=certs/envoy-client.key
+	kubectl apply -f deploy/marin3r.yaml
+
+	# kubectl create secret tls certificate --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key
+	# kubectl annotate secret certificate cert-manager.io/common-name=envoy-server
+	# kubectl apply -f example/envoy-configmap.yaml
+
+kind-refresh-marin3r: docker-build
+	kubectl delete pod -l app=marin3r
+
+kind-logs-mariner:
+	kubectl logs -f -l app=marin3r
+
+kind-delete: $(KIND)
 	$(KIND) delete cluster
+	docker rm -f kind-registry
 
 
-build: ## Builds HEAD of the current branch
-build: export RELEASE=$(CURRENT_GIT_REF)
-build: build/$(NAME)_amd64_$(RELEASE)
+# build: ## Builds HEAD of the current branch
+# build: export RELEASE=$(CURRENT_GIT_REF)
+# build: build/$(NAME)_amd64_$(RELEASE)
 
 build/$(NAME)_amd64_$(RELEASE):
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/$(NAME)_amd64_$(RELEASE) cmd/main.go
 
-docker-build: ## Builds the docker image for $(RELEASE)
+docker-build: ## Builds the docker image for HEAD of the current branch
+docker-build: export RELEASE=$(CURRENT_GIT_REF)
 docker-build: build/$(NAME)_amd64_$(RELEASE)
-	docker buil## Compose file to test marin3rd . -t quay.io/roivaz/$(NAME):v$(RELEASE) --build-arg release=$(RELEASE)
+	docker build . -t localhost:5000/$(NAME):v$(RELEASE) --build-arg RELEASE=$(RELEASE)
+	docker tag localhost:5000/$(NAME):v$(RELEASE) localhost:5000/$(NAME):test
+	docker push localhost:5000/$(NAME):v$(RELEASE)
+	docker push localhost:5000/$(NAME):test
 
 certs: ## use easyrsa to create testing CA and certificates for mTLS
 	example/gen-certs.sh $(EASYRSA_VERSION)
