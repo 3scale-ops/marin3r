@@ -64,17 +64,20 @@ func (m *resFromFile) Reset()         { *m = resFromFile{} }
 func (m *resFromFile) String() string { return proto.CompactTextString(m) }
 func (*resFromFile) ProtoMessage()    {}
 
-func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clientset, logger *zap.SugaredLogger) ([]string, error) {
+func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clientset, namespace string, logger *zap.SugaredLogger) ([]string, error) {
 
+	logger.Debugf("Processing ConfigMap job for node-id %s", job.nodeID)
 	// Check if it's the first time we see this
 	// nodeID, in which case we need to bootstrap
 	// its cache
 	if _, ok := c[job.nodeID]; !ok {
+		logger.Infof("Boostraping cache for node-id %s", job.nodeID)
 		c[job.nodeID] = NewNodeCaches()
 		// We need to trigger a reconcile for the secrets
 		// so this new cache gets populated with them
-		secrets, err := job.syncNodeSecrets(clientset)
+		secrets, err := job.syncNodeSecrets(clientset, namespace)
 		if err != nil {
+			logger.Errorf("Error populating secrets cache for node-id %s: '%s'", job.nodeID, err)
 			// Delete the node cache so in the
 			// next job it will try to rebuild the
 			// secrets cache again
@@ -126,9 +129,9 @@ func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clients
 }
 
 // SyncNodeSecrets synchronously builds/rebuilds the whole secrets cache
-func (job ConfigMapReconcileJob) syncNodeSecrets(clientset *kubernetes.Clientset) (map[string]*envoy_auth.Secret, error) {
+func (job ConfigMapReconcileJob) syncNodeSecrets(clientset *kubernetes.Clientset, namespace string) (map[string]*envoy_auth.Secret, error) {
 	secrets := map[string]*envoy_auth.Secret{}
-	list, err := clientset.CoreV1().Secrets("").List(metav1.ListOptions{})
+	list, err := clientset.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}

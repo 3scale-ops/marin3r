@@ -35,11 +35,11 @@ func NewSecretReconcileJob(cn string, eventType EventType, secret *corev1.Secret
 	}
 }
 
-func (srj SecretReconcileJob) Push(queue chan ReconcileJob) {
-	queue <- srj
+func (job SecretReconcileJob) Push(queue chan ReconcileJob) {
+	queue <- job
 }
 
-func (job SecretReconcileJob) process(c caches, clientset *kubernetes.Clientset, logger *zap.SugaredLogger) ([]string, error) {
+func (job SecretReconcileJob) process(c caches, clientset *kubernetes.Clientset, namespace string, logger *zap.SugaredLogger) ([]string, error) {
 
 	// SecretReconcileJob jobs don't have nodeID information because the secrets holding
 	// the certificates in k8s/ocp can be created by other tools (eg cert-manager)

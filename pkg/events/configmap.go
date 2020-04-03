@@ -29,7 +29,7 @@ import (
 
 const (
 	// TODO: make the annotation to look for configurable
-	configMapAnnotation = "marin3r.3scale.net/node-id"
+	annotation = "marin3r.3scale.net/node-id"
 )
 
 type ConfigMapHandler struct {
@@ -77,7 +77,7 @@ func (cmh *ConfigMapHandler) RunConfigMapHandler() {
 
 func onConfigMapAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {
 	cm := obj.(*corev1.ConfigMap)
-	if nodeID, ok := cm.GetAnnotations()[configMapAnnotation]; ok {
+	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' added", cm.GetNamespace(), cm.GetName(), nodeID)
 		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Add, cm).Push(queue)
 	}
@@ -85,7 +85,7 @@ func onConfigMapAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger 
 
 func onConfigMapUpdate(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {
 	cm := obj.(*corev1.ConfigMap)
-	if nodeID, ok := cm.GetAnnotations()[configMapAnnotation]; ok {
+	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' updated", cm.GetNamespace(), cm.GetName(), nodeID)
 		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Update, cm).Push(queue)
 	}
@@ -93,7 +93,7 @@ func onConfigMapUpdate(obj interface{}, queue chan reconciler.ReconcileJob, logg
 
 func onConfigMapDelete(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {
 	cm := obj.(*corev1.ConfigMap)
-	if nodeID, ok := cm.GetAnnotations()[configMapAnnotation]; ok {
+	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' deleted", cm.GetNamespace(), cm.GetName(), nodeID)
 		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Delete, cm).Push(queue)
 	}

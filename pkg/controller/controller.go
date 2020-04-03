@@ -36,8 +36,8 @@ const (
 
 func NewController(
 	tlsCertificatePath string, tlsKeyPath string, tlsCAPath string,
-	logLevel string, namespace string, ooCluster bool,
-	ctx context.Context, stopper chan struct{}, logger *zap.SugaredLogger) error {
+	namespace string, ooCluster bool, ctx context.Context, stopper chan struct{},
+	logger *zap.SugaredLogger) error {
 
 	// -------------------------
 	// ---- Init components ----
@@ -77,7 +77,7 @@ func NewController(
 	}
 
 	// Init the cache worker
-	rec := reconciler.NewReconciler(clientset, xdss.GetSnapshotCache(), stopper, logger)
+	rec := reconciler.NewReconciler(clientset, namespace, xdss.GetSnapshotCache(), stopper, logger)
 
 	// Init event handlers
 	secretHandler := events.NewSecretHandler(clientset, namespace, rec.Queue, ctx, logger, stopper)

@@ -41,7 +41,7 @@ const (
 )
 
 type ReconcileJob interface {
-	process(caches, *kubernetes.Clientset, *zap.SugaredLogger) ([]string, error)
+	process(caches, *kubernetes.Clientset, string, *zap.SugaredLogger) ([]string, error)
 	Push(chan ReconcileJob)
 }
 
@@ -50,6 +50,7 @@ type ReconcileJob interface {
 //------------------
 type Reconciler struct {
 	clientset     *kubernetes.Clientset
+	namespace     string
 	version       int
 	caches        caches
 	snapshotCache *cache.SnapshotCache
@@ -61,9 +62,12 @@ type Reconciler struct {
 	stopper chan struct{}
 }
 
-func NewReconciler(clientset *kubernetes.Clientset, snapshotCache *cache.SnapshotCache, stopper chan struct{}, logger *zap.SugaredLogger) *Reconciler {
+func NewReconciler(clientset *kubernetes.Clientset, namespace string,
+	snapshotCache *cache.SnapshotCache, stopper chan struct{},
+	logger *zap.SugaredLogger) *Reconciler {
 	return &Reconciler{
 		clientset:     clientset,
+		namespace:     namespace,
 		caches:        make(caches),
 		snapshotCache: snapshotCache,
 		Queue:         make(chan ReconcileJob),
@@ -80,7 +84,7 @@ func (r *Reconciler) RunReconciler() {
 	for {
 		job, more := <-r.Queue
 		if more {
-			nodeIDs, err := job.process(r.caches, r.clientset, r.logger)
+			nodeIDs, err := job.process(r.caches, r.clientset, r.namespace, r.logger)
 			if err != nil {
 				break
 			}
