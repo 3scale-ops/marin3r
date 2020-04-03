@@ -15,10 +15,15 @@
 package controller
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
+	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -60,4 +65,68 @@ func outOfClusterClient() (*kubernetes.Clientset, error) {
 	}
 
 	return clientset, err
+}
+
+func NewLogger(logLevel string) *zap.SugaredLogger {
+
+	rawJSON := []byte(`{
+		"level": "info",
+		"outputPaths": ["stdout"],
+		"errorOutputPaths": ["stderr"],
+		"encoding": "json",
+		"encoderConfig": {
+			"messageKey": "message",
+			"levelKey": "level",
+			"levelEncoder": "lowercase"
+		}
+	}`)
+
+	var cfg zap.Config
+	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
+		panic(err)
+	}
+
+	logger, err := cfg.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	if logLevel != "info" {
+		switch logLevel {
+		case "debug":
+			cfg.Level.SetLevel(zap.DebugLevel)
+		case "warn":
+			cfg.Level.SetLevel(zap.WarnLevel)
+		case "error":
+			cfg.Level.SetLevel(zap.ErrorLevel)
+		}
+	}
+
+	defer logger.Sync() // flushes buffer, if any
+	return logger.Sugar()
+}
+
+func RunSignalWatcher(logger *zap.SugaredLogger) (context.Context, chan struct{}) {
+	// Create a context and cancel it when proper
+	// signals are received
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+
+	// Channel to stop reconcilers
+	stopper := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		oscall := <-sigc
+		logger.Infof("Received system call: %+v", oscall)
+		close(stopper)
+		cancel()
+	}()
+
+	return ctx, stopper
 }

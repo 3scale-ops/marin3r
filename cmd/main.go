@@ -15,6 +15,9 @@
 package main
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/roivaz/marin3r/pkg/controller"
 	"github.com/spf13/cobra"
 )
@@ -27,6 +30,7 @@ var (
 	logLevel           string
 	ooCluster          bool
 	namespace          string
+	mode               string
 
 	rootCmd = &cobra.Command{
 		Use:   "marin3r",
@@ -42,6 +46,7 @@ func init() {
 	rootCmd.Flags().StringVar(&logLevel, "log-level", "info", "One of debug, info, warn, error")
 	rootCmd.Flags().BoolVar(&ooCluster, "out-of-cluster", false, "Use this flag if running outside of the cluster")
 	rootCmd.Flags().StringVar(&namespace, "namespace", "", "Namespace that marin3r is scoped to. Only namespace scope is supported")
+	rootCmd.Flags().StringVar(&mode, "mode", "all", "marin3r mode of operation, one of: 'control-plane', 'webhook', 'all'")
 
 	rootCmd.MarkFlagRequired("namespace")
 }
@@ -52,15 +57,53 @@ func main() {
 }
 
 func run(cmd *cobra.Command, args []string) {
-	err := controller.NewController(
-		tlsCertificatePath,
-		tlsKeyPath,
-		tlsCAPath,
-		logLevel,
-		namespace,
-		ooCluster,
-	)
-	if err != nil {
-		panic(err)
+
+	logger := controller.NewLogger(logLevel)
+	ctx, stopper := controller.RunSignalWatcher(logger)
+
+	var wait sync.WaitGroup
+
+	switch mode {
+	case "all":
+		wait.Add(2)
+		go func() {
+			defer wait.Done()
+			err := controller.NewController(
+				tlsCertificatePath, tlsKeyPath, tlsCAPath,
+				logLevel, namespace, ooCluster,
+				ctx, stopper, logger,
+			)
+
+			if err != nil {
+				panic(err)
+			}
+		}()
+
+		go func() {
+			defer wait.Done()
+			controller.RunWebhook()
+		}()
+		wait.Wait()
+
+	case "control-plane":
+		if err := controller.NewController(
+			tlsCertificatePath, tlsKeyPath, tlsCAPath,
+			logLevel, namespace, ooCluster,
+			ctx, stopper, logger,
+		); err != nil {
+			panic(err)
+		}
+
+	case "webhook":
+		if err := controller.RunWebhook(); err != nil {
+			panic(err)
+		}
+
+	default:
+		panic(fmt.Errorf("Unsupported mode '%s'", mode))
 	}
+
+	// The signal watcher will close this channle
+	// upon receiving a system signal
+	<-stopper
 }

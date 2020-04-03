@@ -18,13 +18,9 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"io/ioutil"
 	"log"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"github.com/roivaz/marin3r/pkg/events"
@@ -38,11 +34,10 @@ const (
 	managementPort = 18000
 )
 
-func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespace string, ooCluster bool) error {
-
-	logger := newLogger(logLevel)
-
-	ctx, stopper := runSignalWatcher(logger)
+func NewController(
+	tlsCertificatePath string, tlsKeyPath string, tlsCAPath string,
+	logLevel string, namespace string, ooCluster bool,
+	ctx context.Context, stopper chan struct{}, logger *zap.SugaredLogger) error {
 
 	// -------------------------
 	// ---- Init components ----
@@ -134,31 +129,6 @@ func NewController(tlsCertificatePath, tlsKeyPath, tlsCAPath, logLevel, namespac
 	return nil
 }
 
-func runSignalWatcher(logger *zap.SugaredLogger) (context.Context, chan struct{}) {
-	// Create a context and cancel it when proper
-	// signals are received
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-
-	// Channel to stop reconcilers
-	stopper := make(chan struct{})
-
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		oscall := <-sigc
-		logger.Infof("Received system call: %+v", oscall)
-		close(stopper)
-		cancel()
-	}()
-
-	return ctx, stopper
-}
-
 func getCertificate(certPath, keyPath string, logger *zap.SugaredLogger) tls.Certificate {
 	certificate, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
@@ -178,43 +148,4 @@ func getCA(caPath string, logger *zap.SugaredLogger) *x509.CertPool {
 		}
 	}
 	return certPool
-}
-
-func newLogger(logLevel string) *zap.SugaredLogger {
-
-	rawJSON := []byte(`{
-		"level": "info",
-		"outputPaths": ["stdout"],
-		"errorOutputPaths": ["stderr"],
-		"encoding": "json",
-		"encoderConfig": {
-			"messageKey": "message",
-			"levelKey": "level",
-			"levelEncoder": "lowercase"
-		}
-	}`)
-
-	var cfg zap.Config
-	if err := json.Unmarshal(rawJSON, &cfg); err != nil {
-		panic(err)
-	}
-
-	logger, err := cfg.Build()
-	if err != nil {
-		panic(err)
-	}
-
-	if logLevel != "info" {
-		switch logLevel {
-		case "debug":
-			cfg.Level.SetLevel(zap.DebugLevel)
-		case "warn":
-			cfg.Level.SetLevel(zap.WarnLevel)
-		case "error":
-			cfg.Level.SetLevel(zap.ErrorLevel)
-		}
-	}
-
-	defer logger.Sync() // flushes buffer, if any
-	return logger.Sugar()
 }
