@@ -5,6 +5,7 @@ RELEASE := 0.0.0
 CURRENT_GIT_REF := $(shell git describe --always --dirty)
 KIND_VERSION := v0.7.0
 KIND := bin/kind
+export KUBECONFIG = tmp/kubeconfig
 .PHONY: clean kind-create kind-delete docker-build compose envoy start
 
 $(KIND):
@@ -16,26 +17,29 @@ tmp:
 	mkdir -p $@
 
 kind-create: export KIND_BIN=$(KIND)
-kind-create: export KUBECONFIG=tmp/kubeconfig
 kind-create: tmp $(KIND)
 	script/kind-with-registry.sh
 
-kind-marin3r: export KUBECONFIG=tmp/kubeconfig
 kind-start-marin3r: certs docker-build
-	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r-server.crt --key=certs/marin3r-server.key
+	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r.default.svc.crt --key=certs/marin3r.default.svc.key
 	kubectl create secret tls marin3r-ca-cert --cert=certs/ca.crt --key=certs/ca.key
-	kubectl create secret tls envoy-client-cert --cert=certs/envoy-client.crt --key=certs/envoy-client.key
+	kubectl create secret tls envoy-sidecar-client-cert --cert=certs/envoy-client.crt --key=certs/envoy-client.key
 	kubectl apply -f deploy/marin3r.yaml
 
-	# kubectl create secret tls certificate --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key
-	# kubectl annotate secret certificate cert-manager.io/common-name=envoy-server
-	# kubectl apply -f example/envoy-configmap.yaml
+kind-start-envoy1: certs
+	kubectl create secret tls envoy1-cert --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key
+	kubectl annotate secret envoy1-cert cert-manager.io/common-name=envoy-server1
+	kubectl apply -f deploy/envoy-config-cm.yaml
+	kubectl apply -f deploy/envoy-pod.yaml
 
 kind-refresh-marin3r: docker-build
 	kubectl delete pod -l app=marin3r
 
-kind-logs-mariner:
+kind-logs-marin3r:
 	kubectl logs -f -l app=marin3r
+
+kind-logs-envoy1:
+	kubectl logs -f envoy1
 
 kind-delete: $(KIND)
 	$(KIND) delete cluster
@@ -58,7 +62,7 @@ docker-build: build/$(NAME)_amd64_$(RELEASE)
 	docker push localhost:5000/$(NAME):test
 
 certs: ## use easyrsa to create testing CA and certificates for mTLS
-	example/gen-certs.sh $(EASYRSA_VERSION)
+	script/gen-certs.sh $(EASYRSA_VERSION)
 
 compose: ## Compose file to test marin3r
 compose: export RELEASE=$(CURRENT_GIT_REF)
@@ -66,7 +70,7 @@ compose: certs build/$(NAME)_amd64_$(RELEASE)
 	docker-compose up
 
 clean: ## Remove temporary resources from the repo
-	rm -rf certs build tmp
+	rm -rf certs build tmp bin
 
 envoy: ## execute an envoy process in a container that will try to connect to a local marin3r control plane
 envoy: certs

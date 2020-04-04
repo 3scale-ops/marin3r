@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: Pod
 metadata:
@@ -12,19 +13,48 @@ spec:
           "-c",
           "/etc/envoy/bootstrap/config.yaml",
           "--service-cluster",
-          "roivaz",
+          "envoy1",
           "--service-node",
-          "roivaz",
+          "envoy1",
         ]
+      ports:
+        - name: http
+          containerPort: 8080
+          hostPort: 8080
+          protocol: TCP
+        - name: https
+          containerPort: 8443
+          hostPort: 8443
+          protocol: TCP
       volumeMounts:
-        - name: bootstrap
+        - name: envoy-sidecar-bootstrap
           mountPath: /etc/envoy/bootstrap
         - name: client-cert
           mountPath: /etc/envoy/tls/client
   volumes:
-    - name: bootstrap
+    - name: envoy-sidecar-bootstrap
       configMap:
-        name: envoy-bootstrap
-    - name: client-cert
+        name: envoy-sidecar-bootstrap
+    - name: envoy-sidecar-client-cert
       secret:
-        secretName: envoy-client-cert
+        secretName: envoy-sicecar-client-cert
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: envoy1
+#   namespace: default
+#   labels:
+#     app: envoy1
+# spec:
+#   type: ClusterIP
+#   ports:
+#     - name: http
+#       port: 8080
+#       targetPort: http
+#     - name: https
+#       port: 8443
+#       targetPort: https
+#   selector:
+#     app: envoy1

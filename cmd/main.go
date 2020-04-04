@@ -70,8 +70,7 @@ func run(cmd *cobra.Command, args []string) {
 			defer wait.Done()
 			err := controller.NewController(
 				tlsCertificatePath, tlsKeyPath, tlsCAPath,
-				logLevel, namespace, ooCluster,
-				ctx, stopper, logger,
+				namespace, ooCluster, ctx, stopper, logger,
 			)
 
 			if err != nil {
@@ -81,21 +80,26 @@ func run(cmd *cobra.Command, args []string) {
 
 		go func() {
 			defer wait.Done()
-			controller.RunWebhook()
+			err := controller.RunWebhook(ctx, tlsCertificatePath, tlsKeyPath, tlsCAPath,
+				namespace, logger)
+			if err != nil {
+				panic(err)
+			}
 		}()
 		wait.Wait()
 
 	case "control-plane":
 		if err := controller.NewController(
 			tlsCertificatePath, tlsKeyPath, tlsCAPath,
-			logLevel, namespace, ooCluster,
-			ctx, stopper, logger,
+			namespace, ooCluster, ctx, stopper, logger,
 		); err != nil {
 			panic(err)
 		}
 
 	case "webhook":
-		if err := controller.RunWebhook(); err != nil {
+		err := controller.RunWebhook(ctx, tlsCertificatePath, tlsKeyPath, tlsCAPath,
+			namespace, logger)
+		if err != nil {
 			panic(err)
 		}
 
