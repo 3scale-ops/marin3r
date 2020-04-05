@@ -46,17 +46,11 @@ spec:
             - name: webhook
               containerPort: 8443
           volumeMounts:
-            - name: envoy-sidecar-bootstrap
-              mountPath: /etc/marin3r/envoy/
-              subPath: bootstrap.yaml
             - name: server-cert
               mountPath: /etc/marin3r/tls/server/
             - name: ca-cert
               mountPath: /etc/marin3r/tls/ca/
       volumes:
-        - name: envoy-sidecar-bootstrap
-          configMap:
-            name: envoy-sidecar-bootstrap
         - name: server-cert
           secret:
             secretName: marin3r-server-cert
@@ -168,6 +162,12 @@ metadata:
   name: mariner-sidecar-injector-webhook
 webhooks:
   - name: webhook.marin3r.3scale.net
+    namespaceSelector:
+      matchLabels:
+        marin3r.3scale.net/status: "enabled"
+    objectSelector:
+      matchLabels:
+        marin3r.3scale.net/status: "enabled"
     sideEffects: None
     admissionReviewVersions: ["v1", "v1beta1"]
     timeoutSeconds: 5
@@ -199,7 +199,7 @@ webhooks:
         b2d1dGhEa3BNdVVsUmZGbDhZSyt1MXYxQkk4Zm5aUE5pQmhQWmZrMFdhRjh4RDFrRgpka1BjbjY5
         TWIvT2R3QnhjdVRWZnZLNkxFcER3Vnc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
     rules:
-      - operations: ["CREATE", "UPDATE"]
+      - operations: ["CREATE"]
         apiGroups: [""]
         apiVersions: ["v1"]
         resources: ["pods"]
