@@ -48,8 +48,9 @@ func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]
 	logger.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v patchOperation=%v UserInfo=%v",
 		req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
 
-	if _, ok := pod.GetAnnotations()[nodeIDAnnotation]; !ok {
-		logger.Infof("skipping mutation for %s/%s due to missing '%s' annotation", pod.Namespace, pod.Name, nodeIDAnnotation)
+	if _, ok := pod.GetAnnotations()[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID)]; !ok {
+		logger.Infof("skipping mutation for %s/%s due to missing '%s' annotation", pod.Namespace,
+			pod.Name, fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID))
 		return nil, nil
 	}
 

@@ -22,30 +22,35 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+type parameter struct {
+	name         string
+	annotation   string
+	defaultValua string
+}
+
 const (
-	// annotations
-	// node-id annotation the only required one, and the one
-	// that determines if pod must be mutated or not
-	nodeIDAnnotation = "marin3r.3scale.net/node-id"
-	// format "name:port:protocol,name:port:protcol"
-	portsAnnotation            = "marin3r.3scale.net/ports"
-	hostPortMappingsAnnotation = "marin3r.3scale.net/host-port-mappings"
-	containerNameAnnotation    = "marin3r.3scale.net/container-name"
-	imageAnnotation            = "marin3r.3scale.net/image"
-	adsConfigMapAnnotation     = "marin3r.3scale.net/ads-configmap"
-	clusterIDAnnotation        = "marin3r.3scale.net/cluster-id"
-	configVolumeAnnotation     = "marin3r.3scale.net/config-volume"
-	tlsVolumeAnnotation        = "marin3r.3scale.net/tls-volume"
-	clientCertSecretAnnotation = "marin3r.3scale.net/client-certificate"
+
+	// parameter names
+	paramNodeID            = "node-id"
+	paramClusteID          = "cluster-id"
+	paramContainerName     = "container-name"
+	paramPorts             = "ports"
+	paramHostPortMapings   = "host-port-mappings"
+	paramImage             = "image"
+	paramADSConfigMap      = "ads-configmap"
+	paramConfigVolume      = "config-volume"
+	paramTLSVolume         = "tls-volume"
+	paramClientCertificate = "client-certificate"
 
 	// default values
 	defaultContainerName     = "envoy-sidecar"
-	defaultContainerImage    = "envoyproxy/envoy:v1.13.1"
+	defaultImage             = "envoyproxy/envoy:v1.13.1"
 	defaultADSConfigMap      = "envoy-sidecar-bootstrap"
-	defaultEnvoyConfigVolume = "envoy-sidecar-bootstrap"
-	defaultEnvoyTLSVolume    = "envoy-sidecar-tls"
-	defaultPortProtocol      = "TCP"
-	defaultClientCertSecret  = "envoy-sidecar-client-cert"
+	defaultConfigVolume      = "envoy-sidecar-bootstrap"
+	defaultTLSVolume         = "envoy-sidecar-tls"
+	defaultClientCertificate = "envoy-sidecar-client-cert"
+
+	marin3rAnnotationsDomain = "marin3r.3scale.net"
 )
 
 type envoySidecarConfig struct {
@@ -60,46 +65,64 @@ type envoySidecarConfig struct {
 	clientCertSecret string
 }
 
+func getStringParam(key string, annotations map[string]string) string {
+
+	var defaults = map[string]string{
+		paramContainerName:     defaultContainerName,
+		paramImage:             defaultImage,
+		paramADSConfigMap:      defaultADSConfigMap,
+		paramConfigVolume:      defaultConfigVolume,
+		paramTLSVolume:         defaultTLSVolume,
+		paramClientCertificate: defaultClientCertificate,
+	}
+
+	// return the value specified in the corresponding annotation, if any
+	if value, ok := annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, key)]; ok {
+		return value
+	}
+
+	// the default for cluster-id is to be set to the node-id value, which
+	// has no default but is always set by the user, otherwise we won't get
+	// this far as there are previous checks that validate that node-id is set
+	if key == "cluster-id" {
+		return getNodeID(annotations)
+	}
+
+	// return a default value
+	return defaults[key]
+}
+
+func getNodeID(annotations map[string]string) string {
+	// the node-id annotation is always present, otherwise
+	// mutation won't even be triggered
+	return annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID)]
+}
+
 func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
 
-	esc.name = getContainerName(annotations)
-	esc.image = getContainerImage(annotations)
+	esc.name = getStringParam("container-name", annotations)
+	esc.image = getStringParam("image", annotations)
 
 	ports, err := getContainerPorts(annotations)
 	if err != nil {
 		return err
 	}
 	esc.ports = ports
-	esc.adsConfigMap = getADSConfigMap(annotations)
-	esc.nodeID = getEnvoyNodeID(annotations)
-	esc.clusterID = getEnvoyClusterID(annotations)
-	esc.configVolume = getConfigVolumeName(annotations)
-	esc.tlsVolume = getTLSVolumeName(annotations)
-	esc.clientCertSecret = getClientCertSecret(annotations)
+	esc.adsConfigMap = getStringParam("ads-configmap", annotations)
+	esc.nodeID = getNodeID(annotations)
+	esc.clusterID = getStringParam("cluster-id", annotations)
+	esc.configVolume = getStringParam("config-volume", annotations)
+	esc.tlsVolume = getStringParam("tls-volume", annotations)
+	esc.clientCertSecret = getStringParam("client-certificate", annotations)
 
 	return nil
 }
 
-func getContainerName(annotations map[string]string) string {
-	if name, ok := annotations[containerNameAnnotation]; ok {
-		return name
-	} else {
-		return defaultContainerName
-	}
-}
-
-func getContainerImage(annotations map[string]string) string {
-	if image, ok := annotations[imageAnnotation]; ok {
-		return image
-	} else {
-		return defaultContainerImage
-	}
-}
-
+// port spec format is "name:port[:protocol],name:port[:protcol]"
 func getContainerPorts(annotations map[string]string) ([]corev1.ContainerPort, error) {
 	plist := []corev1.ContainerPort{}
 
-	if ports, ok := annotations[portsAnnotation]; ok {
+	if ports, ok := annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramPorts)]; ok {
 
 		for _, containerPort := range strings.Split(ports, ",") {
 
@@ -137,17 +160,19 @@ func parsePortSpec(spec string) (*corev1.ContainerPort, error) {
 	}
 
 	port.Name = params[0]
-	if p, err := portNumber(params[1]); err != nil {
+	p, err := portNumber(params[1])
+	if err != nil {
 		return nil, err
-	} else {
-		port.ContainerPort = int32(p)
 	}
+	port.ContainerPort = int32(p)
 
 	// Check that protocol matches one of the allowed protocols
 	if len(params) == 3 {
 		if params[2] == "TCP" || params[2] == "UDP" || params[2] == "SCTP" {
 			port.Protocol = corev1.Protocol(params[2])
 
+		} else {
+			return nil, fmt.Errorf("Unsupported port protocol '%s'", params[2])
 		}
 	}
 
@@ -157,18 +182,18 @@ func parsePortSpec(spec string) (*corev1.ContainerPort, error) {
 
 func hostPortMapping(portName string, annotations map[string]string) (int32, error) {
 
-	if specs, ok := annotations[hostPortMappingsAnnotation]; ok {
+	if specs, ok := annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramHostPortMapings)]; ok {
 		for _, spec := range strings.Split(specs, ",") {
 			params := strings.Split(spec, ":")
 			if len(params) != 2 {
 				return 0, fmt.Errorf("Incorrect number of params in host-port-mapping spec '%v'", spec)
 			}
 			if params[0] == portName {
-				if p, err := portNumber(params[1]); err != nil {
+				p, err := portNumber(params[1])
+				if err != nil {
 					return 0, err
-				} else {
-					return p, nil
 				}
+				return p, nil
 			}
 		}
 	}
@@ -187,51 +212,6 @@ func portNumber(sport string) (int32, error) {
 		return 0, fmt.Errorf("Port number %v is not in the range 1024-65535", iport)
 	}
 	return int32(iport), nil
-}
-
-func getADSConfigMap(annotations map[string]string) string {
-	if cm, ok := annotations[adsConfigMapAnnotation]; ok {
-		return cm
-	} else {
-		return defaultADSConfigMap
-	}
-}
-func getEnvoyNodeID(annotations map[string]string) string {
-	// the node-id annotation is always present, otherwise
-	// mutation won't even be triggered
-	return annotations[nodeIDAnnotation]
-}
-
-func getEnvoyClusterID(annotations map[string]string) string {
-	if clusterID, ok := annotations[clusterIDAnnotation]; ok {
-		return clusterID
-	} else {
-		return annotations[nodeIDAnnotation]
-	}
-}
-
-func getTLSVolumeName(annotations map[string]string) string {
-	if name, ok := annotations[tlsVolumeAnnotation]; ok {
-		return name
-	} else {
-		return defaultEnvoyTLSVolume
-	}
-}
-
-func getConfigVolumeName(annotations map[string]string) string {
-	if clusterID, ok := annotations[configVolumeAnnotation]; ok {
-		return clusterID
-	} else {
-		return defaultEnvoyConfigVolume
-	}
-}
-
-func getClientCertSecret(annotations map[string]string) string {
-	if name, ok := annotations[clientCertSecretAnnotation]; ok {
-		return name
-	} else {
-		return defaultClientCertSecret
-	}
 }
 
 func (esc *envoySidecarConfig) container() corev1.Container {
