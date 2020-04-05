@@ -21,7 +21,7 @@ kind-create: tmp $(KIND)
 	script/kind-with-registry.sh
 
 kind-start-marin3r: certs docker-build
-	kubectl label namespace/default marin3r.3scale.net/status="on"
+	kubectl label namespace/default marin3r.3scale.net/status="enabled"
 	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r.default.svc.crt --key=certs/marin3r.default.svc.key
 	kubectl create secret tls marin3r-ca-cert --cert=certs/ca.crt --key=certs/ca.key
 	kubectl create secret tls envoy-sidecar-client-cert --cert=certs/envoy-client.crt --key=certs/envoy-client.key

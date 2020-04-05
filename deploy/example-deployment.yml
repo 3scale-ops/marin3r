@@ -18,6 +18,9 @@ spec:
       annotations:
         marin3r.3scale.net/node-id: kuard
         marin3r.3scale.net/ports: envoy-http:8090,envoy-https:8443
+        # Map envoy ports to the to the kind extraPortMappings so services
+        # are reachable from the docker host
+        marin3r.3scale.net/host-port-mappings: envoy-http:8080,envoy-https:8443
     spec:
       containers:
         - name: kuard

@@ -29,6 +29,7 @@ const (
 	nodeIDAnnotation = "marin3r.3scale.net/node-id"
 	// format "name:port:protocol,name:port:protcol"
 	portsAnnotation            = "marin3r.3scale.net/ports"
+	hostPortMappingsAnnotation = "marin3r.3scale.net/host-port-mappings"
 	containerNameAnnotation    = "marin3r.3scale.net/container-name"
 	imageAnnotation            = "marin3r.3scale.net/image"
 	adsConfigMapAnnotation     = "marin3r.3scale.net/ads-configmap"
@@ -97,17 +98,29 @@ func getContainerImage(annotations map[string]string) string {
 
 func getContainerPorts(annotations map[string]string) ([]corev1.ContainerPort, error) {
 	plist := []corev1.ContainerPort{}
+
 	if ports, ok := annotations[portsAnnotation]; ok {
+
 		for _, containerPort := range strings.Split(ports, ",") {
-			if p, err := parsePortSpec(containerPort); err != nil {
+
+			p, err := parsePortSpec(containerPort)
+			if err != nil {
 				return []corev1.ContainerPort{}, err
-			} else {
-				plist = append(plist, *p)
 			}
+
+			hp, err := hostPortMapping(p.Name, annotations)
+			if err != nil {
+				return []corev1.ContainerPort{}, err
+			}
+			if hp != 0 {
+				p.HostPort = hp
+			}
+			plist = append(plist, *p)
+
 		}
 
 	} else {
-		// no ports defined for envoy sidecat
+		// no ports defined for envoy sidecar
 		return []corev1.ContainerPort{}, nil
 	}
 
@@ -115,38 +128,65 @@ func getContainerPorts(annotations map[string]string) ([]corev1.ContainerPort, e
 }
 
 func parsePortSpec(spec string) (*corev1.ContainerPort, error) {
+	var port corev1.ContainerPort
+
 	params := strings.Split(spec, ":")
 	// Each port spec should at least contain name and port number
 	if len(params) < 2 {
 		return nil, fmt.Errorf("Incorrect format, the por specification format for the envoy sidecar container is 'name:port[:protocol]'")
 	}
-	// Parse and validate the port number
-	portNumber, err := strconv.Atoi(params[1])
-	if err != nil {
-		return nil, fmt.Errorf("%s doesn't look a number, the por specification format for the envoy sidecar container is 'name:port[:protocol]'", params[1])
-	}
-	// Check if port is within allowed ranges. Privileged ports are not allowed
-	if portNumber < 1024 || portNumber > 65535 {
-		return nil, fmt.Errorf("Port number %s is not in the range 1024-65535", params[1])
+
+	port.Name = params[0]
+	if p, err := portNumber(params[1]); err != nil {
+		return nil, err
+	} else {
+		port.ContainerPort = int32(p)
 	}
 
 	// Check that protocol matches one of the allowed protocols
 	if len(params) == 3 {
 		if params[2] == "TCP" || params[2] == "UDP" || params[2] == "SCTP" {
-			return &corev1.ContainerPort{
-				Name:          params[0],
-				ContainerPort: int32(portNumber),
-				Protocol:      corev1.Protocol(params[2]),
-			}, nil
+			port.Protocol = corev1.Protocol(params[2])
+
 		}
 	}
 
-	// No protocol specified
-	return &corev1.ContainerPort{
-		Name:          params[0],
-		ContainerPort: int32(portNumber),
-	}, nil
+	return &port, nil
 
+}
+
+func hostPortMapping(portName string, annotations map[string]string) (int32, error) {
+
+	if specs, ok := annotations[hostPortMappingsAnnotation]; ok {
+		for _, spec := range strings.Split(specs, ",") {
+			params := strings.Split(spec, ":")
+			if len(params) != 2 {
+				return 0, fmt.Errorf("Incorrect number of params in host-port-mapping spec '%v'", spec)
+			}
+			if params[0] == portName {
+				if p, err := portNumber(params[1]); err != nil {
+					return 0, err
+				} else {
+					return p, nil
+				}
+			}
+		}
+	}
+	return 0, nil
+}
+
+func portNumber(sport string) (int32, error) {
+
+	// Parse and validate the port number
+	iport, err := strconv.Atoi(sport)
+	if err != nil {
+		return 0, fmt.Errorf("%v doesn't look like a port number, check your port specs", sport)
+	}
+	// Check if port is within allowed ranges. Privileged ports are not allowed
+	if iport < 1024 || iport > 65535 {
+		return 0, fmt.Errorf("Port number %v is not in the range 1024-65535", iport)
+	}
+	return int32(iport), nil
 }
 
 func getADSConfigMap(annotations map[string]string) string {

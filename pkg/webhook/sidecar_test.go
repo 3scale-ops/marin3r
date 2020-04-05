@@ -7,6 +7,50 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+func TestPortNumber(t *testing.T) {
+
+	cases := map[string]int32{
+		"8080": 8080,
+		"3000": 3000,
+	}
+
+	for input, expected := range cases {
+		port, _ := portNumber(input)
+		assert.Equal(t, expected, port, "Expected port received")
+	}
+}
+
+func TestHostPortMapping(t *testing.T) {
+	cases := []struct {
+		annotations map[string]string
+		pname       string
+		expected    int32
+	}{
+		{
+			annotations: map[string]string{
+				"marin3r.3scale.net/host-port-mappings": "http:3000",
+			},
+			pname:    "http",
+			expected: 3000,
+		},
+		{
+			annotations: map[string]string{
+				"marin3r.3scale.net/host-port-mappings": "https:8443",
+			},
+			pname:    "https",
+			expected: 8443,
+		},
+	}
+
+	for _, c := range cases {
+		iport, err := hostPortMapping(c.pname, c.annotations)
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(t, c.expected, iport, "Expected port received")
+	}
+}
+
 func TestParsePortSpec(t *testing.T) {
 
 	specs := map[string]*corev1.ContainerPort{
@@ -32,8 +76,11 @@ func TestParsePortSpec(t *testing.T) {
 	}
 
 	for k, v := range specs {
-		r, _ := parsePortSpec(k)
-		assert.Equal(t, r, v, "ContainerPort objects are equal")
+		r, err := parsePortSpec(k)
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(t, v, r, "ContainerPort objects are equal")
 	}
 }
 
@@ -41,13 +88,13 @@ func TestGetContainerPorts(t *testing.T) {
 
 	specs := []struct {
 		annotations map[string]string
-		result      []corev1.ContainerPort
+		expected    []corev1.ContainerPort
 	}{
 		{
 			annotations: map[string]string{
 				"marin3r.3scale.net/ports": "http:3000",
 			},
-			result: []corev1.ContainerPort{
+			expected: []corev1.ContainerPort{
 				corev1.ContainerPort{
 					Name:          "http",
 					ContainerPort: 3000,
@@ -57,7 +104,7 @@ func TestGetContainerPorts(t *testing.T) {
 			annotations: map[string]string{
 				"marin3r.3scale.net/ports": "http:8080,https:8443",
 			},
-			result: []corev1.ContainerPort{
+			expected: []corev1.ContainerPort{
 				corev1.ContainerPort{
 					Name:          "http",
 					ContainerPort: 8080,
@@ -71,7 +118,7 @@ func TestGetContainerPorts(t *testing.T) {
 			annotations: map[string]string{
 				"marin3r.3scale.net/ports": "udp:6000:UDP,https:8443",
 			},
-			result: []corev1.ContainerPort{
+			expected: []corev1.ContainerPort{
 				corev1.ContainerPort{
 					Name:          "udp",
 					ContainerPort: 6000,
@@ -82,20 +129,41 @@ func TestGetContainerPorts(t *testing.T) {
 					ContainerPort: 8443,
 				},
 			},
+		}, {
+			annotations: map[string]string{
+				"marin3r.3scale.net/ports":              "http:3000:UDP,https:4000",
+				"marin3r.3scale.net/host-port-mappings": "http:8080,https:8443",
+			},
+			expected: []corev1.ContainerPort{
+				corev1.ContainerPort{
+					Name:          "http",
+					ContainerPort: 3000,
+					HostPort:      8080,
+					Protocol:      corev1.Protocol("UDP"),
+				},
+				corev1.ContainerPort{
+					Name:          "https",
+					ContainerPort: 4000,
+					HostPort:      8443,
+				},
+			},
 		},
 	}
 
 	for _, v := range specs {
-		r, _ := getContainerPorts(v.annotations)
-		assert.Equal(t, r, v.result, "ContainerPort slices are equal")
+		r, err := getContainerPorts(v.annotations)
+		if err != nil {
+			panic(err)
+		}
+		assert.Equal(t, v.expected, r, "ContainerPort slices are equal")
 	}
 }
 
 func TestContainer(t *testing.T) {
 
 	cases := []struct {
-		config envoySidecarConfig
-		result corev1.Container
+		config   envoySidecarConfig
+		expected corev1.Container
 	}{
 		{
 			config: envoySidecarConfig{
@@ -119,7 +187,7 @@ func TestContainer(t *testing.T) {
 				configVolume:     "config-volume",
 				clientCertSecret: "secret",
 			},
-			result: corev1.Container{
+			expected: corev1.Container{
 				Name:    "sidecar",
 				Image:   "sidecar:latest",
 				Command: []string{"envoy"},
@@ -160,6 +228,6 @@ func TestContainer(t *testing.T) {
 
 	for _, c := range cases {
 		r := c.config.container()
-		assert.Equal(t, r, c.result, "ContainerPort slices are equal")
+		assert.Equal(t, c.expected, r, "ContainerPort slices are equal")
 	}
 }
