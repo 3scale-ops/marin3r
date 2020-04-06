@@ -9,7 +9,6 @@ require (
 	github.com/golang/protobuf v1.4.0-rc.4
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/spf13/cobra v0.0.7
-	github.com/stretchr/testify v1.4.0
 	go.uber.org/zap v1.14.1
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/grpc v1.28.0
