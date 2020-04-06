@@ -40,6 +40,11 @@ const (
 	Delete
 )
 
+// ReconcileJob is the interface that all types
+// of jobs must adhere to. It has a "process" function
+// which holds the logic of how the item is to be processed
+// and a "Push" function that pushes new jobs of the same
+// type to the job queue
 type ReconcileJob interface {
 	process(caches, *kubernetes.Clientset, string, *zap.SugaredLogger) ([]string, error)
 	Push(chan ReconcileJob)
@@ -48,6 +53,11 @@ type ReconcileJob interface {
 //------------------
 //----- Worker -----
 //------------------
+
+// Reconciler is a loop that reads jobs
+// from a queue and processes them to reconcile
+// input information (usually in the form of events)
+// with output envoy configuration
 type Reconciler struct {
 	clientset     *kubernetes.Clientset
 	namespace     string
@@ -62,6 +72,8 @@ type Reconciler struct {
 	stopper chan struct{}
 }
 
+// NewReconciler returns a new Reconciler object built using the
+// passed parameters
 func NewReconciler(clientset *kubernetes.Clientset, namespace string,
 	snapshotCache *cache.SnapshotCache, stopper chan struct{},
 	logger *zap.SugaredLogger) *Reconciler {
@@ -76,6 +88,8 @@ func NewReconciler(clientset *kubernetes.Clientset, namespace string,
 	}
 }
 
+// RunReconciler runs the reconciler loop
+// until the stop signal is sent to it
 func (r *Reconciler) RunReconciler() {
 
 	// Watch for the call to shutdown the worker
