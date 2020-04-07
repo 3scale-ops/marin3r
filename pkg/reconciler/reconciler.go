@@ -98,12 +98,20 @@ func (r *Reconciler) RunReconciler() {
 	for {
 		job, more := <-r.Queue
 		if more {
-			nodeIDs, err := job.process(r.caches, r.clientset, r.namespace, r.logger)
-			if err != nil {
-				break
-			}
-			for _, nodeID := range nodeIDs {
-				r.makeSnapshot(nodeID)
+			{
+				// Recover from panics in job processing
+				defer func() {
+					if recov := recover(); r != nil {
+						r.logger.Warnf("Recovered from panicked job", recov)
+					}
+				}()
+				nodeIDs, err := job.process(r.caches, r.clientset, r.namespace, r.logger)
+				if err != nil {
+					break
+				}
+				for _, nodeID := range nodeIDs {
+					r.makeSnapshot(nodeID)
+				}
 			}
 		} else {
 			r.logger.Info("Received channel close, shutting down worker")
