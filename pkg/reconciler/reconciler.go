@@ -60,7 +60,6 @@ type ReconcileJob interface {
 type Reconciler struct {
 	clientset     *kubernetes.Clientset
 	namespace     string
-	version       int
 	cache         cache.Cache
 	snapshotCache *xds_cache.SnapshotCache
 	// TODO: do not go passing the channel around so freely,
