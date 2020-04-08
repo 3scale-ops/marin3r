@@ -23,37 +23,39 @@ import (
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
 )
 
-var testCache Cache = Cache{
-	"node1": &xds_cache.Snapshot{
-		Resources: [6]xds_cache.Resources{
-			xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{
-				"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
-			}},
-			xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{
-				"cluster1": &envoy_api.Cluster{Name: "cluster1"},
-				"cluster2": &envoy_api.Cluster{Name: "cluster2"},
-				"cluster3": &envoy_api.Cluster{Name: "cluster3"},
-			}},
-			xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
-			xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
-			xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
-			xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
+func newTestCache() Cache {
+	return Cache{
+		"node1": &xds_cache.Snapshot{
+			Resources: [6]xds_cache.Resources{
+				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{
+					"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
+				}},
+				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{
+					"cluster1": &envoy_api.Cluster{Name: "cluster1"},
+					"cluster2": &envoy_api.Cluster{Name: "cluster2"},
+					"cluster3": &envoy_api.Cluster{Name: "cluster3"},
+				}},
+				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
+				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
+				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
+				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
+			},
 		},
-	},
-	"node2": &xds_cache.Snapshot{
-		Resources: [6]xds_cache.Resources{
-			xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{
-				"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
-			}},
-			xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{
-				"cluster1": &envoy_api.Cluster{Name: "cluster1"},
-			}},
-			xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
-			xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
-			xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
-			xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
+		"node2": &xds_cache.Snapshot{
+			Resources: [6]xds_cache.Resources{
+				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{
+					"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
+				}},
+				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{
+					"cluster1": &envoy_api.Cluster{Name: "cluster1"},
+				}},
+				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
+				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
+				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
+				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
+			},
 		},
-	},
+	}
 }
 
 func TestNewCache(t *testing.T) {
@@ -89,8 +91,8 @@ func TestCache_NewNodeCache(t *testing.T) {
 		want  want
 	}{
 		{
-			"Deletes a node's snapshot from the cache",
-			testCache,
+			"Booststraps a new node snapshot in the cache",
+			newTestCache(),
 			args{
 				nodeID: "node3",
 			},
@@ -163,7 +165,7 @@ func TestCache_DeleteNodeCache(t *testing.T) {
 	}{
 		{
 			"Deletes a node's snapshot from the cache",
-			testCache,
+			newTestCache(),
 			args{
 				nodeID: "node1",
 			},
@@ -210,7 +212,7 @@ func TestCache_GetNodeCache(t *testing.T) {
 	}{
 		{
 			"Gets the snapshot for a given node",
-			testCache,
+			newTestCache(),
 			args{nodeID: "node2"},
 			want{&xds_cache.Snapshot{
 				Resources: [6]xds_cache.Resources{
@@ -255,7 +257,7 @@ func TestCache_SetResource(t *testing.T) {
 	}{
 		{
 			"Writes a named resource of a given resource type in a node's cache",
-			testCache,
+			newTestCache(),
 			args{
 				nodeID: "node1",
 				name:   "listener1",
@@ -275,7 +277,7 @@ func TestCache_SetResource(t *testing.T) {
 						}},
 						xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
 						xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{
-							"listener1": &envoy_api.Listener{Name: "listener"},
+							"listener1": &envoy_api.Listener{Name: "listener1"},
 						}},
 						xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
 						xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
@@ -325,7 +327,7 @@ func TestCache_GetResource(t *testing.T) {
 	}{
 		{
 			"Gets a named resource of a given resource type from a node's cache",
-			testCache,
+			newTestCache(),
 			args{
 				nodeID: "node2",
 				name:   "endpoint",
@@ -335,7 +337,7 @@ func TestCache_GetResource(t *testing.T) {
 		},
 		{
 			"Returns 'nil' if the named resource is not found",
-			testCache,
+			newTestCache(),
 			args{
 				nodeID: "node2",
 				name:   "xxxx",
@@ -370,7 +372,7 @@ func TestCache_DeleteResource(t *testing.T) {
 	}{
 		{
 			"Deletes a named resource of a given resource type from a node's cache",
-			testCache,
+			newTestCache(),
 			args{
 				nodeID: "node1",
 				name:   "cluster2",
@@ -435,7 +437,7 @@ func TestCache_ClearResources(t *testing.T) {
 	}{
 		{
 			"Deletes resources of a given resource type from a node's cache, only for the given node",
-			testCache,
+			newTestCache(),
 			args{
 				nodeID: "node1",
 				rtype:  xds_cache.Cluster,
@@ -497,7 +499,7 @@ func TestCache_SetSnapshot(t *testing.T) {
 	}{
 		{
 			"Writes a node's snapshot to xds_cache.SnapshotCache",
-			testCache,
+			newTestCache(),
 			args{
 				nodeID:        "node1",
 				snapshotCache: xds_cache.NewSnapshotCache(true, cache.IDHash{}, nil),
@@ -558,7 +560,7 @@ func TestCache_GetCurrentVersion(t *testing.T) {
 	}{
 		{
 			"Gets current version for a node's cache",
-			testCache,
+			newTestCache(),
 			args{nodeID: "node1"},
 			want{version: 789},
 			false,
@@ -597,7 +599,7 @@ func TestCache_BumpCacheVersion(t *testing.T) {
 	}{
 		{
 			"Bumps up version for all resource types",
-			testCache,
+			newTestCache(),
 			args{nodeID: "node2"},
 			want{
 				version: 44,
