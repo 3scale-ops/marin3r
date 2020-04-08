@@ -34,12 +34,12 @@ For reference, an example cache struct:
 
 	c := map[string][6]xds_cache.Resources{
 			"my-node-id": [6]xds_cache.Resources{
-				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // xds_cache.Enspoint
-				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // xds_cache.Cluster
-				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // xds_cache.Route
-				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // xds_cache.Listener
-				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // xds_cache.Secret
-				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // xds_cache.Runtime
+				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // Endpoint
+				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // Cluster
+				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // Route
+				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // Listener
+				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // Secret
+				xds_cache.Resources{Version: "1", Items: map[string]xds_cache.Resource{}}, // Runtime
 		},
 	}
 
@@ -48,6 +48,18 @@ For reference, an example cache struct:
 
 const (
 	startingVersion = 1
+	// Endpoint cache resource type
+	Endpoint xds_cache.ResponseType = xds_cache.Endpoint
+	// Cluster cache resource type
+	Cluster xds_cache.ResponseType = xds_cache.Cluster
+	// Route cache resource type
+	Route xds_cache.ResponseType = xds_cache.Route
+	// Listener cache resource type
+	Listener xds_cache.ResponseType = xds_cache.Listener
+	// Secret cache resurce type
+	Secret xds_cache.ResponseType = xds_cache.Secret
+	// Runtime cache resource type
+	Runtime xds_cache.ResponseType = xds_cache.Runtime
 )
 
 // Cache ...
@@ -64,12 +76,12 @@ func (cache Cache) NewNodeCache(nodeID string) {
 	version := strconv.Itoa(startingVersion)
 
 	ncache := xds_cache.Snapshot{Resources: [6]xds_cache.Resources{}}
-	ncache.Resources[xds_cache.Listener] = xds_cache.NewResources(version, []xds_cache.Resource{})
-	ncache.Resources[xds_cache.Endpoint] = xds_cache.NewResources(version, []xds_cache.Resource{})
-	ncache.Resources[xds_cache.Cluster] = xds_cache.NewResources(version, []xds_cache.Resource{})
-	ncache.Resources[xds_cache.Route] = xds_cache.NewResources(version, []xds_cache.Resource{})
-	ncache.Resources[xds_cache.Secret] = xds_cache.NewResources(version, []xds_cache.Resource{})
-	ncache.Resources[xds_cache.Runtime] = xds_cache.NewResources(version, []xds_cache.Resource{})
+	ncache.Resources[Listener] = xds_cache.NewResources(version, []xds_cache.Resource{})
+	ncache.Resources[Endpoint] = xds_cache.NewResources(version, []xds_cache.Resource{})
+	ncache.Resources[Cluster] = xds_cache.NewResources(version, []xds_cache.Resource{})
+	ncache.Resources[Route] = xds_cache.NewResources(version, []xds_cache.Resource{})
+	ncache.Resources[Secret] = xds_cache.NewResources(version, []xds_cache.Resource{})
+	ncache.Resources[Runtime] = xds_cache.NewResources(version, []xds_cache.Resource{})
 
 	cache[nodeID] = &ncache
 }

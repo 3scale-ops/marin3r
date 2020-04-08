@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
@@ -95,8 +94,8 @@ func (job ConfigMapReconcileJob) process(c cache.Cache, clientset *kubernetes.Cl
 		// Clear current cached clusters and listeners, we don't care about
 		// previous values because the yaml in the ConfigMap provider is
 		// expected to be complete
-		c.ClearResources(job.nodeID, xds_cache.Cluster)
-		c.ClearResources(job.nodeID, xds_cache.Listener)
+		c.ClearResources(job.nodeID, cache.Cluster)
+		c.ClearResources(job.nodeID, cache.Listener)
 
 		j, err := yaml.YAMLToJSON([]byte(job.configMap.Data["config.yaml"]))
 		if err != nil {
@@ -111,11 +110,11 @@ func (job ConfigMapReconcileJob) process(c cache.Cache, clientset *kubernetes.Cl
 		}
 
 		for _, cluster := range rff.Clusters {
-			c.SetResource(job.nodeID, cluster.Name, xds_cache.Cluster, cluster)
+			c.SetResource(job.nodeID, cluster.Name, cache.Cluster, cluster)
 		}
 
 		for _, lis := range rff.Listeners {
-			c.SetResource(job.nodeID, lis.Name, xds_cache.Cluster, lis)
+			c.SetResource(job.nodeID, lis.Name, cache.Listener, lis)
 		}
 
 	case Delete:
@@ -135,7 +134,7 @@ func (job ConfigMapReconcileJob) syncNodeSecrets(clientset *kubernetes.Clientset
 	}
 	for _, s := range list.Items {
 		if cn, ok := s.GetAnnotations()[certificateAnnotation]; ok {
-			c.SetResource(nodeID, cn, xds_cache.Secret, envoy.NewSecret(cn, string(s.Data["tls.key"]), string(s.Data["tls.crt"])))
+			c.SetResource(nodeID, cn, cache.Secret, envoy.NewSecret(cn, string(s.Data["tls.key"]), string(s.Data["tls.crt"])))
 		}
 	}
 	return nil

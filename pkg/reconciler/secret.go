@@ -15,7 +15,6 @@
 package reconciler
 
 import (
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
@@ -62,7 +61,7 @@ func (job SecretReconcileJob) process(c cache.Cache, clientset *kubernetes.Clien
 	case Add, Update:
 		// Copy the secret to all existent node caches
 		for _, nodeID := range nodeIDs {
-			c.SetResource(nodeID, job.cn, xds_cache.Secret, envoy.NewSecret(
+			c.SetResource(nodeID, job.cn, cache.Secret, envoy.NewSecret(
 				job.cn,
 				string(job.secret.Data["tls.key"]),
 				string(job.secret.Data["tls.crt"]),
@@ -71,7 +70,7 @@ func (job SecretReconcileJob) process(c cache.Cache, clientset *kubernetes.Clien
 	case Delete:
 		logger.Warnf("The certificate with CN '%s' is about to be deleted", job.cn)
 		for _, nodeID := range nodeIDs {
-			delete(c[nodeID].Resources[xds_cache.Secret].Items, job.cn)
+			delete(c[nodeID].Resources[cache.Secret].Items, job.cn)
 		}
 	}
 
