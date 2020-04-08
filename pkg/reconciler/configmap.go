@@ -19,14 +19,15 @@ import (
 	"fmt"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
+	"github.com/roivaz/marin3r/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -64,7 +65,7 @@ func (m *resFromFile) Reset()         { *m = resFromFile{} }
 func (m *resFromFile) String() string { return proto.CompactTextString(m) }
 func (*resFromFile) ProtoMessage()    {}
 
-func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clientset, namespace string, logger *zap.SugaredLogger) ([]string, error) {
+func (job ConfigMapReconcileJob) process(c cache.Cache, clientset *kubernetes.Clientset, namespace string, logger *zap.SugaredLogger) ([]string, error) {
 
 	logger.Debugf("Processing ConfigMap job for node-id %s", job.nodeID)
 	// Check if it's the first time we see this
@@ -72,22 +73,19 @@ func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clients
 	// its cache
 	if _, ok := c[job.nodeID]; !ok {
 		logger.Infof("Boostraping cache for node-id %s", job.nodeID)
-		c[job.nodeID] = NewNodeCaches()
+		c.NewNodeCache(job.nodeID)
 		// We need to trigger a reconcile for the secrets
 		// so this new cache gets populated with them
-		secrets, err := job.syncNodeSecrets(clientset, namespace)
+		err := job.syncNodeSecrets(clientset, namespace, job.nodeID, c)
 		if err != nil {
 			logger.Errorf("Error populating secrets cache for node-id %s: '%s'", job.nodeID, err)
 			// Delete the node cache so in the
 			// next job it will try to rebuild the
 			// secrets cache again
-			delete(c, job.nodeID)
+			c.DeleteNodeCache(job.nodeID)
 			return []string{}, err
 		}
-		c[job.nodeID].secrets = secrets
-
 	}
-	nodeCache := c[job.nodeID]
 
 	switch job.eventType {
 
@@ -96,9 +94,8 @@ func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clients
 		// Clear current cached clusters and listeners, we don't care about
 		// previous values because the yaml in the ConfigMap provider is
 		// expected to be complete
-		nodeCache.clusters = make(map[string]*envoyapi.Cluster)
-		nodeCache.listeners = make(map[string]*envoyapi.Listener)
-		// c.endpoints = map[string]*envoyapi.Listener{}
+		c.ClearResources(job.nodeID, cache.Cluster)
+		c.ClearResources(job.nodeID, cache.Listener)
 
 		j, err := yaml.YAMLToJSON([]byte(job.configMap.Data["config.yaml"]))
 		if err != nil {
@@ -113,11 +110,11 @@ func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clients
 		}
 
 		for _, cluster := range rff.Clusters {
-			nodeCache.clusters[cluster.Name] = cluster
+			c.SetResource(job.nodeID, cluster.Name, cache.Cluster, cluster)
 		}
 
 		for _, lis := range rff.Listeners {
-			nodeCache.listeners[lis.Name] = lis
+			c.SetResource(job.nodeID, lis.Name, cache.Listener, lis)
 		}
 
 	case Delete:
@@ -129,16 +126,16 @@ func (job ConfigMapReconcileJob) process(c caches, clientset *kubernetes.Clients
 }
 
 // SyncNodeSecrets synchronously builds/rebuilds the whole secrets cache
-func (job ConfigMapReconcileJob) syncNodeSecrets(clientset *kubernetes.Clientset, namespace string) (map[string]*envoy_auth.Secret, error) {
-	secrets := map[string]*envoy_auth.Secret{}
+func (job ConfigMapReconcileJob) syncNodeSecrets(clientset *kubernetes.Clientset, namespace, nodeID string, c cache.Cache) error {
+
 	list, err := clientset.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	for _, s := range list.Items {
 		if cn, ok := s.GetAnnotations()[certificateAnnotation]; ok {
-			secrets[cn] = envoy.NewSecret(cn, string(s.Data["tls.key"]), string(s.Data["tls.crt"]))
+			c.SetResource(nodeID, cn, cache.Secret, envoy.NewSecret(cn, string(s.Data["tls.key"]), string(s.Data["tls.crt"])))
 		}
 	}
-	return secrets, nil
+	return nil
 }

@@ -15,9 +15,8 @@
 package reconciler
 
 import (
-	"fmt"
-
-	"github.com/envoyproxy/go-control-plane/pkg/cache"
+	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
+	"github.com/roivaz/marin3r/pkg/cache"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 )
@@ -46,7 +45,7 @@ const (
 // and a "Push" function that pushes new jobs of the same
 // type to the job queue
 type ReconcileJob interface {
-	process(caches, *kubernetes.Clientset, string, *zap.SugaredLogger) ([]string, error)
+	process(cache.Cache, *kubernetes.Clientset, string, *zap.SugaredLogger) ([]string, error)
 	Push(chan ReconcileJob)
 }
 
@@ -61,9 +60,8 @@ type ReconcileJob interface {
 type Reconciler struct {
 	clientset     *kubernetes.Clientset
 	namespace     string
-	version       int
-	caches        caches
-	snapshotCache *cache.SnapshotCache
+	cache         cache.Cache
+	snapshotCache *xds_cache.SnapshotCache
 	// TODO: do not go passing the channel around so freely,
 	// create a queue object with a channel inside, not public,
 	// and a set of public functions to access the channel
@@ -75,12 +73,12 @@ type Reconciler struct {
 // NewReconciler returns a new Reconciler object built using the
 // passed parameters
 func NewReconciler(clientset *kubernetes.Clientset, namespace string,
-	snapshotCache *cache.SnapshotCache, stopper chan struct{},
+	snapshotCache *xds_cache.SnapshotCache, stopper chan struct{},
 	logger *zap.SugaredLogger) *Reconciler {
 	return &Reconciler{
 		clientset:     clientset,
 		namespace:     namespace,
-		caches:        make(caches),
+		cache:         cache.NewCache(),
 		snapshotCache: snapshotCache,
 		Queue:         make(chan ReconcileJob),
 		logger:        logger,
@@ -105,12 +103,13 @@ func (r *Reconciler) RunReconciler() {
 						r.logger.Warnf("Recovered from panicked job", recov)
 					}
 				}()
-				nodeIDs, err := job.process(r.caches, r.clientset, r.namespace, r.logger)
+				nodeIDs, err := job.process(r.cache, r.clientset, r.namespace, r.logger)
 				if err != nil {
 					break
 				}
 				for _, nodeID := range nodeIDs {
-					r.makeSnapshot(nodeID)
+					r.cache.BumpCacheVersion(nodeID)
+					r.cache.SetSnapshot(nodeID, *r.snapshotCache)
 				}
 			}
 		} else {
@@ -125,21 +124,4 @@ func (r *Reconciler) runStopWatcher() {
 		<-r.stopper
 		close(r.Queue)
 	}()
-}
-
-func (r *Reconciler) makeSnapshot(nodeID string) {
-	r.version++
-	snapshotCache := *(r.snapshotCache)
-
-	r.logger.Infof(">>> creating snapshot version '%s' for node-id '%s'", fmt.Sprint(r.version), nodeID)
-	snap := cache.NewSnapshot(fmt.Sprint(r.version),
-		nil,
-		r.caches[nodeID].makeClusterResources(),
-		nil,
-		r.caches[nodeID].makeListenerResources(),
-		nil,
-	)
-	snap.Resources[cache.Secret] = cache.NewResources(fmt.Sprintf("%v", r.version), r.caches[nodeID].makeSecretResources())
-	// Push snapshot to the server for the given node-id
-	snapshotCache.SetSnapshot(nodeID, snap)
 }
