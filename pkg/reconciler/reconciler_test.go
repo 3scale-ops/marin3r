@@ -27,41 +27,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// func newTestCache() Cache {
-// 	return Cache{
-// 		"node1": &xds_cache.Snapshot{
-// 			Resources: [6]xds_cache.Resources{
-// 				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{
-// 					"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
-// 				}},
-// 				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{
-// 					"cluster1": &envoy_api.Cluster{Name: "cluster1"},
-// 					"cluster2": &envoy_api.Cluster{Name: "cluster2"},
-// 					"cluster3": &envoy_api.Cluster{Name: "cluster3"},
-// 				}},
-// 				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
-// 				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
-// 				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
-// 				xds_cache.Resources{Version: "789", Items: map[string]xds_cache.Resource{}},
-// 			},
-// 		},
-// 		"node2": &xds_cache.Snapshot{
-// 			Resources: [6]xds_cache.Resources{
-// 				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{
-// 					"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
-// 				}},
-// 				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{
-// 					"cluster1": &envoy_api.Cluster{Name: "cluster1"},
-// 				}},
-// 				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
-// 				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
-// 				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
-// 				xds_cache.Resources{Version: "43", Items: map[string]xds_cache.Resource{}},
-// 			},
-// 		},
-// 	}
-// }
-
 func testReconciler(rcaches cache.Cache) Reconciler {
 	lg, _ := zap.NewDevelopment()
 	logger := lg.Sugar()
@@ -140,7 +105,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 			},
 			},
 			[]want{
-				want{"node", map[string]xds_cache.Resource{"node-secret": &envoyauth.Secret{Name: "node-secret"}}},
+				{"node", map[string]xds_cache.Resource{"node-secret": &envoyauth.Secret{Name: "node-secret"}}},
 			},
 		}, {
 			"Processes a job for a several nodeIDs and generates the expected snapshots",
@@ -149,8 +114,8 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node1", "node2"}, fail: false, panic: false},
 			}},
 			[]want{
-				want{"node1", map[string]xds_cache.Resource{"node1-secret": &envoyauth.Secret{Name: "node1-secret"}}},
-				want{"node2", map[string]xds_cache.Resource{"node2-secret": &envoyauth.Secret{Name: "node2-secret"}}},
+				{"node1", map[string]xds_cache.Resource{"node1-secret": &envoyauth.Secret{Name: "node1-secret"}}},
+				{"node2", map[string]xds_cache.Resource{"node2-secret": &envoyauth.Secret{Name: "node2-secret"}}},
 			},
 		}, {
 			"Processes a job that returns error without altering the snapshotCache",
@@ -160,7 +125,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node"}, fail: true, panic: false},
 			}},
 			[]want{
-				want{"node", map[string]xds_cache.Resource{"node-secret": &envoyauth.Secret{Name: "node-secret"}}},
+				{"node", map[string]xds_cache.Resource{"node-secret": &envoyauth.Secret{Name: "node-secret"}}},
 			},
 		}, {
 			"Keeps processing jobs after one job panics",
@@ -170,7 +135,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node"}, fail: false, panic: false},
 			}},
 			[]want{
-				want{"node", map[string]xds_cache.Resource{"node-secret": &envoyauth.Secret{Name: "node-secret"}}},
+				{"node", map[string]xds_cache.Resource{"node-secret": &envoyauth.Secret{Name: "node-secret"}}},
 			},
 		},
 	}
