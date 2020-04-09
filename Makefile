@@ -92,3 +92,8 @@ start: certs
 		--log-level debug \
 		--namespace default \
 		--out-of-cluster
+
+test-unit:
+	go test ./... -covermode=atomic
+
+test: test-unit
