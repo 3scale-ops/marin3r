@@ -28,10 +28,10 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/roivaz/marin3r/pkg/cache"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 func TestNewConfigMapReconcileJob(t *testing.T) {
@@ -121,7 +121,7 @@ func TestConfigMapReconcileJob_Push(t *testing.T) {
 func TestConfigMapReconcileJob_process(t *testing.T) {
 	type args struct {
 		c         cache.Cache
-		clientset *kubernetes.Clientset
+		clientset *util.K8s
 		namespace string
 		logger    *zap.SugaredLogger
 	}
@@ -180,7 +180,7 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 			},
 			args{
 				func() cache.Cache { c := cache.NewCache(); c.NewNodeCache("node1"); return c }(),
-				&kubernetes.Clientset{},
+				&util.K8s{},
 				"default",
 				func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }(),
 			},
@@ -285,7 +285,7 @@ func TestConfigMapReconcileJob_syncNodeSecrets(t *testing.T) {
 		configMap *corev1.ConfigMap
 	}
 	type args struct {
-		clientset *kubernetes.Clientset
+		client    *util.K8s
 		namespace string
 		nodeID    string
 		c         cache.Cache
@@ -305,7 +305,7 @@ func TestConfigMapReconcileJob_syncNodeSecrets(t *testing.T) {
 				nodeID:    tt.fields.nodeID,
 				configMap: tt.fields.configMap,
 			}
-			if err := job.syncNodeSecrets(tt.args.clientset, tt.args.namespace, tt.args.nodeID, tt.args.c); (err != nil) != tt.wantErr {
+			if err := job.syncNodeSecrets(tt.args.client, tt.args.namespace, tt.args.nodeID, tt.args.c); (err != nil) != tt.wantErr {
 				t.Errorf("ConfigMapReconcileJob.syncNodeSecrets() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

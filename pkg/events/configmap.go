@@ -19,11 +19,11 @@ import (
 	"fmt"
 
 	"github.com/roivaz/marin3r/pkg/reconciler"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -33,7 +33,7 @@ const (
 )
 
 type ConfigMapHandler struct {
-	clientset *kubernetes.Clientset
+	client    *util.K8s
 	namespace string
 	queue     chan reconciler.ReconcileJob
 	ctx       context.Context
@@ -42,11 +42,11 @@ type ConfigMapHandler struct {
 }
 
 func NewConfigMapHandler(
-	clientset *kubernetes.Clientset, namespace string, queue chan reconciler.ReconcileJob,
+	client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
 	ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *ConfigMapHandler {
 
 	return &ConfigMapHandler{
-		clientset: clientset,
+		client:    client,
 		namespace: namespace,
 		queue:     queue,
 		ctx:       ctx,
@@ -57,7 +57,7 @@ func NewConfigMapHandler(
 
 func (cmh *ConfigMapHandler) RunConfigMapHandler() {
 
-	factory := informers.NewSharedInformerFactoryWithOptions(cmh.clientset, 0, informers.WithNamespace(cmh.namespace))
+	factory := informers.NewSharedInformerFactoryWithOptions(cmh.client.Clientset, 0, informers.WithNamespace(cmh.namespace))
 	informer := factory.Core().V1().ConfigMaps().Informer()
 	defer runtime.HandleCrash()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{

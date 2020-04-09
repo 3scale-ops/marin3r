@@ -25,8 +25,8 @@ import (
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"github.com/roivaz/marin3r/pkg/events"
 	"github.com/roivaz/marin3r/pkg/reconciler"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -79,26 +79,26 @@ func NewController(
 		logger,
 	)
 
-	var clientset *kubernetes.Clientset
+	var client *util.K8s
 	var err error
 	if ooCluster {
-		clientset, err = outOfClusterClient()
+		client, err = util.OutOfClusterClient()
 		if err != nil {
 			return err
 		}
 	} else {
-		clientset, err = inClusterClient()
+		client, err = util.InClusterClient()
 		if err != nil {
 			return err
 		}
 	}
 
 	// Init the cache worker
-	rec := reconciler.NewReconciler(clientset, namespace, xdss.GetSnapshotCache(), stopper, logger)
+	rec := reconciler.NewReconciler(client, namespace, xdss.GetSnapshotCache(), stopper, logger)
 
 	// Init event handlers
-	secretHandler := events.NewSecretHandler(clientset, namespace, rec.Queue, ctx, logger, stopper)
-	configMapHandler := events.NewConfigMapHandler(clientset, namespace, rec.Queue, ctx, logger, stopper)
+	secretHandler := events.NewSecretHandler(client, namespace, rec.Queue, ctx, logger, stopper)
+	configMapHandler := events.NewConfigMapHandler(client, namespace, rec.Queue, ctx, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----

@@ -24,11 +24,10 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/roivaz/marin3r/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/envoy"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -65,7 +64,7 @@ func (m *resFromFile) Reset()         { *m = resFromFile{} }
 func (m *resFromFile) String() string { return proto.CompactTextString(m) }
 func (*resFromFile) ProtoMessage()    {}
 
-func (job ConfigMapReconcileJob) process(c cache.Cache, clientset *kubernetes.Clientset, namespace string, logger *zap.SugaredLogger) ([]string, error) {
+func (job ConfigMapReconcileJob) process(c cache.Cache, client *util.K8s, namespace string, logger *zap.SugaredLogger) ([]string, error) {
 
 	logger.Debugf("Processing ConfigMap job for node-id %s", job.nodeID)
 	// Check if it's the first time we see this
@@ -76,7 +75,7 @@ func (job ConfigMapReconcileJob) process(c cache.Cache, clientset *kubernetes.Cl
 		c.NewNodeCache(job.nodeID)
 		// We need to trigger a reconcile for the secrets
 		// so this new cache gets populated with them
-		err := job.syncNodeSecrets(clientset, namespace, job.nodeID, c)
+		err := job.syncNodeSecrets(client, namespace, job.nodeID, c)
 		if err != nil {
 			logger.Errorf("Error populating secrets cache for node-id %s: '%s'", job.nodeID, err)
 			// Delete the node cache so in the
@@ -126,9 +125,9 @@ func (job ConfigMapReconcileJob) process(c cache.Cache, clientset *kubernetes.Cl
 }
 
 // SyncNodeSecrets synchronously builds/rebuilds the whole secrets cache
-func (job ConfigMapReconcileJob) syncNodeSecrets(clientset *kubernetes.Clientset, namespace, nodeID string, c cache.Cache) error {
+func (job ConfigMapReconcileJob) syncNodeSecrets(client *util.K8s, namespace, nodeID string, c cache.Cache) error {
 
-	list, err := clientset.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
+	list, err := client.Clientset.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

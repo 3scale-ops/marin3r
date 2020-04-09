@@ -17,9 +17,9 @@ package reconciler
 import (
 	"github.com/roivaz/marin3r/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/envoy"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 type SecretReconcileJob struct {
@@ -40,7 +40,7 @@ func (job SecretReconcileJob) Push(queue chan ReconcileJob) {
 	queue <- job
 }
 
-func (job SecretReconcileJob) process(c cache.Cache, clientset *kubernetes.Clientset, namespace string, logger *zap.SugaredLogger) ([]string, error) {
+func (job SecretReconcileJob) process(c cache.Cache, client *util.K8s, namespace string, logger *zap.SugaredLogger) ([]string, error) {
 
 	// SecretReconcileJob jobs don't have nodeID information because the secrets holding
 	// the certificates in k8s/ocp can be created by other tools (eg cert-manager)

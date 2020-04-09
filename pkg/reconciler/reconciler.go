@@ -17,8 +17,8 @@ package reconciler
 import (
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/cache"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -45,7 +45,7 @@ const (
 // and a "Push" function that pushes new jobs of the same
 // type to the job queue
 type ReconcileJob interface {
-	process(cache.Cache, *kubernetes.Clientset, string, *zap.SugaredLogger) ([]string, error)
+	process(cache.Cache, *util.K8s, string, *zap.SugaredLogger) ([]string, error)
 	Push(chan ReconcileJob)
 }
 
@@ -58,7 +58,7 @@ type ReconcileJob interface {
 // input information (usually in the form of events)
 // with output envoy configuration
 type Reconciler struct {
-	clientset     *kubernetes.Clientset
+	client        *util.K8s
 	namespace     string
 	cache         cache.Cache
 	snapshotCache *xds_cache.SnapshotCache
@@ -72,11 +72,11 @@ type Reconciler struct {
 
 // NewReconciler returns a new Reconciler object built using the
 // passed parameters
-func NewReconciler(clientset *kubernetes.Clientset, namespace string,
+func NewReconciler(client *util.K8s, namespace string,
 	snapshotCache *xds_cache.SnapshotCache, stopper chan struct{},
 	logger *zap.SugaredLogger) *Reconciler {
 	return &Reconciler{
-		clientset:     clientset,
+		client:        client,
 		namespace:     namespace,
 		cache:         cache.NewCache(),
 		snapshotCache: snapshotCache,
@@ -103,7 +103,7 @@ func (r *Reconciler) RunReconciler() {
 						r.logger.Warnf("Recovered from panicked job", recov)
 					}
 				}()
-				nodeIDs, err := job.process(r.cache, r.clientset, r.namespace, r.logger)
+				nodeIDs, err := job.process(r.cache, r.client, r.namespace, r.logger)
 				if err != nil {
 					break
 				}

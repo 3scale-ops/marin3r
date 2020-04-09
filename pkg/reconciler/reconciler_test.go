@@ -23,8 +23,8 @@ import (
 	envoyauth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/cache"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
-	"k8s.io/client-go/kubernetes"
 )
 
 func testReconciler(rcaches cache.Cache) Reconciler {
@@ -41,7 +41,7 @@ func testReconciler(rcaches cache.Cache) Reconciler {
 	}
 
 	return Reconciler{
-		clientset:     &kubernetes.Clientset{},
+		client:        &util.K8s{},
 		namespace:     "namespace",
 		cache:         rc,
 		snapshotCache: &scache,
@@ -58,7 +58,7 @@ type testJob struct {
 }
 
 func (job testJob) Push(queue chan ReconcileJob) { queue <- job }
-func (job testJob) process(c cache.Cache, clientset *kubernetes.Clientset, namespace string, logger *zap.SugaredLogger) ([]string, error) {
+func (job testJob) process(c cache.Cache, client *util.K8s, namespace string, logger *zap.SugaredLogger) ([]string, error) {
 
 	// Simulate a job panic
 	if job.fail {

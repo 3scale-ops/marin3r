@@ -19,11 +19,11 @@ import (
 	"fmt"
 
 	"github.com/roivaz/marin3r/pkg/reconciler"
+	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -34,7 +34,7 @@ const (
 )
 
 type SecretHandler struct {
-	clientset *kubernetes.Clientset
+	client    *util.K8s
 	namespace string
 	queue     chan reconciler.ReconcileJob
 	ctx       context.Context
@@ -45,11 +45,11 @@ type SecretHandler struct {
 var version int32
 
 func NewSecretHandler(
-	clientset *kubernetes.Clientset, namespace string, queue chan reconciler.ReconcileJob,
+	client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
 	ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretHandler {
 
 	return &SecretHandler{
-		clientset: clientset,
+		client:    client,
 		namespace: namespace,
 		queue:     queue,
 		ctx:       ctx,
@@ -60,7 +60,7 @@ func NewSecretHandler(
 
 func (sr *SecretHandler) RunSecretHandler() {
 
-	factory := informers.NewSharedInformerFactoryWithOptions(sr.clientset, 0, informers.WithNamespace(sr.namespace))
+	factory := informers.NewSharedInformerFactoryWithOptions(sr.client.Clientset, 0, informers.WithNamespace(sr.namespace))
 	informer := factory.Core().V1().Secrets().Informer()
 	defer runtime.HandleCrash()
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
