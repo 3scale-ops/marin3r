@@ -75,7 +75,7 @@ func (job ConfigMapReconcileJob) process(c cache.Cache, client *util.K8s, namesp
 		c.NewNodeCache(job.nodeID)
 		// We need to trigger a reconcile for the secrets
 		// so this new cache gets populated with them
-		err := job.syncNodeSecrets(client, namespace, job.nodeID, c)
+		err := syncNodeSecrets(client, namespace, job.nodeID, c)
 		if err != nil {
 			logger.Errorf("Error populating secrets cache for node-id %s: '%s'", job.nodeID, err)
 			// Delete the node cache so in the
@@ -99,13 +99,13 @@ func (job ConfigMapReconcileJob) process(c cache.Cache, client *util.K8s, namesp
 		j, err := yaml.YAMLToJSON([]byte(job.configMap.Data["config.yaml"]))
 		if err != nil {
 			logger.Errorf("Error converting yaml to json: '%s'", err)
-			return nil, fmt.Errorf("Error converting yaml to json: '%s'", err)
+			return []string{}, fmt.Errorf("Error converting yaml to json: '%s'", err)
 		}
 
 		rff := resFromFile{}
 		if err := jsonpb.Unmarshal(bytes.NewReader(j), &rff); err != nil {
 			logger.Errorf("Error unmarshalling config for node-id %s: '%s'", job.nodeID, err)
-			return nil, fmt.Errorf("Error unmarshalling config for node-id %s: '%s'", job.nodeID, err)
+			return []string{}, fmt.Errorf("Error unmarshalling config for node-id %s: '%s'", job.nodeID, err)
 		}
 
 		for _, cluster := range rff.Clusters {
@@ -125,7 +125,7 @@ func (job ConfigMapReconcileJob) process(c cache.Cache, client *util.K8s, namesp
 }
 
 // SyncNodeSecrets synchronously builds/rebuilds the whole secrets cache
-func (job ConfigMapReconcileJob) syncNodeSecrets(client *util.K8s, namespace, nodeID string, c cache.Cache) error {
+func syncNodeSecrets(client *util.K8s, namespace, nodeID string, c cache.Cache) error {
 
 	list, err := client.Clientset.CoreV1().Secrets(namespace).List(metav1.ListOptions{})
 	if err != nil {
