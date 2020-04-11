@@ -15,6 +15,8 @@
 package reconciler
 
 import (
+	"fmt"
+
 	"github.com/roivaz/marin3r/pkg/cache"
 	"github.com/roivaz/marin3r/pkg/envoy"
 	"github.com/roivaz/marin3r/pkg/util"
@@ -59,6 +61,15 @@ func (job SecretReconcileJob) process(c cache.Cache, client *util.K8s, namespace
 	switch job.eventType {
 
 	case Add, Update:
+
+		// validate that the secret is well formed
+		if _, ok := job.secret.Data["tls.crt"]; !ok {
+			return []string{}, fmt.Errorf("Secret '%s' is missing required key 'tls.crt'", job.secret.ObjectMeta.Name)
+		}
+		if _, ok := job.secret.Data["tls.key"]; !ok {
+			return []string{}, fmt.Errorf("Secret '%s' is missing required key 'tls.key'", job.secret.ObjectMeta.Name)
+		}
+
 		// Copy the secret to all existent node caches
 		for _, nodeID := range nodeIDs {
 			c.SetResource(nodeID, job.cn, cache.Secret, envoy.NewSecret(

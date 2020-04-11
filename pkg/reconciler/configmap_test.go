@@ -148,7 +148,7 @@ func TestConfigMapReconcileJob_Push(t *testing.T) {
 			}()
 			tt.job.Push(tt.args.queue)
 			if !received {
-				t.Fatal("Job not received")
+				t.Error("ConfigMapReconcileJob.Push(): Job not received")
 			}
 		})
 	}
