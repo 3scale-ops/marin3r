@@ -28,7 +28,9 @@ var (
 	podResource = metav1.GroupVersionResource{Version: "v1", Resource: "pods"}
 )
 
-func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]patchOperation, error) {
+// MutatePod returns the PatchOperation required to inject the envoy sidecar
+// container and its volumes in the pod
+func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]PatchOperation, error) {
 
 	// This handler should only get called on Pod objects as per the MutatingWebhookConfiguration in the YAML file.
 	// However, if (for whatever reason) this gets invoked on an object of a different kind, issue a log message but
@@ -45,7 +47,7 @@ func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]
 		return nil, fmt.Errorf("could not deserialize pod object: %v", err)
 	}
 
-	logger.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v patchOperation=%v UserInfo=%v",
+	logger.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v PatchOperation=%v UserInfo=%v",
 		req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
 
 	if _, ok := pod.GetAnnotations()[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID)]; !ok {
@@ -55,16 +57,16 @@ func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]
 	}
 
 	// Init the list of patches
-	var patches []patchOperation
+	var patches []PatchOperation
 
 	// Get the patches for the envoy sidecar container
 	config := envoySidecarConfig{}
 	err := config.PopulateFromAnnotations(pod.GetAnnotations())
 	if err != nil {
-		return []patchOperation{}, err
+		return []PatchOperation{}, err
 	}
 
-	patches = append(patches, patchOperation{
+	patches = append(patches, PatchOperation{
 		// "/-" refers to the end of an array in jsonPatch
 		Path:  "/spec/containers/-",
 		Op:    "add",
@@ -73,7 +75,7 @@ func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]
 
 	volumes := config.volumes()
 	for _, volume := range volumes {
-		patches = append(patches, patchOperation{
+		patches = append(patches, PatchOperation{
 			// "/-" refers to the end of an array in jsonPatch
 			Path:  "/spec/volumes/-",
 			Op:    "add",

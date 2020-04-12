@@ -24,12 +24,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// SecretReconcileJob is a struct that holds the
+// required information for Secret type jobs
 type SecretReconcileJob struct {
 	eventType EventType
 	cn        string
 	secret    *corev1.Secret
 }
 
+// NewSecretReconcileJob creates a new SecretReconcileJob
+// from provided parameters
 func NewSecretReconcileJob(cn string, eventType EventType, secret *corev1.Secret) *SecretReconcileJob {
 	return &SecretReconcileJob{
 		eventType: eventType,
@@ -38,6 +42,7 @@ func NewSecretReconcileJob(cn string, eventType EventType, secret *corev1.Secret
 	}
 }
 
+// Push pushes the SecretReconcileJob to the queue
 func (job SecretReconcileJob) Push(queue chan ReconcileJob) {
 	queue <- job
 }

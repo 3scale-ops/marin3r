@@ -31,11 +31,19 @@ const (
 // ---- Reconciler interface ----
 // ------------------------------
 
+// EventType is a type that holds information
+// on the type of event received in the queue
 type EventType int
 
 const (
+	// Add is an event triggered by a "create"
+	// operation in the k8s api
 	Add EventType = iota
+	// Update is an event triggered by a "update"
+	// operation in the k8s api
 	Update
+	// Delete is an event triggered by a "delete"
+	// operation in the k8s api
 	Delete
 )
 

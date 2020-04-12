@@ -19,6 +19,7 @@ import (
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 )
 
+// NewSecret generates a new envoy api secret struct from the given params
 func NewSecret(name, privateKey, certificateChain string) *auth.Secret {
 
 	return &auth.Secret{

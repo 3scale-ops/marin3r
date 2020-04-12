@@ -230,12 +230,12 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 		},
 		Ports: esc.ports,
 		VolumeMounts: []corev1.VolumeMount{
-			corev1.VolumeMount{
+			{
 				Name:      esc.tlsVolume,
 				ReadOnly:  true,
 				MountPath: "/etc/envoy/tls/client",
 			},
-			corev1.VolumeMount{
+			{
 				Name:      esc.configVolume,
 				ReadOnly:  true,
 				MountPath: "/etc/envoy/bootstrap",
@@ -247,7 +247,7 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 func (esc *envoySidecarConfig) volumes() []corev1.Volume {
 
 	volumes := []corev1.Volume{
-		corev1.Volume{
+		{
 			Name: esc.tlsVolume,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -255,7 +255,7 @@ func (esc *envoySidecarConfig) volumes() []corev1.Volume {
 				},
 			},
 		},
-		corev1.Volume{
+		{
 			Name: esc.configVolume,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{

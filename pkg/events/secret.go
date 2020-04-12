@@ -33,6 +33,8 @@ const (
 	certificateAnnotation = "cert-manager.io/common-name"
 )
 
+// SecretHandler represents a kubernetes shared
+// informer for Secrets
 type SecretHandler struct {
 	client    *util.K8s
 	namespace string
@@ -44,9 +46,11 @@ type SecretHandler struct {
 
 var version int32
 
+// NewSecretHandler creates a new SecretHandler from
+// the given params
 func NewSecretHandler(
-	client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
-	ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *SecretHandler {
+	ctx context.Context, client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
+	logger *zap.SugaredLogger, stopper chan struct{}) *SecretHandler {
 
 	return &SecretHandler{
 		client:    client,
@@ -58,6 +62,9 @@ func NewSecretHandler(
 	}
 }
 
+// RunSecretHandler runs the SecretHandler in a goroutine
+// and waits forever until the stopper signal is sent to the
+// stopper channel
 func (sr *SecretHandler) RunSecretHandler() {
 
 	factory := informers.NewSharedInformerFactoryWithOptions(sr.client.Clientset, 0, informers.WithNamespace(sr.namespace))

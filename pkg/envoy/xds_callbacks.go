@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
 type Callbacks struct {
 	Logger *zap.SugaredLogger
 }
@@ -66,7 +67,7 @@ func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *v2.DiscoveryReques
 	return nil
 }
 
-// OnFetchRequest implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
+// OnFetchResponse implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchResponse is called immediately prior to sending a response.
 func (cb *Callbacks) OnFetchResponse(req *v2.DiscoveryRequest, resp *v2.DiscoveryResponse) {
 }

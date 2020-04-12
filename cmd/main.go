@@ -69,8 +69,8 @@ func run(cmd *cobra.Command, args []string) {
 		go func() {
 			defer wait.Done()
 			err := controller.NewController(
-				tlsCertificatePath, tlsKeyPath, tlsCAPath,
-				namespace, ooCluster, ctx, stopper, logger,
+				ctx, tlsCertificatePath, tlsKeyPath, tlsCAPath,
+				namespace, ooCluster, stopper, logger,
 			)
 
 			if err != nil {
@@ -90,8 +90,8 @@ func run(cmd *cobra.Command, args []string) {
 
 	case "control-plane":
 		if err := controller.NewController(
-			tlsCertificatePath, tlsKeyPath, tlsCAPath,
-			namespace, ooCluster, ctx, stopper, logger,
+			ctx, tlsCertificatePath, tlsKeyPath, tlsCAPath,
+			namespace, ooCluster, stopper, logger,
 		); err != nil {
 			panic(err)
 		}

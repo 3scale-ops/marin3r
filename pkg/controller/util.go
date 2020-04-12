@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// NewLogger returns a logger object from the given params
 func NewLogger(logLevel string) *zap.SugaredLogger {
 
 	rawJSON := []byte(`{
@@ -63,6 +64,8 @@ func NewLogger(logLevel string) *zap.SugaredLogger {
 	return logger.Sugar()
 }
 
+// RunSignalWatcher listens for system calls to gracefully shutdown all
+// components when the SIGHUP, SIGINT, SIGTERM ot SIGQUIT is received
 func RunSignalWatcher(logger *zap.SugaredLogger) (context.Context, chan struct{}) {
 	// Create a context and cancel it when proper
 	// signals are received

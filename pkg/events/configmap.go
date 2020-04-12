@@ -32,6 +32,8 @@ const (
 	annotation = "marin3r.3scale.net/node-id"
 )
 
+// ConfigMapHandler represents a kubernetes shared
+// informer for ConfigMaps
 type ConfigMapHandler struct {
 	client    *util.K8s
 	namespace string
@@ -41,9 +43,11 @@ type ConfigMapHandler struct {
 	stopper   chan struct{}
 }
 
+// NewConfigMapHandler creates a new ConfigMapHandler from
+// the given params
 func NewConfigMapHandler(
-	client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
-	ctx context.Context, logger *zap.SugaredLogger, stopper chan struct{}) *ConfigMapHandler {
+	ctx context.Context, client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
+	logger *zap.SugaredLogger, stopper chan struct{}) *ConfigMapHandler {
 
 	return &ConfigMapHandler{
 		client:    client,
@@ -55,6 +59,9 @@ func NewConfigMapHandler(
 	}
 }
 
+// RunConfigMapHandler runs the ConfigMapHandler in a goroutine
+// and waits forever until the stopper signal is sent to the
+// stopper channel
 func (cmh *ConfigMapHandler) RunConfigMapHandler() {
 
 	factory := informers.NewSharedInformerFactoryWithOptions(cmh.client.Clientset, 0, informers.WithNamespace(cmh.namespace))

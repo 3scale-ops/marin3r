@@ -35,6 +35,8 @@ const (
 	grpcMaxConcurrentStreams = 1000000
 )
 
+// XdsServer is a type that holds configuration
+// and runtime objects for the envoy xds server
 type XdsServer struct {
 	ctx            context.Context
 	gatewayPort    uint
@@ -57,6 +59,7 @@ func (h hasher) ID(node *core.Node) string {
 	return node.Id
 }
 
+// NewXdsServer creates a new XdsServer object fron the given params
 func NewXdsServer(ctx context.Context, gatewayPort uint, managementPort uint,
 	tlsConfig *tls.Config, callbacks xds.Callbacks, logger *zap.SugaredLogger) *XdsServer {
 	snapshotCache := cache.NewSnapshotCache(true, hasher{}, nil)
@@ -130,6 +133,7 @@ func (xdss *XdsServer) RunManagementGateway() {
 	}
 }
 
+// GetSnapshotCache returns the xds_cache.SnapshotCache
 func (xdss *XdsServer) GetSnapshotCache() *cache.SnapshotCache {
 	return &xdss.snapshotCache
 }

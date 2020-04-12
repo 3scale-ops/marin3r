@@ -34,12 +34,16 @@ const (
 	configMapKey = "config.yaml"
 )
 
+// ConfigMapReconcileJob is a struct that holds the
+// required information for ConfigMap type jobs
 type ConfigMapReconcileJob struct {
 	eventType EventType
 	nodeID    string
 	configMap *corev1.ConfigMap
 }
 
+// NewConfigMapReconcileJob creates a new ConfigMapReconcileJob
+// from provided parameters
 func NewConfigMapReconcileJob(nodeID string, eventType EventType, configMap *corev1.ConfigMap) *ConfigMapReconcileJob {
 	return &ConfigMapReconcileJob{
 		eventType: eventType,
@@ -48,6 +52,7 @@ func NewConfigMapReconcileJob(nodeID string, eventType EventType, configMap *cor
 	}
 }
 
+// Push pushes the ConfigMapReconcileJob to the queue
 func (job ConfigMapReconcileJob) Push(queue chan ReconcileJob) {
 	queue <- job
 }
@@ -58,11 +63,17 @@ type resFromFile struct {
 	LoadAssignments []*envoyapi.ClusterLoadAssignment `protobuf:"bytes,3,rep,name=load_assignments,json=loadAssignments" json:"load_assignments"`
 }
 
-// This is so resFromFile implements the protbuf api an the resFromFile
+// This is so resFromFile implements the protbuf api and the resFromFile
 // struct can be directly unmarshalled into envoyapi structs
-func (m *resFromFile) Reset()         { *m = resFromFile{} }
+
+// Reset is noop function for resFromFile to implement protobuf interface
+func (m *resFromFile) Reset() { *m = resFromFile{} }
+
+// String is noop function for resFromFile to implement protobuf interface
 func (m *resFromFile) String() string { return proto.CompactTextString(m) }
-func (*resFromFile) ProtoMessage()    {}
+
+// ProtoMessage is noop function for resFromFile to implement protobuf interface
+func (*resFromFile) ProtoMessage() {}
 
 func (job ConfigMapReconcileJob) process(c cache.Cache, client *util.K8s, namespace string, logger *zap.SugaredLogger) ([]string, error) {
 

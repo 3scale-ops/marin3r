@@ -28,16 +28,24 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
+// K8s is a generic kubernetes client
 type K8s struct {
 	Clientset kubernetes.Interface
 }
 
+// FakeClusterClient returns a kubernetes client with
+// a fake Clientset inside. It can receive a list of
+// objects so the fake clienset will return them. Use
+// just for testing purposes.
 func FakeClusterClient(objects ...runtime.Object) *K8s {
 	client := K8s{}
 	client.Clientset = fake.NewSimpleClientset(objects...)
 	return &client
 }
 
+// FakeErrorClusterClient returns a kubernetes client with
+// a fake Clientset inside. This clientset always returns
+// an error. Use just for testing.
 func FakeErrorClusterClient(objects ...runtime.Object) *K8s {
 	client := K8s{}
 	client.Clientset = &fake.Clientset{}
@@ -49,6 +57,9 @@ func FakeErrorClusterClient(objects ...runtime.Object) *K8s {
 	return &client
 }
 
+// InClusterClient returns a kubernetes client with
+// a Clientset inside. Tries to use the serviceaccount
+// kubernetes gives to pods for authentication.
 func InClusterClient() (*K8s, error) {
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -63,6 +74,9 @@ func InClusterClient() (*K8s, error) {
 	return &client, nil
 }
 
+// OutOfClusterClient returns a kubernetes client with
+// a fake Clientset inside. It tries to build the clientset
+// config from a kubeconfig file
 func OutOfClusterClient() (*K8s, error) {
 	var kubeconfig string
 

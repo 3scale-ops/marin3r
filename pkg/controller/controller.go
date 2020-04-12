@@ -34,9 +34,10 @@ const (
 	managementPort = 18000
 )
 
+// NewController creates a Controller object from the given params
 func NewController(
-	tlsCertificatePath string, tlsKeyPath string, tlsCAPath string,
-	namespace string, ooCluster bool, ctx context.Context, stopper chan struct{},
+	ctx context.Context, tlsCertificatePath string, tlsKeyPath string,
+	tlsCAPath string, namespace string, ooCluster bool, stopper chan struct{},
 	logger *zap.SugaredLogger) error {
 
 	// -------------------------
@@ -97,8 +98,8 @@ func NewController(
 	rec := reconciler.NewReconciler(client, namespace, xdss.GetSnapshotCache(), stopper, logger)
 
 	// Init event handlers
-	secretHandler := events.NewSecretHandler(client, namespace, rec.Queue, ctx, logger, stopper)
-	configMapHandler := events.NewConfigMapHandler(client, namespace, rec.Queue, ctx, logger, stopper)
+	secretHandler := events.NewSecretHandler(ctx, client, namespace, rec.Queue, logger, stopper)
+	configMapHandler := events.NewConfigMapHandler(ctx, client, namespace, rec.Queue, logger, stopper)
 
 	// ------------------------
 	// ---- Run components ----

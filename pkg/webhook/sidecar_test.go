@@ -37,7 +37,7 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				name:  "container",
 				image: "image",
 				ports: []corev1.ContainerPort{
-					corev1.ContainerPort{Name: "xxxx", ContainerPort: 1111, HostPort: 3000},
+					{Name: "xxxx", ContainerPort: 1111, HostPort: 3000},
 				},
 				adsConfigMap:     "cm",
 				nodeID:           "node-id",
@@ -96,7 +96,7 @@ func Test_getContainerPorts(t *testing.T) {
 				"marin3r.3scale.net/ports": "xxxx:1111",
 			}},
 			[]corev1.ContainerPort{
-				corev1.ContainerPort{Name: "xxxx", ContainerPort: 1111},
+				{Name: "xxxx", ContainerPort: 1111},
 			},
 			false,
 		}, {
@@ -105,9 +105,9 @@ func Test_getContainerPorts(t *testing.T) {
 				"marin3r.3scale.net/ports": "xxxx:1111,yyyy:2222,zzzz:3333",
 			}},
 			[]corev1.ContainerPort{
-				corev1.ContainerPort{Name: "xxxx", ContainerPort: 1111},
-				corev1.ContainerPort{Name: "yyyy", ContainerPort: 2222},
-				corev1.ContainerPort{Name: "zzzz", ContainerPort: 3333},
+				{Name: "xxxx", ContainerPort: 1111},
+				{Name: "yyyy", ContainerPort: 2222},
+				{Name: "zzzz", ContainerPort: 3333},
 			},
 			false,
 		}, {
@@ -128,8 +128,8 @@ func Test_getContainerPorts(t *testing.T) {
 				"marin3r.3scale.net/ports": "xxxx:1111:UDP,yyyy:2222",
 			}},
 			[]corev1.ContainerPort{
-				corev1.ContainerPort{Name: "xxxx", ContainerPort: 1111, Protocol: "UDP"},
-				corev1.ContainerPort{Name: "yyyy", ContainerPort: 2222},
+				{Name: "xxxx", ContainerPort: 1111, Protocol: "UDP"},
+				{Name: "yyyy", ContainerPort: 2222},
 			},
 			false,
 		}, {
@@ -139,9 +139,9 @@ func Test_getContainerPorts(t *testing.T) {
 				"marin3r.3scale.net/host-port-mappings": "xxxx:5000,yyyy:6000",
 			}},
 			[]corev1.ContainerPort{
-				corev1.ContainerPort{Name: "xxxx", ContainerPort: 1111, Protocol: "UDP", HostPort: 5000},
-				corev1.ContainerPort{Name: "yyyy", ContainerPort: 2222, HostPort: 6000},
-				corev1.ContainerPort{Name: "zzzz", ContainerPort: 3333},
+				{Name: "xxxx", ContainerPort: 1111, Protocol: "UDP", HostPort: 5000},
+				{Name: "yyyy", ContainerPort: 2222, HostPort: 6000},
+				{Name: "zzzz", ContainerPort: 3333},
 			},
 			false,
 		},
@@ -342,12 +342,12 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 				name:  "sidecar",
 				image: "sidecar:latest",
 				ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
+					{
 						Name:          "udp",
 						ContainerPort: 6000,
 						Protocol:      corev1.Protocol("UDP"),
 					},
-					corev1.ContainerPort{
+					{
 						Name:          "https",
 						ContainerPort: 8443,
 					},
@@ -372,23 +372,23 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 					"cluster-id",
 				},
 				Ports: []corev1.ContainerPort{
-					corev1.ContainerPort{
+					{
 						Name:          "udp",
 						ContainerPort: 6000,
 						Protocol:      corev1.Protocol("UDP"),
 					},
-					corev1.ContainerPort{
+					{
 						Name:          "https",
 						ContainerPort: 8443,
 					},
 				},
 				VolumeMounts: []corev1.VolumeMount{
-					corev1.VolumeMount{
+					{
 						Name:      "tls-volume",
 						ReadOnly:  true,
 						MountPath: "/etc/envoy/tls/client",
 					},
-					corev1.VolumeMount{
+					{
 						Name:      "config-volume",
 						ReadOnly:  true,
 						MountPath: "/etc/envoy/bootstrap",

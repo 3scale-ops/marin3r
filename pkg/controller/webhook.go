@@ -37,6 +37,8 @@ var (
 // defaulter = runtime.ObjectDefaulter(runtimeScheme)
 )
 
+// RunWebhook runs the mutating admission controller in a gorouting and
+// waits forever until the context is closed.
 func RunWebhook(ctx context.Context, tlsCertificatePath string, tlsKeyPath string, tlsCAPath string, namespace string, logger *zap.SugaredLogger) error {
 
 	mux := http.NewServeMux()
