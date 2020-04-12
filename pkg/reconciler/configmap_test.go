@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"io"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -140,16 +141,13 @@ func TestConfigMapReconcileJob_Push(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
-			received := false
+			var wait sync.WaitGroup
+			wait.Add(1)
 			go func() {
 				<-tt.args.queue
-				received = true
 			}()
 			tt.job.Push(tt.args.queue)
-			if !received {
-				t.Error("ConfigMapReconcileJob.Push(): Job not received")
-			}
+			wait.Done()
 		})
 	}
 }

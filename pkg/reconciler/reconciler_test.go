@@ -143,9 +143,9 @@ func TestReconciler_RunReconciler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			go func() {
-				tt.rec.RunReconciler()
-			}()
+			go func(reconciler Reconciler) {
+				reconciler.RunReconciler()
+			}(tt.rec)
 
 			// Push jobs to the queue
 			for _, job := range tt.args.jobs {
