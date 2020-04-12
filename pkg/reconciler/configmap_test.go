@@ -74,7 +74,7 @@ func TestNewConfigMapReconcileJob(t *testing.T) {
 	type args struct {
 		nodeID    string
 		eventType EventType
-		configMap *corev1.ConfigMap
+		configMap corev1.ConfigMap
 	}
 	tests := []struct {
 		name string
@@ -86,7 +86,7 @@ func TestNewConfigMapReconcileJob(t *testing.T) {
 			args{
 				"node1",
 				Add,
-				&corev1.ConfigMap{
+				corev1.ConfigMap{
 					TypeMeta:   v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "cm"},
 					Data:       map[string]string{"config.yaml": "content"},
@@ -95,7 +95,7 @@ func TestNewConfigMapReconcileJob(t *testing.T) {
 			&ConfigMapReconcileJob{
 				eventType: Add,
 				nodeID:    "node1",
-				configMap: &corev1.ConfigMap{
+				configMap: corev1.ConfigMap{
 					TypeMeta:   v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "cm"},
 					Data:       map[string]string{"config.yaml": "content"},
@@ -126,7 +126,7 @@ func TestConfigMapReconcileJob_Push(t *testing.T) {
 			ConfigMapReconcileJob{
 				eventType: Update,
 				nodeID:    "node1",
-				configMap: &corev1.ConfigMap{
+				configMap: corev1.ConfigMap{
 					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{
 						Name:        "cm",
@@ -182,7 +182,7 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 			job: ConfigMapReconcileJob{
 				Add,
 				"node1",
-				&corev1.ConfigMap{
+				corev1.ConfigMap{
 					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{
 						Name:        "cm",
@@ -271,7 +271,7 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 			job: ConfigMapReconcileJob{
 				Update,
 				"node1",
-				&corev1.ConfigMap{
+				corev1.ConfigMap{
 					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{
 						Name:        "cm",
@@ -348,7 +348,7 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 			job: ConfigMapReconcileJob{
 				Add,
 				"node1",
-				&corev1.ConfigMap{
+				corev1.ConfigMap{
 					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{
 						Name:        "cm",
@@ -383,7 +383,7 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 			job: ConfigMapReconcileJob{
 				Add,
 				"node1",
-				&corev1.ConfigMap{
+				corev1.ConfigMap{
 					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{
 						Name:        "cm",

@@ -89,7 +89,7 @@ func onSecretAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger *za
 	secret := obj.(*corev1.Secret)
 	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
 		logger.Infof("Certificate '%s/%s' 'CN=%s' added", secret.GetNamespace(), secret.GetName(), cn)
-		reconciler.NewSecretReconcileJob(cn, reconciler.Add, secret).Push(queue)
+		reconciler.NewSecretReconcileJob(cn, reconciler.Add, *secret).Push(queue)
 	}
 }
 
@@ -102,7 +102,7 @@ func onSecretUpdate(obj interface{}, queue chan reconciler.ReconcileJob, logger 
 	secret := obj.(*corev1.Secret)
 	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
 		logger.Infof("Certificate '%s/%s' 'CN=%s' updated", secret.GetNamespace(), secret.GetName(), cn)
-		reconciler.NewSecretReconcileJob(cn, reconciler.Update, secret).Push(queue)
+		reconciler.NewSecretReconcileJob(cn, reconciler.Update, *secret).Push(queue)
 	}
 }
 
@@ -110,6 +110,6 @@ func onSecretDelete(obj interface{}, queue chan reconciler.ReconcileJob, logger 
 	secret := obj.(*corev1.Secret)
 	if cn, ok := secret.GetAnnotations()[certificateAnnotation]; ok {
 		logger.Infof("Certificate '%s/%s' 'CN=%s' deleted", secret.GetNamespace(), secret.GetName(), cn)
-		reconciler.NewSecretReconcileJob(cn, reconciler.Delete, secret).Push(queue)
+		reconciler.NewSecretReconcileJob(cn, reconciler.Delete, *secret).Push(queue)
 	}
 }

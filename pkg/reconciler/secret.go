@@ -29,12 +29,12 @@ import (
 type SecretReconcileJob struct {
 	eventType EventType
 	cn        string
-	secret    *corev1.Secret
+	secret    corev1.Secret
 }
 
 // NewSecretReconcileJob creates a new SecretReconcileJob
 // from provided parameters
-func NewSecretReconcileJob(cn string, eventType EventType, secret *corev1.Secret) *SecretReconcileJob {
+func NewSecretReconcileJob(cn string, eventType EventType, secret corev1.Secret) *SecretReconcileJob {
 	return &SecretReconcileJob{
 		eventType: eventType,
 		cn:        cn,

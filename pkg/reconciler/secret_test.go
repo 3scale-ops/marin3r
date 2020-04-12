@@ -35,7 +35,7 @@ func TestNewSecretReconcileJob(t *testing.T) {
 	type args struct {
 		cn        string
 		eventType EventType
-		secret    *corev1.Secret
+		secret    corev1.Secret
 	}
 	tests := []struct {
 		name string
@@ -47,7 +47,7 @@ func TestNewSecretReconcileJob(t *testing.T) {
 			args{
 				"common-name",
 				Add,
-				&corev1.Secret{
+				corev1.Secret{
 					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
@@ -58,7 +58,7 @@ func TestNewSecretReconcileJob(t *testing.T) {
 			&SecretReconcileJob{
 				eventType: Add,
 				cn:        "common-name",
-				secret: &corev1.Secret{
+				secret: corev1.Secret{
 					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
@@ -91,7 +91,7 @@ func TestSecretReconcileJob_Push(t *testing.T) {
 			SecretReconcileJob{
 				eventType: Update,
 				cn:        "common-name",
-				secret: &corev1.Secret{
+				secret: corev1.Secret{
 					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
@@ -147,7 +147,7 @@ func TestSecretReconcileJob_process(t *testing.T) {
 			job: SecretReconcileJob{
 				eventType: Update,
 				cn:        "common-name",
-				secret: &corev1.Secret{
+				secret: corev1.Secret{
 					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
@@ -191,7 +191,7 @@ func TestSecretReconcileJob_process(t *testing.T) {
 			job: SecretReconcileJob{
 				eventType: Update,
 				cn:        "common-name",
-				secret: &corev1.Secret{
+				secret: corev1.Secret{
 					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
@@ -216,7 +216,7 @@ func TestSecretReconcileJob_process(t *testing.T) {
 			job: SecretReconcileJob{
 				eventType: Update,
 				cn:        "common-name",
-				secret: &corev1.Secret{
+				secret: corev1.Secret{
 					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
 					ObjectMeta: v1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{

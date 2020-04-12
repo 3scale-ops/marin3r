@@ -39,12 +39,12 @@ const (
 type ConfigMapReconcileJob struct {
 	eventType EventType
 	nodeID    string
-	configMap *corev1.ConfigMap
+	configMap corev1.ConfigMap
 }
 
 // NewConfigMapReconcileJob creates a new ConfigMapReconcileJob
 // from provided parameters
-func NewConfigMapReconcileJob(nodeID string, eventType EventType, configMap *corev1.ConfigMap) *ConfigMapReconcileJob {
+func NewConfigMapReconcileJob(nodeID string, eventType EventType, configMap corev1.ConfigMap) *ConfigMapReconcileJob {
 	return &ConfigMapReconcileJob{
 		eventType: eventType,
 		nodeID:    nodeID,

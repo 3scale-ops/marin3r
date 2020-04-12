@@ -86,7 +86,7 @@ func onConfigMapAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger 
 	cm := obj.(*corev1.ConfigMap)
 	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' added", cm.GetNamespace(), cm.GetName(), nodeID)
-		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Add, cm).Push(queue)
+		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Add, *cm).Push(queue)
 	}
 }
 
@@ -94,7 +94,7 @@ func onConfigMapUpdate(obj interface{}, queue chan reconciler.ReconcileJob, logg
 	cm := obj.(*corev1.ConfigMap)
 	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' updated", cm.GetNamespace(), cm.GetName(), nodeID)
-		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Update, cm).Push(queue)
+		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Update, *cm).Push(queue)
 	}
 }
 
@@ -102,6 +102,6 @@ func onConfigMapDelete(obj interface{}, queue chan reconciler.ReconcileJob, logg
 	cm := obj.(*corev1.ConfigMap)
 	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' deleted", cm.GetNamespace(), cm.GetName(), nodeID)
-		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Delete, cm).Push(queue)
+		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Delete, *cm).Push(queue)
 	}
 }
