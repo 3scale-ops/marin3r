@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"io"
 	"reflect"
+	"sort"
 	"sync"
 	"testing"
 
@@ -245,6 +246,9 @@ func TestSecretReconcileJob_process(t *testing.T) {
 				t.Errorf("SecretReconcileJob.process() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			// Sort the slices so results are consistent
+			sort.Strings(got)
+			sort.Strings(tt.want.nodeIDs)
 			if !reflect.DeepEqual(got, tt.want.nodeIDs) {
 				t.Errorf("SecretReconcileJob.process() = %v, want %v", got, tt.want.nodeIDs)
 			}
