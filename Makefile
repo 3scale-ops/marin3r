@@ -94,6 +94,8 @@ start: certs
 		--out-of-cluster
 
 test-unit:
-	go test ./... -covermode=atomic
+	go test ./... -race -coverprofile=coverage.txt -covermode=atomic
 
 test: test-unit
+
+
