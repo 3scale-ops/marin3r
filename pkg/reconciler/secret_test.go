@@ -30,7 +30,7 @@ import (
 	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestNewSecretReconcileJob(t *testing.T) {
@@ -50,8 +50,8 @@ func TestNewSecretReconcileJob(t *testing.T) {
 				"common-name",
 				Add,
 				corev1.Secret{
-					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "secret"},
+					TypeMeta:   metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
 						"tls.crt": []byte("xxxx"),
 						"tls.key": []byte("yyyy"),
@@ -61,8 +61,8 @@ func TestNewSecretReconcileJob(t *testing.T) {
 				eventType: Add,
 				cn:        "common-name",
 				secret: corev1.Secret{
-					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "secret"},
+					TypeMeta:   metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
 						"tls.crt": []byte("xxxx"),
 						"tls.key": []byte("yyyy"),
@@ -94,8 +94,8 @@ func TestSecretReconcileJob_Push(t *testing.T) {
 				eventType: Update,
 				cn:        "common-name",
 				secret: corev1.Secret{
-					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "secret"},
+					TypeMeta:   metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
 						"tls.crt": []byte("xxxx"),
 						"tls.key": []byte("yyyy"),
@@ -112,10 +112,10 @@ func TestSecretReconcileJob_Push(t *testing.T) {
 			wait.Add(1)
 			go func() {
 				<-tt.args.queue
+				wait.Done()
 			}()
 			tt.job.Push(tt.args.queue)
-			wait.Done()
-
+			wait.Wait()
 		})
 	}
 }
@@ -149,8 +149,8 @@ func TestSecretReconcileJob_process(t *testing.T) {
 				eventType: Update,
 				cn:        "common-name",
 				secret: corev1.Secret{
-					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "secret"},
+					TypeMeta:   metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
 						"tls.crt": []byte("xxxx"),
 						"tls.key": []byte("yyyy"),
@@ -193,8 +193,8 @@ func TestSecretReconcileJob_process(t *testing.T) {
 				eventType: Update,
 				cn:        "common-name",
 				secret: corev1.Secret{
-					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "secret"},
+					TypeMeta:   metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
 						"wrong_key": []byte("xxxx"),
 					},
@@ -218,8 +218,8 @@ func TestSecretReconcileJob_process(t *testing.T) {
 				eventType: Update,
 				cn:        "common-name",
 				secret: corev1.Secret{
-					TypeMeta:   v1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "secret"},
+					TypeMeta:   metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret"},
 					Data: map[string][]byte{
 						"tls.crt": []byte("yyyy"),
 					},

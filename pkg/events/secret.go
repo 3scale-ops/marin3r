@@ -36,10 +36,10 @@ const (
 // SecretHandler represents a kubernetes shared
 // informer for Secrets
 type SecretHandler struct {
+	ctx       context.Context
 	client    *util.K8s
 	namespace string
 	queue     chan reconciler.ReconcileJob
-	ctx       context.Context
 	logger    *zap.SugaredLogger
 	stopper   chan struct{}
 }
@@ -77,6 +77,8 @@ func (sr *SecretHandler) RunSecretHandler() {
 	})
 	go informer.Run(sr.stopper)
 	if !cache.WaitForCacheSync(sr.stopper, informer.HasSynced) {
+		// TODO: return an actual error to the controller, otherwise the
+		// main process will be unaware that the handler initialization failed
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 		return
 	}

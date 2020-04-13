@@ -2,6 +2,7 @@ certs
 build
 bin
 tmp
+coverage.txt
 
 # Binaries for programs and plugins
 *.exe

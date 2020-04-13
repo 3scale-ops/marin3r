@@ -34,7 +34,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func fakeClientWithSecrets() *util.K8s {
@@ -88,8 +87,8 @@ func TestNewConfigMapReconcileJob(t *testing.T) {
 				"node1",
 				Add,
 				corev1.ConfigMap{
-					TypeMeta:   v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "cm"},
+					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "cm"},
 					Data:       map[string]string{"config.yaml": "content"},
 				},
 			},
@@ -97,8 +96,8 @@ func TestNewConfigMapReconcileJob(t *testing.T) {
 				eventType: Add,
 				nodeID:    "node1",
 				configMap: corev1.ConfigMap{
-					TypeMeta:   v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{Name: "cm"},
+					TypeMeta:   metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "cm"},
 					Data:       map[string]string{"config.yaml": "content"},
 				},
 			},
@@ -128,8 +127,8 @@ func TestConfigMapReconcileJob_Push(t *testing.T) {
 				eventType: Update,
 				nodeID:    "node1",
 				configMap: corev1.ConfigMap{
-					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:        "cm",
 						Annotations: map[string]string{"marin3r.3scale.net/node-id": "node1"},
 					},
@@ -145,9 +144,10 @@ func TestConfigMapReconcileJob_Push(t *testing.T) {
 			wait.Add(1)
 			go func() {
 				<-tt.args.queue
+				wait.Done()
 			}()
 			tt.job.Push(tt.args.queue)
-			wait.Done()
+			wait.Wait()
 		})
 	}
 }
@@ -181,8 +181,8 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 				Add,
 				"node1",
 				corev1.ConfigMap{
-					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:        "cm",
 						Annotations: map[string]string{"marin3r.3scale.net/node-id": "node1"},
 					},
@@ -270,8 +270,8 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 				Update,
 				"node1",
 				corev1.ConfigMap{
-					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:        "cm",
 						Annotations: map[string]string{"marin3r.3scale.net/node-id": "node1"},
 					},
@@ -347,8 +347,8 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 				Add,
 				"node1",
 				corev1.ConfigMap{
-					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:        "cm",
 						Annotations: map[string]string{"marin3r.3scale.net/node-id": "node1"},
 					},
@@ -382,8 +382,8 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 				Add,
 				"node1",
 				corev1.ConfigMap{
-					TypeMeta: v1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
-					ObjectMeta: v1.ObjectMeta{
+					TypeMeta: metav1.TypeMeta{Kind: "ConfigMap", APIVersion: "v1"},
+					ObjectMeta: metav1.ObjectMeta{
 						Name:        "cm",
 						Annotations: map[string]string{"marin3r.3scale.net/node-id": "node1"},
 					},

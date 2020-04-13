@@ -35,10 +35,10 @@ const (
 // ConfigMapHandler represents a kubernetes shared
 // informer for ConfigMaps
 type ConfigMapHandler struct {
+	ctx       context.Context
 	client    *util.K8s
 	namespace string
 	queue     chan reconciler.ReconcileJob
-	ctx       context.Context
 	logger    *zap.SugaredLogger
 	stopper   chan struct{}
 }
@@ -74,6 +74,8 @@ func (cmh *ConfigMapHandler) RunConfigMapHandler() {
 	})
 	go informer.Run(cmh.stopper)
 	if !cache.WaitForCacheSync(cmh.stopper, informer.HasSynced) {
+		// TODO: return an actual error to the controller, otherwise the
+		// main process will be unaware that the handler initialization failed
 		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
 		return
 	}
