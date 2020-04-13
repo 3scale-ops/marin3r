@@ -30,8 +30,7 @@ import (
 )
 
 const (
-	gatewayPort    = 19001
-	managementPort = 18000
+	adsPort = 18000
 )
 
 // NewController creates a Controller object from the given params
@@ -47,25 +46,15 @@ func NewController(
 	// Init the xDS server
 	xdss := envoy.NewXdsServer(
 		ctx,
-		gatewayPort,
-		managementPort,
+		adsPort,
 		&tls.Config{
 			MinVersion:               tls.VersionTLS12,
 			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
 			PreferServerCipherSuites: true,
 			CipherSuites: []uint16{
-				// Sadly, these 2 are required to use http2 and
-				// must go first as others could be offered first
-				// to the client and cause the connection to be
-				// rejected
+				// Sadly, these 2 non 256 are required to use http2 in go
 				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-
-				// This are for the management gateway
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 			},
 			// TODO: mechanism to reload server certificate when renewed
 			// Probably the easieast way is to have a goroutine force server
@@ -127,14 +116,10 @@ func NewController(
 
 	// Finally start the servers
 	var waitServers sync.WaitGroup
-	waitServers.Add(2)
+	waitServers.Add(1)
 	go func() {
 		defer waitServers.Done()
-		xdss.RunManagementServer()
-	}()
-	go func() {
-		defer waitServers.Done()
-		xdss.RunManagementGateway()
+		xdss.RunADSServer()
 	}()
 
 	// Stop in order

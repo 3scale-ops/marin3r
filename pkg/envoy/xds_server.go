@@ -19,11 +19,9 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"net/http"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
-	secretservice "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server"
 	"go.uber.org/zap"
@@ -38,12 +36,12 @@ const (
 // XdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server
 type XdsServer struct {
-	ctx            context.Context
-	gatewayPort    uint
-	managementPort uint
-	tlsConfig      *tls.Config
-	server         xds.Server
-	snapshotCache  cache.SnapshotCache
+	ctx           context.Context
+	gatewayPort   uint
+	adsPort       uint
+	tlsConfig     *tls.Config
+	server        xds.Server
+	snapshotCache cache.SnapshotCache
 
 	logger *zap.SugaredLogger
 }
@@ -60,24 +58,23 @@ func (h hasher) ID(node *core.Node) string {
 }
 
 // NewXdsServer creates a new XdsServer object fron the given params
-func NewXdsServer(ctx context.Context, gatewayPort uint, managementPort uint,
+func NewXdsServer(ctx context.Context, adsPort uint,
 	tlsConfig *tls.Config, callbacks xds.Callbacks, logger *zap.SugaredLogger) *XdsServer {
 	snapshotCache := cache.NewSnapshotCache(true, hasher{}, nil)
 	srv := xds.NewServer(ctx, snapshotCache, callbacks)
 
 	return &XdsServer{
-		ctx:            ctx,
-		gatewayPort:    gatewayPort,
-		managementPort: managementPort,
-		tlsConfig:      tlsConfig,
-		server:         srv,
-		snapshotCache:  snapshotCache,
-		logger:         logger,
+		ctx:           ctx,
+		adsPort:       adsPort,
+		tlsConfig:     tlsConfig,
+		server:        srv,
+		snapshotCache: snapshotCache,
+		logger:        logger,
 	}
 }
 
-// RunManagementServer starts an xDS server at the given port.
-func (xdss *XdsServer) RunManagementServer() {
+// RunADSServer starts an xDS server at the given port.
+func (xdss *XdsServer) RunADSServer() {
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
 	// a single connection to the management server, then it might lead to
@@ -86,21 +83,13 @@ func (xdss *XdsServer) RunManagementServer() {
 		grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams),
 		grpc.Creds(credentials.NewTLS(xdss.tlsConfig)),
 	)
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", xdss.managementPort))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", xdss.adsPort))
 	if err != nil {
 		xdss.logger.Fatal(err)
 	}
 
-	// register services
 	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
-	// endpointservice.RegisterEndpointDiscoveryServiceServer(grpcServer, server)
-	// clusterservice.RegisterClusterDiscoveryServiceServer(grpcServer, server)
-	// routeservice.RegisterRouteDiscoveryServiceServer(grpcServer, server)
-	// listenerservice.RegisterListenerDiscoveryServiceServer(grpcServer, server)
-	secretservice.RegisterSecretDiscoveryServiceServer(grpcServer, xdss.server)
-	// runtimeservice.RegisterRuntimeDiscoveryServiceServer(grpcServer, server)
-
-	xdss.logger.Infof("Management server listening on %d\n", xdss.managementPort)
+	xdss.logger.Infof("Aggregates discovery service listening on %d\n", xdss.adsPort)
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
 			xdss.logger.Error(err)
@@ -108,29 +97,8 @@ func (xdss *XdsServer) RunManagementServer() {
 	}()
 	<-xdss.ctx.Done()
 
-	xdss.logger.Infof("Shutting down management server")
+	xdss.logger.Infof("Shutting down ads server")
 	grpcServer.GracefulStop()
-}
-
-// RunManagementGateway starts an HTTP gateway to an xDS server.
-func (xdss *XdsServer) RunManagementGateway() {
-	xdss.logger.Infof("Starting HTTP/1.1 gateway on Port %d\n", xdss.gatewayPort)
-	httpServer := &http.Server{
-		Addr:      fmt.Sprintf(":%d", xdss.gatewayPort),
-		Handler:   &xds.HTTPGateway{Server: xdss.server, Log: xdss.logger},
-		TLSConfig: xdss.tlsConfig,
-	}
-	go func() {
-		if err := httpServer.ListenAndServeTLS("", ""); err != nil {
-			xdss.logger.Error(err)
-		}
-	}()
-
-	<-xdss.ctx.Done()
-	xdss.logger.Infof("Shutting down gateway")
-	if err := httpServer.Shutdown(xdss.ctx); err != nil {
-		xdss.logger.Error(err)
-	}
 }
 
 // GetSnapshotCache returns the xds_cache.SnapshotCache
