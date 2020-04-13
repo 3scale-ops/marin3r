@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davecgh/go-spew/spew"
 	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	"go.uber.org/zap"
 )
@@ -56,8 +55,12 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 
 // OnStreamResponse implements go-control-plane/pkg/server/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
-func (cb *Callbacks) OnStreamResponse(i int64, request *v2.DiscoveryRequest, response *v2.DiscoveryResponse) {
-	cb.Logger.Debug("OnStreamResponse: %s", spew.Sprint(response))
+func (cb *Callbacks) OnStreamResponse(i int64, req *v2.DiscoveryRequest, rsp *v2.DiscoveryResponse) {
+	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v2.auth.Secret" {
+		cb.Logger.Debugf("OnStreamResponse. Node: '%s'. Resources: 'Resources are secrets, refusing to log'. TypeURL: '%s' ", req.Node.Id, rsp.TypeUrl)
+	} else {
+		cb.Logger.Debugf("OnStreamResponse. Node: '%s'. Resources: '%s'. TypeURL: '%s' ", req.Node.Id, rsp.Resources, rsp.TypeUrl)
+	}
 }
 
 // OnFetchRequest implements go-control-plane/pkg/server/Callbacks.OnFetchRequest

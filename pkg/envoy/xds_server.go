@@ -89,7 +89,7 @@ func (xdss *XdsServer) RunADSServer() {
 	}
 
 	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
-	xdss.logger.Infof("Aggregates discovery service listening on %d\n", xdss.adsPort)
+	xdss.logger.Infof("Aggregated discovery service listening on %d\n", xdss.adsPort)
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
 			xdss.logger.Error(err)
