@@ -55,7 +55,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 
 // OnStreamResponse implements go-control-plane/pkg/server/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
-func (cb *Callbacks) OnStreamResponse(i int64, req *v2.DiscoveryRequest, rsp *v2.DiscoveryResponse) {
+func (cb *Callbacks) OnStreamResponse(id int64, req *v2.DiscoveryRequest, rsp *v2.DiscoveryResponse) {
 	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v2.auth.Secret" {
 		cb.Logger.Debugf("OnStreamResponse. Node: '%s'. Resources: 'Resources are secrets, refusing to log'. TypeURL: '%s' ", req.Node.Id, rsp.TypeUrl)
 	} else {

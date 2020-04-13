@@ -37,7 +37,6 @@ const (
 // and runtime objects for the envoy xds server
 type XdsServer struct {
 	ctx           context.Context
-	gatewayPort   uint
 	adsPort       uint
 	tlsConfig     *tls.Config
 	server        xds.Server
