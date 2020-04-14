@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"sync"
@@ -74,12 +75,12 @@ func NewController(
 	if ooCluster {
 		client, err = util.OutOfClusterClient()
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to load the out of cluster k8s client: '%s'", err)
 		}
 	} else {
 		client, err = util.InClusterClient()
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to load the in cluster k8s client: '%s'", err)
 		}
 	}
 
@@ -107,11 +108,15 @@ func NewController(
 	waitEventHandlers.Add(2)
 	go func() {
 		defer waitEventHandlers.Done()
-		secretHandler.RunSecretHandler()
+		if err := secretHandler.RunSecretHandler(); err != nil {
+			logger.Panicf("SecretHandler returned an unrecoverable error, shutting down: '%s'", "err")
+		}
 	}()
 	go func() {
 		defer waitEventHandlers.Done()
-		configMapHandler.RunConfigMapHandler()
+		if err := configMapHandler.RunConfigMapHandler(); err != nil {
+			logger.Panicf("ConfigMapHandler returned an unrecoverable error, shutting down: '%s'", "err")
+		}
 	}()
 
 	// Finally start the servers
@@ -119,7 +124,9 @@ func NewController(
 	waitServers.Add(1)
 	go func() {
 		defer waitServers.Done()
-		xdss.RunADSServer()
+		if err := xdss.RunADSServer(); err != nil {
+			logger.Panicf("ADS server returned an unrecoverable error, shutting down: '%s'", "err")
+		}
 	}()
 
 	// Stop in order

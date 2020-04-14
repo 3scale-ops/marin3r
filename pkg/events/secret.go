@@ -65,7 +65,7 @@ func NewSecretHandler(
 // RunSecretHandler runs the SecretHandler in a goroutine
 // and waits forever until the stopper signal is sent to the
 // stopper channel
-func (sr *SecretHandler) RunSecretHandler() {
+func (sr *SecretHandler) RunSecretHandler() error {
 
 	factory := informers.NewSharedInformerFactoryWithOptions(sr.client.Clientset, 0, informers.WithNamespace(sr.namespace))
 	informer := factory.Core().V1().Secrets().Informer()
@@ -77,14 +77,12 @@ func (sr *SecretHandler) RunSecretHandler() {
 	})
 	go informer.Run(sr.stopper)
 	if !cache.WaitForCacheSync(sr.stopper, informer.HasSynced) {
-		// TODO: return an actual error to the controller, otherwise the
-		// main process will be unaware that the handler initialization failed
-		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
-		return
+		return fmt.Errorf("Timed out waiting for caches to sync")
 	}
 
 	sr.logger.Info("Secret handler started")
 	<-sr.stopper
+	return nil
 }
 
 func onSecretAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {

@@ -73,7 +73,7 @@ func NewXdsServer(ctx context.Context, adsPort uint,
 }
 
 // RunADSServer starts an xDS server at the given port.
-func (xdss *XdsServer) RunADSServer() {
+func (xdss *XdsServer) RunADSServer() error {
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
 	// a single connection to the management server, then it might lead to
@@ -88,16 +88,19 @@ func (xdss *XdsServer) RunADSServer() {
 	}
 
 	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
-	xdss.logger.Infof("Aggregated discovery service listening on %d\n", xdss.adsPort)
-	go func() {
+	go func() error {
 		if err = grpcServer.Serve(lis); err != nil {
 			xdss.logger.Error(err)
+			return err
 		}
+		return nil
 	}()
+	xdss.logger.Infof("Aggregated discovery service listening on %d\n", xdss.adsPort)
 	<-xdss.ctx.Done()
 
 	xdss.logger.Infof("Shutting down ads server")
 	grpcServer.GracefulStop()
+	return nil
 }
 
 // GetSnapshotCache returns the xds_cache.SnapshotCache

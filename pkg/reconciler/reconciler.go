@@ -100,7 +100,7 @@ func (r *Reconciler) RunReconciler() {
 
 	// Watch for the call to shutdown the worker
 	r.runStopWatcher()
-
+	r.logger.Info("Reconcile worker started")
 	for {
 		job, more := <-r.Queue
 		if more {
@@ -121,7 +121,7 @@ func (r *Reconciler) RunReconciler() {
 				}
 			}
 		} else {
-			r.logger.Info("Received channel close, shutting down worker")
+			r.logger.Info("Shutting down reconcile worker")
 			return
 		}
 	}

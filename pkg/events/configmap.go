@@ -62,7 +62,7 @@ func NewConfigMapHandler(
 // RunConfigMapHandler runs the ConfigMapHandler in a goroutine
 // and waits forever until the stopper signal is sent to the
 // stopper channel
-func (cmh *ConfigMapHandler) RunConfigMapHandler() {
+func (cmh *ConfigMapHandler) RunConfigMapHandler() error {
 
 	factory := informers.NewSharedInformerFactoryWithOptions(cmh.client.Clientset, 0, informers.WithNamespace(cmh.namespace))
 	informer := factory.Core().V1().ConfigMaps().Informer()
@@ -74,14 +74,12 @@ func (cmh *ConfigMapHandler) RunConfigMapHandler() {
 	})
 	go informer.Run(cmh.stopper)
 	if !cache.WaitForCacheSync(cmh.stopper, informer.HasSynced) {
-		// TODO: return an actual error to the controller, otherwise the
-		// main process will be unaware that the handler initialization failed
-		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
-		return
+		return fmt.Errorf("Timed out waiting for caches to sync")
 	}
 
 	cmh.logger.Info("ConfigMap handler started")
 	<-cmh.stopper
+	return nil
 }
 
 func onConfigMapAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {
