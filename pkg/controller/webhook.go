@@ -73,6 +73,7 @@ func RunWebhook(ctx context.Context, tlsCertificatePath string, tlsKeyPath strin
 		logger.Fatal(srv.ListenAndServeTLS("", ""))
 	}()
 
+	logger.Infof("Mutating admission webhook started")
 	<-ctx.Done()
 	logger.Infof("Shutting down admission webhook")
 	if err := srv.Shutdown(ctx); err != nil {
