@@ -17,10 +17,10 @@ spec:
         marin3r.3scale.net/status: "enabled"
       annotations:
         marin3r.3scale.net/node-id: kuard
-        marin3r.3scale.net/ports: envoy-http:8090,envoy-https:8443
+        marin3r.3scale.net/ports: envoy-http:1080,envoy-https:1443
         # Map envoy ports to the to the kind extraPortMappings so services
         # are reachable from the docker host
-        marin3r.3scale.net/host-port-mappings: envoy-http:8080,envoy-https:8443
+        marin3r.3scale.net/host-port-mappings: envoy-http:1080,envoy-https:1443
     spec:
       containers:
         - name: kuard
@@ -60,7 +60,7 @@ data:
         address:
           socket_address:
             address: 0.0.0.0
-            port_value: 8443
+            port_value: 1443
         filter_chains:
           - filters:
             - name: envoy.http_connection_manager
@@ -96,7 +96,7 @@ data:
         address:
           socket_address:
             address: 0.0.0.0
-            port_value: 8090
+            port_value: 1080
         filter_chains:
           - filters:
             - name: envoy.http_connection_manager
