@@ -15,9 +15,9 @@
 package reconciler
 
 import (
+	"github.com/3scale/marin3r/pkg/cache"
+	"github.com/3scale/marin3r/pkg/util"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
-	"github.com/roivaz/marin3r/pkg/cache"
-	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 )
 

@@ -22,10 +22,10 @@ import (
 	"log"
 	"sync"
 
-	"github.com/roivaz/marin3r/pkg/envoy"
-	"github.com/roivaz/marin3r/pkg/events"
-	"github.com/roivaz/marin3r/pkg/reconciler"
-	"github.com/roivaz/marin3r/pkg/util"
+	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale/marin3r/pkg/events"
+	"github.com/3scale/marin3r/pkg/reconciler"
+	"github.com/3scale/marin3r/pkg/util"
 	"go.uber.org/zap"
 )
 

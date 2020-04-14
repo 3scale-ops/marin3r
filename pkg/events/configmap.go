@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/roivaz/marin3r/pkg/reconciler"
-	"github.com/roivaz/marin3r/pkg/util"
+	"github.com/3scale/marin3r/pkg/reconciler"
+	"github.com/3scale/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/runtime"

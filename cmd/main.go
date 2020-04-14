@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/roivaz/marin3r/pkg/controller"
+	"github.com/3scale/marin3r/pkg/controller"
 	"github.com/spf13/cobra"
 )
 

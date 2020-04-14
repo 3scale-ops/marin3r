@@ -22,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/3scale/marin3r/pkg/cache"
+	"github.com/3scale/marin3r/pkg/util"
 	envoy_api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -29,8 +31,6 @@ import (
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/roivaz/marin3r/pkg/cache"
-	"github.com/roivaz/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

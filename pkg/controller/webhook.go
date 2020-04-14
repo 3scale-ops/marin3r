@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/roivaz/marin3r/pkg/webhook"
+	"github.com/3scale/marin3r/pkg/webhook"
 	"go.uber.org/zap"
 )
 

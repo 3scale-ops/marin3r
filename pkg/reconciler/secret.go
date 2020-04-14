@@ -17,9 +17,9 @@ package reconciler
 import (
 	"fmt"
 
-	"github.com/roivaz/marin3r/pkg/cache"
-	"github.com/roivaz/marin3r/pkg/envoy"
-	"github.com/roivaz/marin3r/pkg/util"
+	"github.com/3scale/marin3r/pkg/cache"
+	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale/marin3r/pkg/util"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 )
