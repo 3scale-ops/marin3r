@@ -23,7 +23,7 @@ kind-create: tmp $(KIND)
 kind-docker-build: ## Builds the docker image for HEAD of the current branch
 kind-docker-build: build/$(NAME)_amd64_$(RELEASE)
 	docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
-	docker tag ${IMAGE_NAME}:$(RELEASE) ${IMAGE_NAME}/$(NAME):test
+	docker tag ${IMAGE_NAME}:$(RELEASE) ${IMAGE_NAME}:test
 	docker push ${IMAGE_NAME}:$(RELEASE)
 	docker push ${IMAGE_NAME}:test
 
@@ -41,7 +41,8 @@ kind-start-envoy1: certs
 	kubectl apply -f deploy/envoy-config-cm.yaml
 	kubectl apply -f deploy/envoy-pod.yaml
 
-kind-refresh-marin3r: docker-build
+kind-refresh-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
+kind-refresh-marin3r: kind-docker-build
 	kubectl delete pod -l app=marin3r
 
 kind-logs-marin3r:
