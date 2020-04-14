@@ -91,11 +91,11 @@ envoy: certs
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config/envoy-bootstrap.yaml $(ARGS)
 
-start: ## starts the marin3r contrl plane
+start: ## starts the marin3r control plane
 start: certs
 	KUBECONFIG=tmp/kubeconfig go run cmd/main.go \
-		--certificate certs/marin3r-server.crt \
-		--private-key certs/marin3r-server.key \
+		--certificate certs/marin3r.default.svc.crt \
+		--private-key certs/marin3r.default.svc.key \
 		--ca certs/ca.crt \
 		--log-level debug \
 		--namespace default \
