@@ -16,7 +16,6 @@ package events
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/3scale/marin3r/pkg/reconciler"
 	"github.com/3scale/marin3r/pkg/util"
@@ -72,9 +71,6 @@ func (cmh *ConfigMapHandler) RunConfigMapHandler() error {
 	})
 	stopper := make(chan struct{})
 	go informer.Run(stopper)
-	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
-		return fmt.Errorf("Timed out waiting for caches to sync")
-	}
 
 	cmh.logger.Info("ConfigMap handler started")
 
