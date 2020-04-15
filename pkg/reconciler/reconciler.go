@@ -15,6 +15,8 @@
 package reconciler
 
 import (
+	"context"
+
 	"github.com/3scale/marin3r/pkg/cache"
 	"github.com/3scale/marin3r/pkg/util"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
@@ -66,6 +68,7 @@ type ReconcileJob interface {
 // input information (usually in the form of events)
 // with output envoy configuration
 type Reconciler struct {
+	ctx           context.Context
 	client        *util.K8s
 	namespace     string
 	cache         cache.Cache
@@ -73,24 +76,22 @@ type Reconciler struct {
 	// TODO: do not go passing the channel around so freely,
 	// create a queue object with a channel inside, not public,
 	// and a set of public functions to access the channel
-	Queue   chan ReconcileJob
-	logger  *zap.SugaredLogger
-	stopper chan struct{}
+	Queue  chan ReconcileJob
+	logger *zap.SugaredLogger
 }
 
 // NewReconciler returns a new Reconciler object built using the
 // passed parameters
-func NewReconciler(client *util.K8s, namespace string,
-	snapshotCache *xds_cache.SnapshotCache, stopper chan struct{},
-	logger *zap.SugaredLogger) *Reconciler {
+func NewReconciler(ctx context.Context, client *util.K8s, namespace string,
+	snapshotCache *xds_cache.SnapshotCache, logger *zap.SugaredLogger) *Reconciler {
 	return &Reconciler{
+		ctx:           ctx,
 		client:        client,
 		namespace:     namespace,
 		cache:         cache.NewCache(),
 		snapshotCache: snapshotCache,
 		Queue:         make(chan ReconcileJob),
 		logger:        logger,
-		stopper:       stopper,
 	}
 }
 
@@ -129,7 +130,7 @@ func (r *Reconciler) RunReconciler() {
 
 func (r *Reconciler) runStopWatcher() {
 	go func() {
-		<-r.stopper
+		<-r.ctx.Done()
 		close(r.Queue)
 	}()
 }

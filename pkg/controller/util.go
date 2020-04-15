@@ -66,7 +66,7 @@ func NewLogger(logLevel string) *zap.SugaredLogger {
 
 // RunSignalWatcher listens for system calls to gracefully shutdown all
 // components when the SIGHUP, SIGINT, SIGTERM ot SIGQUIT is received
-func RunSignalWatcher(logger *zap.SugaredLogger) (context.Context, chan struct{}) {
+func RunSignalWatcher(logger *zap.SugaredLogger) context.Context {
 	// Create a context and cancel it when proper
 	// signals are received
 	sigc := make(chan os.Signal, 1)
@@ -77,16 +77,12 @@ func RunSignalWatcher(logger *zap.SugaredLogger) (context.Context, chan struct{}
 		syscall.SIGQUIT,
 	)
 
-	// Channel to stop reconcilers
-	stopper := make(chan struct{})
-
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		oscall := <-sigc
 		logger.Infof("Received system call: %+v", oscall)
-		close(stopper)
 		cancel()
 	}()
 
-	return ctx, stopper
+	return ctx
 }

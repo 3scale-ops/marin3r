@@ -15,6 +15,7 @@
 package reconciler
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -30,7 +31,6 @@ import (
 func testReconciler(rcaches cache.Cache) Reconciler {
 	lg, _ := zap.NewDevelopment()
 	logger := lg.Sugar()
-	stopper := make(chan struct{})
 	scache := xds_cache.NewSnapshotCache(true, xds_cache.IDHash{}, nil)
 
 	var rc cache.Cache
@@ -41,13 +41,13 @@ func testReconciler(rcaches cache.Cache) Reconciler {
 	}
 
 	return Reconciler{
-		client:        &util.K8s{},
+		ctx:           context.Background(),
+		client:        util.FakeClusterClient(),
 		namespace:     "namespace",
 		cache:         rc,
 		snapshotCache: &scache,
 		Queue:         make(chan ReconcileJob),
 		logger:        logger,
-		stopper:       stopper,
 	}
 }
 
@@ -171,13 +171,23 @@ func TestReconciler_RunReconciler(t *testing.T) {
 }
 
 func TestReconciler_runStopWatcher(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	rec := Reconciler{
+		ctx:       ctx,
+		client:    util.FakeClusterClient(),
+		namespace: "namespace",
+		cache:     cache.Cache{},
+		snapshotCache: func() *xds_cache.SnapshotCache {
+			sc := xds_cache.NewSnapshotCache(true, xds_cache.IDHash{}, nil)
+			return &sc
+		}(),
+		Queue:  make(chan ReconcileJob),
+		logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }(),
+	}
 
-	t.Run("Closes Reconciler.Queue channel when receives the stopper signal", func(t *testing.T) {
-		rec := testReconciler(nil)
-		close(rec.stopper)
-		go func() {
-			rec.runStopWatcher()
-		}()
+	t.Run("Closes Reconciler.Queue channel when context cancelled", func(t *testing.T) {
+		go rec.runStopWatcher()
+		cancel()
 		<-rec.Queue
 	})
 }

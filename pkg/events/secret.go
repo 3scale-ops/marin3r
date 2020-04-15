@@ -41,7 +41,6 @@ type SecretHandler struct {
 	namespace string
 	queue     chan reconciler.ReconcileJob
 	logger    *zap.SugaredLogger
-	stopper   chan struct{}
 }
 
 var version int32
@@ -50,7 +49,7 @@ var version int32
 // the given params
 func NewSecretHandler(
 	ctx context.Context, client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
-	logger *zap.SugaredLogger, stopper chan struct{}) *SecretHandler {
+	logger *zap.SugaredLogger) *SecretHandler {
 
 	return &SecretHandler{
 		client:    client,
@@ -58,7 +57,6 @@ func NewSecretHandler(
 		queue:     queue,
 		ctx:       ctx,
 		logger:    logger,
-		stopper:   stopper,
 	}
 }
 
@@ -75,13 +73,15 @@ func (sr *SecretHandler) RunSecretHandler() error {
 		UpdateFunc: func(oldObj, newObj interface{}) { onSecretUpdate(newObj, sr.queue, sr.logger) },
 		DeleteFunc: func(obj interface{}) { onSecretDelete(obj, sr.queue, sr.logger) },
 	})
-	go informer.Run(sr.stopper)
-	if !cache.WaitForCacheSync(sr.stopper, informer.HasSynced) {
+	stopper := make(chan struct{})
+	go informer.Run(stopper)
+	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
 		return fmt.Errorf("Timed out waiting for caches to sync")
 	}
 
 	sr.logger.Info("Secret handler started")
-	<-sr.stopper
+	<-sr.ctx.Done()
+	close(stopper)
 	return nil
 }
 

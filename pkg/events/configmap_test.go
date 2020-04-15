@@ -54,8 +54,8 @@ func TestNewConfigMapHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewConfigMapHandler(tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger, tt.args.stopper)
-			want := &ConfigMapHandler{tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger, tt.args.stopper}
+			got := NewConfigMapHandler(tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger)
+			want := &ConfigMapHandler{tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("NewConfigMapHandler() = %v, want %v", got, want)
 			}
@@ -64,6 +64,9 @@ func TestNewConfigMapHandler(t *testing.T) {
 }
 
 func TestConfigMapHandler_RunConfigMapHandler(t *testing.T) {
+	var cancel context.CancelFunc
+	var ctx context.Context
+
 	tests := []struct {
 		name string
 		cmh  *ConfigMapHandler
@@ -71,12 +74,11 @@ func TestConfigMapHandler_RunConfigMapHandler(t *testing.T) {
 		{
 			"Runs a ConfigMapHandler",
 			&ConfigMapHandler{
-				context.Background(),
-				&util.K8s{},
+				func() context.Context { ctx, cancel = context.WithCancel(context.Background()); return ctx }(),
+				util.FakeClusterClient(),
 				"default",
 				make(chan reconciler.ReconcileJob),
 				func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }(),
-				make(chan struct{}),
 			},
 		}}
 	for _, tt := range tests {
@@ -87,10 +89,11 @@ func TestConfigMapHandler_RunConfigMapHandler(t *testing.T) {
 				tt.cmh.RunConfigMapHandler()
 				wait.Done()
 			}()
-			close(tt.cmh.stopper)
+			cancel()
 			wait.Wait()
 		})
 	}
+	cancel()
 }
 
 func Test_onConfigMapAdd(t *testing.T) {

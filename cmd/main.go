@@ -59,7 +59,7 @@ func main() {
 func run(cmd *cobra.Command, args []string) {
 
 	logger := controller.NewLogger(logLevel)
-	ctx, stopper := controller.RunSignalWatcher(logger)
+	ctx := controller.RunSignalWatcher(logger)
 
 	var wait sync.WaitGroup
 
@@ -70,7 +70,7 @@ func run(cmd *cobra.Command, args []string) {
 			defer wait.Done()
 			err := controller.NewController(
 				ctx, tlsCertificatePath, tlsKeyPath, tlsCAPath,
-				namespace, ooCluster, stopper, logger,
+				namespace, ooCluster, logger,
 			)
 
 			if err != nil {
@@ -91,7 +91,7 @@ func run(cmd *cobra.Command, args []string) {
 	case "control-plane":
 		if err := controller.NewController(
 			ctx, tlsCertificatePath, tlsKeyPath, tlsCAPath,
-			namespace, ooCluster, stopper, logger,
+			namespace, ooCluster, logger,
 		); err != nil {
 			panic(err)
 		}
@@ -109,5 +109,4 @@ func run(cmd *cobra.Command, args []string) {
 
 	// The signal watcher will close this channle
 	// upon receiving a system signal
-	<-stopper
 }

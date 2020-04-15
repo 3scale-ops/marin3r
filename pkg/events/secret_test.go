@@ -34,7 +34,6 @@ func TestNewSecretHandler(t *testing.T) {
 		namespace string
 		queue     chan reconciler.ReconcileJob
 		logger    *zap.SugaredLogger
-		stopper   chan struct{}
 	}
 	tests := []struct {
 		name string
@@ -48,14 +47,13 @@ func TestNewSecretHandler(t *testing.T) {
 				"default",
 				make(chan reconciler.ReconcileJob),
 				func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }(),
-				make(chan struct{}),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewSecretHandler(tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger, tt.args.stopper)
-			want := &SecretHandler{tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger, tt.args.stopper}
+			got := NewSecretHandler(tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger)
+			want := &SecretHandler{tt.args.ctx, tt.args.client, tt.args.namespace, tt.args.queue, tt.args.logger}
 			if !reflect.DeepEqual(got, want) {
 				t.Errorf("NewSecretHandler() = %v, want %v", got, want)
 			}
@@ -64,6 +62,8 @@ func TestNewSecretHandler(t *testing.T) {
 }
 
 func TestSecretHandler_RunSecretHandler(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	tests := []struct {
 		name string
 		cmh  *SecretHandler
@@ -71,12 +71,11 @@ func TestSecretHandler_RunSecretHandler(t *testing.T) {
 		{
 			"Runs a SecretHandler",
 			&SecretHandler{
-				context.Background(),
-				&util.K8s{},
+				ctx,
+				util.FakeClusterClient(),
 				"default",
 				make(chan reconciler.ReconcileJob),
 				func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }(),
-				make(chan struct{}),
 			},
 		}}
 	for _, tt := range tests {
@@ -87,10 +86,11 @@ func TestSecretHandler_RunSecretHandler(t *testing.T) {
 				tt.cmh.RunSecretHandler()
 				wait.Done()
 			}()
-			close(tt.cmh.stopper)
+			cancel()
 			wait.Wait()
 		})
 	}
+	cancel()
 }
 
 func Test_onSecretAdd(t *testing.T) {

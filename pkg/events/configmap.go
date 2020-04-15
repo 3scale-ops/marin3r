@@ -40,22 +40,20 @@ type ConfigMapHandler struct {
 	namespace string
 	queue     chan reconciler.ReconcileJob
 	logger    *zap.SugaredLogger
-	stopper   chan struct{}
 }
 
 // NewConfigMapHandler creates a new ConfigMapHandler from
 // the given params
 func NewConfigMapHandler(
 	ctx context.Context, client *util.K8s, namespace string, queue chan reconciler.ReconcileJob,
-	logger *zap.SugaredLogger, stopper chan struct{}) *ConfigMapHandler {
+	logger *zap.SugaredLogger) *ConfigMapHandler {
 
 	return &ConfigMapHandler{
+		ctx:       ctx,
 		client:    client,
 		namespace: namespace,
 		queue:     queue,
-		ctx:       ctx,
 		logger:    logger,
-		stopper:   stopper,
 	}
 }
 
@@ -72,13 +70,17 @@ func (cmh *ConfigMapHandler) RunConfigMapHandler() error {
 		UpdateFunc: func(oldObj, newObj interface{}) { onConfigMapUpdate(newObj, cmh.queue, cmh.logger) },
 		DeleteFunc: func(obj interface{}) { onConfigMapDelete(obj, cmh.queue, cmh.logger) },
 	})
-	go informer.Run(cmh.stopper)
-	if !cache.WaitForCacheSync(cmh.stopper, informer.HasSynced) {
+	stopper := make(chan struct{})
+	go informer.Run(stopper)
+	if !cache.WaitForCacheSync(stopper, informer.HasSynced) {
 		return fmt.Errorf("Timed out waiting for caches to sync")
 	}
 
 	cmh.logger.Info("ConfigMap handler started")
-	<-cmh.stopper
+
+	// Shutdown when ctx is canceled
+	<-cmh.ctx.Done()
+	close(stopper)
 	return nil
 }
 

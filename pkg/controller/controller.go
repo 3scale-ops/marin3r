@@ -34,11 +34,10 @@ const (
 	adsPort = 18000
 )
 
-// NewController creates a Controller object from the given params
+// NewController runs the envoy control plane components
 func NewController(
 	ctx context.Context, tlsCertificatePath string, tlsKeyPath string,
-	tlsCAPath string, namespace string, ooCluster bool, stopper chan struct{},
-	logger *zap.SugaredLogger) error {
+	tlsCAPath string, namespace string, ooCluster bool, logger *zap.SugaredLogger) error {
 
 	// -------------------------
 	// ---- Init components ----
@@ -57,11 +56,6 @@ func NewController(
 				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			},
-			// TODO: mechanism to reload server certificate when renewed
-			// Probably the easieast way is to have a goroutine force server
-			// graceful shutdown when it detects the certificate has changed
-			// The goroutine needs to receive both the context and the stopper channel
-			// and close all other subroutines the same way as when a os signal is received
 			Certificates: []tls.Certificate{getCertificate(tlsCertificatePath, tlsKeyPath, logger)},
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    getCA(tlsCAPath, logger),
@@ -85,11 +79,11 @@ func NewController(
 	}
 
 	// Init the cache worker
-	rec := reconciler.NewReconciler(client, namespace, xdss.GetSnapshotCache(), stopper, logger)
+	rec := reconciler.NewReconciler(ctx, client, namespace, xdss.GetSnapshotCache(), logger)
 
 	// Init event handlers
-	secretHandler := events.NewSecretHandler(ctx, client, namespace, rec.Queue, logger, stopper)
-	configMapHandler := events.NewConfigMapHandler(ctx, client, namespace, rec.Queue, logger, stopper)
+	secretHandler := events.NewSecretHandler(ctx, client, namespace, rec.Queue, logger)
+	configMapHandler := events.NewConfigMapHandler(ctx, client, namespace, rec.Queue, logger)
 
 	// ------------------------
 	// ---- Run components ----
