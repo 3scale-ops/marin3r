@@ -3,7 +3,7 @@ module github.com/3scale/marin3r
 go 1.14
 
 require (
-	github.com/envoyproxy/go-control-plane v0.9.4
+	github.com/envoyproxy/go-control-plane v0.9.5
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/protobuf v1.4.0-rc.4
 	github.com/spf13/cobra v0.0.7

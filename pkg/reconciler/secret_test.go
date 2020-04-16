@@ -26,7 +26,7 @@ import (
 	"github.com/3scale/marin3r/pkg/util"
 	envoy_api_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
+	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/golang/protobuf/jsonpb"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
@@ -129,8 +129,8 @@ func TestSecretReconcileJob_process(t *testing.T) {
 	}
 	type resource struct {
 		name  string
-		rtype xds_cache.ResponseType
-		value xds_cache.Resource
+		rtype xds_cache_types.ResponseType
+		value xds_cache_types.Resource
 	}
 	type want struct {
 		nodeIDs   []string

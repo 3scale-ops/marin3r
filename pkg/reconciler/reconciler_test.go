@@ -24,7 +24,8 @@ import (
 	"github.com/3scale/marin3r/pkg/cache"
 	"github.com/3scale/marin3r/pkg/util"
 	envoyauth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
+	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"go.uber.org/zap"
 )
 
@@ -54,7 +55,7 @@ func testReconciler(rcaches cache.Cache) Reconciler {
 type testJob struct {
 	nodeIDs []string
 	resName string
-	res     xds_cache.Resource
+	res     xds_cache_types.Resource
 	fail    bool
 	panic   bool
 }
@@ -92,7 +93,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 	}
 	type want struct {
 		nodeID    string
-		resources map[string]xds_cache.Resource
+		resources map[string]xds_cache_types.Resource
 	}
 	tests := []struct {
 		name string
@@ -107,7 +108,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node"}, resName: "secret", res: &envoyauth.Secret{Name: "secret"}, fail: false, panic: false},
 			}},
 			[]want{
-				{"node", map[string]xds_cache.Resource{"secret": &envoyauth.Secret{Name: "secret"}}},
+				{"node", map[string]xds_cache_types.Resource{"secret": &envoyauth.Secret{Name: "secret"}}},
 			},
 		},
 		{
@@ -117,8 +118,8 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node1", "node2"}, resName: "secret", res: &envoyauth.Secret{Name: "secret"}, fail: false, panic: false},
 			}},
 			[]want{
-				{"node1", map[string]xds_cache.Resource{"secret": &envoyauth.Secret{Name: "secret"}}},
-				{"node2", map[string]xds_cache.Resource{"secret": &envoyauth.Secret{Name: "secret"}}},
+				{"node1", map[string]xds_cache_types.Resource{"secret": &envoyauth.Secret{Name: "secret"}}},
+				{"node2", map[string]xds_cache_types.Resource{"secret": &envoyauth.Secret{Name: "secret"}}},
 			},
 		},
 		{
@@ -129,7 +130,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node"}, resName: "secret2", res: &envoyauth.Secret{Name: "secret2"}, fail: true, panic: false},
 			}},
 			[]want{
-				{"node", map[string]xds_cache.Resource{"secret1": &envoyauth.Secret{Name: "secret1"}}},
+				{"node", map[string]xds_cache_types.Resource{"secret1": &envoyauth.Secret{Name: "secret1"}}},
 			},
 		},
 		{
@@ -140,7 +141,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node"}, resName: "secret2", res: &envoyauth.Secret{Name: "secret2"}, fail: false, panic: false},
 			}},
 			[]want{
-				{"node", map[string]xds_cache.Resource{"secret2": &envoyauth.Secret{Name: "secret2"}}},
+				{"node", map[string]xds_cache_types.Resource{"secret2": &envoyauth.Secret{Name: "secret2"}}},
 			},
 		},
 		{
@@ -151,7 +152,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node"}, resName: "secret2", res: &envoyauth.Secret{Name: "secret2"}, fail: false, panic: true},
 			}},
 			[]want{
-				{"node", map[string]xds_cache.Resource{"secret1": &envoyauth.Secret{Name: "secret1"}}},
+				{"node", map[string]xds_cache_types.Resource{"secret1": &envoyauth.Secret{Name: "secret1"}}},
 			},
 		},
 		{
@@ -162,7 +163,7 @@ func TestReconciler_RunReconciler(t *testing.T) {
 				testJob{nodeIDs: []string{"node"}, resName: "secret2", res: &envoyauth.Secret{Name: "secret2"}, fail: false, panic: false},
 			}},
 			[]want{
-				{"node", map[string]xds_cache.Resource{"secret2": &envoyauth.Secret{Name: "secret2"}}},
+				{"node", map[string]xds_cache_types.Resource{"secret2": &envoyauth.Secret{Name: "secret2"}}},
 			},
 		},
 	}

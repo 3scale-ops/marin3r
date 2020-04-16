@@ -19,40 +19,41 @@ import (
 	"testing"
 
 	envoy_api "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	"github.com/envoyproxy/go-control-plane/pkg/cache"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
+	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 )
 
 func newTestCache() Cache {
 	return Cache{
 		"node1": &xds_cache.Snapshot{
 			Resources: [6]xds_cache.Resources{
-				{Version: "789", Items: map[string]xds_cache.Resource{
+				{Version: "789", Items: map[string]xds_cache_types.Resource{
 					"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 				}},
-				{Version: "789", Items: map[string]xds_cache.Resource{
+				{Version: "789", Items: map[string]xds_cache_types.Resource{
 					"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 					"cluster2": &envoy_api.Cluster{Name: "cluster2"},
 					"cluster3": &envoy_api.Cluster{Name: "cluster3"},
 				}},
-				{Version: "789", Items: map[string]xds_cache.Resource{}},
-				{Version: "789", Items: map[string]xds_cache.Resource{}},
-				{Version: "789", Items: map[string]xds_cache.Resource{}},
-				{Version: "789", Items: map[string]xds_cache.Resource{}},
+				{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+				{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+				{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+				{Version: "789", Items: map[string]xds_cache_types.Resource{}},
 			},
 		},
 		"node2": &xds_cache.Snapshot{
 			Resources: [6]xds_cache.Resources{
-				{Version: "43", Items: map[string]xds_cache.Resource{
+				{Version: "43", Items: map[string]xds_cache_types.Resource{
 					"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 				}},
-				{Version: "43", Items: map[string]xds_cache.Resource{
+				{Version: "43", Items: map[string]xds_cache_types.Resource{
 					"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 				}},
-				{Version: "43", Items: map[string]xds_cache.Resource{}},
-				{Version: "43", Items: map[string]xds_cache.Resource{}},
-				{Version: "43", Items: map[string]xds_cache.Resource{}},
-				{Version: "43", Items: map[string]xds_cache.Resource{}},
+				{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+				{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+				{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+				{Version: "43", Items: map[string]xds_cache_types.Resource{}},
 			},
 		},
 	}
@@ -99,42 +100,42 @@ func TestCache_NewNodeCache(t *testing.T) {
 			want{Cache{
 				"node1": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 							"cluster2": &envoy_api.Cluster{Name: "cluster2"},
 							"cluster3": &envoy_api.Cluster{Name: "cluster3"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 				"node2": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 				"node3": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "1", Items: map[string]xds_cache.Resource{}},
-						{Version: "1", Items: map[string]xds_cache.Resource{}},
-						{Version: "1", Items: map[string]xds_cache.Resource{}},
-						{Version: "1", Items: map[string]xds_cache.Resource{}},
-						{Version: "1", Items: map[string]xds_cache.Resource{}},
-						{Version: "1", Items: map[string]xds_cache.Resource{}},
+						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 			}},
@@ -172,16 +173,16 @@ func TestCache_DeleteNodeCache(t *testing.T) {
 			want{Cache{
 				"node2": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 			}},
@@ -216,16 +217,16 @@ func TestCache_GetNodeCache(t *testing.T) {
 			args{nodeID: "node2"},
 			want{&xds_cache.Snapshot{
 				Resources: [6]xds_cache.Resources{
-					{Version: "43", Items: map[string]xds_cache.Resource{
+					{Version: "43", Items: map[string]xds_cache_types.Resource{
 						"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 					}},
-					{Version: "43", Items: map[string]xds_cache.Resource{
+					{Version: "43", Items: map[string]xds_cache_types.Resource{
 						"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 					}},
-					{Version: "43", Items: map[string]xds_cache.Resource{}},
-					{Version: "43", Items: map[string]xds_cache.Resource{}},
-					{Version: "43", Items: map[string]xds_cache.Resource{}},
-					{Version: "43", Items: map[string]xds_cache.Resource{}},
+					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
 				},
 			}},
 		},
@@ -243,8 +244,8 @@ func TestCache_SetResource(t *testing.T) {
 	type args struct {
 		nodeID string
 		name   string
-		rtype  xds_cache.ResponseType
-		value  xds_cache.Resource
+		rtype  xds_cache_types.ResponseType
+		value  xds_cache_types.Resource
 	}
 	type want struct {
 		cache Cache
@@ -261,40 +262,40 @@ func TestCache_SetResource(t *testing.T) {
 			args{
 				nodeID: "node1",
 				name:   "listener1",
-				rtype:  xds_cache.Listener,
+				rtype:  xds_cache_types.Listener,
 				value:  &envoy_api.Listener{Name: "listener1"},
 			},
 			want{Cache{
 				"node1": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 							"cluster2": &envoy_api.Cluster{Name: "cluster2"},
 							"cluster3": &envoy_api.Cluster{Name: "cluster3"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"listener1": &envoy_api.Listener{Name: "listener1"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 				"node2": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 			}},
@@ -314,10 +315,10 @@ func TestCache_GetResource(t *testing.T) {
 	type args struct {
 		nodeID string
 		name   string
-		rtype  xds_cache.ResponseType
+		rtype  xds_cache_types.ResponseType
 	}
 	type want struct {
-		resource xds_cache.Resource
+		resource xds_cache_types.Resource
 	}
 	tests := []struct {
 		name  string
@@ -331,7 +332,7 @@ func TestCache_GetResource(t *testing.T) {
 			args{
 				nodeID: "node2",
 				name:   "endpoint",
-				rtype:  xds_cache.Endpoint,
+				rtype:  xds_cache_types.Endpoint,
 			},
 			want{&envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"}},
 		},
@@ -341,7 +342,7 @@ func TestCache_GetResource(t *testing.T) {
 			args{
 				nodeID: "node2",
 				name:   "xxxx",
-				rtype:  xds_cache.Endpoint,
+				rtype:  xds_cache_types.Endpoint,
 			},
 			want{nil},
 		},
@@ -359,7 +360,7 @@ func TestCache_DeleteResource(t *testing.T) {
 	type args struct {
 		nodeID string
 		name   string
-		rtype  xds_cache.ResponseType
+		rtype  xds_cache_types.ResponseType
 	}
 	type want struct {
 		cache Cache
@@ -376,36 +377,36 @@ func TestCache_DeleteResource(t *testing.T) {
 			args{
 				nodeID: "node1",
 				name:   "cluster2",
-				rtype:  xds_cache.Cluster,
+				rtype:  xds_cache_types.Cluster,
 			},
 			want{Cache{
 				"node1": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 							"cluster3": &envoy_api.Cluster{Name: "cluster3"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 				"node2": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 			}},
@@ -424,7 +425,7 @@ func TestCache_DeleteResource(t *testing.T) {
 func TestCache_ClearResources(t *testing.T) {
 	type args struct {
 		nodeID string
-		rtype  xds_cache.ResponseType
+		rtype  xds_cache_types.ResponseType
 	}
 	type want struct {
 		cache Cache
@@ -440,33 +441,33 @@ func TestCache_ClearResources(t *testing.T) {
 			newTestCache(),
 			args{
 				nodeID: "node1",
-				rtype:  xds_cache.Cluster,
+				rtype:  xds_cache_types.Cluster,
 			},
 			want{Cache{
 				"node1": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "789", Items: map[string]xds_cache.Resource{
+						{Version: "789", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
-						{Version: "789", Items: map[string]xds_cache.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 				"node2": &xds_cache.Snapshot{
 					Resources: [6]xds_cache.Resources{
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{
+						{Version: "43", Items: map[string]xds_cache_types.Resource{
 							"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 						}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
-						{Version: "43", Items: map[string]xds_cache.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "43", Items: map[string]xds_cache_types.Resource{}},
 					},
 				},
 			}},
@@ -508,18 +509,18 @@ func TestCache_SetSnapshot(t *testing.T) {
 				map[string]xds_cache.Snapshot{
 					"node1": {
 						Resources: [6]xds_cache.Resources{
-							{Version: "789", Items: map[string]xds_cache.Resource{
+							{Version: "789", Items: map[string]xds_cache_types.Resource{
 								"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 							}},
-							{Version: "789", Items: map[string]xds_cache.Resource{
+							{Version: "789", Items: map[string]xds_cache_types.Resource{
 								"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 								"cluster2": &envoy_api.Cluster{Name: "cluster2"},
 								"cluster3": &envoy_api.Cluster{Name: "cluster3"},
 							}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
 						},
 					},
 				},
@@ -606,32 +607,32 @@ func TestCache_BumpCacheVersion(t *testing.T) {
 				cache: Cache{
 					"node1": &xds_cache.Snapshot{
 						Resources: [6]xds_cache.Resources{
-							{Version: "789", Items: map[string]xds_cache.Resource{
+							{Version: "789", Items: map[string]xds_cache_types.Resource{
 								"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 							}},
-							{Version: "789", Items: map[string]xds_cache.Resource{
+							{Version: "789", Items: map[string]xds_cache_types.Resource{
 								"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 								"cluster2": &envoy_api.Cluster{Name: "cluster2"},
 								"cluster3": &envoy_api.Cluster{Name: "cluster3"},
 							}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
-							{Version: "789", Items: map[string]xds_cache.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "789", Items: map[string]xds_cache_types.Resource{}},
 						},
 					},
 					"node2": &xds_cache.Snapshot{
 						Resources: [6]xds_cache.Resources{
-							{Version: "44", Items: map[string]xds_cache.Resource{
+							{Version: "44", Items: map[string]xds_cache_types.Resource{
 								"endpoint": &envoy_api.ClusterLoadAssignment{ClusterName: "endpoint"},
 							}},
-							{Version: "44", Items: map[string]xds_cache.Resource{
+							{Version: "44", Items: map[string]xds_cache_types.Resource{
 								"cluster1": &envoy_api.Cluster{Name: "cluster1"},
 							}},
-							{Version: "44", Items: map[string]xds_cache.Resource{}},
-							{Version: "44", Items: map[string]xds_cache.Resource{}},
-							{Version: "44", Items: map[string]xds_cache.Resource{}},
-							{Version: "44", Items: map[string]xds_cache.Resource{}},
+							{Version: "44", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "44", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "44", Items: map[string]xds_cache_types.Resource{}},
+							{Version: "44", Items: map[string]xds_cache_types.Resource{}},
 						},
 					},
 				},

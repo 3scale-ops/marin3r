@@ -28,7 +28,7 @@ import (
 	envoy_api_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoy_api_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
+	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
 	"go.uber.org/zap"
@@ -161,8 +161,8 @@ func TestConfigMapReconcileJob_process(t *testing.T) {
 	}
 	type resource struct {
 		name  string
-		rtype xds_cache.ResponseType
-		value xds_cache.Resource
+		rtype xds_cache_types.ResponseType
+		value xds_cache_types.Resource
 	}
 	type want struct {
 		nodeIDs   []string
@@ -453,8 +453,8 @@ func Test_syncNodeSecrets(t *testing.T) {
 	}
 	type resource struct {
 		name  string
-		rtype xds_cache.ResponseType
-		value xds_cache.Resource
+		rtype xds_cache_types.ResponseType
+		value xds_cache_types.Resource
 	}
 	tests := []struct {
 		name    string

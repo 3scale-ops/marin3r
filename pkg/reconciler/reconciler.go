@@ -20,7 +20,7 @@ import (
 
 	"github.com/3scale/marin3r/pkg/cache"
 	"github.com/3scale/marin3r/pkg/util"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache"
+	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"go.uber.org/zap"
 )
 
