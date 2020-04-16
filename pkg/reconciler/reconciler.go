@@ -16,6 +16,7 @@ package reconciler
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/3scale/marin3r/pkg/cache"
 	"github.com/3scale/marin3r/pkg/util"
@@ -106,15 +107,9 @@ func (r *Reconciler) RunReconciler() {
 		job, more := <-r.Queue
 		if more {
 			{
-				// Recover from panics in job processing
-				defer func() {
-					if recov := recover(); r != nil {
-						r.logger.Warnf("Recovered from panicked job", recov)
-					}
-				}()
-				nodeIDs, err := job.process(r.cache, r.client, r.namespace, r.logger)
+				nodeIDs, err := safeJobExecutor(job, r.cache, r.client, r.namespace, r.logger)
 				if err != nil {
-					break
+					continue
 				}
 				for _, nodeID := range nodeIDs {
 					r.cache.BumpCacheVersion(nodeID)
@@ -133,4 +128,19 @@ func (r *Reconciler) runStopWatcher() {
 		<-r.ctx.Done()
 		close(r.Queue)
 	}()
+}
+
+// sfaeJobExecutor wraps the process() function and handles
+// panics so the whole worker does not crush on a job panic
+func safeJobExecutor(job ReconcileJob, cache cache.Cache, client *util.K8s, namespace string, logger *zap.SugaredLogger) (nodeIDs []string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Warnf("Recovered from panicked job: '%s'", r)
+			err = fmt.Errorf("Recovered from panicked job: '%s'", r)
+			nodeIDs = []string{}
+		}
+	}()
+
+	nodeIDs, err = job.process(cache, client, namespace, logger)
+	return nodeIDs, err
 }
