@@ -76,6 +76,8 @@ func (sr *SecretHandler) RunSecretHandler() error {
 	go informer.Run(stopper)
 
 	sr.logger.Info("Secret handler started")
+
+	// Shutdown when ctx is canceled
 	<-sr.ctx.Done()
 	close(stopper)
 	return nil

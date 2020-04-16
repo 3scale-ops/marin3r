@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	// TODO: make the annotation to look for configurable
-	annotation = "marin3r.3scale.net/node-id"
+	// TODO: make the configmapAnnotation to look for configurable
+	configmapAnnotation = "marin3r.3scale.net/node-id"
 )
 
 // ConfigMapHandler represents a kubernetes shared
@@ -82,7 +82,7 @@ func (cmh *ConfigMapHandler) RunConfigMapHandler() error {
 
 func onConfigMapAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {
 	cm := obj.(*corev1.ConfigMap)
-	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
+	if nodeID, ok := cm.GetAnnotations()[configmapAnnotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' added", cm.GetNamespace(), cm.GetName(), nodeID)
 		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Add, *cm).Push(queue)
 	}
@@ -90,7 +90,7 @@ func onConfigMapAdd(obj interface{}, queue chan reconciler.ReconcileJob, logger 
 
 func onConfigMapUpdate(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {
 	cm := obj.(*corev1.ConfigMap)
-	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
+	if nodeID, ok := cm.GetAnnotations()[configmapAnnotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' updated", cm.GetNamespace(), cm.GetName(), nodeID)
 		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Update, *cm).Push(queue)
 	}
@@ -98,7 +98,7 @@ func onConfigMapUpdate(obj interface{}, queue chan reconciler.ReconcileJob, logg
 
 func onConfigMapDelete(obj interface{}, queue chan reconciler.ReconcileJob, logger *zap.SugaredLogger) {
 	cm := obj.(*corev1.ConfigMap)
-	if nodeID, ok := cm.GetAnnotations()[annotation]; ok {
+	if nodeID, ok := cm.GetAnnotations()[configmapAnnotation]; ok {
 		logger.Infof("ConfigMap '%s/%s' 'node-id=%s' deleted", cm.GetNamespace(), cm.GetName(), nodeID)
 		reconciler.NewConfigMapReconcileJob(nodeID, reconciler.Delete, *cm).Push(queue)
 	}

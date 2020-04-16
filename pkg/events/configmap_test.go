@@ -114,7 +114,7 @@ func Test_onConfigMapAdd(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cm",
 						Annotations: map[string]string{
-							annotation: "xxxx",
+							configmapAnnotation: "xxxx",
 						},
 					},
 					Data: map[string]string{"key": "value"},
@@ -156,7 +156,7 @@ func Test_onConfigMapUpdate(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cm",
 						Annotations: map[string]string{
-							annotation: "xxxx",
+							configmapAnnotation: "xxxx",
 						},
 					},
 					Data: map[string]string{"key": "value"},
@@ -198,7 +198,7 @@ func Test_onConfigMapDelete(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "cm",
 						Annotations: map[string]string{
-							annotation: "xxxx",
+							configmapAnnotation: "xxxx",
 						},
 					},
 					Data: map[string]string{"key": "value"},
