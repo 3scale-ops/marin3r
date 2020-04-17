@@ -26,12 +26,13 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				"marin3r.3scale.net/ports":              "xxxx:1111",
 				"marin3r.3scale.net/host-port-mappings": "xxxx:3000",
 				"marin3r.3scale.net/container-name":     "container",
-				"marin3r.3scale.net/image":              "image",
+				"marin3r.3scale.net/envoy-image":        "image",
 				"marin3r.3scale.net/ads-configmap":      "cm",
 				"marin3r.3scale.net/cluster-id":         "cluster-id",
 				"marin3r.3scale.net/config-volume":      "config-volume",
 				"marin3r.3scale.net/tls-volume":         "tls-volume",
 				"marin3r.3scale.net/client-certificate": "client-cert",
+				"marin3r.3scale.net/envoy-extra-args":   "--log-level debug",
 			}},
 			&envoySidecarConfig{
 				name:  "container",
@@ -45,6 +46,7 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				tlsVolume:        "tls-volume",
 				configVolume:     "config-volume",
 				clientCertSecret: "client-cert",
+				extraArgs:        "--log-level debug",
 			},
 			false,
 		}, {
@@ -396,6 +398,71 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 				},
 			},
 		},
+		{
+			"Returns resolved container, with extra-args",
+			&envoySidecarConfig{
+				name:  "sidecar",
+				image: "sidecar:latest",
+				ports: []corev1.ContainerPort{
+					{
+						Name:          "udp",
+						ContainerPort: 6000,
+						Protocol:      corev1.Protocol("UDP"),
+					},
+					{
+						Name:          "https",
+						ContainerPort: 8443,
+					},
+				},
+				adsConfigMap:     "ads-configmap",
+				nodeID:           "test-id",
+				clusterID:        "cluster-id",
+				tlsVolume:        "tls-volume",
+				configVolume:     "config-volume",
+				clientCertSecret: "secret",
+				extraArgs:        "-x xxxx -z zzzz",
+			},
+			corev1.Container{
+				Name:    "sidecar",
+				Image:   "sidecar:latest",
+				Command: []string{"envoy"},
+				Args: []string{
+					"-c",
+					"/etc/envoy/bootstrap/config.yaml",
+					"--service-node",
+					"test-id",
+					"--service-cluster",
+					"cluster-id",
+					"-x",
+					"xxxx",
+					"-z",
+					"zzzz",
+				},
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "udp",
+						ContainerPort: 6000,
+						Protocol:      corev1.Protocol("UDP"),
+					},
+					{
+						Name:          "https",
+						ContainerPort: 8443,
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      "tls-volume",
+						ReadOnly:  true,
+						MountPath: "/etc/envoy/tls/client",
+					},
+					{
+						Name:      "config-volume",
+						ReadOnly:  true,
+						MountPath: "/etc/envoy/bootstrap",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -418,11 +485,11 @@ func Test_getStringParam(t *testing.T) {
 	}{
 		{
 			"Return string value from annotation",
-			args{"image", map[string]string{"marin3r.3scale.net/image": "image"}},
+			args{"envoy-image", map[string]string{"marin3r.3scale.net/envoy-image": "image"}},
 			"image",
 		}, {
 			"Return string value from default",
-			args{"image", map[string]string{}},
+			args{"envoy-image", map[string]string{}},
 			defaultImage,
 		}, {
 			"Return cluster-id from annotation",

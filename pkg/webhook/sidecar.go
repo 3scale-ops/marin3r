@@ -32,15 +32,16 @@ const (
 
 	// parameter names
 	paramNodeID            = "node-id"
-	paramClusteID          = "cluster-id"
+	paramClusterID         = "cluster-id"
 	paramContainerName     = "container-name"
 	paramPorts             = "ports"
 	paramHostPortMapings   = "host-port-mappings"
-	paramImage             = "image"
+	paramImage             = "envoy-image"
 	paramADSConfigMap      = "ads-configmap"
 	paramConfigVolume      = "config-volume"
 	paramTLSVolume         = "tls-volume"
 	paramClientCertificate = "client-certificate"
+	paramEnvoyExtraArgs    = "envoy-extra-args"
 
 	// default values
 	defaultContainerName     = "envoy-sidecar"
@@ -49,6 +50,7 @@ const (
 	defaultConfigVolume      = "envoy-sidecar-bootstrap"
 	defaultTLSVolume         = "envoy-sidecar-tls"
 	defaultClientCertificate = "envoy-sidecar-client-cert"
+	defaultEnvoyExtraArgs    = ""
 
 	marin3rAnnotationsDomain = "marin3r.3scale.net"
 )
@@ -63,6 +65,7 @@ type envoySidecarConfig struct {
 	tlsVolume        string
 	configVolume     string
 	clientCertSecret string
+	extraArgs        string
 }
 
 func getStringParam(key string, annotations map[string]string) string {
@@ -74,6 +77,7 @@ func getStringParam(key string, annotations map[string]string) string {
 		paramConfigVolume:      defaultConfigVolume,
 		paramTLSVolume:         defaultTLSVolume,
 		paramClientCertificate: defaultClientCertificate,
+		paramEnvoyExtraArgs:    defaultEnvoyExtraArgs,
 	}
 
 	// return the value specified in the corresponding annotation, if any
@@ -100,20 +104,21 @@ func getNodeID(annotations map[string]string) string {
 
 func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
 
-	esc.name = getStringParam("container-name", annotations)
-	esc.image = getStringParam("image", annotations)
+	esc.name = getStringParam(paramContainerName, annotations)
+	esc.image = getStringParam(paramImage, annotations)
 
 	ports, err := getContainerPorts(annotations)
 	if err != nil {
 		return err
 	}
 	esc.ports = ports
-	esc.adsConfigMap = getStringParam("ads-configmap", annotations)
+	esc.adsConfigMap = getStringParam(paramADSConfigMap, annotations)
 	esc.nodeID = getNodeID(annotations)
-	esc.clusterID = getStringParam("cluster-id", annotations)
-	esc.configVolume = getStringParam("config-volume", annotations)
-	esc.tlsVolume = getStringParam("tls-volume", annotations)
-	esc.clientCertSecret = getStringParam("client-certificate", annotations)
+	esc.clusterID = getStringParam(paramClusterID, annotations)
+	esc.configVolume = getStringParam(paramConfigVolume, annotations)
+	esc.tlsVolume = getStringParam(paramTLSVolume, annotations)
+	esc.clientCertSecret = getStringParam(paramClientCertificate, annotations)
+	esc.extraArgs = getStringParam(paramEnvoyExtraArgs, annotations)
 
 	return nil
 }
@@ -216,7 +221,7 @@ func portNumber(sport string) (int32, error) {
 
 func (esc *envoySidecarConfig) container() corev1.Container {
 
-	return corev1.Container{
+	container := corev1.Container{
 		Name:    esc.name,
 		Image:   esc.image,
 		Command: []string{"envoy"},
@@ -242,6 +247,14 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 			},
 		},
 	}
+
+	if esc.extraArgs != "" {
+		for _, arg := range strings.Split(esc.extraArgs, " ") {
+			container.Args = append(container.Args, arg)
+		}
+	}
+
+	return container
 }
 
 func (esc *envoySidecarConfig) volumes() []corev1.Volume {
