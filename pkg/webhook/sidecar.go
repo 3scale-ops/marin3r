@@ -45,7 +45,7 @@ const (
 
 	// default values
 	defaultContainerName     = "envoy-sidecar"
-	defaultImage             = "envoyproxy/envoy:v1.13.1"
+	defaultImage             = "envoyproxy/envoy:v1.14.1"
 	defaultADSConfigMap      = "envoy-sidecar-bootstrap"
 	defaultConfigVolume      = "envoy-sidecar-bootstrap"
 	defaultTLSVolume         = "envoy-sidecar-tls"
