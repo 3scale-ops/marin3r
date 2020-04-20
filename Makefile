@@ -109,4 +109,12 @@ test-unit:
 
 test: test-unit
 
+test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: make test-envoy-config CONFIG=example/config.yaml
+test-envoy-config: ## To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
+test-envoy-config:
+	docker run -ti --rm \
+		--network=host \
+		-v $$(pwd)/$(CONFIG):/config.yaml \
+		envoyproxy/envoy:$(ENVOY_VERSION) \
+		envoy -c /config.yaml $(ARGS)
 
