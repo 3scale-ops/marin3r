@@ -6,7 +6,7 @@ RELEASE := $(CURRENT_GIT_REF)
 KIND_VERSION := v0.7.0
 KIND := bin/kind
 export KUBECONFIG = tmp/kubeconfig
-.PHONY: clean kind-create kind-delete docker-build compose envoy start
+.PHONY: clean kind-create kind-delete docker-build envoy start
 
 $(KIND):
 	mkdir -p $$(dirname $@)
@@ -73,11 +73,6 @@ docker-push:
 
 certs: ## use easyrsa to create testing CA and certificates for mTLS
 	script/gen-certs.sh $(EASYRSA_VERSION)
-
-compose: ## Compose file to test marin3r
-compose: export RELEASE=$(CURRENT_GIT_REF)
-compose: certs build/$(NAME)_amd64_$(RELEASE)
-	docker-compose up
 
 clean: ## Remove temporary resources from the repo
 	rm -rf certs build tmp bin
