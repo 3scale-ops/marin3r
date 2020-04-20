@@ -63,7 +63,7 @@ func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]
 	config := envoySidecarConfig{}
 	err := config.PopulateFromAnnotations(pod.GetAnnotations())
 	if err != nil {
-		return []PatchOperation{}, err
+		return nil, err
 	}
 
 	patches = append(patches, PatchOperation{

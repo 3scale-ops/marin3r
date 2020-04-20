@@ -533,3 +533,48 @@ func Test_getNodeID(t *testing.T) {
 		})
 	}
 }
+
+func Test_envoySidecarConfig_volumes(t *testing.T) {
+	tests := []struct {
+		name string
+		esc  *envoySidecarConfig
+		want []corev1.Volume
+	}{
+		{
+			"Returns resolved pod volumes",
+			&envoySidecarConfig{
+				adsConfigMap:     "ads-configmap",
+				tlsVolume:        "tls-volume",
+				configVolume:     "config-volume",
+				clientCertSecret: "secret",
+			},
+			[]corev1.Volume{
+				{
+					Name: "tls-volume",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: "secret",
+						},
+					},
+				},
+				{
+					Name: "config-volume",
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "ads-configmap",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.esc.volumes(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("envoySidecarConfig.volumes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
