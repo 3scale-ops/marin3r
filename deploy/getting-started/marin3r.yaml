@@ -1,0 +1,198 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: marin3r
+  namespace: default
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marin3r
+  namespace: default
+  labels:
+    app: marin3r
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marin3r
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: marin3r
+    spec:
+      serviceAccountName: marin3r
+      containers:
+        - name: marin3r
+          image: quay.io/3scale/marin3r:v0.1.4
+          args:
+            - --certificate=/etc/marin3r/tls/server/tls.crt
+            - --private-key=/etc/marin3r/tls/server/tls.key
+            - --ca=/etc/marin3r/tls/ca/tls.crt
+            - --log-level=debug
+            - --namespace=default
+          ports:
+            - name: ads-server
+              containerPort: 18000
+            - name: webhook
+              containerPort: 8443
+          volumeMounts:
+            - name: server-cert
+              mountPath: /etc/marin3r/tls/server/
+            - name: ca-cert
+              mountPath: /etc/marin3r/tls/ca/
+      volumes:
+        - name: server-cert
+          secret:
+            secretName: marin3r-server-cert
+        - name: ca-cert
+          secret:
+            secretName: marin3r-ca-cert
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marin3r
+  namespace: default
+  labels:
+    app: marin3r
+spec:
+  type: ClusterIP
+  ports:
+    - name: ads-server
+      port: 18000
+      targetPort: ads-server
+    - name: webhook
+      port: 443
+      targetPort: webhook
+  selector:
+    app: marin3r
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-sidecar-bootstrap
+  namespace: default
+data:
+  config.yaml: |
+    dynamic_resources:
+      ads_config:
+        api_type: GRPC
+        transport_api_version: V2
+        grpc_services:
+          - envoy_grpc:
+              cluster_name: ads_cluster
+      cds_config:
+        ads: {}
+      lds_config:
+        ads: {}
+    static_resources:
+      clusters:
+        - name: ads_cluster
+          connect_timeout: 1s
+          type: strict_dns
+          http2_protocol_options: {}
+          load_assignment:
+            cluster_name: ads_cluster
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: marin3r
+                          port_value: 18000
+          transport_socket:
+            name: envoy.transport_sockets.tls
+            typed_config:
+              "@type": type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext
+              common_tls_context:
+                # mTLS is necessary for sds
+                tls_certificates:
+                  - certificate_chain:
+                      filename: /etc/envoy/tls/client/tls.crt
+                    private_key:
+                      filename: /etc/envoy/tls/client/tls.key
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: marin3r
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "watch", "list"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: marin3r
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: marin3r
+subjects:
+  - kind: ServiceAccount
+    name: marin3r
+    namespace: default
+
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mariner-sidecar-injector-webhook
+webhooks:
+  - name: webhook.marin3r.3scale.net
+    namespaceSelector:
+      matchLabels:
+        marin3r.3scale.net/status: "enabled"
+    objectSelector:
+      matchLabels:
+        marin3r.3scale.net/status: "enabled"
+    sideEffects: None
+    admissionReviewVersions: ["v1", "v1beta1"]
+    timeoutSeconds: 5
+    clientConfig:
+      service:
+        name: marin3r
+        namespace: default
+        path: /mutate
+      caBundle: |
+        LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRakNDQWlxZ0F3SUJBZ0lVTXQvTGltZ0da
+        TkNVN0ttQkZ6NGV5Sm54M2Uwd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lR
+        MmhoYm1kbFRXVXdIaGNOTWpBd05ESXdNVFl4T0RRM1doY05NekF3TkRFNApNVFl4T0RRM1dqQVRN
+        UkV3RHdZRFZRUUREQWhEYUdGdVoyVk5aVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBB
+        RENDQVFvQ2dnRUJBS3gzWVZOSkVqUmNhVWw0T3haVE5rek5zZTBtanZPeVNPMk5oVXNlVnFSYmRo
+        U3YKckQ4YWRobHR2NUovcElpbnRlQXFJeEx5bEV3ZFFRZlZGQjAvdEkzbEFhUFIySVVteW1YSlVs
+        d3kvQXlCTlp5KwpmcmpvZk4zMjhiUDJNVEtMaDVyQjBZNDQ5ejF0eFljWUx0NW5zRGlvNXhIeThZ
+        dDBCQVd4U1VMblhRTy9tRVoxCkw0TjVZSWx6ZGVxd3MwRHQ4ZnA2elYxaS8rMkxuMzBKcUJlSFUy
+        L2tGOVJIc0JaaHJmWTdYZ1g3bkxKVWV6MUIKb3lWMkZESXdKMGtkb01URlRFcVpaVjhNL1g0RmZM
+        bXl5Q0JvSkoyOGJVeGlLdWJYdzQ3WWluQmEyYWd0RHZKKwpkVENuUjlXRzFVM3RnVitmOEZrV2Q5
+        OERBdzAxaE9Mdzhoa2lrVkVDQXdFQUFhT0JqVENCaWpBZEJnTlZIUTRFCkZnUVVxbHpGdG9sMkVO
+        U0dEL3UwTkZQRGN0dGdkL1V3VGdZRFZSMGpCRWN3UllBVXFsekZ0b2wyRU5TR0QvdTAKTkZQRGN0
+        dGdkL1doRjZRVk1CTXhFVEFQQmdOVkJBTU1DRU5vWVc1blpVMWxnaFF5Mzh1S2FBWmswSlRzcVlF
+        WApQaDdJbWZIZDdUQU1CZ05WSFJNRUJUQURBUUgvTUFzR0ExVWREd1FFQXdJQkJqQU5CZ2txaGtp
+        Rzl3MEJBUXNGCkFBT0NBUUVBbWtWYXBGT3JUSTdvVjlmaTgxSnJvSUJPVStZZEFpWkxtM0liODkr
+        Q2NHWENtdjRCNnZuT1pKR0YKYloyb0xaczcySlRHQVJaWTdIV3ZGcWY5Y3JETTdqNjhXdEVLYS8y
+        QTVRRmVvbTJ4MlNmcENIMGlNVkwrMGhUbwp0UERWV3d0VHhEMm9HK2NucFFXdytMYThLZC9JQU5C
+        ZU42alRNWHpFVGtMNENYY1lzd1JVUVd0M3h3cjUrMzdYCjRwYzBFNGtRblY5c2w3YkxYblE0aW40
+        RDRYNmJEYkN0ZjhkLytGNHlPQWZSWXU0ZWdqaU5XTHJZRktONVBrb28KeFNhTnBxN25yYldOUDI4
+        NDluV2RDNG11MUxWakJJTEVEMFJkT3BNVnQ3cXdESTh0TjhRcmJtSWwwSWJXMzExcgpodWZBUW1J
+        WmNYYlJBN3FIaFJ4dktHTzVLdmxYamc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+        scope: Namespaced
