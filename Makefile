@@ -1,6 +1,6 @@
 NAME := marin3r
 EASYRSA_VERSION := v3.0.6
-ENVOY_VERSION := v1.13.1
+ENVOY_VERSION := v1.14.1
 CURRENT_GIT_REF := $(shell git describe --always --dirty)
 RELEASE := $(CURRENT_GIT_REF)
 KIND_VERSION := v0.7.0
