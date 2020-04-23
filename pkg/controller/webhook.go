@@ -28,16 +28,7 @@ const (
 	webhookPort = 8443
 )
 
-var (
-// runtimeScheme = runtime.NewScheme()
-// codecs        = serializer.NewCodecFactory(runtimeScheme)
-// deserializer  = codecs.UniversalDeserializer()
-
-// // (https://github.com/kubernetes/kubernetes/issues/57982)
-// defaulter = runtime.ObjectDefaulter(runtimeScheme)
-)
-
-// RunWebhook runs the mutating admission controller in a gorouting and
+// RunWebhook runs the mutating admission controller in a goroutine and
 // waits forever until the context is closed.
 func RunWebhook(ctx context.Context, tlsCertificatePath string, tlsKeyPath string, tlsCAPath string, namespace string, logger *zap.SugaredLogger) error {
 
