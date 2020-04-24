@@ -18,7 +18,7 @@ marin3r started in a weekend (thank you COVID-19 for the countless indoor hours 
 
 ## Getting started
 
-marin3r has two components, an envoy aggregated discovery service (a.k.a "the control plamne") and an optional (though recommended) kubernetes mutating admission webhook to inject envoy containers in your pods. With these two components you can very quickly some service mesh patterns, with the full envoy configuration set available.
+marin3r has two components, an envoy aggregated discovery service (a.k.a "the control plane") and an optional (though recommended) kubernetes mutating admission webhook to inject envoy containers in your pods. With these two components you can very quickly create some service mesh patterns, with the full envoy configuration set available.
 
 NOTE: marin3r is currently scoped to a single namespace, this might change in the future.
 
