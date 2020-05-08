@@ -2,7 +2,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/3scale/marin3r)](https://goreportcard.com/report/github.com/3scale/marin3r)
 [![codecov](https://codecov.io/gh/3scale/marin3r/branch/master/graph/badge.svg)](https://codecov.io/gh/3scale/marin3r)
-[![build status](https://circleci.com/gh/3scale/marin3r.svg?style=shield)](https://codecov.io/gh/3scale/marin3r/.circleci/config.yml)
+[![build status](https://circleci.com/gh/3scale/marin3r.svg?style=shield)](https://app.circleci.com/pipelines/github/3scale/marin3r)
 [![release](https://badgen.net/github/release/3scale/marin3r)](https://github.com/3scale/marin3r/releases)
 [![license](https://badgen.net/github/license/3scale/marin3r)](https://github.com/3scale/marin3r/blob/master/LICENSE)
 
