@@ -1,0 +1,8 @@
+apiVersion: caches.marin3r.3scale.net/v1alpha1
+kind: NodeConfigCache
+metadata:
+  name: example-nodeconfigcache
+spec:
+  # Add fields here
+  nodeID: test-node
+  currentVersion: 1
