@@ -28,16 +28,25 @@ spec:
       serviceAccountName: marin3r
       containers:
         - name: marin3r
-          image: quay.io/3scale/marin3r:v0.1.4
+          image: localhost:5000/marin3r:test
+          imagePullPolicy: Always
           args:
             - --certificate=/etc/marin3r/tls/server/tls.crt
             - --private-key=/etc/marin3r/tls/server/tls.key
             - --ca=/etc/marin3r/tls/ca/tls.crt
-            - --log-level=debug
-            - --namespace=default
+            - --zap-devel
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           ports:
-            - name: ads-server
+            - name: mgmt-server
               containerPort: 18000
+            - name: mgmt-gateway
+              containerPort: 19001
             - name: webhook
               containerPort: 8443
           volumeMounts:
@@ -64,9 +73,12 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - name: ads-server
+    - name: mgmt-server
       port: 18000
-      targetPort: ads-server
+      targetPort: mgmt-server
+    - name: mgmt-gateway
+      port: 19001
+      targetPort: mgmt-gateway
     - name: webhook
       port: 443
       targetPort: webhook
@@ -118,29 +130,34 @@ data:
                       filename: /etc/envoy/tls/client/tls.crt
                     private_key:
                       filename: /etc/envoy/tls/client/tls.key
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: marin3r
-  namespace: default
 rules:
+  - apiGroups:
+    - ""
+    resources: ["pods"]
+    verbs: ["get","list"]
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "watch", "list"]
   - apiGroups: [""]
     resources: ["configmaps"]
-    verbs: ["get", "watch", "list"]
+    verbs: ["get", "watch", "list", "create"]
+  - apiGroups: [caches.marin3r.3scale.net]
+    resources: ["*"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: marin3r
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: marin3r
 subjects:
   - kind: ServiceAccount
@@ -169,27 +186,29 @@ webhooks:
         namespace: default
         path: /mutate
       caBundle: |
-        LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURRakNDQWlxZ0F3SUJBZ0lVTXQvTGltZ0da
-        TkNVN0ttQkZ6NGV5Sm54M2Uwd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0V6RVJNQThHQTFVRUF3d0lR
-        MmhoYm1kbFRXVXdIaGNOTWpBd05ESXdNVFl4T0RRM1doY05NekF3TkRFNApNVFl4T0RRM1dqQVRN
-        UkV3RHdZRFZRUUREQWhEYUdGdVoyVk5aVENDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBB
-        RENDQVFvQ2dnRUJBS3gzWVZOSkVqUmNhVWw0T3haVE5rek5zZTBtanZPeVNPMk5oVXNlVnFSYmRo
-        U3YKckQ4YWRobHR2NUovcElpbnRlQXFJeEx5bEV3ZFFRZlZGQjAvdEkzbEFhUFIySVVteW1YSlVs
-        d3kvQXlCTlp5KwpmcmpvZk4zMjhiUDJNVEtMaDVyQjBZNDQ5ejF0eFljWUx0NW5zRGlvNXhIeThZ
-        dDBCQVd4U1VMblhRTy9tRVoxCkw0TjVZSWx6ZGVxd3MwRHQ4ZnA2elYxaS8rMkxuMzBKcUJlSFUy
-        L2tGOVJIc0JaaHJmWTdYZ1g3bkxKVWV6MUIKb3lWMkZESXdKMGtkb01URlRFcVpaVjhNL1g0RmZM
-        bXl5Q0JvSkoyOGJVeGlLdWJYdzQ3WWluQmEyYWd0RHZKKwpkVENuUjlXRzFVM3RnVitmOEZrV2Q5
-        OERBdzAxaE9Mdzhoa2lrVkVDQXdFQUFhT0JqVENCaWpBZEJnTlZIUTRFCkZnUVVxbHpGdG9sMkVO
-        U0dEL3UwTkZQRGN0dGdkL1V3VGdZRFZSMGpCRWN3UllBVXFsekZ0b2wyRU5TR0QvdTAKTkZQRGN0
-        dGdkL1doRjZRVk1CTXhFVEFQQmdOVkJBTU1DRU5vWVc1blpVMWxnaFF5Mzh1S2FBWmswSlRzcVlF
-        WApQaDdJbWZIZDdUQU1CZ05WSFJNRUJUQURBUUgvTUFzR0ExVWREd1FFQXdJQkJqQU5CZ2txaGtp
-        Rzl3MEJBUXNGCkFBT0NBUUVBbWtWYXBGT3JUSTdvVjlmaTgxSnJvSUJPVStZZEFpWkxtM0liODkr
-        Q2NHWENtdjRCNnZuT1pKR0YKYloyb0xaczcySlRHQVJaWTdIV3ZGcWY5Y3JETTdqNjhXdEVLYS8y
-        QTVRRmVvbTJ4MlNmcENIMGlNVkwrMGhUbwp0UERWV3d0VHhEMm9HK2NucFFXdytMYThLZC9JQU5C
-        ZU42alRNWHpFVGtMNENYY1lzd1JVUVd0M3h3cjUrMzdYCjRwYzBFNGtRblY5c2w3YkxYblE0aW40
-        RDRYNmJEYkN0ZjhkLytGNHlPQWZSWXU0ZWdqaU5XTHJZRktONVBrb28KeFNhTnBxN25yYldOUDI4
-        NDluV2RDNG11MUxWakJJTEVEMFJkT3BNVnQ3cXdESTh0TjhRcmJtSWwwSWJXMzExcgpodWZBUW1J
-        WmNYYlJBN3FIaFJ4dktHTzVLdmxYamc9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+        LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURmRENDQW1TZ0F3SUJBZ0lSQUxrTUVINTFs
+        ZWFFd05RcytuTk5oYjR3RFFZSktvWklodmNOQVFFTEJRQXcKRXpFUk1BOEdBMVVFQXd3SVEyaGhi
+        bWRsVFdVd0hoY05NakF3TkRJd01UWXhPRFEzV2hjTk1qTXdOREExTVRZeApPRFEzV2pBZU1Sd3dH
+        Z1lEVlFRRERCTnRZWEpwYmpOeUxtUmxabUYxYkhRdWMzWmpNSUlCSWpBTkJna3Foa2lHCjl3MEJB
+        UUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF3OVUwY2t6MnVNc3JTSXQ5WXd5Nmh2WTFxd3NtOTRVQyt6
+        OHkKQ2VsbGZRVFZya042eTJWcml2Ky9ReGdJb0tka0x0eDVMTW5nbktaanBLSHBMNDJYcnVaVFVv
+        dXFRa1pVQWRWYQpDdWIzSW84Z21JeVhiUHFuMU9MM1ZXQ1J0QlAwOGg1eUdXZkJITFRjblZQdU05
+        c3FXalRueWNTZG1MMU4zemM1Ci92emVqNXB4djQzeCtXVFBueUlrRVo5eW9wb212bWJ1OWVpZUoz
+        Zmwxam15Y2ZhalRJTWNkWnVCL0thS0IvZkwKbVZud2dudzJtZS8ydzd4TEpuSS9mMGtPK21adGlJ
+        VzJwZVZlcEh3ZUdYR0V6azF4d0duR3VZK3N5QjBDcXp0YwpnMEZMcFlqdmpmRjFCcEt4NHAvR3hr
+        Tk1NQzNjcTBScXRqaHM1VTQyak43bTI4WFNyUUlEQVFBQm80Ry9NSUc4Ck1Ba0dBMVVkRXdRQ01B
+        QXdIUVlEVlIwT0JCWUVGTENjdXZvbFJUN3lET1NsYTM0a3dwRURsNlpkTUU0R0ExVWQKSXdSSE1F
+        V0FGS3BjeGJhSmRoRFVoZy83dERSVHczTGJZSGYxb1Jla0ZUQVRNUkV3RHdZRFZRUUREQWhEYUdG
+        dQpaMlZOWllJVU10L0xpbWdHWk5DVTdLbUJGejRleUpueDNlMHdFd1lEVlIwbEJBd3dDZ1lJS3dZ
+        QkJRVUhBd0V3CkN3WURWUjBQQkFRREFnV2dNQjRHQTFVZEVRUVhNQldDRTIxaGNtbHVNM0l1WkdW
+        bVlYVnNkQzV6ZG1Nd0RRWUoKS29aSWh2Y05BUUVMQlFBRGdnRUJBSDFZS2JFRlFReHNHQU91eGlK
+        UGw5TzBneDVGeXhJUjl0YkxKc25yNG50WQpSRzVGN296aHd3MTAwSXFZenJ0YzM1STQwbU5JdFdW
+        U3pldlhxM0crTkJ2Q0RrdnhlSFFBOVJWZ2l6Q3AvZDhDCmlUbjNheVh3czNmNzZPMmloaC82RnFw
+        dnNiMG03cXhRdS9HOU5TMy8veFJmM0pscCswYTB6NU13bHRodm03N0wKUFlMRy9lWGNyV0lnd1d5
+        Ung3Tk5aQ1Q3VDFlSkpiTWI5YnFZQlhMVVJ4WU85ejM0THpDZjRJRnZ6V1p6d0hZaQpTcTNuaVBH
+        bkhFMUk3K0p5Wnk5OHhWKzV4dE9iZjM2Ni9ZYnJzd0c1aVhzY2NjMEpOUTJBN2x1Y1FzWFpOY1JT
+        CjAvWWdiWFdPcXMzWWdLYUozMjUrTFFjbGtXYzFyNUNCaTFIaTMrRWtNTmc9Ci0tLS0tRU5EIENF
+        UlRJRklDQVRFLS0tLS0K
     rules:
       - operations: ["CREATE"]
         apiGroups: [""]

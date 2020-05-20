@@ -1,0 +1,7 @@
+apiVersion: caches.marin3r.3scale.net/v1alpha1
+kind: NodeConfigRevision
+metadata:
+  name: example-nodeconfigrevision
+spec:
+  # Add fields here
+  size: 3

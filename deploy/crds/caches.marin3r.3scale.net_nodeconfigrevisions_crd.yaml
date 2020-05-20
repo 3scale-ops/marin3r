@@ -1,0 +1,76 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: nodeconfigrevisions.caches.marin3r.3scale.net
+spec:
+  group: caches.marin3r.3scale.net
+  names:
+    kind: NodeConfigRevision
+    listKind: NodeConfigRevisionList
+    plural: nodeconfigrevisions
+    singular: nodeconfigrevision
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: NodeConfigRevision is the Schema for the nodeconfigrevisions API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
+          properties:
+            clusters:
+              type: string
+            listeners:
+              type: string
+            nodeID:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "operator-sdk generate k8s" to regenerate code after
+                modifying this file Add custom validation using kubebuilder tags:
+                https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              type: string
+            secrets:
+              type: string
+            version:
+              format: int64
+              type: integer
+          required:
+          - clusters
+          - listeners
+          - nodeID
+          - secrets
+          - version
+          type: object
+        status:
+          description: NodeConfigRevisionStatus defines the observed state of NodeConfigRevision
+          properties:
+            failureMessage:
+              type: string
+            hasFailed:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "operator-sdk generate k8s" to regenerate
+                code after modifying this file Add custom validation using kubebuilder
+                tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html'
+              type: boolean
+          required:
+          - failureMessage
+          - hasFailed
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
