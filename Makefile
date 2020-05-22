@@ -119,6 +119,7 @@ kind-start-envoy: certs
 kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
 kind-refresh-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
 kind-refresh-marin3r: kind-docker-build
+	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
 	kubectl delete pod -l app=marin3r
 
 kind-delete: ## deletes the kind cluster and the registry

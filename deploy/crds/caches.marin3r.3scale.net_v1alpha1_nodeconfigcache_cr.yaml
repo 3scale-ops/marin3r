@@ -1,8 +1,54 @@
 apiVersion: caches.marin3r.3scale.net/v1alpha1
 kind: NodeConfigCache
 metadata:
-  name: example-nodeconfigcache
+  name: kuard
 spec:
   # Add fields here
-  nodeID: test-node
-  currentVersion: 1
+  nodeID: kuard
+  version: "2"
+  resources:
+    secrets:
+      - name: envoy1-cert
+        namespace: default
+    clusters:
+      - name: kuard
+        value: |
+          eyJAdHlwZSI6InR5cGUuZ29vZ2xlYXBpcy5jb20vZW52b3kuYXBpLnYyLkNsdXN0ZXIiLCJuYW1l
+          Ijoia3VhcmQiLCJ0eXBlIjoiU1RSSUNUX0ROUyIsImNvbm5lY3RUaW1lb3V0IjoiMnMiLCJsb2Fk
+          QXNzaWdubWVudCI6eyJjbHVzdGVyTmFtZSI6Imt1YXJkIiwiZW5kcG9pbnRzIjpbeyJsYkVuZHBv
+          aW50cyI6W3siZW5kcG9pbnQiOnsiYWRkcmVzcyI6eyJzb2NrZXRBZGRyZXNzIjp7ImFkZHJlc3Mi
+          OiIxMjcuMC4wLjEiLCJwb3J0VmFsdWUiOjgwODB9fX19XX1dfSwiZG5zTG9va3VwRmFtaWx5Ijoi
+          VjRfT05MWSJ9Cg==
+    listeners:
+      - name: http
+        value: |
+          eyJAdHlwZSI6InR5cGUuZ29vZ2xlYXBpcy5jb20vZW52b3kuYXBpLnYyLkxpc3RlbmVyIiwibmFt
+          ZSI6Imh0dHAiLCJhZGRyZXNzIjp7InNvY2tldEFkZHJlc3MiOnsiYWRkcmVzcyI6IjAuMC4wLjAi
+          LCJwb3J0VmFsdWUiOjEwODB9fSwiZmlsdGVyQ2hhaW5zIjpbeyJmaWx0ZXJzIjpbeyJuYW1lIjoi
+          ZW52b3kuaHR0cF9jb25uZWN0aW9uX21hbmFnZXIiLCJ0eXBlZENvbmZpZyI6eyJAdHlwZSI6InR5
+          cGUuZ29vZ2xlYXBpcy5jb20vZW52b3kuY29uZmlnLmZpbHRlci5uZXR3b3JrLmh0dHBfY29ubmVj
+          dGlvbl9tYW5hZ2VyLnYyLkh0dHBDb25uZWN0aW9uTWFuYWdlciIsInN0YXRQcmVmaXgiOiJpbmdy
+          ZXNzX2h0dHAiLCJyb3V0ZUNvbmZpZyI6eyJuYW1lIjoibG9jYWxfcm91dGUiLCJ2aXJ0dWFsSG9z
+          dHMiOlt7Im5hbWUiOiJrdWFyZCIsImRvbWFpbnMiOlsiKiJdLCJyb3V0ZXMiOlt7Im1hdGNoIjp7
+          InByZWZpeCI6Ii8ifSwicm91dGUiOnsiY2x1c3RlciI6Imt1YXJkIn19XX1dfSwiaHR0cEZpbHRl
+          cnMiOlt7Im5hbWUiOiJlbnZveS5yb3V0ZXIifV0sImFjY2Vzc0xvZyI6W3sibmFtZSI6ImVudm95
+          LmZpbGVfYWNjZXNzX2xvZyIsImNvbmZpZyI6eyJwYXRoIjoiL2Rldi9zdGRvdXQifX1dfX1dfV19
+          Cg==
+      - name: https
+        value: |
+          eyJAdHlwZSI6InR5cGUuZ29vZ2xlYXBpcy5jb20vZW52b3kuYXBpLnYyLkxpc3RlbmVyIiwibmFt
+          ZSI6Imh0dHBzIiwiYWRkcmVzcyI6eyJzb2NrZXRBZGRyZXNzIjp7ImFkZHJlc3MiOiIwLjAuMC4w
+          IiwicG9ydFZhbHVlIjoxNDQzfX0sImZpbHRlckNoYWlucyI6W3siZmlsdGVycyI6W3sibmFtZSI6
+          ImVudm95Lmh0dHBfY29ubmVjdGlvbl9tYW5hZ2VyIiwidHlwZWRDb25maWciOnsiQHR5cGUiOiJ0
+          eXBlLmdvb2dsZWFwaXMuY29tL2Vudm95LmNvbmZpZy5maWx0ZXIubmV0d29yay5odHRwX2Nvbm5l
+          Y3Rpb25fbWFuYWdlci52Mi5IdHRwQ29ubmVjdGlvbk1hbmFnZXIiLCJzdGF0UHJlZml4IjoiaW5n
+          cmVzc19odHRwIiwicm91dGVDb25maWciOnsibmFtZSI6ImxvY2FsX3JvdXRlIiwidmlydHVhbEhv
+          c3RzIjpbeyJuYW1lIjoia3VhcmQiLCJkb21haW5zIjpbIioiXSwicm91dGVzIjpbeyJtYXRjaCI6
+          eyJwcmVmaXgiOiIvIn0sInJvdXRlIjp7ImNsdXN0ZXIiOiJrdWFyZCJ9fV19XX0sImh0dHBGaWx0
+          ZXJzIjpbeyJuYW1lIjoiZW52b3kucm91dGVyIn1dLCJhY2Nlc3NMb2ciOlt7Im5hbWUiOiJlbnZv
+          eS5maWxlX2FjY2Vzc19sb2ciLCJjb25maWciOnsicGF0aCI6Ii9kZXYvc3Rkb3V0In19XX19XSwi
+          dHJhbnNwb3J0U29ja2V0Ijp7Im5hbWUiOiJlbnZveS50cmFuc3BvcnRfc29ja2V0cy50bHMiLCJ0
+          eXBlZENvbmZpZyI6eyJAdHlwZSI6InR5cGUuZ29vZ2xlYXBpcy5jb20vZW52b3kuYXBpLnYyLmF1
+          dGguRG93bnN0cmVhbVRsc0NvbnRleHQiLCJjb21tb25UbHNDb250ZXh0Ijp7InRsc0NlcnRpZmlj
+          YXRlU2RzU2VjcmV0Q29uZmlncyI6W3sibmFtZSI6ImVudm95LXNlcnZlcjEiLCJzZHNDb25maWci
+          OnsiYWRzIjp7fX19XX19fX1dfQo=

@@ -1,7 +1,9 @@
 package controller
 
 import (
-	"github.com/3scale/marin3r/pkg/controller/configmap"
+	// "github.com/3scale/marin3r/pkg/controller/configmap"
+	"github.com/3scale/marin3r/pkg/controller/nodeconfigcache"
+	// "github.com/3scale/marin3r/pkg/controller/secret"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -16,6 +18,8 @@ func AddToManager(m manager.Manager, c *xds_cache.SnapshotCache) error {
 			return err
 		}
 	}
-	configmap.Add(m, c)
+	// configmap.Add(m, c)
+	// secret.Add(m, c)
+	nodeconfigcache.Add(m, c)
 	return nil
 }

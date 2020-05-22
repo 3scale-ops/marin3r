@@ -1,26 +1,43 @@
 package v1alpha1
 
 import (
+	"github.com/operator-framework/operator-sdk/pkg/status"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // NodeConfigCacheSpec defines the desired state of NodeConfigCache
 type NodeConfigCacheSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	NodeID         string `json:"nodeID"`
-	CurrentVersion int64  `json:"currentVersion"`
+	NodeID          string                   `json:"nodeID"`
+	Version         string                   `json:"version"`
+	Resources       EnvoyResources           `json:"resources"`
+	ConfigRevisions []corev1.ObjectReference `json:"revisions,omitempty"`
+}
+
+// EnvoyResources holds each envoy api resource type
+type EnvoyResources struct {
+	Endpoints []EnvoyResource          `json:"endpoints,omitempty"`
+	Clusters  []EnvoyResource          `json:"clusters,omitempty"`
+	Routes    []EnvoyResource          `json:"routes,omitempty"`
+	Listeners []EnvoyResource          `json:"listeners,omitempty"`
+	Runtimes  []EnvoyResource          `json:"runtime,omitempty"`
+	Secrets   []corev1.SecretReference `json:"secrets,omitempty"`
+}
+
+// EnvoyResource holds a single envoy api resources,
+// serialized as json, base64 encoded
+type EnvoyResource struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 // NodeConfigCacheStatus defines the observed state of NodeConfigCache
 type NodeConfigCacheStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	// PublishedVersion is the config version currently
+	// served by the envoy control plane for the node-id
+	PublishedVersion string `json:"publishedVersion"`
+	// Conditions represent the latest available observations of an object's state
+	Conditions status.Conditions `json:"conditions"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
