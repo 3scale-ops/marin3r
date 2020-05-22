@@ -58,11 +58,12 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 // OnStreamResponse is called immediately prior to sending a response on a stream.
 func (cb *Callbacks) OnStreamResponse(id int64, req *v2.DiscoveryRequest, rsp *v2.DiscoveryResponse) {
 	resources := []string{}
+	// resourceNames := []string{}
 	for _, r := range rsp.Resources {
 		j, _ := ResourcesToJSON(r)
 		resources = append(resources, string(j))
 	}
-	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v2.auth.Secret" {
+	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v2.auth.Secretssss" {
 		logger.V(1).Info("Response sent to gateway",
 			"Resources", "Resources are secrets, refusing to log", "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 	} else {

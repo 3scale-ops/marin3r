@@ -2,9 +2,16 @@ package envoy
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
+	route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+
+	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/ghodss/yaml"
 	"github.com/go-logr/logr"
 	"github.com/golang/protobuf/jsonpb"
@@ -92,13 +99,11 @@ func (*Resources) ProtoMessage() {}
 func YAMLtoResources(data []byte, logger logr.Logger) (*Resources, error) {
 	j, err := yaml.YAMLToJSON(data)
 	if err != nil {
-		logger.Error(err, "Error converting yaml to json")
 		return nil, fmt.Errorf("Error converting yaml to json: '%s'", err)
 	}
 
 	res := &Resources{}
 	if err := jsonpb.Unmarshal(bytes.NewReader(j), res); err != nil {
-		logger.Error(err, "Error deserializing resources from json")
 		return nil, fmt.Errorf("Error deserializing resources: '%s'", err)
 	}
 
@@ -116,4 +121,75 @@ func ResourcesToJSON(pb proto.Message) ([]byte, error) {
 		return []byte{}, err
 	}
 	return json.Bytes(), nil
+}
+
+func JSONtoResource(b []byte, res xds_cache_types.Resource) error {
+
+	switch o := res.(type) {
+
+	case *endpoint.LbEndpoint:
+		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+			return fmt.Errorf("Error deserializing listener: '%s'", err)
+		}
+		return nil
+
+	case *envoyapi.Cluster:
+		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+			return fmt.Errorf("Error deserializing cluster: '%s'", err)
+		}
+		return nil
+
+	case *route.Route:
+		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+			return fmt.Errorf("Error deserializing route: '%s'", err)
+		}
+		return nil
+
+	case *envoyapi.Listener:
+		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+			return fmt.Errorf("Error deserializing listener: '%s'", err)
+		}
+		return nil
+
+	case *discovery.Runtime:
+		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+			return fmt.Errorf("Error deserializing runtime: '%s'", err)
+		}
+		return nil
+
+	case *auth.Secret:
+		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+			return fmt.Errorf("Error deserializing secret: '%s'", err)
+		}
+
+	}
+	return nil
+}
+
+func B64EncodedJSONtoResource(str string, res xds_cache_types.Resource) error {
+	b, err := base64.StdEncoding.DecodeString(str)
+	if err != nil {
+		return fmt.Errorf("Error decoding base64 string: '%s'", err)
+	}
+
+	err = JSONtoResource(b, res)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func YAMLtoResource(str string, res xds_cache_types.Resource) error {
+	b, err := yaml.YAMLToJSON([]byte(str))
+	if err != nil {
+		return fmt.Errorf("Error converting yaml to json: '%s'", err)
+	}
+
+	err = JSONtoResource(b, res)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

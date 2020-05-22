@@ -1,31 +1,21 @@
 package v1alpha1
 
 import (
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
 type NodeConfigRevisionSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	NodeID    string `json:"nodeID"`
-	Version   int64  `json:"version"`
-	Clusters  string `json:"clusters"`
-	Listeners string `json:"listeners"`
-	Secrets   string `json:"secrets"`
+	NodeID    string         `json:"nodeID"`
+	Version   int64          `json:"version"`
+	Resources EnvoyResources `json:"revision"`
 }
 
 // NodeConfigRevisionStatus defines the observed state of NodeConfigRevision
 type NodeConfigRevisionStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	HasFailed      bool   `json:"hasFailed"`
-	FailureMessage string `json:"failureMessage"`
+	// Conditions represent the latest available observations of an object's state
+	Conditions status.Conditions `json:"conditions"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
