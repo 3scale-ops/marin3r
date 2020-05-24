@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
-	"github.com/3scale/marin3r/pkg/cache"
 	"github.com/3scale/marin3r/pkg/envoy"
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -51,7 +50,6 @@ func newReconciler(mgr manager.Manager, c *xds_cache.SnapshotCache) reconcile.Re
 	return &ReconcileNodeConfigCache{
 		client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
-		cache:    cache.NewCache(),
 		adsCache: c,
 	}
 }
@@ -90,7 +88,6 @@ var _ reconcile.Reconciler = &ReconcileNodeConfigCache{}
 type ReconcileNodeConfigCache struct {
 	client   client.Client
 	scheme   *runtime.Scheme
-	cache    cache.Cache
 	adsCache *xds_cache.SnapshotCache
 }
 

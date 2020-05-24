@@ -3,11 +3,6 @@ package configmap
 import (
 	"context"
 
-	"github.com/3scale/marin3r/pkg/cache"
-	"github.com/3scale/marin3r/pkg/envoy"
-	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,17 +29,15 @@ var log = logf.Log.WithName("controller_configmap")
 
 // Add creates a new ConfigMap Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, cache *xds_cache.SnapshotCache) error {
-	return add(mgr, newReconciler(mgr, cache))
+func Add(mgr manager.Manager) error {
+	return add(mgr, newReconciler(mgr))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, c *xds_cache.SnapshotCache) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileConfigMap{
-		client:   mgr.GetClient(),
-		scheme:   mgr.GetScheme(),
-		cache:    cache.NewCache(),
-		adsCache: c,
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
 	}
 }
 
@@ -101,10 +94,8 @@ var _ reconcile.Reconciler = &ReconcileConfigMap{}
 
 // ReconcileConfigMap reconciles a ConfigMap object
 type ReconcileConfigMap struct {
-	client   client.Client
-	scheme   *runtime.Scheme
-	cache    cache.Cache
-	adsCache *xds_cache.SnapshotCache
+	client client.Client
+	scheme *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a ConfigMap object and makes changes based on the state read
@@ -134,69 +125,5 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 
 	reqLogger.Info("Reconciling from ConfigMap")
 
-	// Check if it's the first time we see this
-	// nodeID, in which case we need to bootstrap
-	// its cache
-	if _, ok := r.cache[nodeID]; !ok {
-		reqLogger.Info("New node-id, boostraping in-memory cache")
-		r.cache.NewNodeCache(nodeID)
-		// We need to trigger a reconcile for the secrets
-		// so this new cache gets populated with them
-		secrets, err := getNamespaceSecrets(ctx, r.client, request.Namespace, nodeID, reqLogger)
-		for _, s := range secrets {
-			r.cache.SetResource(nodeID, s.Name, cache.Secret, s)
-		}
-		if err != nil {
-			reqLogger.Error(err, "Error populating secrets cache")
-			// Delete the node cache so in the next reconcile it will try to rebuild the
-			// secrets cache again
-			r.cache.DeleteNodeCache(nodeID)
-			// Reenqueue
-			return reconcile.Result{}, err
-		}
-	}
-
-	// Clear current cached clusters and listeners, we don't care about
-	// previous values because the yaml in the ConfigMap provider is
-	// expected to be complete
-	r.cache.ClearResources(nodeID, cache.Cluster)
-	r.cache.ClearResources(nodeID, cache.Listener)
-	// TODO: function that acutally validates that the resources in the ConfigMap have changed
-	// to avoid unnecessary updates of the ads server cache
-
-	// Get envoy resources
-	resources, err := envoy.YAMLtoResources([]byte(cm.Data[configMapKey]), reqLogger)
-
-	for _, cluster := range resources.Clusters {
-		r.cache.SetResource(nodeID, cluster.Name, cache.Cluster, cluster)
-	}
-
-	for _, lis := range resources.Listeners {
-		r.cache.SetResource(nodeID, lis.Name, cache.Listener, lis)
-	}
-
-	// Publish resources to the ads server cache
-	r.cache.BumpCacheVersion(nodeID)
-	r.cache.SetSnapshot(nodeID, *r.adsCache)
-
 	return reconcile.Result{}, nil
-}
-
-// SyncNodeSecrets synchronously builds/rebuilds the whole secrets cache
-func getNamespaceSecrets(ctx context.Context, cli client.Client, namespace, nodeID string, logger logr.Logger) ([]*auth.Secret, error) {
-
-	list := &corev1.SecretList{}
-	err := cli.List(ctx, list, []client.ListOption{client.InNamespace(namespace)}...)
-	if err != nil {
-		return nil, err
-	}
-
-	secrets := []*auth.Secret{}
-	for _, s := range list.Items {
-		if cn, ok := s.GetAnnotations()[secretAnnotation]; ok {
-			logger.V(1).Info("Discovered secret containing certificate", "Secret", s.ObjectMeta.Name, "CN", cn)
-			secrets = append(secrets, envoy.NewSecret(cn, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate])))
-		}
-	}
-	return secrets, nil
 }
