@@ -116,14 +116,15 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	secret := &corev1.Secret{}
 	err := r.client.Get(ctx, request.NamespacedName, secret)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		// NOTE: We skip the IsNotFound error because we want to trigger NodeConfigCache
+		// reconciles when referred secrets are deleted so the envoy control-plane
+		// stops publishing them. This might cause errors if the reference hasn't been
+		// removed from the NodeCacheConfig, but that's ok as we do want to surface this
+		// inconsistency instead of silently failing
+		if !errors.IsNotFound(err) {
+			return reconcile.Result{}, err
+		}
 	}
 
 	logger := log.WithValues("Namespace", request.Namespace, "Name", request.Name)
