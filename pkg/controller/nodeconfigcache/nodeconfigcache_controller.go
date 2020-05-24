@@ -120,7 +120,7 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	snap := newNodeSnapshot(nodeID, version)
 
 	// Populate the snapshot with the resources in the spec
-	err = r.loadResources(ctx, nodeID, instance.Spec.Resources, snap)
+	err = r.loadResources(ctx, nodeID, instance, snap)
 	if err != nil {
 		// Return error to reenqueue
 		// TODO: publish event
@@ -138,39 +138,39 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID string, rl cachesv1alpha1.EnvoyResources, snap *xds_cache.Snapshot) error {
+func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID string, o *cachesv1alpha1.NodeConfigCache, snap *xds_cache.Snapshot) error {
 
-	for _, endpoint := range rl.Endpoints {
+	for _, endpoint := range o.Spec.Resources.Endpoints {
 		res := &envoyapi_endpoint.LbEndpoint{}
 		envoy.YAMLtoResource(endpoint.Value, res)
 		setResource(nodeID, endpoint.Name, res, snap)
 	}
 
-	for _, cluster := range rl.Clusters {
+	for _, cluster := range o.Spec.Resources.Clusters {
 		res := &envoyapi.Cluster{}
 		envoy.YAMLtoResource(cluster.Value, res)
 		setResource(nodeID, cluster.Name, res, snap)
 	}
 
-	for _, route := range rl.Routes {
+	for _, route := range o.Spec.Resources.Routes {
 		res := &envoyapi_route.Route{}
 		envoy.YAMLtoResource(route.Value, res)
 		setResource(nodeID, route.Name, res, snap)
 	}
 
-	for _, listener := range rl.Listeners {
+	for _, listener := range o.Spec.Resources.Listeners {
 		res := &envoyapi.Listener{}
 		envoy.YAMLtoResource(listener.Value, res)
 		setResource(nodeID, listener.Name, res, snap)
 	}
 
-	for _, runtime := range rl.Runtimes {
+	for _, runtime := range o.Spec.Resources.Runtimes {
 		res := &envoyapi_discovery.Runtime{}
 		envoy.YAMLtoResource(runtime.Value, res)
 		setResource(nodeID, runtime.Name, res, snap)
 	}
 
-	for _, secret := range rl.Secrets {
+	for idx, secret := range o.Spec.Resources.Secrets {
 		s := &corev1.Secret{}
 		key := types.NamespacedName{
 			Name:      secret.Ref.Name,
@@ -190,11 +190,11 @@ func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID str
 		} else {
 			return errors.NewInvalid(
 				schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
-				"InvalidSecretType",
+				fmt.Sprintf("%s/%s", o.ObjectMeta.Namespace, o.ObjectMeta.Name),
 				field.ErrorList{
 					field.Invalid(
-						field.NewPath("Data"),
-						s.Data,
+						field.NewPath("Spec", "Secrets").Index(idx).Child("Ref"),
+						secret.Ref,
 						fmt.Sprint("Only 'kubernetes.io/tls' type secrets allowed"),
 					),
 				},
