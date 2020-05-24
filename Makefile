@@ -83,6 +83,10 @@ $(KIND):
 	curl -sLo $(KIND) https://github.com/kubernetes-sigs/kind/releases/download/$(KIND_VERSION)/kind-$$(uname)-amd64
 	chmod +x $(KIND)
 
+kind-apply-crds: ## Applies all CRDs tp the kind cluster
+kind-apply-crds:
+	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
+
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
 kind-create: export KIND_BIN=$(KIND)
 kind-create: tmp $(KIND)
@@ -97,12 +101,11 @@ kind-docker-build: clean-dirty-builds build
 
 kind-start-marin3r: ## deploys marin3r inside the kind k8s cluster
 kind-start-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
-kind-start-marin3r: certs kind-docker-build
+kind-start-marin3r: certs kind-docker-build kind-apply-crds
 	kubectl label namespace/default marin3r.3scale.net/status="enabled" || true
 	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r.default.svc.crt --key=certs/marin3r.default.svc.key || true
 	kubectl create secret tls marin3r-ca-cert --cert=certs/ca.crt --key=certs/ca.key || true
 	kubectl create secret tls envoy-sidecar-client-cert --cert=certs/envoy-client.crt --key=certs/envoy-client.key || true
-	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
 	kubectl apply -f deploy/kind/marin3r.yaml
 	while [[ $$(kubectl get pods -l app=marin3r -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do sleep 5; done
 	kubectl logs -f -l app=marin3r
@@ -118,7 +121,7 @@ kind-start-envoy: certs
 
 kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
 kind-refresh-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
-kind-refresh-marin3r: kind-docker-build
+kind-refresh-marin3r: kind-docker-build kind-apply-crds
 	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
 	kubectl delete pod -l app=marin3r
 
