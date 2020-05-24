@@ -2,6 +2,7 @@ package nodeconfigcache
 
 import (
 	"context"
+	"fmt"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
@@ -10,6 +11,8 @@ import (
 	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	"github.com/3scale/marin3r/pkg/cache"
@@ -173,25 +176,47 @@ func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID str
 	for _, secret := range rl.Secrets {
 		s := &corev1.Secret{}
 		key := types.NamespacedName{
-			Name:      secret.Name,
-			Namespace: secret.Namespace,
+			Name:      secret.Ref.Name,
+			Namespace: secret.Ref.Namespace,
 		}
 		if err := r.client.Get(ctx, key, s); err != nil {
 			if errors.IsNotFound(err) {
-				// Secret was not found, need to act somehow?
-				// Might the secret controler have missed the event
+				return err
 			}
 			return err
 		}
 
-		log.Info("Loading secrets", "Secret", secret.Name)
-		if cn, ok := s.GetAnnotations()[secretAnnotation]; ok {
-			log.Info("Has CN annotation", "Secret", secret.Name)
-			res := envoy.NewSecret(cn, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
-			setResource(nodeID, cn, res, snap)
+		// Validate secret holds a certificate
+		if s.Type == "kubernetes.io/tls" {
+			_, keyOk := s.Data[secretPrivateKey]
+			_, certOk := s.Data[secretCertificate]
+			if !keyOk || !certOk {
+				return errors.NewInvalid(
+					schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
+					"InvalidTLSSecret",
+					field.ErrorList{
+						field.Invalid(
+							field.NewPath("Data"),
+							s.Data,
+							fmt.Sprintf("Malformed 'kubernetes.io/tls' secret %s/%s", s.ObjectMeta.Namespace, s.ObjectMeta.Name),
+						),
+					},
+				)
+			}
+			res := envoy.NewSecret(secret.Name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
+			setResource(nodeID, secret.Name, res, snap)
 		} else {
-			// Secret annotation has been removed, need to act somehow?
-			// Might the secret controler have missed the event
+			return errors.NewInvalid(
+				schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
+				"InvalidSecretType",
+				field.ErrorList{
+					field.Invalid(
+						field.NewPath("Data"),
+						s.Data,
+						fmt.Sprint("Only 'kubernetes.io/tls' type secrets allowed"),
+					),
+				},
+			)
 		}
 	}
 

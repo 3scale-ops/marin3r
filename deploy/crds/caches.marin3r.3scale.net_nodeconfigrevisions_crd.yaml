@@ -108,17 +108,27 @@ spec:
                   type: array
                 secrets:
                   items:
-                    description: SecretReference represents a Secret Reference. It
-                      has enough information to retrieve secret in any namespace
+                    description: EnvoySecretResource holds a reference to a k8s Secret
+                      from where to take a secret from
                     properties:
                       name:
-                        description: Name is unique within a namespace to reference
-                          a secret resource.
                         type: string
-                      namespace:
-                        description: Namespace defines the space within which the
-                          secret name must be unique.
-                        type: string
+                      ref:
+                        description: SecretReference represents a Secret Reference.
+                          It has enough information to retrieve secret in any namespace
+                        properties:
+                          name:
+                            description: Name is unique within a namespace to reference
+                              a secret resource.
+                            type: string
+                          namespace:
+                            description: Namespace defines the space within which
+                              the secret name must be unique.
+                            type: string
+                        type: object
+                    required:
+                    - name
+                    - ref
                     type: object
                   type: array
               type: object

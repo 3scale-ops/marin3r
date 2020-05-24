@@ -8,8 +8,10 @@ spec:
   version: "4"
   resources:
     secrets:
-      - name: envoy1-cert
-        namespace: default
+      - name: envoy-server1
+        ref:
+          name: envoy1-cert
+          namespace: default
     clusters:
       - name: kuard
         value: |

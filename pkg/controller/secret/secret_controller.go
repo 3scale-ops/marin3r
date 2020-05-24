@@ -2,11 +2,9 @@ package secret
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/3scale/marin3r/pkg/cache"
+	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,7 +20,6 @@ import (
 )
 
 const (
-	secretAnnotation  = "cert-manager.io/common-name"
 	secretCertificate = "tls.crt"
 	secretPrivateKey  = "tls.key"
 )
@@ -31,17 +28,15 @@ var log = logf.Log.WithName("controller_secret")
 
 // Add creates a new Secret Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, cache *xds_cache.SnapshotCache) error {
-	return add(mgr, newReconciler(mgr, cache))
+func Add(mgr manager.Manager) error {
+	return add(mgr, newReconciler(mgr))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, c *xds_cache.SnapshotCache) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileSecret{
-		client:   mgr.GetClient(),
-		scheme:   mgr.GetScheme(),
-		cache:    cache.NewCache(),
-		adsCache: c,
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
 	}
 }
 
@@ -55,23 +50,32 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	filter := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			// Secret has certificate annotation
-			_, ok := e.Meta.GetAnnotations()[secretAnnotation]
-			return ok
+			switch o := e.Object.(type) {
+			case *corev1.Secret:
+				if o.Type == "kubernetes.io/tls" {
+					return true
+				}
+			}
+			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Secret has certificate annotation
-			if _, ok := e.MetaNew.GetAnnotations()[secretAnnotation]; ok {
-				// Ignore updates to CR status in which case metadata.Generation does not change
-				// return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
-				return ok
+			switch o := e.ObjectNew.(type) {
+			case *corev1.Secret:
+				if o.Type == "kubernetes.io/tls" {
+					// Ignore updates to resource status in which case metadata.Generation does not change
+					return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+				}
 			}
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			// Secret has certificate annotation
-			_, ok := e.Meta.GetAnnotations()[secretAnnotation]
-			return ok
+			switch o := e.Object.(type) {
+			case *corev1.Secret:
+				if o.Type == "kubernetes.io/tls" {
+					return true
+				}
+			}
+			return false
 		},
 	}
 
@@ -98,10 +102,8 @@ var _ reconcile.Reconciler = &ReconcileSecret{}
 
 // ReconcileSecret reconciles a Secret object
 type ReconcileSecret struct {
-	client   client.Client
-	scheme   *runtime.Scheme
-	cache    cache.Cache
-	adsCache *xds_cache.SnapshotCache
+	client client.Client
+	scheme *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a Secret object and makes changes based on the state read
@@ -124,49 +126,31 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	cn := secret.GetAnnotations()[secretAnnotation]
-	logger := log.WithValues(
-		"Namespace", request.Namespace,
-		"Name", request.Name,
-		"CN", cn)
+	logger := log.WithValues("Namespace", request.Namespace, "Name", request.Name)
+	logger.Info("Reconciling from 'kubernetes.io/tls' Secret")
 
-	logger.Info("Reconciling from Secret")
+	// Get the list of NoceConfigCaches and check which of them
+	// contain refs to this secret
+	list := &cachesv1alpha1.NodeConfigCacheList{}
+	err = r.client.List(ctx, list)
 
-	// We don't have nodeID information because the secrets holding
-	// the certificates in k8s/ocp can be created by other tools (eg cert-manager)
-	// We need inspect the node-ids registered in the cache and publish the secrets to
-	// all of them
-	// TODO: improve this and publish secrets only to those node-ids actually interested
-	// in them
-
-	nodeIDs := make([]string, len(r.cache))
-	i := 0
-	for k := range r.cache {
-		nodeIDs[i] = k
-		i++
-	}
-
-	logger.Info("Pushing secret for each NodeID", "NodeIDs", nodeIDs)
-
-	// validate that the secret is well formed
-	if _, ok := secret.Data[secretCertificate]; !ok {
-		logger.Error(fmt.Errorf("Secret '%s' is missing required key '%s'", secret.ObjectMeta.Name, secretCertificate), "Malformed 'kubernetes.io/tls' secret")
-	}
-	if _, ok := secret.Data[secretPrivateKey]; !ok {
-		logger.Error(fmt.Errorf("Secret '%s' is missing required key '%s'", secret.ObjectMeta.Name, secretPrivateKey), "Malformed 'kubernetes.io/tls' secret")
-	}
-
-	// Copy the secret to all existent node caches
-	for _, nodeID := range nodeIDs {
-		r.cache.SetResource(nodeID, cn, cache.Secret, envoy.NewSecret(
-			cn,
-			string(secret.Data[secretPrivateKey]),
-			string(secret.Data[secretCertificate]),
-		))
-		// Publish resources to the ads server cache
-		r.cache.BumpCacheVersion(nodeID)
-		r.cache.SetSnapshot(nodeID, *r.adsCache)
-		logger.V(1).Info("Secret added to cache", "nodeID", nodeID)
+	for _, ncc := range list.Items {
+		// TODO: Might need to look inside specific revision instead,
+		// when revisions are implemented
+		for _, secret := range ncc.Spec.Resources.Secrets {
+			if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
+				logger.Info("Triggered NodeConfigCache reconcile",
+					"NodeConfigCache_Name", ncc.ObjectMeta.Name, "NodeConfigCache_Namespace", ncc.ObjectMeta.Namespace)
+				version, err := envoy.BumpVersion(ncc.Spec.Version)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
+				// patch operation to update Spec.Version in the cache
+				patch := client.MergeFrom(ncc.DeepCopy())
+				ncc.Spec.Version = version
+				r.client.Patch(ctx, &ncc, patch)
+			}
+		}
 	}
 
 	return reconcile.Result{}, nil

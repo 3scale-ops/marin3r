@@ -16,12 +16,12 @@ type NodeConfigCacheSpec struct {
 
 // EnvoyResources holds each envoy api resource type
 type EnvoyResources struct {
-	Endpoints []EnvoyResource          `json:"endpoints,omitempty"`
-	Clusters  []EnvoyResource          `json:"clusters,omitempty"`
-	Routes    []EnvoyResource          `json:"routes,omitempty"`
-	Listeners []EnvoyResource          `json:"listeners,omitempty"`
-	Runtimes  []EnvoyResource          `json:"runtime,omitempty"`
-	Secrets   []corev1.SecretReference `json:"secrets,omitempty"`
+	Endpoints []EnvoyResource       `json:"endpoints,omitempty"`
+	Clusters  []EnvoyResource       `json:"clusters,omitempty"`
+	Routes    []EnvoyResource       `json:"routes,omitempty"`
+	Listeners []EnvoyResource       `json:"listeners,omitempty"`
+	Runtimes  []EnvoyResource       `json:"runtime,omitempty"`
+	Secrets   []EnvoySecretResource `json:"secrets,omitempty"`
 }
 
 // EnvoyResource holds a single envoy api resources,
@@ -29,6 +29,13 @@ type EnvoyResources struct {
 type EnvoyResource struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
+}
+
+// EnvoySecretResource holds a reference to a k8s
+// Secret from where to take a secret from
+type EnvoySecretResource struct {
+	Name string                 `json:"name"`
+	Ref  corev1.SecretReference `json:"ref"`
 }
 
 // NodeConfigCacheStatus defines the observed state of NodeConfigCache
