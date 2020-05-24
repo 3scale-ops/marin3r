@@ -18,8 +18,6 @@ func AddToManager(m manager.Manager, c *xds_cache.SnapshotCache) error {
 			return err
 		}
 	}
-	// configmap.Add(m, c)
-	// secret.Add(m, c)
 	nodeconfigcache.Add(m, c)
 	return nil
 }

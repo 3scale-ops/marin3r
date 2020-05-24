@@ -1,10 +1,10 @@
 package controller
 
 import (
-	_ "github.com/3scale/marin3r/pkg/controller/configmap"
+	"github.com/3scale/marin3r/pkg/controller/configmap"
 )
 
 func init() {
 	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	//AddToManagerFuncs = append(AddToManagerFuncs, configmap.Add)
+	AddToManagerFuncs = append(AddToManagerFuncs, configmap.Add)
 }
