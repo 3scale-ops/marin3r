@@ -185,21 +185,6 @@ func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID str
 
 		// Validate secret holds a certificate
 		if s.Type == "kubernetes.io/tls" {
-			_, keyOk := s.Data[secretPrivateKey]
-			_, certOk := s.Data[secretCertificate]
-			if !keyOk || !certOk {
-				return errors.NewInvalid(
-					schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
-					"InvalidTLSSecret",
-					field.ErrorList{
-						field.Invalid(
-							field.NewPath("Data"),
-							s.Data,
-							fmt.Sprintf("Malformed 'kubernetes.io/tls' secret %s/%s", s.ObjectMeta.Namespace, s.ObjectMeta.Name),
-						),
-					},
-				)
-			}
 			res := envoy.NewSecret(secret.Name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
 			setResource(nodeID, secret.Name, res, snap)
 		} else {
