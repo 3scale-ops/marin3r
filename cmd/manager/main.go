@@ -67,7 +67,6 @@ var (
 	tlsCertificatePath string
 	tlsKeyPath         string
 	tlsCAPath          string
-	mode               string
 )
 
 var logger = logf.Log.WithName("cmd")
@@ -84,7 +83,6 @@ func main() {
 	pflag.StringVar(&tlsCertificatePath, "certificate", "/etc/marin3r/tls/server.crt", "Server certificate")
 	pflag.StringVar(&tlsKeyPath, "private-key", "/etc/marin3r/tls/server.key", "The private key of the server certificate")
 	pflag.StringVar(&tlsCAPath, "ca", "/etc/marin3r/tls/ca.crt", "The CA of the server certificate")
-	pflag.StringVar(&mode, "mode", "all", "marin3r mode of operation, one of: 'control-plane', 'webhook', 'all'")
 
 	pflag.CommandLine.AddFlagSet(zap.FlagSet())
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
