@@ -25,7 +25,6 @@ import (
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
-	"github.com/go-logr/logr"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -45,8 +44,6 @@ type XdsServer struct {
 	tlsConfig     *tls.Config
 	server        xds.Server
 	snapshotCache cache.SnapshotCache
-
-	logger logr.Logger
 }
 
 // hasher returns node ID as an ID
@@ -62,7 +59,7 @@ func (h hasher) ID(node *core.Node) string {
 
 // NewXdsServer creates a new XdsServer object fron the given params
 func NewXdsServer(ctx context.Context, adsPort uint,
-	tlsConfig *tls.Config, callbacks xds.Callbacks, logger logr.Logger) *XdsServer {
+	tlsConfig *tls.Config, callbacks xds.Callbacks) *XdsServer {
 	snapshotCache := cache.NewSnapshotCache(true, hasher{}, nil)
 	srv := xds.NewServer(ctx, snapshotCache, callbacks)
 
@@ -72,7 +69,6 @@ func NewXdsServer(ctx context.Context, adsPort uint,
 		tlsConfig:     tlsConfig,
 		server:        srv,
 		snapshotCache: snapshotCache,
-		logger:        logger,
 	}
 }
 

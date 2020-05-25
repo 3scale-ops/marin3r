@@ -86,53 +86,16 @@ func TestNewXdsServer(t *testing.T) {
 				&tls.Config{},
 				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
 				snapshotCache,
-				nil,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.callbacks, tt.args.logger); !reflect.DeepEqual(got, tt.want) {
+			if got := NewXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.callbacks); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewXdsServer() = %v, want %v", got, tt.want)
 			}
 		})
 	}
-}
-
-func TestXdsServer_RunADSServer(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-
-	tests := []struct {
-		name string
-		xdss *XdsServer
-	}{
-		{
-			"Runs the ads server",
-			&XdsServer{
-				ctx,
-				10000,
-				&tls.Config{},
-				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
-				snapshotCache,
-				func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }(),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var wait sync.WaitGroup
-			wait.Add(1)
-			go func() {
-				tt.xdss.RunADSServer()
-				wait.Done()
-			}()
-			cancel()
-			wait.Wait()
-		})
-	}
-	// Avoid go vet complaining about cancel not being
-	// invoked in some code paths
-	cancel()
 }
 
 func TestXdsServer_GetSnapshotCache(t *testing.T) {
@@ -149,7 +112,6 @@ func TestXdsServer_GetSnapshotCache(t *testing.T) {
 				&tls.Config{},
 				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
 				snapshotCache,
-				nil,
 			},
 			&snapshotCache,
 		},
@@ -159,6 +121,38 @@ func TestXdsServer_GetSnapshotCache(t *testing.T) {
 			if got := tt.xdss.GetSnapshotCache(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("XdsServer.GetSnapshotCache() = %v, want %v", got, tt.want)
 			}
+		})
+	}
+}
+
+func TestXdsServer_Start(t *testing.T) {
+
+	tests := []struct {
+		name string
+		xdss *XdsServer
+	}{
+		{
+			"Runs the ads server",
+			&XdsServer{
+				context.Background(),
+				10000,
+				&tls.Config{},
+				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
+				snapshotCache,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var wait sync.WaitGroup
+			stopCh := make(chan struct{})
+			wait.Add(1)
+			go func() {
+				tt.xdss.Start(stopCh)
+				wait.Done()
+			}()
+			close(stopCh)
+			wait.Wait()
 		})
 	}
 }

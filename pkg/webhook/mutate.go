@@ -17,7 +17,6 @@ package webhook
 import (
 	"fmt"
 
-	"github.com/go-logr/logr"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +28,7 @@ var (
 
 // MutatePod returns the PatchOperation required to inject the envoy sidecar
 // container and its volumes in the pod
-func MutatePod(req *admissionv1.AdmissionRequest, logger logr.Logger) ([]PatchOperation, error) {
+func MutatePod(req *admissionv1.AdmissionRequest) ([]PatchOperation, error) {
 
 	// This handler should only get called on Pod objects as per the MutatingWebhookConfiguration in the YAML file.
 	// However, if (for whatever reason) this gets invoked on an object of a different kind, issue a log message but
