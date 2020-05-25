@@ -12,7 +12,7 @@ type NodeConfigCacheSpec struct {
 	Version string `json:"version"`
 	// +kubebuilder:validation:Enum=json;b64json;yaml
 	Serialization   string                   `json:"serialization,omitifempty"`
-	Resources       EnvoyResources           `json:"resources"`
+	Resources       *EnvoyResources          `json:"resources"`
 	ConfigRevisions []corev1.ObjectReference `json:"revisions,omitempty"`
 }
 
