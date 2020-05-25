@@ -98,33 +98,6 @@ func TestNewXdsServer(t *testing.T) {
 	}
 }
 
-func TestXdsServer_GetSnapshotCache(t *testing.T) {
-	tests := []struct {
-		name string
-		xdss *XdsServer
-		want *cache.SnapshotCache
-	}{
-		{
-			"Gets the server's SnapshotCache",
-			&XdsServer{
-				context.Background(),
-				10000,
-				&tls.Config{},
-				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
-				snapshotCache,
-			},
-			&snapshotCache,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.xdss.GetSnapshotCache(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("XdsServer.GetSnapshotCache() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestXdsServer_Start(t *testing.T) {
 
 	tests := []struct {
@@ -148,11 +121,40 @@ func TestXdsServer_Start(t *testing.T) {
 			stopCh := make(chan struct{})
 			wait.Add(1)
 			go func() {
-				tt.xdss.Start(stopCh)
+				if err := tt.xdss.Start(stopCh); err != nil {
+					t.Errorf("TestXdsServer_Start = non nil error: '%s'", err)
+				}
 				wait.Done()
 			}()
 			close(stopCh)
 			wait.Wait()
+		})
+	}
+}
+
+func TestXdsServer_GetSnapshotCache(t *testing.T) {
+	tests := []struct {
+		name string
+		xdss *XdsServer
+		want *cache.SnapshotCache
+	}{
+		{
+			"Gets the server's SnapshotCache",
+			&XdsServer{
+				context.Background(),
+				10000,
+				&tls.Config{},
+				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
+				snapshotCache,
+			},
+			&snapshotCache,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.xdss.GetSnapshotCache(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("XdsServer.GetSnapshotCache() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

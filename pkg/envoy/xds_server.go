@@ -19,7 +19,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"os"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
@@ -88,20 +87,36 @@ func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 		return err
 	}
 
+	// channel to receive errors from the gorutine running the server
+	errCh := make(chan error)
+
+	// goroutine to run server
 	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
-			logger.Error(err, "aDS server exited with error")
-			os.Exit(1)
+			errCh <- err
 		}
 	}()
 
 	logger.Info(fmt.Sprintf("Aggregated discovery service listening on %d\n", xdss.adsPort))
-	<-stopCh
 
-	logger.Info("Shutting down ads server")
-	grpcServer.GracefulStop()
-	return nil
+	// wait until channel stopCh closed or an error is received
+	select {
+	case <-stopCh:
+		grpcServer.GracefulStop()
+		select {
+		case err := <-errCh:
+			logger.Error(err, "Server graceful stop failed")
+			return err
+		default:
+			logger.Info("Server stopped gracefully")
+			return nil
+		}
+	case err := <-errCh:
+		logger.Error(err, "Server failed")
+		return err
+	}
+
 }
 
 // GetSnapshotCache returns the xds_cache.SnapshotCache
