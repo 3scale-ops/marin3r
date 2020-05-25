@@ -8,8 +8,10 @@ import (
 
 // NodeConfigCacheSpec defines the desired state of NodeConfigCache
 type NodeConfigCacheSpec struct {
-	NodeID          string                   `json:"nodeID"`
-	Version         string                   `json:"version"`
+	NodeID  string `json:"nodeID"`
+	Version string `json:"version"`
+	// +kubebuilder:validation:Enum=json;b64json;yaml
+	Serialization   string                   `json:"serialization,omitifempty"`
 	Resources       EnvoyResources           `json:"resources"`
 	ConfigRevisions []corev1.ObjectReference `json:"revisions,omitempty"`
 }
@@ -52,6 +54,7 @@ type NodeConfigCacheStatus struct {
 // NodeConfigCache is the Schema for the nodeconfigcaches API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodeconfigcaches,scope=Namespaced
+// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
 type NodeConfigCache struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

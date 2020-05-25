@@ -3,6 +3,10 @@ kind: CustomResourceDefinition
 metadata:
   name: nodeconfigcaches.caches.marin3r.3scale.net
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.nodeID
+    name: NodeID
+    type: string
   group: caches.marin3r.3scale.net
   names:
     kind: NodeConfigCache
@@ -171,11 +175,18 @@ spec:
                     type: string
                 type: object
               type: array
+            serialization:
+              enum:
+              - json
+              - b64json
+              - yaml
+              type: string
             version:
               type: string
           required:
           - nodeID
           - resources
+          - serialization
           - version
           type: object
         status:

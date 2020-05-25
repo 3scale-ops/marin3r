@@ -119,8 +119,20 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	version := instance.Spec.Version
 	snap := newNodeSnapshot(nodeID, version)
 
+	switch serialization := instance.Spec.Serialization; serialization {
+	case "b64json":
+		ds := envoy.B64JSON{}
+		err = r.loadResources(ctx, nodeID, instance, snap, ds)
+	case "yaml":
+		ds := envoy.YAML{}
+		err = r.loadResources(ctx, nodeID, instance, snap, ds)
+	default:
+		// "json" is the default
+		ds := envoy.JSON{}
+		err = r.loadResources(ctx, nodeID, instance, snap, ds)
+	}
+
 	// Populate the snapshot with the resources in the spec
-	err = r.loadResources(ctx, nodeID, instance, snap)
 	if err != nil {
 		// Return error to reenqueue
 		// TODO: publish event
@@ -138,35 +150,36 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID string, o *cachesv1alpha1.NodeConfigCache, snap *xds_cache.Snapshot) error {
+func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID string,
+	o *cachesv1alpha1.NodeConfigCache, snap *xds_cache.Snapshot, ds envoy.ResourceUnmarshaller) error {
 
 	for _, endpoint := range o.Spec.Resources.Endpoints {
 		res := &envoyapi_endpoint.LbEndpoint{}
-		envoy.YAMLtoResource(endpoint.Value, res)
+		ds.Unmarshal(endpoint.Value, res)
 		setResource(nodeID, endpoint.Name, res, snap)
 	}
 
 	for _, cluster := range o.Spec.Resources.Clusters {
 		res := &envoyapi.Cluster{}
-		envoy.YAMLtoResource(cluster.Value, res)
+		ds.Unmarshal(cluster.Value, res)
 		setResource(nodeID, cluster.Name, res, snap)
 	}
 
 	for _, route := range o.Spec.Resources.Routes {
 		res := &envoyapi_route.Route{}
-		envoy.YAMLtoResource(route.Value, res)
+		ds.Unmarshal(route.Value, res)
 		setResource(nodeID, route.Name, res, snap)
 	}
 
 	for _, listener := range o.Spec.Resources.Listeners {
 		res := &envoyapi.Listener{}
-		envoy.YAMLtoResource(listener.Value, res)
+		ds.Unmarshal(listener.Value, res)
 		setResource(nodeID, listener.Name, res, snap)
 	}
 
 	for _, runtime := range o.Spec.Resources.Runtimes {
 		res := &envoyapi_discovery.Runtime{}
-		envoy.YAMLtoResource(runtime.Value, res)
+		ds.Unmarshal(runtime.Value, res)
 		setResource(nodeID, runtime.Name, res, snap)
 	}
 
