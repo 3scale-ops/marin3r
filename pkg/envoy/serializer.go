@@ -13,7 +13,6 @@ import (
 
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/ghodss/yaml"
-	"github.com/go-logr/logr"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 
@@ -81,9 +80,8 @@ import (
 // Resources is a struct that holds the different envoy resources types
 // so it can be deserialized directly from the yaml representation
 type Resources struct {
-	Clusters        []*envoyapi.Cluster               `protobuf:"bytes,1,rep,name=clusters,json=clusters" json:"clusters"`
-	Listeners       []*envoyapi.Listener              `protobuf:"bytes,2,rep,name=listeners,json=listeners" json:"listeners"`
-	LoadAssignments []*envoyapi.ClusterLoadAssignment `protobuf:"bytes,3,rep,name=load_assignments,json=loadAssignments" json:"load_assignments"`
+	Clusters  []*envoyapi.Cluster  `protobuf:"bytes,2,rep,name=clusters,json=clusters" json:"clusters"`
+	Listeners []*envoyapi.Listener `protobuf:"bytes,4,rep,name=listeners,json=listeners" json:"listeners"`
 }
 
 // Reset is noop function for resFromFile to implement protobuf interface
@@ -96,7 +94,7 @@ func (m *Resources) String() string { return proto.CompactTextString(m) }
 func (*Resources) ProtoMessage() {}
 
 // YAMLtoResources -> DeserializeYAML([]byte(configMap.Data["config.yaml"]))
-func YAMLtoResources(data []byte, logger logr.Logger) (*Resources, error) {
+func YAMLtoResources(data []byte) (*Resources, error) {
 	j, err := yaml.YAMLToJSON(data)
 	if err != nil {
 		return nil, fmt.Errorf("Error converting yaml to json: '%s'", err)
@@ -123,11 +121,26 @@ func ResourcesToJSON(pb proto.Message) ([]byte, error) {
 	return json.Bytes(), nil
 }
 
+type ResourceMarshaller interface {
+	Marshal(xds_cache_types.Resource) (string, error)
+}
+
 type ResourceUnmarshaller interface {
 	Unmarshal(string, xds_cache_types.Resource) error
 }
 
 type JSON struct{}
+
+func (s JSON) Marshal(res xds_cache_types.Resource) (string, error) {
+	m := jsonpb.Marshaler{}
+
+	json := bytes.NewBuffer([]byte{})
+	err := m.Marshal(json, res)
+	if err != nil {
+		return "", err
+	}
+	return string(json.Bytes()), nil
+}
 
 func (s JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
 

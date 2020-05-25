@@ -6,4 +6,6 @@ kind: Secret
 metadata:
   name: envoy1-cert
   namespace: default
+  annotations:
+    "cert-manager.io/common-name": envoy-server1
 type: kubernetes.io/tls
