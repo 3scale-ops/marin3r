@@ -123,42 +123,48 @@ func ResourcesToJSON(pb proto.Message) ([]byte, error) {
 	return json.Bytes(), nil
 }
 
-func JSONtoResource(b []byte, res xds_cache_types.Resource) error {
+type ResourceUnmarshaller interface {
+	Unmarshal(string, xds_cache_types.Resource) error
+}
+
+type JSON struct{}
+
+func (s JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
 
 	switch o := res.(type) {
 
 	case *endpoint.LbEndpoint:
-		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
 			return fmt.Errorf("Error deserializing listener: '%s'", err)
 		}
 		return nil
 
 	case *envoyapi.Cluster:
-		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
 			return fmt.Errorf("Error deserializing cluster: '%s'", err)
 		}
 		return nil
 
 	case *route.Route:
-		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
 			return fmt.Errorf("Error deserializing route: '%s'", err)
 		}
 		return nil
 
 	case *envoyapi.Listener:
-		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
 			return fmt.Errorf("Error deserializing listener: '%s'", err)
 		}
 		return nil
 
 	case *discovery.Runtime:
-		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
 			return fmt.Errorf("Error deserializing runtime: '%s'", err)
 		}
 		return nil
 
 	case *auth.Secret:
-		if err := jsonpb.Unmarshal(bytes.NewReader(b), o); err != nil {
+		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
 			return fmt.Errorf("Error deserializing secret: '%s'", err)
 		}
 
@@ -166,13 +172,16 @@ func JSONtoResource(b []byte, res xds_cache_types.Resource) error {
 	return nil
 }
 
-func B64EncodedJSONtoResource(str string, res xds_cache_types.Resource) error {
+type B64JSON struct{}
+
+func (s B64JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
 	b, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
 		return fmt.Errorf("Error decoding base64 string: '%s'", err)
 	}
 
-	err = JSONtoResource(b, res)
+	js := JSON{}
+	err = js.Unmarshal(string(b), res)
 	if err != nil {
 		return err
 	}
@@ -180,13 +189,16 @@ func B64EncodedJSONtoResource(str string, res xds_cache_types.Resource) error {
 	return nil
 }
 
-func YAMLtoResource(str string, res xds_cache_types.Resource) error {
+type YAML struct{}
+
+func (s YAML) Unmarshal(str string, res xds_cache_types.Resource) error {
 	b, err := yaml.YAMLToJSON([]byte(str))
 	if err != nil {
 		return fmt.Errorf("Error converting yaml to json: '%s'", err)
 	}
 
-	err = JSONtoResource(b, res)
+	js := JSON{}
+	err = js.Unmarshal(string(b), res)
 	if err != nil {
 		return err
 	}
