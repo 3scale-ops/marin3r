@@ -77,14 +77,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// // Watch for changes to secondary resource Pods and requeue the owner ConfigMap
-	// err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-	// 	IsController: true,
-	// 	OwnerType:    &corev1.ConfigMap{},
-	// })
-	// if err != nil {
-	// 	return err
-	// }
+	// Watch for changes to owned NodeCacheConfig resources
+	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &corev1.ConfigMap{},
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

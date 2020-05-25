@@ -19,7 +19,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
-	"os"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -55,18 +54,29 @@ func (ws *WebhookServer) Start(stopCh <-chan struct{}) error {
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 
+	// channel to receive errors from the gorutine running the server
+	errCh := make(chan error)
+
+	// goroutine to run server
 	go func() {
 		if err := srv.ListenAndServeTLS("", ""); err != nil {
-			logger.Error(err, "Webhook server exited unexpectedly")
-			os.Exit(1)
+			errCh <- err
 		}
 	}()
 
 	logger.Info("Mutating admission webhook started")
-	<-stopCh
-	logger.Info("Shutting down mutating admission webhook")
-	if err := srv.Shutdown(ws.ctx); err != nil {
-		logger.Error(err, "Webhook failed to shutdown gracefully")
+
+	// wait until channel stopCh closed or an error is received
+	select {
+	case <-stopCh:
+		logger.Info("Shutting down mutating admission webhook")
+		if err := srv.Shutdown(ws.ctx); err != nil {
+			logger.Error(err, "Webhook failed to shutdown gracefully")
+		}
+		return nil
+	case err := <-errCh:
+		logger.Error(err, "Webhook server exited unexpectedly")
+		return err
 	}
-	return nil
+
 }
