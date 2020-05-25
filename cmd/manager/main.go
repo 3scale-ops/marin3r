@@ -124,8 +124,7 @@ func main() {
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
-		&envoy.Callbacks{Logger: logger},
-		logger,
+		&envoy.Callbacks{},
 	)
 
 	wait.Add(1)

@@ -46,7 +46,7 @@ func NewWebhookServer(ctx context.Context, port int32, tlsConfig *tls.Config) *W
 func (ws *WebhookServer) Start(stopCh <-chan struct{}) error {
 
 	mux := http.NewServeMux()
-	mux.Handle("/mutate", AdmitFuncHandler(MutatePod, logger))
+	mux.Handle("/mutate", AdmitFuncHandler(MutatePod))
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%v", ws.port),

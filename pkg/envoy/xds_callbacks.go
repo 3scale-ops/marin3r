@@ -19,13 +19,10 @@ import (
 	"fmt"
 
 	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	"github.com/go-logr/logr"
 )
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
-type Callbacks struct {
-	Logger logr.Logger
-}
+type Callbacks struct{}
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
