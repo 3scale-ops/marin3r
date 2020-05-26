@@ -9,6 +9,7 @@ import (
 	envoyapi_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	"github.com/golang/protobuf/proto"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -141,10 +142,20 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
+	// Get the current published snapshot for this nodeID
+	oldSnap, err := (*r.adsCache).GetSnapshot(nodeID)
+	if err != nil {
+		reqLogger.Info("No snapshot exists yet for the nodeID, creating a new one")
+	} else if snapshotIsEqual(snap, &oldSnap) {
+		reqLogger.Info("Generated snapshot is equal to published one, skipping reconcile")
+		return reconcile.Result{}, nil
+	}
+
 	// Create a NodeConfigRevision for this config
 	// createNewNodeConfigRevision()
 
 	// Publish the in-memory cache to the envoy control-plane
+	reqLogger.Info("Publishing new snapshot for nodeID", "Version", version)
 	(*r.adsCache).SetSnapshot(nodeID, *snap)
 
 	return reconcile.Result{}, nil
@@ -254,4 +265,33 @@ func setResource(nodeID, name string, res xds_cache_types.Resource, snap *xds_ca
 		snap.Resources[xds_cache_types.Runtime].Items[name] = o
 
 	}
+}
+
+func snapshotIsEqual(newSnap, oldSnap *xds_cache.Snapshot) bool {
+
+	// Check resources are equal for each resource type
+	for rtype, newResources := range newSnap.Resources {
+		oldResources := oldSnap.Resources[rtype]
+
+		// If lenght is not equal, resources are not equal
+		if len(oldResources.Items) != len(newResources.Items) {
+			return false
+		}
+
+		for name, oldValue := range oldResources.Items {
+
+			newValue, ok := newResources.Items[name]
+
+			// If some key does not exist, resources are not equal
+			if !ok {
+				return false
+			}
+
+			// If value has changed, resources are not equal
+			if !proto.Equal(oldValue, newValue) {
+				return false
+			}
+		}
+	}
+	return true
 }
