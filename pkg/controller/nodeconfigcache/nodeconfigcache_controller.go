@@ -150,6 +150,10 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, nil
 	}
 
+	// TODO: check snapshot consistency using "snap.Consistent()". Consider also validating
+	// consistency between clusters and listeners, as this is not done by snap.Consistent()
+	// because listeners and clusters are not requested by name by the envoy gateways
+
 	// Create a NodeConfigRevision for this config
 	// createNewNodeConfigRevision()
 
