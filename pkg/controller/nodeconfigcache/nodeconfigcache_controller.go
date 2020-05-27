@@ -3,6 +3,7 @@ package nodeconfigcache
 import (
 	"context"
 	"fmt"
+	"time"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
@@ -24,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -32,9 +34,10 @@ import (
 )
 
 const (
-	secretAnnotation  = "cert-manager.io/common-name"
-	secretCertificate = "tls.crt"
-	secretPrivateKey  = "tls.key"
+	secretAnnotation         = "cert-manager.io/common-name"
+	secretCertificate        = "tls.crt"
+	secretPrivateKey         = "tls.key"
+	nodeconfigcacheFinalizer = "finalizer.caches.3scale.net"
 )
 
 var log = logf.Log.WithName("controller_nodeconfigcache")
@@ -102,8 +105,8 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	ctx := context.TODO()
 
 	// Fetch the NodeConfigCache instance
-	instance := &cachesv1alpha1.NodeConfigCache{}
-	err := r.client.Get(ctx, request.NamespacedName, instance)
+	ncc := &cachesv1alpha1.NodeConfigCache{}
+	err := r.client.Get(ctx, request.NamespacedName, ncc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -115,30 +118,47 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	nodeID := instance.Spec.NodeID
-	version := instance.Spec.Version
+	// Check if the NodeConfigCache instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	if ncc.GetDeletionTimestamp() != nil {
+		if contains(ncc.GetFinalizers(), nodeconfigcacheFinalizer) {
+			r.finalizeNodeConfigCache(ncc.Spec.NodeID)
+			reqLogger.V(1).Info("Successfully cleared ads server cache")
+			// Remove memcachedFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			controllerutil.RemoveFinalizer(ncc, nodeconfigcacheFinalizer)
+			err := r.client.Update(ctx, ncc)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		return reconcile.Result{}, nil
+	}
+
+	nodeID := ncc.Spec.NodeID
+	version := ncc.Spec.Version
 	snap := newNodeSnapshot(nodeID, version)
 
-	switch serialization := instance.Spec.Serialization; serialization {
+	switch serialization := ncc.Spec.Serialization; serialization {
 	case "b64json":
 		ds := envoy.B64JSON{}
-		err = r.loadResources(ctx, nodeID, instance, snap, ds)
+		err = r.loadResources(ctx, nodeID, ncc, snap, ds)
 	case "yaml":
 		ds := envoy.YAML{}
-		err = r.loadResources(ctx, nodeID, instance, snap, ds)
+		err = r.loadResources(ctx, nodeID, ncc, snap, ds)
 	default:
 		// "json" is the default
 		ds := envoy.JSON{}
-		err = r.loadResources(ctx, nodeID, instance, snap, ds)
+		err = r.loadResources(ctx, nodeID, ncc, snap, ds)
 	}
 
 	// Populate the snapshot with the resources in the spec
 	if err != nil {
-		// Return error to reenqueue
-		// TODO: publish event
-		// TODO: update condition
+		// Requeue with delay, as the envoy resources syntax is probably wrong
+		// and that is not a transitory error (some other higher level resource
+		// probaly needs fixing)
 		reqLogger.Error(err, "Errors occured while loading resources from CR")
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, err
 	}
 
 	// Get the current published snapshot for this nodeID
@@ -154,7 +174,16 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	// consistency between clusters and listeners, as this is not done by snap.Consistent()
 	// because listeners and clusters are not requested by name by the envoy gateways
 
-	// Create a NodeConfigRevision for this config
+	// Add finalizer for this CR
+	if !contains(ncc.GetFinalizers(), nodeconfigcacheFinalizer) {
+		reqLogger.Info("Adding Finalizer for the NodeConfigCache")
+		if err := r.addFinalizer(ctx, ncc); err != nil {
+			reqLogger.Error(err, "Failed adding finalizer for nodecacheconfig")
+			return reconcile.Result{}, err
+		}
+	}
+
+	// TODO: Create a NodeConfigRevision for this config
 	// createNewNodeConfigRevision()
 
 	// Publish the in-memory cache to the envoy control-plane
@@ -321,4 +350,28 @@ func snapshotIsEqual(newSnap, oldSnap *xds_cache.Snapshot) bool {
 		}
 	}
 	return true
+}
+
+func (r *ReconcileNodeConfigCache) finalizeNodeConfigCache(nodeID string) {
+	(*r.adsCache).ClearSnapshot(nodeID)
+}
+
+func (r *ReconcileNodeConfigCache) addFinalizer(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
+	controllerutil.AddFinalizer(ncc, nodeconfigcacheFinalizer)
+
+	// Update CR
+	err := r.client.Update(ctx, ncc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func contains(list []string, s string) bool {
+	for _, v := range list {
+		if v == s {
+			return true
+		}
+	}
+	return false
 }

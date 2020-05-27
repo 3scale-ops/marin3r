@@ -761,18 +761,10 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-			// Register operator types with the runtime scheme.
 			s := scheme.Scheme
 			s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion, tt.cr)
-
-			// Create a fake client to mock API calls.
 			cl := fake.NewFakeClient(tt.cr)
-
-			// Create a ReconcileMemcached object with the scheme and fake client.
 			r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
-
-			// Mock request to simulate Reconcile() being called on an event for a
-			// watched resource .
 			req := reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      "ncc",
@@ -796,6 +788,113 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			gotVersion := gotSnap.GetVersion("type.googleapis.com/envoy.api.v2.ClusterLoadAssignment")
 			if !tt.wantErr && gotVersion != tt.wantVersion {
 				t.Errorf("Snapshot version = %v, want %v", gotVersion, tt.wantVersion)
+			}
+		})
+	}
+}
+
+func TestReconcileNodeConfigCache_finalizeNodeConfigCache(t *testing.T) {
+	type fields struct {
+		client   client.Client
+		scheme   *runtime.Scheme
+		adsCache *xds_cache.SnapshotCache
+	}
+	type args struct {
+		nodeID string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "Deletes the snapshot from the ads server cache",
+			fields: fields{client: fake.NewFakeClient(),
+				scheme:   scheme.Scheme,
+				adsCache: fakeTestCache(),
+			},
+			args: args{"node1"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ReconcileNodeConfigCache{
+				client:   tt.fields.client,
+				scheme:   tt.fields.scheme,
+				adsCache: tt.fields.adsCache,
+			}
+			r.finalizeNodeConfigCache(tt.args.nodeID)
+			if _, err := (*r.adsCache).GetSnapshot(tt.args.nodeID); err == nil {
+				t.Errorf("TestReconcileNodeConfigCache_finalizeNodeConfigCache() -> snapshot still in the cache")
+			}
+		})
+	}
+}
+
+func TestReconcileNodeConfigCache_addFinalizer(t *testing.T) {
+	tests := []struct {
+		name    string
+		cr      *cachesv1alpha1.NodeConfigCache
+		wantErr bool
+	}{
+		{
+			name: "Adds finalizer to NodecacheConfig",
+			cr: &cachesv1alpha1.NodeConfigCache{
+				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+					NodeID:    "node1",
+					Version:   "1",
+					Resources: &cachesv1alpha1.EnvoyResources{},
+				}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := scheme.Scheme
+			s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion, tt.cr)
+			cl := fake.NewFakeClient(tt.cr)
+			r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
+
+			if err := r.addFinalizer(context.TODO(), tt.cr); (err != nil) != tt.wantErr {
+				t.Errorf("ReconcileNodeConfigCache.addFinalizer() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				ncc := &cachesv1alpha1.NodeConfigCache{}
+				r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
+				if len(ncc.ObjectMeta.Finalizers) != 1 {
+					t.Error("ReconcileNodeConfigCache.addFinalizer() wrong number of finalizers present in object")
+				}
+			}
+		})
+	}
+}
+
+func Test_contains(t *testing.T) {
+	type args struct {
+		list []string
+		s    string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "True -> key in slice",
+			args: args{list: []string{"a", "b", "c"}, s: "a"},
+			want: true,
+		},
+		{
+			name: "False -> key not in slice",
+			args: args{list: []string{"a", "b", "c"}, s: "z"},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := contains(tt.args.list, tt.args.s); got != tt.want {
+				t.Errorf("contains() = %v, want %v", got, tt.want)
 			}
 		})
 	}
