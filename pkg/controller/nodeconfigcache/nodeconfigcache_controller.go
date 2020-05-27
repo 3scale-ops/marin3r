@@ -6,7 +6,6 @@ import (
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoyapi_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/golang/protobuf/proto"
@@ -179,7 +178,7 @@ func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID str
 	o *cachesv1alpha1.NodeConfigCache, snap *xds_cache.Snapshot, ds envoy.ResourceUnmarshaller) error {
 
 	for idx, endpoint := range o.Spec.Resources.Endpoints {
-		res := &envoyapi_endpoint.LbEndpoint{}
+		res := &envoyapi.ClusterLoadAssignment{}
 		if err := ds.Unmarshal(endpoint.Value, res); err != nil {
 			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Endpoints", endpoint.Value, idx)
 		}
@@ -270,7 +269,7 @@ func setResource(name string, res xds_cache_types.Resource, snap *xds_cache.Snap
 
 	switch o := res.(type) {
 
-	case *envoyapi_endpoint.LbEndpoint:
+	case *envoyapi.ClusterLoadAssignment:
 		snap.Resources[xds_cache_types.Endpoint].Items[name] = o
 
 	case *envoyapi.Cluster:

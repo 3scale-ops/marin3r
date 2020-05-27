@@ -7,7 +7,6 @@ import (
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 
@@ -146,7 +145,7 @@ func (s JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
 
 	switch o := res.(type) {
 
-	case *endpoint.LbEndpoint:
+	case *envoyapi.ClusterLoadAssignment:
 		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
 			return fmt.Errorf("Error deserializing listener: '%s'", err)
 		}
