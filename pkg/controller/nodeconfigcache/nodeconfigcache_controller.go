@@ -161,37 +161,61 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	return reconcile.Result{}, nil
 }
 
+func resourceLoaderError(name, namespace, rtype, rvalue string, idx int) error {
+	return errors.NewInvalid(
+		schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
+		fmt.Sprintf("%s/%s", namespace, name),
+		field.ErrorList{
+			field.Invalid(
+				field.NewPath("Spec", rtype).Index(idx).Child("Value"),
+				rvalue,
+				fmt.Sprint("Invalid envoy resource value"),
+			),
+		},
+	)
+}
+
 func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID string,
 	o *cachesv1alpha1.NodeConfigCache, snap *xds_cache.Snapshot, ds envoy.ResourceUnmarshaller) error {
 
-	for _, endpoint := range o.Spec.Resources.Endpoints {
+	for idx, endpoint := range o.Spec.Resources.Endpoints {
 		res := &envoyapi_endpoint.LbEndpoint{}
-		ds.Unmarshal(endpoint.Value, res)
-		setResource(nodeID, endpoint.Name, res, snap)
+		if err := ds.Unmarshal(endpoint.Value, res); err != nil {
+			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Endpoints", endpoint.Value, idx)
+		}
+		setResource(endpoint.Name, res, snap)
 	}
 
-	for _, cluster := range o.Spec.Resources.Clusters {
+	for idx, cluster := range o.Spec.Resources.Clusters {
 		res := &envoyapi.Cluster{}
-		ds.Unmarshal(cluster.Value, res)
-		setResource(nodeID, cluster.Name, res, snap)
+		if err := ds.Unmarshal(cluster.Value, res); err != nil {
+			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Clusters", cluster.Value, idx)
+		}
+		setResource(cluster.Name, res, snap)
 	}
 
-	for _, route := range o.Spec.Resources.Routes {
+	for idx, route := range o.Spec.Resources.Routes {
 		res := &envoyapi_route.Route{}
-		ds.Unmarshal(route.Value, res)
-		setResource(nodeID, route.Name, res, snap)
+		if err := ds.Unmarshal(route.Value, res); err != nil {
+			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Routes", route.Value, idx)
+		}
+		setResource(route.Name, res, snap)
 	}
 
-	for _, listener := range o.Spec.Resources.Listeners {
+	for idx, listener := range o.Spec.Resources.Listeners {
 		res := &envoyapi.Listener{}
-		ds.Unmarshal(listener.Value, res)
-		setResource(nodeID, listener.Name, res, snap)
+		if err := ds.Unmarshal(listener.Value, res); err != nil {
+			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Listeners", listener.Value, idx)
+		}
+		setResource(listener.Name, res, snap)
 	}
 
-	for _, runtime := range o.Spec.Resources.Runtimes {
+	for idx, runtime := range o.Spec.Resources.Runtimes {
 		res := &envoyapi_discovery.Runtime{}
-		ds.Unmarshal(runtime.Value, res)
-		setResource(nodeID, runtime.Name, res, snap)
+		if err := ds.Unmarshal(runtime.Value, res); err != nil {
+			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Runtimes", runtime.Value, idx)
+		}
+		setResource(runtime.Name, res, snap)
 	}
 
 	for idx, secret := range o.Spec.Resources.Secrets {
@@ -210,7 +234,7 @@ func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID str
 		// Validate secret holds a certificate
 		if s.Type == "kubernetes.io/tls" {
 			res := envoy.NewSecret(secret.Name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
-			setResource(nodeID, secret.Name, res, snap)
+			setResource(secret.Name, res, snap)
 		} else {
 			return errors.NewInvalid(
 				schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
@@ -242,7 +266,7 @@ func newNodeSnapshot(nodeID string, version string) *xds_cache.Snapshot {
 	return &snap
 }
 
-func setResource(nodeID, name string, res xds_cache_types.Resource, snap *xds_cache.Snapshot) {
+func setResource(name string, res xds_cache_types.Resource, snap *xds_cache.Snapshot) {
 
 	switch o := res.(type) {
 
