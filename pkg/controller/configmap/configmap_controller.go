@@ -197,7 +197,6 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 		ncc.Spec.Resources.Secrets = secrets
 
-		// TODO patch only when DeepEqual shows differences
 		r.client.Patch(ctx, ncc, patch)
 
 	default:
