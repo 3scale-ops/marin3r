@@ -756,7 +756,6 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			wantVersion: "-",
 			wantErr:     true,
 		},
-		// TODO: test for object deletion
 	}
 	for _, tt := range tests {
 
@@ -791,6 +790,53 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReconcileNodeConfigCache_Reconcile_Finalizer(t *testing.T) {
+
+	cr := &cachesv1alpha1.NodeConfigCache{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:              "ncc",
+			Namespace:         "default",
+			DeletionTimestamp: func() *metav1.Time { t := metav1.Now(); return &t }(),
+			Finalizers:        []string{nodeconfigcacheFinalizer},
+		},
+		Spec: cachesv1alpha1.NodeConfigCacheSpec{
+			NodeID:    "node1",
+			Version:   "43",
+			Resources: &cachesv1alpha1.EnvoyResources{},
+		}}
+
+	s := scheme.Scheme
+	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion, cr)
+	cl := fake.NewFakeClient(cr)
+	r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
+	req := reconcile.Request{
+		NamespacedName: types.NamespacedName{
+			Name:      "ncc",
+			Namespace: "default",
+		},
+	}
+
+	_, gotErr := r.Reconcile(req)
+
+	if gotErr != nil {
+		t.Errorf("ReconcileNodeConfigCache.Reconcile_Finalizer() error = %v", gotErr)
+		return
+	}
+	_, err := (*r.adsCache).GetSnapshot(cr.Spec.NodeID)
+	if err == nil {
+		t.Errorf("ReconcileNodeConfigCache.Reconcile_Finalizer() - snapshot still exists in the ads server cache")
+		return
+	}
+
+	ncc := &cachesv1alpha1.NodeConfigCache{}
+	cl.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
+	if len(ncc.GetObjectMeta().GetFinalizers()) != 0 {
+		t.Errorf("ReconcileNodeConfigCache.Reconcile_Finalizer() - finalizer not deleted from object")
+		return
+	}
+
 }
 
 func TestReconcileNodeConfigCache_finalizeNodeConfigCache(t *testing.T) {
