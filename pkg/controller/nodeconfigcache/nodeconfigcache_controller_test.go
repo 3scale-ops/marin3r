@@ -761,7 +761,11 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			s := scheme.Scheme
-			s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion, tt.cr)
+			s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
+				tt.cr,
+				&cachesv1alpha1.NodeConfigRevisionList{},
+				&cachesv1alpha1.NodeConfigRevision{},
+			)
 			cl := fake.NewFakeClient(tt.cr)
 			r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
 			req := reconcile.Request{
@@ -808,7 +812,11 @@ func TestReconcileNodeConfigCache_Reconcile_Finalizer(t *testing.T) {
 		}}
 
 	s := scheme.Scheme
-	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion, cr)
+	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
+		cr,
+		&cachesv1alpha1.NodeConfigRevisionList{},
+		&cachesv1alpha1.NodeConfigRevision{},
+	)
 	cl := fake.NewFakeClient(cr)
 	r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
 	req := reconcile.Request{

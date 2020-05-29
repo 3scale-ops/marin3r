@@ -7,8 +7,9 @@ import (
 
 // NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
 type NodeConfigRevisionSpec struct {
+	// TODO: Add validations
 	NodeID    string         `json:"nodeID"`
-	Version   int64          `json:"version"`
+	Version   string         `json:"version"`
 	Resources EnvoyResources `json:"revision"`
 }
 
