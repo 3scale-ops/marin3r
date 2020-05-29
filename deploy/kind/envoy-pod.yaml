@@ -19,11 +19,11 @@ spec:
         ]
       ports:
         - name: http
-          containerPort: 8080
+          containerPort: 1080
           hostPort: 1080
           protocol: TCP
         - name: https
-          containerPort: 8443
+          containerPort: 1443
           hostPort: 1443
           protocol: TCP
       volumeMounts:
@@ -74,7 +74,7 @@ data:
         address:
           socket_address:
             address: 0.0.0.0
-            port_value: 8443
+            port_value: 1443
         filter_chains:
           - filters:
             - name: envoy.http_connection_manager
@@ -111,7 +111,7 @@ data:
         address:
           socket_address:
             address: 0.0.0.0
-            port_value: 8080
+            port_value: 1080
         filter_chains:
           - filters:
             - name: envoy.http_connection_manager
