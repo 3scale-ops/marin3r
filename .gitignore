@@ -1,6 +1,6 @@
 certs
-build
 bin
+build/bin
 tmp
 coverage.txt
 

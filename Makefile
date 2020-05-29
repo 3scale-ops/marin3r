@@ -24,17 +24,17 @@ clean: ## remove temporary resources from the repo
 #### Build targets ####
 #######################
 build: ## builds $(RELEASE) or HEAD of the current branch when $(RELEASE) is unset
-build: build/$(NAME)_amd64_$(RELEASE)
+build: build/bin/$(NAME)_amd64_$(RELEASE)
 
-build/$(NAME)_amd64_$(RELEASE):
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/$(NAME)_amd64_$(RELEASE) cmd/manager/main.go
+build/bin/$(NAME)_amd64_$(RELEASE):
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/bin/$(NAME)_amd64_$(RELEASE) cmd/manager/main.go
 
 clean-dirty-builds:
-	rm -rf build/*-dirty
+	rm -rf build/bin/*-dirty
 
 docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-docker-build: build/$(NAME)_amd64_$(RELEASE)
-	docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
+docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
+	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
 
 docker-push: ## pushes the image built from $(RELEASE) to quay.io
 	docker push ${IMAGE_NAME}:$(RELEASE)
@@ -94,7 +94,7 @@ kind-create: tmp $(KIND)
 
 kind-docker-build: ## builds the docker image  $(RELEASE) or HEAD of the current branch when unset and pushes it to the kind local registry in "localhost:5000"
 kind-docker-build: clean-dirty-builds build
-	docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
+	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
 	docker tag ${IMAGE_NAME}:$(RELEASE) ${IMAGE_NAME}:test
 	docker push ${IMAGE_NAME}:$(RELEASE)
 	docker push ${IMAGE_NAME}:test
