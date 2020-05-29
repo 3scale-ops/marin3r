@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	configMapAnnotation  = "marin3r.3scale.net/node-id"
+	nodeIDTag            = "marin3r.3scale.net/node-id"
 	configMapKey         = "config.yaml"
 	secretAnnotation     = "cert-manager.io/common-name"
 	defaultSerialization = "json"
@@ -59,12 +59,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	filter := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// ConfigMap has marin3r annotation
-			_, ok := e.Meta.GetAnnotations()[configMapAnnotation]
+			_, ok := e.Meta.GetAnnotations()[nodeIDTag]
 			return ok
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// ConfigMap has marin3r annotation
-			if _, ok := e.MetaNew.GetAnnotations()[configMapAnnotation]; ok {
+			if _, ok := e.MetaNew.GetAnnotations()[nodeIDTag]; ok {
 				// Ignore updates to CR status in which case metadata.ResourceVersion does not change
 				return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 				// return ok
@@ -73,7 +73,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			// ConfigMap has marin3r annotation
-			_, ok := e.Meta.GetAnnotations()[configMapAnnotation]
+			_, ok := e.Meta.GetAnnotations()[nodeIDTag]
 			return ok
 		},
 	}
@@ -116,7 +116,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	nodeID := cm.GetAnnotations()[configMapAnnotation]
+	nodeID := cm.GetAnnotations()[nodeIDTag]
 	reqLogger := log.WithValues(
 		"Namespace", request.Namespace,
 		"Name", request.Name,
@@ -127,7 +127,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	// Get corresponding NodeConfigCache
 	nccList := &cachesv1alpha1.NodeConfigCacheList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{configMapAnnotation: nodeID},
+		MatchLabels: map[string]string{nodeIDTag: nodeID},
 	})
 	if err != nil {
 		reqLogger.Error(err, "Could not create selector to get cachesalpha1v1.NodeConfigCache resource")
@@ -220,7 +220,7 @@ func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.Confi
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				configMapAnnotation: nodeID,
+				nodeIDTag: nodeID,
 			},
 		},
 		Spec: cachesv1alpha1.NodeConfigCacheSpec{

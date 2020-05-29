@@ -183,12 +183,33 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		}
 	}
 
-	// TODO: Create a NodeConfigRevision for this config
-	// createNewNodeConfigRevision()
-
 	// Publish the in-memory cache to the envoy control-plane
 	reqLogger.Info("Publishing new snapshot for nodeID", "Version", version)
-	(*r.adsCache).SetSnapshot(nodeID, *snap)
+	if err := (*r.adsCache).SetSnapshot(nodeID, *snap); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Create a NodeConfigRevision for this config
+	if err := r.ensureNodeConfigRevision(ctx, ncc); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Use this 2 to create a updateStatus function with a single patch operation
+	if err := r.consolidateRevisionList(ctx, ncc); err != nil {
+		return reconcile.Result{}, err
+	}
+	// Update the status with the pusblished version
+	if ncc.Status.PublishedVersion != ncc.Spec.Version {
+		patch := client.MergeFrom(ncc.DeepCopy())
+		ncc.Status.PublishedVersion = ncc.Spec.Version
+		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	if err := r.deleteUnreferencedRevisions(ctx, ncc); err != nil {
+		return reconcile.Result{}, err
+	}
 
 	return reconcile.Result{}, nil
 }

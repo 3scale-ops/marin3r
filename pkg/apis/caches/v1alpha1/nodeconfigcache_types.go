@@ -8,12 +8,13 @@ import (
 
 // NodeConfigCacheSpec defines the desired state of NodeConfigCache
 type NodeConfigCacheSpec struct {
-	NodeID  string `json:"nodeID"`
+	// +kubebuilder:validation:Pattern:[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
+	NodeID string `json:"nodeID"`
+	// TODO: add validations
 	Version string `json:"version"`
 	// +kubebuilder:validation:Enum=json;b64json;yaml
-	Serialization   string                   `json:"serialization,omitifempty"`
-	Resources       *EnvoyResources          `json:"resources"`
-	ConfigRevisions []corev1.ObjectReference `json:"revisions,omitempty"`
+	Serialization string          `json:"serialization,omitifempty"`
+	Resources     *EnvoyResources `json:"resources"`
 }
 
 // EnvoyResources holds each envoy api resource type
@@ -44,9 +45,16 @@ type EnvoySecretResource struct {
 type NodeConfigCacheStatus struct {
 	// PublishedVersion is the config version currently
 	// served by the envoy control plane for the node-id
-	PublishedVersion string `json:"publishedVersion"`
+	PublishedVersion string `json:"publishedVersion,omitempty"`
 	// Conditions represent the latest available observations of an object's state
-	Conditions status.Conditions `json:"conditions"`
+	Conditions      status.Conditions   `json:"conditions,omitempty"`
+	ConfigRevisions []ConfigRevisionRef `json:"revisions,omitempty"`
+}
+
+// ConfigRevisionRef holds a reference to NodeConfigRevision object
+type ConfigRevisionRef struct {
+	Version string                 `json:"version"`
+	Ref     corev1.ObjectReference `json:"ref"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -55,6 +63,7 @@ type NodeConfigCacheStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodeconfigcaches,scope=Namespaced
 // +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=PublishedVersion,type=string
 type NodeConfigCache struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
