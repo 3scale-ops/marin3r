@@ -35,6 +35,7 @@ import (
 
 	"github.com/3scale/marin3r/pkg/apis"
 	"github.com/3scale/marin3r/pkg/controller"
+	controller_nodeconfigcache "github.com/3scale/marin3r/pkg/controller/nodeconfigcache"
 	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/webhook"
 	"github.com/3scale/marin3r/version"
@@ -137,7 +138,9 @@ func main() {
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
-		&envoy.Callbacks{},
+		&envoy.Callbacks{
+			OnErrorFn: controller_nodeconfigcache.OnError(cfg, namespace),
+		},
 	)
 
 	wait.Add(1)

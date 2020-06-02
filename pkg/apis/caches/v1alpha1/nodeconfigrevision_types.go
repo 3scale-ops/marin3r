@@ -23,7 +23,7 @@ type NodeConfigRevisionStatus struct {
 
 // NodeConfigRevision is the Schema for the nodeconfigrevisions API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=nodeconfigrevisions,scope=Namespaced
+// +kubebuilder:resource:path=nodeconfigrevisions,scope=Namespaced,shortName=ncr
 type NodeConfigRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -22,7 +22,9 @@ import (
 )
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
-type Callbacks struct{}
+type Callbacks struct {
+	OnErrorFn func(nodeID string) error
+}
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
@@ -44,14 +46,16 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 	logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 
 	if req.ErrorDetail != nil {
-		err := fmt.Errorf(req.ErrorDetail.Message)
-		logger.Error(err, "A gateway reported an error", "NodeID", req.Node.Id, "StreamID", id)
-		return err
+		logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "NodeID", req.Node.Id, "StreamID", id)
+		if err := cb.OnErrorFn(req.Node.Id); err != nil {
+			logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
+			return err
+		}
 	}
 	return nil
 }
 
-// OnStreamResponse implements go-control-plane/pkg/server/Callbacks.OnStreamResponse
+// OnStreamResponse implements go-control-plane/pkgserver/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
 func (cb *Callbacks) OnStreamResponse(id int64, req *v2.DiscoveryRequest, rsp *v2.DiscoveryResponse) {
 	resources := []string{}

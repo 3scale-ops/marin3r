@@ -46,6 +46,7 @@ type NodeConfigCacheStatus struct {
 	// PublishedVersion is the config version currently
 	// served by the envoy control plane for the node-id
 	PublishedVersion string `json:"publishedVersion,omitempty"`
+	// Status
 	// Conditions represent the latest available observations of an object's state
 	Conditions      status.Conditions   `json:"conditions,omitempty"`
 	ConfigRevisions []ConfigRevisionRef `json:"revisions,omitempty"`
@@ -61,9 +62,11 @@ type ConfigRevisionRef struct {
 
 // NodeConfigCache is the Schema for the nodeconfigcaches API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=nodeconfigcaches,scope=Namespaced
+// +kubebuilder:resource:path=nodeconfigcaches,scope=Namespaced,shortName=ncc
 // +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
-// +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=PublishedVersion,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.version",name=Desired Version,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=Published Version,type=string
+// kubebuilder:printcolumn:JSONPath=".status.status",name=Status,type=string
 type NodeConfigCache struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
