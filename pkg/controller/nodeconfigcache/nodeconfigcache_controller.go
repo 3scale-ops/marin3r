@@ -26,9 +26,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -65,17 +67,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	filter := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Filter out all changes to status except for the ConfigFailed condition
+			// The addition of a ConfigFailed condition triggers a rollback
+			if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
+				nccOld := e.ObjectOld.(*cachesv1alpha1.NodeConfigCache)
+				nccNew := e.ObjectNew.(*cachesv1alpha1.NodeConfigCache)
+				if !nccOld.Status.Conditions.IsTrueFor("ConfigFailed") && nccNew.Status.Conditions.IsTrueFor("ConfigFailed") {
+					return true
+				}
+				return false
+			}
+			return true
+		},
+	}
 	// Watch for changes to primary resource NodeConfigCache
-	err = c.Watch(&source.Kind{Type: &cachesv1alpha1.NodeConfigCache{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &cachesv1alpha1.NodeConfigCache{}}, &handler.EnqueueRequestForObject{}, filter)
 	if err != nil {
 		return err
 	}
-
-	// // Watch for changes to secondary resource Pods and requeue the owner NodeConfigCache
-	// err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-	// 	IsController: true,
-	// 	OwnerType:    &cachesv1alpha1.NodeConfigCache{},
-	// })
 
 	if err != nil {
 		return err
@@ -135,44 +146,7 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, nil
 	}
 
-	nodeID := ncc.Spec.NodeID
-	version := ncc.Spec.Version
-	snap := newNodeSnapshot(nodeID, version)
-
-	switch serialization := ncc.Spec.Serialization; serialization {
-	case "b64json":
-		ds := envoy.B64JSON{}
-		err = r.loadResources(ctx, nodeID, ncc, snap, ds)
-	case "yaml":
-		ds := envoy.YAML{}
-		err = r.loadResources(ctx, nodeID, ncc, snap, ds)
-	default:
-		// "json" is the default
-		ds := envoy.JSON{}
-		err = r.loadResources(ctx, nodeID, ncc, snap, ds)
-	}
-
-	// Populate the snapshot with the resources in the spec
-	if err != nil {
-		// Requeue with delay, as the envoy resources syntax is probably wrong
-		// and that is not a transitory error (some other higher level resource
-		// probaly needs fixing)
-		reqLogger.Error(err, "Errors occured while loading resources from CR")
-		return reconcile.Result{RequeueAfter: 30 * time.Second}, err
-	}
-
-	// Get the current published snapshot for this nodeID
-	oldSnap, err := (*r.adsCache).GetSnapshot(nodeID)
-	if err != nil {
-		reqLogger.Info("No snapshot exists yet for the nodeID, creating a new one")
-	} else if snapshotIsEqual(snap, &oldSnap) {
-		reqLogger.Info("Generated snapshot is equal to published one, skipping reconcile")
-		return reconcile.Result{}, nil
-	}
-
-	// TODO: check snapshot consistency using "snap.Consistent()". Consider also validating
-	// consistency between clusters and listeners, as this is not done by snap.Consistent()
-	// because listeners and clusters are not requested by name by the envoy gateways
+	// TODO: add the label with the nodeID if it is missing
 
 	// Add finalizer for this CR
 	if !contains(ncc.GetFinalizers(), nodeconfigcacheFinalizer) {
@@ -183,21 +157,34 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		}
 	}
 
-	// Publish the in-memory cache to the envoy control-plane
-	reqLogger.Info("Publishing new snapshot for nodeID", "Version", version)
-	if err := (*r.adsCache).SetSnapshot(nodeID, *snap); err != nil {
-		return reconcile.Result{}, err
+	nodeID := ncc.Spec.NodeID
+	version := ncc.Spec.Version
+	snap := newNodeSnapshot(nodeID, version)
+
+	// If the rollback condition is true, return the resources from the
+	// immediately previous revision instead of the ones in the spec
+	// in order to perform a rollback operation. Resources in the spec
+	// will be ignored until the rollback condition is cleared
+	if ncc.Status.Conditions.IsTrueFor("ConfigFailed") {
+		if err := r.rollback(ctx, ncc, snap, reqLogger); err != nil {
+			reqLogger.Error(err, "Rollback failed", "NodeID", nodeID)
+			return reconcile.Result{}, err
+		}
+		// Rollback complete, do not requeue
+		reqLogger.Info("Failing config detected, rollback performed", "NodeID", nodeID)
+		return reconcile.Result{}, nil
 	}
 
-	// Create a NodeConfigRevision for this config
-	if err := r.ensureNodeConfigRevision(ctx, ncc); err != nil {
-		return reconcile.Result{}, err
+	// Deserialize envoy resources from the spec and create a new snapshot with them
+	if err := r.loadResources(ctx, request.Name, request.Namespace,
+		ncc.Spec.Serialization, ncc.Spec.Resources, field.NewPath("spec", "resources"), snap); err != nil {
+		// Requeue with delay, as the envoy resources syntax is probably wrong
+		// and that is not a transitory error (some other higher level resource
+		// probaly needs fixing)
+		reqLogger.Error(err, "Errors occured while loading resources from CR")
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, err
 	}
 
-	// Use this 2 to create a updateStatus function with a single patch operation
-	if err := r.consolidateRevisionList(ctx, ncc); err != nil {
-		return reconcile.Result{}, err
-	}
 	// Update the status with the pusblished version
 	if ncc.Status.PublishedVersion != ncc.Spec.Version {
 		patch := client.MergeFrom(ncc.DeepCopy())
@@ -207,20 +194,57 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		}
 	}
 
+	// Create a NodeConfigRevision for this config
+	if err := r.ensureNodeConfigRevision(ctx, ncc); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Update the ConfigRevisions list in the status
+	if err := r.consolidateRevisionList(ctx, ncc); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Cleanup unreferenced NodeConfigRevision objects
 	if err := r.deleteUnreferencedRevisions(ctx, ncc); err != nil {
 		return reconcile.Result{}, err
 	}
 
+	// Push the snapshot to the xds server cache
+	oldSnap, err := (*r.adsCache).GetSnapshot(nodeID)
+	if !snapshotIsEqual(snap, &oldSnap) {
+		// TODO: check snapshot consistency using "snap.Consistent()". Consider also validating
+		// consistency between clusters and listeners, as this is not done by snap.Consistent()
+		// because listeners and clusters are not requested by name by the envoy gateways
+
+		// Publish the in-memory cache to the envoy control-plane
+		reqLogger.Info("Publishing new snapshot for nodeID", "Version", version, "NodeID", nodeID)
+		if err := (*r.adsCache).SetSnapshot(nodeID, *snap); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		reqLogger.Info("Generated snapshot is equal to published one, avoiding push to xds server cache", "NodeID", nodeID)
+	}
+
+	// // Remove Rollback condition, if active
+	// if ncc.Status.Conditions.IsTrueFor("Rollback") {
+	// 	if ncc.Status.Conditions.GetCondition("Rollback").Reason == "RollbackComplete" {
+	// 		if err := r.removeRollbackCondition(ctx, ncc); err != nil {
+	// 			reqLogger.Error(err, "Failed to remove 'Rollback' condition", "NodeID", nodeID)
+	// 			return reconcile.Result{}, err
+	// 		}
+	// 	}
+	// }
+
 	return reconcile.Result{}, nil
 }
 
-func resourceLoaderError(name, namespace, rtype, rvalue string, idx int) error {
+func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.Path, idx int) error {
 	return errors.NewInvalid(
 		schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
 		fmt.Sprintf("%s/%s", namespace, name),
 		field.ErrorList{
 			field.Invalid(
-				field.NewPath("Spec", rtype).Index(idx).Child("Value"),
+				resPath.Child(rtype).Index(idx).Child("Value"),
 				rvalue,
 				fmt.Sprint("Invalid envoy resource value"),
 			),
@@ -228,50 +252,62 @@ func resourceLoaderError(name, namespace, rtype, rvalue string, idx int) error {
 	)
 }
 
-func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID string,
-	o *cachesv1alpha1.NodeConfigCache, snap *xds_cache.Snapshot, ds envoy.ResourceUnmarshaller) error {
+func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, name, namespace, serialization string,
+	resources *cachesv1alpha1.EnvoyResources, resPath *field.Path, snap *xds_cache.Snapshot) error {
 
-	for idx, endpoint := range o.Spec.Resources.Endpoints {
+	var ds envoy.ResourceUnmarshaller
+	switch serialization {
+	case "b64json":
+		ds = envoy.B64JSON{}
+
+	case "yaml":
+		ds = envoy.YAML{}
+	default:
+		// "json" is the default
+		ds = envoy.JSON{}
+	}
+
+	for idx, endpoint := range resources.Endpoints {
 		res := &envoyapi.ClusterLoadAssignment{}
 		if err := ds.Unmarshal(endpoint.Value, res); err != nil {
-			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Endpoints", endpoint.Value, idx)
+			return resourceLoaderError(name, namespace, "Endpoints", endpoint.Value, resPath, idx)
 		}
 		setResource(endpoint.Name, res, snap)
 	}
 
-	for idx, cluster := range o.Spec.Resources.Clusters {
+	for idx, cluster := range resources.Clusters {
 		res := &envoyapi.Cluster{}
 		if err := ds.Unmarshal(cluster.Value, res); err != nil {
-			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Clusters", cluster.Value, idx)
+			return resourceLoaderError(name, namespace, "Clusters", cluster.Value, resPath, idx)
 		}
 		setResource(cluster.Name, res, snap)
 	}
 
-	for idx, route := range o.Spec.Resources.Routes {
+	for idx, route := range resources.Routes {
 		res := &envoyapi_route.Route{}
 		if err := ds.Unmarshal(route.Value, res); err != nil {
-			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Routes", route.Value, idx)
+			return resourceLoaderError(name, namespace, "Routes", route.Value, resPath, idx)
 		}
 		setResource(route.Name, res, snap)
 	}
 
-	for idx, listener := range o.Spec.Resources.Listeners {
+	for idx, listener := range resources.Listeners {
 		res := &envoyapi.Listener{}
 		if err := ds.Unmarshal(listener.Value, res); err != nil {
-			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Listeners", listener.Value, idx)
+			return resourceLoaderError(name, namespace, "Listeners", listener.Value, resPath, idx)
 		}
 		setResource(listener.Name, res, snap)
 	}
 
-	for idx, runtime := range o.Spec.Resources.Runtimes {
+	for idx, runtime := range resources.Runtimes {
 		res := &envoyapi_discovery.Runtime{}
 		if err := ds.Unmarshal(runtime.Value, res); err != nil {
-			return resourceLoaderError(o.ObjectMeta.Name, o.ObjectMeta.Namespace, "Runtimes", runtime.Value, idx)
+			return resourceLoaderError(name, namespace, "Runtimes", runtime.Value, resPath, idx)
 		}
 		setResource(runtime.Name, res, snap)
 	}
 
-	for idx, secret := range o.Spec.Resources.Secrets {
+	for idx, secret := range resources.Secrets {
 		s := &corev1.Secret{}
 		key := types.NamespacedName{
 			Name:      secret.Ref.Name,
@@ -291,10 +327,10 @@ func (r *ReconcileNodeConfigCache) loadResources(ctx context.Context, nodeID str
 		} else {
 			return errors.NewInvalid(
 				schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
-				fmt.Sprintf("%s/%s", o.ObjectMeta.Namespace, o.ObjectMeta.Name),
+				fmt.Sprintf("%s/%s", namespace, name),
 				field.ErrorList{
 					field.Invalid(
-						field.NewPath("Spec", "Secrets").Index(idx).Child("Ref"),
+						resPath.Child("Secrets").Index(idx).Child("Ref"),
 						secret.Ref,
 						fmt.Sprint("Only 'kubernetes.io/tls' type secrets allowed"),
 					),

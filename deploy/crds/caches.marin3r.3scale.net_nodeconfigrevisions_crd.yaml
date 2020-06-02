@@ -8,6 +8,8 @@ spec:
     kind: NodeConfigRevision
     listKind: NodeConfigRevisionList
     plural: nodeconfigrevisions
+    shortNames:
+    - ncr
     singular: nodeconfigrevision
   scope: Namespaced
   subresources:

@@ -2,10 +2,12 @@ apiVersion: caches.marin3r.3scale.net/v1alpha1
 kind: NodeConfigCache
 metadata:
   name: envoy1
+  labels:
+    marin3r.3scale.net/node-id: envoy1
 spec:
   # Add fields here
   nodeID: envoy1
-  version: "21"
+  version: "1"
   serialization: yaml
   resources:
     secrets:
@@ -42,7 +44,7 @@ spec:
           address:
             socket_address:
               address: 0.0.0.0
-              port_value: 8080
+              port_value: 1080
           filter_chains:
             - filters:
               - name: envoy.http_connection_manager
@@ -72,7 +74,7 @@ spec:
           address:
             socket_address:
               address: 0.0.0.0
-              port_value: 8443
+              port_value: 1443
           filter_chains:
             - filters:
               - name: envoy.http_connection_manager

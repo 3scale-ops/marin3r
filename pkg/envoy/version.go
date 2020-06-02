@@ -24,3 +24,12 @@ func BumpVersion(version string) (string, error) {
 	iv++
 	return strconv.Itoa(iv), nil
 }
+
+func PreviousVersion(version string) (string, error) {
+	iv, err := strconv.Atoi(version)
+	if err != nil {
+		return "", err
+	}
+	iv--
+	return strconv.Itoa(iv), nil
+}
