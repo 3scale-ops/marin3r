@@ -3,12 +3,14 @@ package nodeconfigcache
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/3scale/marin3r/pkg/apis"
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/status"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,6 +18,13 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+const previousVersionPrefix = "ReceivedPreviousVersion"
+
+// ResourcesUpdateUnsuccessful is a condition type that's used to report
+// back to the controller that a resources' update has been unsuccesful
+// so the controller can act accordingly
+var ResourcesUpdateUnsuccessful status.ConditionType = "ResourcesUpdateUnsuccessful"
 
 func (r *ReconcileNodeConfigCache) removeRollbackCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
 	patch := client.MergeFrom(ncc.DeepCopy())
@@ -28,7 +37,7 @@ func (r *ReconcileNodeConfigCache) removeRollbackCondition(ctx context.Context, 
 
 func (r *ReconcileNodeConfigCache) removeConfigFailedCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
 	patch := client.MergeFrom(ncc.DeepCopy())
-	ncc.Status.Conditions.RemoveCondition("ConfigFailed")
+	ncc.Status.Conditions.RemoveCondition(ResourcesUpdateUnsuccessful)
 	if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
 		return err
 	}
@@ -37,43 +46,75 @@ func (r *ReconcileNodeConfigCache) removeConfigFailedCondition(ctx context.Conte
 
 func (r *ReconcileNodeConfigCache) rollback(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache,
 	snap *xds_cache.Snapshot, reqLogger logr.Logger) error {
-	// TODO: mark current PublishedVersion as failed
-	currentIndex := *getRevisionIndex(ncc.Status.PublishedVersion, ncc.Status.ConfigRevisions)
-	if currentIndex > 0 {
-		rollbackToIndex := currentIndex - 1
-		reqLogger.V(1).Info(fmt.Sprintf("Performing rollback to index '%v'", currentIndex))
-		// Get the revision
-		revName := ncc.Status.ConfigRevisions[rollbackToIndex].Ref.Name
-		revNamespace := ncc.Status.ConfigRevisions[rollbackToIndex].Ref.Namespace
+
+	// Read the previous version from the condition
+	cond := ncc.Status.Conditions.GetCondition(ResourcesUpdateUnsuccessful)
+	previousVersion := strings.TrimPrefix(string(cond.Reason), previousVersionPrefix)
+	reqLogger.V(1).Info(fmt.Sprintf("Performing rollback to version '%v'", previousVersion))
+
+	// Validate if the rollback has been alredy done
+	if ncc.Status.PublishedVersion != previousVersion {
+		// Get the index for the previous version
+		i := getRevisionIndex(previousVersion, ncc.Status.ConfigRevisions)
+		if i == nil {
+			// Version not found in ConfigRevisions
+			// Update status with "RollbackFailed"
+			patch := client.MergeFrom(ncc.DeepCopy())
+			ncc.Status.Conditions.SetCondition(status.Condition{
+				Type:    "Rollback",
+				Status:  "True",
+				Reason:  "RollbackFailed",
+				Message: fmt.Sprintf("Version '%s' is not in the list of config revisions", previousVersion),
+			})
+			if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+				return err
+			}
+		}
+
+		idx := *i
+
+		// Get the ncr for the previous version
+		revName := ncc.Status.ConfigRevisions[idx].Ref.Name
+		revNamespace := ncc.Status.ConfigRevisions[idx].Ref.Namespace
 		ncr := &cachesv1alpha1.NodeConfigRevision{}
 		if err := r.client.Get(ctx, types.NamespacedName{Name: revName, Namespace: revNamespace}, ncr); err != nil {
 			return err
 		}
-		// Load resources from the revision
+
+		// Publish snapshot
 		if err := r.loadResources(ctx, revName, revNamespace, ncc.Spec.Serialization,
 			&ncr.Spec.Resources, field.NewPath("spec", "resources"), snap); err != nil {
 			return err
 		}
-
-		// Push resources to xds server cache
 		if err := (*r.adsCache).SetSnapshot(ncc.Spec.NodeID, *snap); err != nil {
 			return err
 		}
 
 		// Update status
 		patch := client.MergeFrom(ncc.DeepCopy())
-		ncc.Status.PublishedVersion = ncc.Status.ConfigRevisions[rollbackToIndex].Version
+		ncc.Status.PublishedVersion = previousVersion
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:    ResourcesUpdateUnsuccessful,
+			Status:  corev1.ConditionFalse,
+			Reason:  "RollbackComplete",
+			Message: fmt.Sprintf("Rollback to version '%s' has been completed", previousVersion),
+		})
 		ncc.Status.Conditions.SetCondition(status.Condition{
 			Type:    "Rollback",
-			Status:  "True",
-			Reason:  "RollbackComplete",
-			Message: fmt.Sprintf("Rollback to version '%s' has been completed", ncc.Status.PublishedVersion),
+			Status:  corev1.ConditionTrue,
+			Reason:  status.ConditionReason(ResourcesUpdateUnsuccessful),
+			Message: fmt.Sprintf("Rollback to version '%s' has been completed", previousVersion),
 		})
-		// TODO: consider adding retries here
+
 		err := r.client.Status().Patch(ctx, ncc, patch)
 		if err != nil {
 			return fmt.Errorf("rollback: failed to update status: '%v'", err)
 		}
+
+	}
+	currentIndex := *getRevisionIndex(ncc.Status.PublishedVersion, ncc.Status.ConfigRevisions)
+	if currentIndex > 0 {
+
 	} else {
 		// Update status with "RollbackFailed"
 		patch := client.MergeFrom(ncc.DeepCopy())
@@ -94,10 +135,10 @@ func (r *ReconcileNodeConfigCache) rollback(ctx context.Context, ncc *cachesv1al
 }
 
 // OnError returns a function that should be called when the envoy control plane receives
-// an error from any of the gateways
-func OnError(cfg *rest.Config, namespace string) func(nodeID string) error {
+// a NACK to a discovery response from any of the gateways
+func OnError(cfg *rest.Config, namespace string) func(nodeID, previousVersion, msg string) error {
 
-	return func(nodeID string) error {
+	return func(nodeID, previousVersion, msg string) error {
 
 		// Create a client and register CRDs
 		s := runtime.NewScheme()
@@ -127,15 +168,15 @@ func OnError(cfg *rest.Config, namespace string) func(nodeID string) error {
 		}
 		ncc := &nccList.Items[0]
 
-		// Add the "ConfigFailed" condition to the NodeConfigCache object
-		// unless the Rollback condition already exists
-		if !ncc.Status.Conditions.IsTrueFor("ConfigFailed") {
+		// Add the "ResourcesUpdateUnsuccessful" condition to the NodeConfigCache object
+		// unless the condition is already set
+		if !ncc.Status.Conditions.IsTrueFor(ResourcesUpdateUnsuccessful) {
 			patch := client.MergeFrom(ncc.DeepCopy())
 			ncc.Status.Conditions.SetCondition(status.Condition{
-				Type:    "ConfigFailed",
+				Type:    "ResourcesUpdateUnsuccessful",
 				Status:  "True",
-				Reason:  "GatewayError",
-				Message: "A gateway returned an error trying to load the resources",
+				Reason:  status.ConditionReason(fmt.Sprintf("%s%s", previousVersionPrefix, previousVersion)),
+				Message: fmt.Sprintf("A gateway returned NACK to the discovery response: '%s'", msg),
 			})
 
 			if err := cl.Status().Patch(context.TODO(), ncc, patch); err != nil {
