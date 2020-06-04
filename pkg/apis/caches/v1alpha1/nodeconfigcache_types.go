@@ -6,12 +6,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	/* Conditions */
+
+	// ResourcesUpdateUnsuccessfulCondition is a condition type that's used to report
+	// back to the controller that a resources' update has been unsuccesful
+	// so the controller can act accordingly
+	ResourcesUpdateUnsuccessfulCondition status.ConditionType = "ResourcesUpdateUnsuccessful"
+	// ResourcesOutOfSyncCondition is a condition that other controllers can use to indicate
+	// that the respurces need resync
+	ResourcesOutOfSyncCondition status.ConditionType = "ResourcesOutOfSync"
+
+	/* Finalizers */
+
+	// NodeConfigCacheFinalizer is the finalizer for NodeConfigCache objects
+	NodeConfigCacheFinalizer string = "finalizer.caches.marin3r.3scale.net"
+)
+
 // NodeConfigCacheSpec defines the desired state of NodeConfigCache
 type NodeConfigCacheSpec struct {
 	// +kubebuilder:validation:Pattern:[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
 	NodeID string `json:"nodeID"`
-	// TODO: add validations
-	Version string `json:"version"`
 	// +kubebuilder:validation:Enum=json;b64json;yaml
 	Serialization string          `json:"serialization,omitifempty"`
 	Resources     *EnvoyResources `json:"resources"`
@@ -64,9 +79,7 @@ type ConfigRevisionRef struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodeconfigcaches,scope=Namespaced,shortName=ncc
 // +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
-// +kubebuilder:printcolumn:JSONPath=".spec.version",name=Desired Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=Published Version,type=string
-// kubebuilder:printcolumn:JSONPath=".status.status",name=Status,type=string
 type NodeConfigCache struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

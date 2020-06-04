@@ -135,11 +135,18 @@ spec:
                     type: object
                   type: array
               type: object
+            serialization:
+              enum:
+              - json
+              - b64json
+              - yaml
+              type: string
             version:
               type: string
           required:
           - nodeID
           - revision
+          - serialization
           - version
           type: object
         status:

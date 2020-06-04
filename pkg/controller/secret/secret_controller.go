@@ -4,7 +4,7 @@ import (
 	"context"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
-	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,30 +50,21 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	filter := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			switch o := e.Object.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					return true
-				}
+			if e.Object.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				return true
 			}
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			switch o := e.ObjectNew.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					// Ignore updates to resource status in which case metadata.Generation does not change
-					return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
-				}
+			if e.ObjectNew.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				// Ignore updates to resource status in which case metadata.Generation does not change
+				return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 			}
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			switch o := e.Object.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					return true
-				}
+			if e.Object.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				return true
 			}
 			return false
 		},
@@ -84,15 +75,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
-
-	// // Watch for changes to secondary resource Pods and requeue the owner Secret
-	// err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-	// 	IsController: true,
-	// 	OwnerType:    &corev1.Secret{},
-	// })
-	// if err != nil {
-	// 	return err
-	// }
 
 	return nil
 }
@@ -133,7 +115,9 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	// Get the list of NoceConfigCaches and check which of them
 	// contain refs to this secret
 	list := &cachesv1alpha1.NodeConfigCacheList{}
-	err = r.client.List(ctx, list)
+	if err := r.client.List(ctx, list); err != nil {
+		return reconcile.Result{}, err
+	}
 
 	for _, ncc := range list.Items {
 		// TODO: Might need to look inside specific revision instead,
@@ -142,14 +126,24 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 			if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
 				logger.Info("Triggered NodeConfigCache reconcile",
 					"NodeConfigCache_Name", ncc.ObjectMeta.Name, "NodeConfigCache_Namespace", ncc.ObjectMeta.Namespace)
-				version, err := envoy.BumpVersion(ncc.Spec.Version)
 				if err != nil {
 					return reconcile.Result{}, err
 				}
-				// patch operation to update Spec.Version in the cache
-				patch := client.MergeFrom(ncc.DeepCopy())
-				ncc.Spec.Version = version
-				r.client.Patch(ctx, &ncc, patch)
+
+				if !ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+					// patch operation to update Spec.Version in the cache
+					patch := client.MergeFrom(ncc.DeepCopy())
+					ncc.Status.Conditions.SetCondition(status.Condition{
+						Type:    cachesv1alpha1.ResourcesOutOfSyncCondition,
+						Reason:  "SecretChanged",
+						Message: "A secret relevant to this nodeconfigcache changed",
+						Status:  corev1.ConditionTrue,
+					})
+					if err := r.client.Status().Patch(ctx, &ncc, patch); err != nil {
+						return reconcile.Result{}, err
+					}
+					logger.V(1).Info("Condition should have been added ...")
+				}
 			}
 		}
 	}

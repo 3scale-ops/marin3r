@@ -5,12 +5,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// RevisionPublishedCondition is a condition that marks the NodeConfigRevision object
+	// as the one that should be published in the xds server cache
+	RevisionPublishedCondition status.ConditionType = "RevisionPublished"
+)
+
 // NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
 type NodeConfigRevisionSpec struct {
 	// TODO: Add validations
-	NodeID    string         `json:"nodeID"`
-	Version   string         `json:"version"`
-	Resources EnvoyResources `json:"revision"`
+	NodeID  string `json:"nodeID"`
+	Version string `json:"version"`
+	// +kubebuilder:validation:Enum=json;b64json;yaml
+	Serialization string          `json:"serialization,omitifempty"`
+	Resources     *EnvoyResources `json:"revision"`
 }
 
 // NodeConfigRevisionStatus defines the observed state of NodeConfigRevision
