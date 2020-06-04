@@ -123,7 +123,7 @@ kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind regis
 kind-refresh-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
 kind-refresh-marin3r: kind-docker-build kind-apply-crds
 	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
-	kubectl delete pod -l app=marin3r
+	kubectl delete pod -l app=marin3r --force --grace-period=0
 
 kind-delete: ## deletes the kind cluster and the registry
 kind-delete: $(KIND)

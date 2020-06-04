@@ -139,7 +139,7 @@ func main() {
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
 		&envoy.Callbacks{
-			OnErrorFn: controller_nodeconfigcache.OnError(cfg, namespace),
+			OnError: controller_nodeconfigcache.OnError(cfg, namespace),
 		},
 	)
 

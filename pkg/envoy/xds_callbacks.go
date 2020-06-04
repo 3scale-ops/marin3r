@@ -23,7 +23,7 @@ import (
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
 type Callbacks struct {
-	OnErrorFn func(nodeID string) error
+	OnError func(nodeID, previousVersion, msg string) error
 }
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
@@ -43,11 +43,11 @@ func (cb *Callbacks) OnStreamClosed(id int64) {
 // OnStreamRequest is called once a request is received on a stream.
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
-	logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
+	logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "Version", req.VersionInfo, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 
 	if req.ErrorDetail != nil {
-		logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "NodeID", req.Node.Id, "StreamID", id)
-		if err := cb.OnErrorFn(req.Node.Id); err != nil {
+		logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "Version", req.VersionInfo, "NodeID", req.Node.Id, "StreamID", id)
+		if err := cb.OnError(req.Node.Id, req.VersionInfo, req.ErrorDetail.Message); err != nil {
 			logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
 			return err
 		}
@@ -65,10 +65,10 @@ func (cb *Callbacks) OnStreamResponse(id int64, req *v2.DiscoveryRequest, rsp *v
 	}
 	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v2.auth.Secret" {
 		logger.V(1).Info("Response sent to gateway",
-			"ResourcesNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
+			"ResourcesNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id, "Version", rsp.GetVersionInfo())
 	} else {
 		logger.V(1).Info("Response sent to gateway",
-			"Resources", resources, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
+			"Resources", resources, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id, "Version", rsp.GetVersionInfo())
 	}
 }
 

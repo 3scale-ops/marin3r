@@ -11,18 +11,18 @@ import (
 	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/golang/protobuf/proto"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -69,14 +69,18 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	filter := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			// Filter out all changes to status except for the ConfigFailed condition
-			// The addition of a ConfigFailed condition triggers a rollback
+			// Ignore updates to CR status in which case metadata.Generation does not change
 			if e.MetaOld.GetGeneration() == e.MetaNew.GetGeneration() {
-				nccOld := e.ObjectOld.(*cachesv1alpha1.NodeConfigCache)
-				nccNew := e.ObjectNew.(*cachesv1alpha1.NodeConfigCache)
-				if !nccOld.Status.Conditions.IsTrueFor("ConfigFailed") && nccNew.Status.Conditions.IsTrueFor("ConfigFailed") {
+				// But trigger reconciles on condition updates as this is the way
+				// other controllers communicate with this one
+				if !apiequality.Semantic.DeepEqual(
+					e.ObjectOld.(*cachesv1alpha1.NodeConfigCache).Status.Conditions,
+					e.ObjectNew.(*cachesv1alpha1.NodeConfigCache).Status.Conditions,
+				) {
+					log.V(1).Info("--------------------> Got a condition change")
 					return true
 				}
+				log.V(1).Info("--------------------> Skip status change")
 				return false
 			}
 			return true
@@ -165,7 +169,7 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	// immediately previous revision instead of the ones in the spec
 	// in order to perform a rollback operation. Resources in the spec
 	// will be ignored until the rollback condition is cleared
-	if ncc.Status.Conditions.IsTrueFor("ConfigFailed") {
+	if ncc.Status.Conditions.IsTrueFor(ResourcesUpdateUnsuccessful) {
 		if err := r.rollback(ctx, ncc, snap, reqLogger); err != nil {
 			reqLogger.Error(err, "Rollback failed", "NodeID", nodeID)
 			return reconcile.Result{}, err
