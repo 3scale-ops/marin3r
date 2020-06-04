@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/rand"
@@ -20,12 +21,13 @@ const (
 	maxRevisions = 10
 )
 
-func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
+func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
+	ncc *cachesv1alpha1.NodeConfigCache, version string) error {
 
-	// Check if a revision already exists for this config version
+	// Get the list of revisions for the current version
 	ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: ncc.Spec.Version},
+		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: version},
 	})
 	if err != nil {
 		return fmt.Errorf("ensureNodeConfigRevisionError: '%s'", err)
@@ -37,22 +39,28 @@ func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
 		}
 	}
 
-	switch len(ncrList.Items) {
-	case 0:
-		// Create the revission for this config version
+	// Got wrong number of revisions
+	if len(ncrList.Items) > 1 {
+		return fmt.Errorf("ensureNodeConfigRevision: more than one revision exists for config version '%s', cannot reconcile", version)
+	}
+
+	// Revision does not yet exists, create one
+	if len(ncrList.Items) == 0 {
+		// Create the revision for this config version
 		ncr := &cachesv1alpha1.NodeConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      revisionName(ncc.Spec.NodeID, ncc.Spec.Version, ncc.Spec.Resources),
+				Name:      fmt.Sprintf("%s-%s", ncc.Spec.NodeID, version),
 				Namespace: ncc.ObjectMeta.Namespace,
 				Labels: map[string]string{
 					nodeIDTag:  ncc.Spec.NodeID,
-					versionTag: ncc.Spec.Version,
+					versionTag: version,
 				},
 			},
 			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
-				NodeID:    ncc.Spec.NodeID,
-				Version:   ncc.Spec.Version,
-				Resources: *ncc.Spec.Resources,
+				NodeID:        ncc.Spec.NodeID,
+				Version:       version,
+				Serialization: ncc.Spec.Serialization,
+				Resources:     ncc.Spec.Resources,
 			},
 		}
 		// Set the ncc as the owner and controller of the revision
@@ -63,66 +71,81 @@ func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
 		if err != nil {
 			return fmt.Errorf("ensureNodeConfigRevisionError: '%s'", err)
 		}
-	case 1:
-		// Revision already exists for this config
-		return nil
-	default:
-		return fmt.Errorf("ensureNodeConfigRevision: more than one revision exists for config version '%s', cannot reconcile", ncc.Spec.Version)
+	}
+
+	// Mark the revision as published
+	if err := r.markRevisionPublished(ctx, ncc.Spec.NodeID, version, "VersionPublished",
+		fmt.Sprintf("Version '%s' has been published", version)); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
+func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
+	ncc *cachesv1alpha1.NodeConfigCache, version string) error {
 
-	// Check if the revision is already in the list of revisions
-	if getRevisionIndex(ncc.Spec.Version, ncc.Status.ConfigRevisions) != nil {
-		// The version is already present in the ConfigRevision list
-		return nil
+	// This code handles the case in which a revision already exists for
+	// this version. We must ensure that this version is at the last position
+	// of the ConfigRevision list to keep the order of published versions
+	{
+		if idx := getRevisionIndex(version, ncc.Status.ConfigRevisions); idx != nil {
+			// The version is already present in the ConfigRevision list
+			if *idx < len(ncc.Status.ConfigRevisions)-1 {
+				patch := client.MergeFrom(ncc.DeepCopy())
+				ncc.Status.ConfigRevisions = moveRevisionToLast(ncc.Status.ConfigRevisions, *idx)
+				if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+					return fmt.Errorf("consolidateRevisionList: failed to update the config revision list: '%v'", err)
+				}
+			}
+			return nil
+		}
 	}
 
-	// Get the revision name that matches nodeID and version
-	ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: ncc.Spec.Version},
-	})
-	if err != nil {
-		return fmt.Errorf("consolidateRevisionList: '%s'", err)
-	}
-	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
+	// This code handles the case in which a revision does not yet exist
+	// for the given version
+	{
+		// Get the revision name that matches nodeID and version
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: version},
+		})
 		if err != nil {
 			return fmt.Errorf("consolidateRevisionList: '%s'", err)
 		}
-	}
-
-	switch len(ncrList.Items) {
-	case 0:
-		return fmt.Errorf("consolidateRevisionList: no config revision found for version '%s'", ncc.Spec.Version)
-	case 1:
-		// Update the revision list in the NCC status
-		patch := client.MergeFrom(ncc.DeepCopy())
-		ncc.Status.ConfigRevisions = append(ncc.Status.ConfigRevisions, cachesv1alpha1.ConfigRevisionRef{
-			Version: ncc.Spec.Version,
-			Ref: corev1.ObjectReference{
-				Kind:       ncrList.Items[0].Kind,
-				Name:       ncrList.Items[0].ObjectMeta.Name,
-				Namespace:  ncrList.Items[0].Namespace,
-				UID:        ncrList.Items[0].UID,
-				APIVersion: ncrList.Items[0].APIVersion,
-			},
-		})
-
-		// Remove old revisions if max have been reached
-		ncc.Status.ConfigRevisions = trimRevisions(ncc.Status.ConfigRevisions, maxRevisions)
-
-		// TODO: might need to do retries here, this is pretty critical
-		err = r.client.Status().Patch(ctx, ncc, patch)
+		err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
 		if err != nil {
-			return fmt.Errorf("consolidateRevisionList: failed to update the config revision list: '%v'", err)
+			if err != nil {
+				return fmt.Errorf("consolidateRevisionList: '%s'", err)
+			}
 		}
-	default:
-		return fmt.Errorf("consolidateRevisionList: more than one revision exists for config version '%s', cannot reconcile", ncc.Spec.Version)
+
+		if len(ncrList.Items) == 1 {
+
+			// Update the revision list in the NCC status
+			patch := client.MergeFrom(ncc.DeepCopy())
+			ncc.Status.ConfigRevisions = append(ncc.Status.ConfigRevisions, cachesv1alpha1.ConfigRevisionRef{
+				Version: version,
+				Ref: corev1.ObjectReference{
+					Kind:       ncrList.Items[0].Kind,
+					Name:       ncrList.Items[0].ObjectMeta.Name,
+					Namespace:  ncrList.Items[0].Namespace,
+					UID:        ncrList.Items[0].UID,
+					APIVersion: ncrList.Items[0].APIVersion,
+				},
+			})
+
+			// Remove old revisions if max have been reached
+			ncc.Status.ConfigRevisions = trimRevisions(ncc.Status.ConfigRevisions, maxRevisions)
+
+			// TODO: might need to do retries here, this is pretty critical
+			err = r.client.Status().Patch(ctx, ncc, patch)
+			if err != nil {
+				return fmt.Errorf("consolidateRevisionList: failed to update the config revision list: '%v'", err)
+			}
+		} else {
+			return fmt.Errorf("consolidateRevisionList: expected just one revision for version '%s', but got '%v'", version, len(ncrList.Items))
+		}
 	}
 
 	return nil
@@ -139,9 +162,7 @@ func (r *ReconcileNodeConfigCache) deleteUnreferencedRevisions(ctx context.Conte
 	}
 	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
-		if err != nil {
-			return fmt.Errorf("deleteUnreferencedRevisions: '%s'", err)
-		}
+		return fmt.Errorf("deleteUnreferencedRevisions: '%s'", err)
 	}
 
 	// For each of the revisions, check if they are still refrered from the ncc
@@ -156,6 +177,89 @@ func (r *ReconcileNodeConfigCache) deleteUnreferencedRevisions(ctx context.Conte
 	return nil
 }
 
+// markRevisionPublished marks the revision that matches the provided version as the one
+// to be set in the xds server cache:
+//  - It will first set the 'RevisionPublished' condition to false in the current published revision
+//  - It will set the 'RevisionPublished' condition to true in the revision that matches the given version
+// This ensures that at a given point in time 0 or 1 revisions can have the 'PublishedRevision' to true, being
+// 1 the case most of the time
+func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, nodeID, version, reason, msg string) error {
+
+	// Set 'RevisionPublished' to false for all revisions
+	{
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: nodeID},
+		})
+
+		if err != nil {
+			return fmt.Errorf("markRevisionPublished: '%s'", err)
+		}
+
+		err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
+		if err != nil {
+			return fmt.Errorf("markRevisionPublished: '%s'", err)
+		}
+
+		for _, ncr := range ncrList.Items {
+			if ncr.Spec.Version != version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+				patch := client.MergeFrom(ncr.DeepCopy())
+				ncr.Status.Conditions.SetCondition(status.Condition{
+					Type:    cachesv1alpha1.RevisionPublishedCondition,
+					Status:  corev1.ConditionFalse,
+					Reason:  status.ConditionReason("OtherVersionPublished"),
+					Message: msg,
+				})
+
+				if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
+					return fmt.Errorf("markRevisionPublished: '%s'", err)
+				}
+			}
+		}
+	}
+
+	// NOTE: from this point on, if something fails we end up with 0 revisions
+	// marked as published. Shouldn't be a problem as the current version
+	// is already being served by the xds server and should be fixed eventually
+	// in another reconcile
+
+	// The the revision that holds the given version with 'RevisionPublished' = True
+	{
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
+		})
+
+		if err != nil {
+			return fmt.Errorf("markRevisionPublished: '%s'", err)
+		}
+
+		err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
+		if err != nil {
+			return fmt.Errorf("markRevisionPublished: '%s'", err)
+		}
+
+		if len(ncrList.Items) != 1 {
+			return fmt.Errorf("markRevisionPublished: found unexpected number of nodeconfigrevisions matching version '%s'", version)
+		}
+
+		ncr := ncrList.Items[0]
+		patch := client.MergeFrom(ncr.DeepCopy())
+		ncr.Status.Conditions.SetCondition(status.Condition{
+			Type:    cachesv1alpha1.RevisionPublishedCondition,
+			Status:  corev1.ConditionTrue,
+			Reason:  status.ConditionReason(reason),
+			Message: msg,
+		})
+
+		if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
+			return fmt.Errorf("markRevisionPublished: '%s'", err)
+		}
+	}
+
+	return nil
+}
+
 func trimRevisions(list []cachesv1alpha1.ConfigRevisionRef, max int) []cachesv1alpha1.ConfigRevisionRef {
 	for len(list) > max {
 		list = list[1:]
@@ -163,11 +267,10 @@ func trimRevisions(list []cachesv1alpha1.ConfigRevisionRef, max int) []cachesv1a
 	return list
 }
 
-func revisionName(nodeID, version string, resources *cachesv1alpha1.EnvoyResources) string {
+func calculateRevisionHash(resources *cachesv1alpha1.EnvoyResources) string {
 	resourcesHasher := fnv.New32a()
 	hashutil.DeepHashObject(resourcesHasher, resources)
-	hash := rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
-	return fmt.Sprintf("%s-%s-%s", nodeID, version, hash)
+	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }
 
 func getRevisionIndex(version string, revisions []cachesv1alpha1.ConfigRevisionRef) *int {
@@ -177,4 +280,9 @@ func getRevisionIndex(version string, revisions []cachesv1alpha1.ConfigRevisionR
 		}
 	}
 	return nil
+}
+
+func moveRevisionToLast(list []cachesv1alpha1.ConfigRevisionRef, idx int) []cachesv1alpha1.ConfigRevisionRef {
+
+	return append(list[:idx], append(list[idx+1:], list[idx])...)
 }

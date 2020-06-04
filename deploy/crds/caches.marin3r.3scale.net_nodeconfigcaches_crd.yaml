@@ -7,9 +7,6 @@ spec:
   - JSONPath: .spec.nodeID
     name: NodeID
     type: string
-  - JSONPath: .spec.version
-    name: Desired Version
-    type: string
   - JSONPath: .status.publishedVersion
     name: Published Version
     type: string
@@ -26,7 +23,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
-      description: NodeConfigCache is the Schema for the nodeconfigcaches API kubebuilder:printcolumn:JSONPath=".status.status",name=Status,type=string
+      description: NodeConfigCache is the Schema for the nodeconfigcaches API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -150,14 +147,10 @@ spec:
               - b64json
               - yaml
               type: string
-            version:
-              description: 'TODO: add validations'
-              type: string
           required:
           - nodeID
           - resources
           - serialization
-          - version
           type: object
         status:
           description: NodeConfigCacheStatus defines the observed state of NodeConfigCache
