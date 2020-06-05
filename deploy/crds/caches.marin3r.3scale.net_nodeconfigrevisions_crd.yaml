@@ -34,7 +34,6 @@ spec:
           description: NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
           properties:
             nodeID:
-              description: 'TODO: Add validations'
               type: string
             revision:
               description: EnvoyResources holds each envoy api resource type

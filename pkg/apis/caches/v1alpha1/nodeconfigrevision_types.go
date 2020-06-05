@@ -22,7 +22,7 @@ const (
 
 // NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
 type NodeConfigRevisionSpec struct {
-	// TODO: Add validations
+	// +kubebuilder:validation:Pattern:[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
 	NodeID  string `json:"nodeID"`
 	Version string `json:"version"`
 	// +kubebuilder:validation:Enum=json;b64json;yaml
