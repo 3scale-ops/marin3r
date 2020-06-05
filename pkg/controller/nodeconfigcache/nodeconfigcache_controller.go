@@ -2,6 +2,7 @@ package nodeconfigcache
 
 import (
 	"context"
+	"fmt"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -138,42 +139,41 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		}
 	}
 
-	// If the rollback condition is true, return the resources from the
-	// immediately previous revision instead of the ones in the spec
-	// in order to perform a rollback operation. Resources in the spec
-	// will be ignored until the rollback condition is cleared
-
-	// if ncc.Status.Conditions.IsTrueFor(ResourcesUpdateUnsuccessful) {
-	// 	if err := r.rollback(ctx, ncc, snap, reqLogger); err != nil {
-	// 		reqLogger.Error(err, "Rollback failed", "NodeID", nodeID)
-	// 		return reconcile.Result{}, err
-	// 	}
-	// 	// Rollback complete, do not requeue
-	// 	reqLogger.Info("Failing config detected, rollback performed", "NodeID", nodeID)
-	// 	return reconcile.Result{}, nil
-	// }
-
 	version := calculateRevisionHash(ncc.Spec.Resources)
 
-	// Update the status with the pusblished version, init conditions
+	// Create a NodeConfigRevision for this config
+	if err := r.ensureNodeConfigRevision(ctx, ncc, version); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Mark the revision as published
+	if err := r.markRevisionPublished(ctx, ncc.Spec.NodeID, version, "VersionPublished", fmt.Sprintf("Version '%s' has been published", version)); err != nil {
+		if err.(cacheError).ErrorType == RevisionTaintedError {
+			// The revision that matches the current spec is tainted and
+			// cannot be published. Set the "CacheOutOfSync" condition
+			if err := r.setCacheOutOfSyncCondition(ctx, ncc, "DesiredRevisionTainted",
+				"The revision thas describes the current spec is tainted due to detected failures"); err != nil {
+				return reconcile.Result{}, err
+			}
+			reqLogger.Info("The revision described by the spec is tainted, cannot reconcile", "NodeID", ncc.Spec.NodeID, "Version", version)
+			// Do no requeue, the "DesiredRevisionTainted" error needs that the
+			// user fixes the resources in the spec
+			return reconcile.Result{}, nil
+		}
+		return reconcile.Result{}, err
+	}
+
+	// Update the status with the pusblished version
 	if ncc.Status.PublishedVersion != version {
 		patch := client.MergeFrom(ncc.DeepCopy())
-		// if len(ncc.Status.Conditions) == 0 {
-		// 	ncc.Status.Conditions = status.NewConditions()
-		// }
 		ncc.Status.PublishedVersion = version
 		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	// Create a NodeConfigRevision for this config
-	if err := r.ensureNodeConfigRevision(ctx, ncc, ncc.Status.PublishedVersion); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Update the ConfigRevisions list in the status
-	if err := r.consolidateRevisionList(ctx, ncc, ncc.Status.PublishedVersion); err != nil {
+	if err := r.consolidateRevisionList(ctx, ncc, version); err != nil {
 		return reconcile.Result{}, err
 	}
 

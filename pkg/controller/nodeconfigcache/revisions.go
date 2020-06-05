@@ -30,18 +30,18 @@ func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
 		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: version},
 	})
 	if err != nil {
-		return fmt.Errorf("ensureNodeConfigRevisionError: '%s'", err)
+		return newCacheError(UnknownError, "ensureNodeConfigRevision", err.Error())
 	}
 	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		if err != nil {
-			return fmt.Errorf("ensureNodeConfigRevisionError: '%s'", err)
+			return newCacheError(UnknownError, "ensureNodeConfigRevision", err.Error())
 		}
 	}
 
 	// Got wrong number of revisions
 	if len(ncrList.Items) > 1 {
-		return fmt.Errorf("ensureNodeConfigRevision: more than one revision exists for config version '%s', cannot reconcile", version)
+		return newCacheError(UnknownError, "ensureNodeConfigRevision", fmt.Sprintf("more than one revision exists for config version '%s', cannot reconcile", version))
 	}
 
 	// Revision does not yet exists, create one
@@ -65,18 +65,12 @@ func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
 		}
 		// Set the ncc as the owner and controller of the revision
 		if err := controllerutil.SetControllerReference(ncc, ncr, r.scheme); err != nil {
-			return fmt.Errorf("ensureNodeConfigRevisionError: '%s'", err)
+			return newCacheError(UnknownError, "ensureNodeConfigRevision", err.Error())
 		}
 		err = r.client.Create(ctx, ncr)
 		if err != nil {
-			return fmt.Errorf("ensureNodeConfigRevisionError: '%s'", err)
+			return newCacheError(UnknownError, "ensureNodeConfigRevision", err.Error())
 		}
-	}
-
-	// Mark the revision as published
-	if err := r.markRevisionPublished(ctx, ncc.Spec.NodeID, version, "VersionPublished",
-		fmt.Sprintf("Version '%s' has been published", version)); err != nil {
-		return err
 	}
 
 	return nil
@@ -95,7 +89,7 @@ func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
 				patch := client.MergeFrom(ncc.DeepCopy())
 				ncc.Status.ConfigRevisions = moveRevisionToLast(ncc.Status.ConfigRevisions, *idx)
 				if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
-					return fmt.Errorf("consolidateRevisionList: failed to update the config revision list: '%v'", err)
+					return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
 				}
 			}
 			return nil
@@ -111,12 +105,12 @@ func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
 			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: version},
 		})
 		if err != nil {
-			return fmt.Errorf("consolidateRevisionList: '%s'", err)
+			return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
 		}
 		err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
 		if err != nil {
 			if err != nil {
-				return fmt.Errorf("consolidateRevisionList: '%s'", err)
+				return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
 			}
 		}
 
@@ -141,10 +135,10 @@ func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
 			// TODO: might need to do retries here, this is pretty critical
 			err = r.client.Status().Patch(ctx, ncc, patch)
 			if err != nil {
-				return fmt.Errorf("consolidateRevisionList: failed to update the config revision list: '%v'", err)
+				return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
 			}
 		} else {
-			return fmt.Errorf("consolidateRevisionList: expected just one revision for version '%s', but got '%v'", version, len(ncrList.Items))
+			return newCacheError(UnknownError, "consolidateRevisionList", fmt.Sprintf("expected just one revision for version '%s', but got '%v'", version, len(ncrList.Items)))
 		}
 	}
 
@@ -158,11 +152,11 @@ func (r *ReconcileNodeConfigCache) deleteUnreferencedRevisions(ctx context.Conte
 		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
 	})
 	if err != nil {
-		return fmt.Errorf("deleteUnreferencedRevisions: '%s'", err)
+		return newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
 	}
 	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
-		return fmt.Errorf("deleteUnreferencedRevisions: '%s'", err)
+		return newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
 	}
 
 	// For each of the revisions, check if they are still refrered from the ncc
@@ -185,35 +179,40 @@ func (r *ReconcileNodeConfigCache) deleteUnreferencedRevisions(ctx context.Conte
 // 1 the case most of the time
 func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, nodeID, version, reason, msg string) error {
 
+	// Get all revisions for this NCC
+	ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{nodeIDTag: nodeID},
+	})
+	if err != nil {
+		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+	}
+	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+	}
+
+	// We need to validate that the revision that mathes 'version' has not been marked with the
+	// 'ResourcesUpdateUnsuccessfulCondition' 	// in which case the revision won't be pusblished
+	for _, ncr := range ncrList.Items {
+		if ncr.Spec.Version == version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) {
+			return newCacheError(RevisionTaintedError, "markRevisionPublished", "NodeCacheRevision has active condition 'ResourcesUpdateUnsuccessful'")
+		}
+	}
+
 	// Set 'RevisionPublished' to false for all revisions
-	{
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
-		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{nodeIDTag: nodeID},
-		})
+	for _, ncr := range ncrList.Items {
+		if ncr.Spec.Version != version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+			patch := client.MergeFrom(ncr.DeepCopy())
+			ncr.Status.Conditions.SetCondition(status.Condition{
+				Type:    cachesv1alpha1.RevisionPublishedCondition,
+				Status:  corev1.ConditionFalse,
+				Reason:  status.ConditionReason("OtherVersionPublished"),
+				Message: msg,
+			})
 
-		if err != nil {
-			return fmt.Errorf("markRevisionPublished: '%s'", err)
-		}
-
-		err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
-		if err != nil {
-			return fmt.Errorf("markRevisionPublished: '%s'", err)
-		}
-
-		for _, ncr := range ncrList.Items {
-			if ncr.Spec.Version != version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
-				patch := client.MergeFrom(ncr.DeepCopy())
-				ncr.Status.Conditions.SetCondition(status.Condition{
-					Type:    cachesv1alpha1.RevisionPublishedCondition,
-					Status:  corev1.ConditionFalse,
-					Reason:  status.ConditionReason("OtherVersionPublished"),
-					Message: msg,
-				})
-
-				if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
-					return fmt.Errorf("markRevisionPublished: '%s'", err)
-				}
+			if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
+				return newCacheError(UnknownError, "markRevisionPublished", err.Error())
 			}
 		}
 	}
@@ -223,40 +222,56 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 	// is already being served by the xds server and should be fixed eventually
 	// in another reconcile
 
-	// The the revision that holds the given version with 'RevisionPublished' = True
-	{
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
-		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
-		})
+	// Set the the revision that holds the given version with 'RevisionPublished' = True
+	ncrList = &cachesv1alpha1.NodeConfigRevisionList{}
+	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
+	})
 
-		if err != nil {
-			return fmt.Errorf("markRevisionPublished: '%s'", err)
-		}
+	if err != nil {
+		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+	}
 
-		err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
-		if err != nil {
-			return fmt.Errorf("markRevisionPublished: '%s'", err)
-		}
+	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+	}
 
-		if len(ncrList.Items) != 1 {
-			return fmt.Errorf("markRevisionPublished: found unexpected number of nodeconfigrevisions matching version '%s'", version)
-		}
+	if len(ncrList.Items) != 1 {
+		return newCacheError(UnknownError, "markRevisionPublished", fmt.Sprintf("found unexpected number of nodeconfigrevisions matching version '%s'", version))
+	}
 
-		ncr := ncrList.Items[0]
-		patch := client.MergeFrom(ncr.DeepCopy())
-		ncr.Status.Conditions.SetCondition(status.Condition{
-			Type:    cachesv1alpha1.RevisionPublishedCondition,
+	ncr := ncrList.Items[0]
+	patch := client.MergeFrom(ncr.DeepCopy())
+	ncr.Status.Conditions.SetCondition(status.Condition{
+		Type:    cachesv1alpha1.RevisionPublishedCondition,
+		Status:  corev1.ConditionTrue,
+		Reason:  status.ConditionReason(reason),
+		Message: msg,
+	})
+
+	if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
+		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+	}
+
+	return nil
+}
+
+func (r *ReconcileNodeConfigCache) setCacheOutOfSyncCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache, reason, msg string) error {
+
+	if !ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) {
+		patch := client.MergeFrom(ncc.DeepCopy())
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:    cachesv1alpha1.CacheOutOfSyncCondition,
 			Status:  corev1.ConditionTrue,
 			Reason:  status.ConditionReason(reason),
 			Message: msg,
 		})
 
-		if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
-			return fmt.Errorf("markRevisionPublished: '%s'", err)
+		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+			return newCacheError(UnknownError, "setCacheOutOfSyncCondition", err.Error())
 		}
 	}
-
 	return nil
 }
 
