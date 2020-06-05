@@ -19,11 +19,13 @@ import (
 	"fmt"
 
 	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 )
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
 type Callbacks struct {
-	OnError func(nodeID, previousVersion, msg string) error
+	OnError       func(nodeID, previousVersion, msg string) error
+	SnapshotCache *cache.SnapshotCache
 }
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
@@ -46,8 +48,14 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 	logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "Version", req.VersionInfo, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 
 	if req.ErrorDetail != nil {
-		logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "Version", req.VersionInfo, "NodeID", req.Node.Id, "StreamID", id)
-		if err := cb.OnError(req.Node.Id, req.VersionInfo, req.ErrorDetail.Message); err != nil {
+		snap, err := (*cb.SnapshotCache).GetSnapshot(req.Node.Id)
+		if err != nil {
+			return err
+		}
+		// All resource types are always kept at the same version
+		failingVersion := snap.GetVersion("type.googleapis.com/envoy.api.v2.ClusterLoadAssignment")
+		logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "CurrentVersion", req.VersionInfo, "FailingVersion", failingVersion, "NodeID", req.Node.Id, "StreamID", id)
+		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message); err != nil {
 			logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
 			return err
 		}
