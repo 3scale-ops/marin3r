@@ -69,30 +69,23 @@ func TestNewXdsServer(t *testing.T) {
 		ctx       context.Context
 		adsPort   uint
 		tlsConfig *tls.Config
-		callbacks xds.Callbacks
+		callbacks *Callbacks
 		logger    *zap.SugaredLogger
 	}
 	tests := []struct {
 		name string
 		args args
-		want *XdsServer
 	}{
 		{
 			"Returns a new XdsServer from the given params",
 			args{context.Background(), 10000, &tls.Config{}, &Callbacks{}, nil},
-			&XdsServer{
-				context.Background(),
-				10000,
-				&tls.Config{},
-				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
-				snapshotCache,
-			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.callbacks); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewXdsServer() = %v, want %v", got, tt.want)
+			got := NewXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.callbacks)
+			if !reflect.DeepEqual(got.snapshotCache, *got.callbacks.SnapshotCache) {
+				t.Errorf("NewXdsServer() = %v, want %v", got.snapshotCache, *got.callbacks.SnapshotCache)
 			}
 		})
 	}
@@ -112,6 +105,7 @@ func TestXdsServer_Start(t *testing.T) {
 				&tls.Config{},
 				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
 				snapshotCache,
+				&Callbacks{},
 			},
 		},
 	}
@@ -146,6 +140,7 @@ func TestXdsServer_GetSnapshotCache(t *testing.T) {
 				&tls.Config{},
 				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
 				snapshotCache,
+				&Callbacks{},
 			},
 			&snapshotCache,
 		},

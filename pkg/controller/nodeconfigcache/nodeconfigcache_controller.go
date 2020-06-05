@@ -21,10 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const (
-	previousVersionPrefix string = "ReceivedPreviousVersion"
-)
-
 var log = logf.Log.WithName("controller_nodeconfigcache")
 
 // Add creates a new NodeConfigCache Controller and adds it to the Manager. The Manager will set fields on the Controller

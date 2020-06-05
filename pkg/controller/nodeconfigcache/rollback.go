@@ -1,23 +1,21 @@
 package nodeconfigcache
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"strings"
+import (
+	"context"
+	"fmt"
 
-// 	"github.com/3scale/marin3r/pkg/apis"
-// 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
-// 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-// 	"github.com/go-logr/logr"
-// 	"github.com/operator-framework/operator-sdk/pkg/status"
-// 	corev1 "k8s.io/api/core/v1"
-// 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-// 	"k8s.io/apimachinery/pkg/runtime"
-// 	"k8s.io/apimachinery/pkg/types"
-// 	"k8s.io/apimachinery/pkg/util/validation/field"
-// 	"k8s.io/client-go/rest"
-// 	"sigs.k8s.io/controller-runtime/pkg/client"
-// )
+	"github.com/3scale/marin3r/pkg/apis"
+	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	"github.com/operator-framework/operator-sdk/pkg/status"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	previousVersionPrefix string = "ReceivedPreviousVersion_"
+)
 
 // func (r *ReconcileNodeConfigCache) removeRollbackCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
 // 	patch := client.MergeFrom(ncc.DeepCopy())
@@ -127,56 +125,55 @@ package nodeconfigcache
 // 	return nil
 // }
 
-// // OnError returns a function that should be called when the envoy control plane receives
-// // a NACK to a discovery response from any of the gateways
-// func OnError(cfg *rest.Config, namespace string) func(nodeID, previousVersion, msg string) error {
+// OnError returns a function that should be called when the envoy control plane receives
+// a NACK to a discovery response from any of the gateways
+func OnError(cfg *rest.Config, namespace string) func(nodeID, version, msg string) error {
 
-// 	return func(nodeID, previousVersion, msg string) error {
+	return func(nodeID, version, msg string) error {
 
-// 		// Create a client and register CRDs
-// 		s := runtime.NewScheme()
-// 		if err := apis.AddToScheme(s); err != nil {
-// 			return err
-// 		}
-// 		cl, err := client.New(cfg, client.Options{Scheme: s})
-// 		if err != nil {
-// 			return err
-// 		}
+		// Create a client and register CRDs
+		s := runtime.NewScheme()
+		if err := apis.AddToScheme(s); err != nil {
+			return err
+		}
+		cl, err := client.New(cfg, client.Options{Scheme: s})
+		if err != nil {
+			return err
+		}
 
-// 		// Get the nodeconfigcache that corresponds to the envoy node that returned the error
-// 		nccList := &cachesv1alpha1.NodeConfigCacheList{}
-// 		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-// 			MatchLabels: map[string]string{nodeIDTag: nodeID},
-// 		})
-// 		if err != nil {
-// 			return err
-// 		}
-// 		err = cl.List(context.TODO(), nccList, &client.ListOptions{LabelSelector: selector})
-// 		if err != nil {
-// 			return err
-// 		}
+		// Get the nodeconfigcache that corresponds to the envoy node that returned the error
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
+		})
+		if err != nil {
+			return err
+		}
+		err = cl.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
+		if err != nil {
+			return err
+		}
+		if len(ncrList.Items) != 1 {
+			return fmt.Errorf("Got %v nodeconfigrevision objects when only 1 expected", len(ncrList.Items))
+		}
 
-// 		if len(nccList.Items) != 1 {
-// 			return fmt.Errorf("Got %v NodeConfigCache objects for nodeID '%s'", len(nccList.Items), nodeID)
-// 		}
-// 		ncc := &nccList.Items[0]
+		// Add the "ResourcesUpdateUnsuccessful" condition to the NodeConfigRevision object
+		// unless the condition is already set
+		ncr := &ncrList.Items[0]
+		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+			patch := client.MergeFrom(ncr.DeepCopy())
+			ncr.Status.Conditions.SetCondition(status.Condition{
+				Type:    "ResourcesUpdateUnsuccessful",
+				Status:  "True",
+				Reason:  status.ConditionReason(fmt.Sprintf("%s%s", previousVersionPrefix, version)),
+				Message: fmt.Sprintf("A gateway returned NACK to the discovery response: '%s'", msg),
+			})
 
-// 		// Add the "ResourcesUpdateUnsuccessful" condition to the NodeConfigCache object
-// 		// unless the condition is already set
-// 		if !ncc.Status.Conditions.IsTrueFor(ResourcesUpdateUnsuccessful) {
-// 			patch := client.MergeFrom(ncc.DeepCopy())
-// 			ncc.Status.Conditions.SetCondition(status.Condition{
-// 				Type:    "ResourcesUpdateUnsuccessful",
-// 				Status:  "True",
-// 				Reason:  status.ConditionReason(fmt.Sprintf("%s%s", previousVersionPrefix, previousVersion)),
-// 				Message: fmt.Sprintf("A gateway returned NACK to the discovery response: '%s'", msg),
-// 			})
+			if err := cl.Status().Patch(context.TODO(), ncr, patch); err != nil {
+				return err
+			}
+		}
 
-// 			if err := cl.Status().Patch(context.TODO(), ncc, patch); err != nil {
-// 				return err
-// 			}
-// 		}
-
-// 		return nil
-// 	}
-// }
+		return nil
+	}
+}

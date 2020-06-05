@@ -35,6 +35,7 @@ import (
 
 	"github.com/3scale/marin3r/pkg/apis"
 	"github.com/3scale/marin3r/pkg/controller"
+	controller_nodeconfigcache "github.com/3scale/marin3r/pkg/controller/nodeconfigcache"
 	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/webhook"
 	"github.com/3scale/marin3r/version"
@@ -138,8 +139,7 @@ func main() {
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
 		&envoy.Callbacks{
-			// OnError: controller_nodeconfigcache.OnError(cfg, namespace),
-			OnError: func(a, b, c string) error { return nil },
+			OnError: controller_nodeconfigcache.OnError(cfg, namespace),
 		},
 	)
 
