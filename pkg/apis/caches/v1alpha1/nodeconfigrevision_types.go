@@ -9,6 +9,15 @@ const (
 	// RevisionPublishedCondition is a condition that marks the NodeConfigRevision object
 	// as the one that should be published in the xds server cache
 	RevisionPublishedCondition status.ConditionType = "RevisionPublished"
+
+	// ResourcesOutOfSyncCondition is a condition that other controllers can use to indicate
+	// that the respurces need resync
+	ResourcesOutOfSyncCondition status.ConditionType = "ResourcesOutOfSync"
+
+	// ResourcesUpdateUnsuccessfulCondition is a condition type that's used to report
+	// back to the controller that a resources' update has been unsuccesful
+	// so the controller can act accordingly
+	ResourcesUpdateUnsuccessfulCondition status.ConditionType = "ResourcesUpdateUnsuccessful"
 )
 
 // NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
