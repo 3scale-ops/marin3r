@@ -3,6 +3,7 @@ package nodeconfigrevision
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
 	"time"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -12,6 +13,7 @@ import (
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/golang/protobuf/proto"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
@@ -20,7 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	hashutil "k8s.io/kubernetes/pkg/util/hash"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -139,6 +143,11 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 		reqLogger.Info("Generated snapshot is equal to published one, avoiding push to xds server cache", "NodeID", nodeID)
 	}
 
+	// Clear any ResourcesOutOfSyncCondition
+	if err := r.clearResourcesOutOfSyncCondition(ctx, ncr); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
 }
 
@@ -229,6 +238,14 @@ func (r *ReconcileNodeConfigRevision) loadResources(ctx context.Context, name, n
 		}
 	}
 
+	// Secrets are a special case of resources as its values are not defined in the spec. This
+	// could cause that new values in the same set of secrets wouldn't trigger updates to the envoy
+	// gateways as the version (the Spec.Resources hash) would be the same. To avoid this problem, we
+	// append the hash of the values of the secrets to the version of the secret resources that will
+	// only trigger secret updates in the envoy gateways when necessary
+	secretsHash := calculateSecretsHash(snap.Resources[xds_cache_types.Secret].Items)
+	snap.Resources[xds_cache_types.Secret].Version = fmt.Sprintf("%s-%s", snap.Resources[xds_cache_types.Secret].Version, secretsHash)
+
 	return nil
 }
 
@@ -244,6 +261,24 @@ func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.P
 			),
 		},
 	)
+}
+
+func (r *ReconcileNodeConfigRevision) clearResourcesOutOfSyncCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigRevision) error {
+
+	if ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+		patch := client.MergeFrom(ncc.DeepCopy())
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:    cachesv1alpha1.ResourcesOutOfSyncCondition,
+			Reason:  "NodeConficRevisionSynced",
+			Status:  corev1.ConditionFalse,
+			Message: "NodeConfigRevision successfully synced",
+		})
+		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func newNodeSnapshot(nodeID string, version string) *xds_cache.Snapshot {
@@ -311,4 +346,10 @@ func snapshotIsEqual(newSnap, oldSnap *xds_cache.Snapshot) bool {
 		}
 	}
 	return true
+}
+
+func calculateSecretsHash(resources map[string]xds_cache_types.Resource) string {
+	resourcesHasher := fnv.New32a()
+	hashutil.DeepHashObject(resourcesHasher, resources)
+	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }

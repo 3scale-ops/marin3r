@@ -5,9 +5,7 @@ import (
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	"github.com/operator-framework/operator-sdk/pkg/status"
 
-	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -188,11 +186,6 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// Clear any ResourcesOutOfSyncCondition
-	if err := r.clearResourcesOutOfSyncCondition(ctx, ncc); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	return reconcile.Result{}, nil
 }
 
@@ -208,24 +201,6 @@ func (r *ReconcileNodeConfigCache) addFinalizer(ctx context.Context, ncc *caches
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func (r *ReconcileNodeConfigCache) clearResourcesOutOfSyncCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
-
-	if ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
-		patch := client.MergeFrom(ncc.DeepCopy())
-		ncc.Status.Conditions.SetCondition(status.Condition{
-			Type:    cachesv1alpha1.ResourcesOutOfSyncCondition,
-			Reason:  "NodeConficCacheSynced",
-			Status:  corev1.ConditionFalse,
-			Message: "NodeConfigCache successfully synced",
-		})
-		if err := r.client.Patch(ctx, ncc, patch); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
