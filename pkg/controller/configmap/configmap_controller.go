@@ -172,14 +172,6 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		// patch operation to update Spec.Version in the cache
 		patch := client.MergeFrom(ncc.DeepCopy())
 
-		// Bump NodeConfigCache version
-		version, err := envoy.BumpVersion(ncc.Spec.Version)
-		if err != nil {
-			reqLogger.Error(err, "Unable to bump config version")
-			return reconcile.Result{}, err
-		}
-		ncc.Spec.Version = version
-
 		// Populate resources, loaded from ConfigMap data
 		er, err := populateResources(cm.Data[configMapKey])
 		if err != nil {
@@ -225,7 +217,6 @@ func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.Confi
 		},
 		Spec: cachesv1alpha1.NodeConfigCacheSpec{
 			NodeID:        nodeID,
-			Version:       "1",
 			Serialization: defaultSerialization,
 		},
 	}
