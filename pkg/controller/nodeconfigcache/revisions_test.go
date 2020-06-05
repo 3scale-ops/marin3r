@@ -69,9 +69,6 @@ func TestReconcileNodeConfigCache_ensureNodeConfigRevision(t *testing.T) {
 			t.Errorf("TestReconcileNodeConfigCache_ensureNodeConfigRevision() - resources '%v', want '%v'", &ncrList.Items[0].Spec.Resources, ncc.Spec.Resources)
 			return
 		}
-		if !ncrList.Items[0].Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
-			t.Errorf("TestReconcileNodeConfigCache_ensureNodeConfigRevision() - condition RevisionPublishedCondition != True or missing")
-		}
 	})
 
 	t.Run("Publishes an already existent revision", func(t *testing.T) {
@@ -120,9 +117,6 @@ func TestReconcileNodeConfigCache_ensureNodeConfigRevision(t *testing.T) {
 		if len(ncrList.Items) != 1 {
 			t.Errorf("TestReconcileNodeConfigCache_ensureNodeConfigRevision() got '%v' ncr objects, expected 1", len(ncrList.Items))
 			return
-		}
-		if !ncrList.Items[0].Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
-			t.Errorf("TestReconcileNodeConfigCache_ensureNodeConfigRevision() - condition RevisionPublishedCondition != True or missing")
 		}
 	})
 
