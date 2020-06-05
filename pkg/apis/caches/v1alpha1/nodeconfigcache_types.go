@@ -9,13 +9,11 @@ import (
 const (
 	/* Conditions */
 
-	// ResourcesUpdateUnsuccessfulCondition is a condition type that's used to report
-	// back to the controller that a resources' update has been unsuccesful
-	// so the controller can act accordingly
-	ResourcesUpdateUnsuccessfulCondition status.ConditionType = "ResourcesUpdateUnsuccessful"
-	// ResourcesOutOfSyncCondition is a condition that other controllers can use to indicate
-	// that the respurces need resync
-	ResourcesOutOfSyncCondition status.ConditionType = "ResourcesOutOfSync"
+	// CacheOutOfSyncCondition is a condition that indicates that the
+	// nodeconfigcache cannot reach the desired status specified in the spec,
+	// usually because the config in the spec is incorrect or has caused failures
+	// in the envoy clients
+	CacheOutOfSyncCondition status.ConditionType = "CacheOutOfSync"
 
 	/* Finalizers */
 
