@@ -84,7 +84,7 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
 				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
 				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
-				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
+				{Version: "xxxx-74d569cc4", Items: map[string]xds_cache_types.Resource{}},
 				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
 			}},
 			wantVersion: "xxxx",
@@ -316,7 +316,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 					{Version: "1", Items: map[string]xds_cache_types.Resource{
 						"listener": &envoyapi.Listener{Name: "listener"},
 					}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "1-74d569cc4", Items: map[string]xds_cache_types.Resource{}},
 					{Version: "1", Items: map[string]xds_cache_types.Resource{
 						"runtime": &envoyapi_discovery.Runtime{Name: "runtime"},
 					}},
@@ -460,7 +460,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
 					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
 					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{
+					{Version: "1-6cf7fd9d65", Items: map[string]xds_cache_types.Resource{
 						"secret": &envoyapi_auth.Secret{
 							Name: "secret",
 							Type: &envoyapi_auth.Secret_TlsCertificate{

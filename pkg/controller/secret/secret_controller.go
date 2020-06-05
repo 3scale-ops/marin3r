@@ -57,8 +57,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			if e.ObjectNew.(*corev1.Secret).Type == "kubernetes.io/tls" {
-				// Ignore updates to resource status in which case metadata.Generation does not change
-				return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
+				return true
 			}
 			return false
 		},
@@ -112,37 +111,39 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	logger := log.WithValues("Namespace", request.Namespace, "Name", request.Name)
 	logger.Info("Reconciling from 'kubernetes.io/tls' Secret")
 
-	// Get the list of NoceConfigCaches and check which of them
-	// contain refs to this secret
-	list := &cachesv1alpha1.NodeConfigCacheList{}
+	// Get the list of NoceConfigRevisions published and
+	// check which of them contain refs to this secret
+	list := &cachesv1alpha1.NodeConfigRevisionList{}
 	if err := r.client.List(ctx, list); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	for _, ncc := range list.Items {
-		// TODO: Might need to look inside specific revision instead,
-		// when revisions are implemented
-		for _, secret := range ncc.Spec.Resources.Secrets {
-			if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
-				logger.Info("Triggered NodeConfigCache reconcile",
-					"NodeConfigCache_Name", ncc.ObjectMeta.Name, "NodeConfigCache_Namespace", ncc.ObjectMeta.Namespace)
-				if err != nil {
-					return reconcile.Result{}, err
-				}
+	for _, ncr := range list.Items {
 
-				if !ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
-					// patch operation to update Spec.Version in the cache
-					patch := client.MergeFrom(ncc.DeepCopy())
-					ncc.Status.Conditions.SetCondition(status.Condition{
-						Type:    cachesv1alpha1.ResourcesOutOfSyncCondition,
-						Reason:  "SecretChanged",
-						Message: "A secret relevant to this nodeconfigcache changed",
-						Status:  corev1.ConditionTrue,
-					})
-					if err := r.client.Status().Patch(ctx, &ncc, patch); err != nil {
+		if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+
+			for _, secret := range ncr.Spec.Resources.Secrets {
+				if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
+					logger.Info("Triggered NodeConfigRevision reconcile",
+						"NodeConfigRevision_Name", ncr.ObjectMeta.Name, "NodeConfigRevision_Namespace", ncr.ObjectMeta.Namespace)
+					if err != nil {
 						return reconcile.Result{}, err
 					}
-					logger.V(1).Info("Condition should have been added ...")
+
+					if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+						// patch operation to update Spec.Version in the cache
+						patch := client.MergeFrom(ncr.DeepCopy())
+						ncr.Status.Conditions.SetCondition(status.Condition{
+							Type:    cachesv1alpha1.ResourcesOutOfSyncCondition,
+							Reason:  "SecretChanged",
+							Message: "A secret relevant to this nodeconfigrevision changed",
+							Status:  corev1.ConditionTrue,
+						})
+						if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
+							return reconcile.Result{}, err
+						}
+						logger.V(1).Info("Condition should have been added ...")
+					}
 				}
 			}
 		}

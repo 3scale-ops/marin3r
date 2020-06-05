@@ -5,16 +5,28 @@ import (
 	"testing"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+var s *runtime.Scheme = scheme.Scheme
+
+func init() {
+	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
+		&cachesv1alpha1.NodeConfigRevision{},
+		&cachesv1alpha1.NodeConfigRevisionList{},
+		&cachesv1alpha1.NodeConfigCache{},
+	)
+}
+
 func TestReconcileSecret_Reconcile(t *testing.T) {
-	t.Run("Adds ResourcesOutOfSyncCondition to NCC when a refered secret changes", func(t *testing.T) {
+	t.Run("Adds ResourcesOutOfSyncCondition to NCR when a refered secret changes", func(t *testing.T) {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret",
@@ -26,13 +38,14 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 				"tls.crt": []byte("xxxxx"),
 			},
 		}
-		ncc := &cachesv1alpha1.NodeConfigCache{
+		ncr := &cachesv1alpha1.NodeConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ncc",
+				Name:      "ncr",
 				Namespace: "default",
 			},
-			Spec: cachesv1alpha1.NodeConfigCacheSpec{
-				NodeID: "node1",
+			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				NodeID:  "node1",
+				Version: "xxxx",
 				Resources: &cachesv1alpha1.EnvoyResources{
 					Secrets: []cachesv1alpha1.EnvoySecretResource{{
 						Name: "secret",
@@ -41,15 +54,12 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 							Namespace: "default",
 						}}}},
 			},
+			Status: cachesv1alpha1.NodeConfigRevisionStatus{
+				Conditions: []status.Condition{{Type: cachesv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue}},
+			},
 		}
 
-		s := scheme.Scheme
-		s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
-			&cachesv1alpha1.NodeConfigCacheList{},
-			&cachesv1alpha1.NodeConfigCache{},
-		)
-
-		cl := fake.NewFakeClient(secret, ncc)
+		cl := fake.NewFakeClient(secret, ncr)
 		r := &ReconcileSecret{client: cl, scheme: s}
 
 		_, gotErr := r.Reconcile(reconcile.Request{
@@ -64,9 +74,9 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 			return
 		}
 
-		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
-		if !ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
-			t.Errorf("TestReconcileSecret_Reconcile() condition 'ResourcesOutOfSyncCondition' was not set in NodeCacheConfig")
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
+		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+			t.Errorf("TestReconcileSecret_Reconcile() condition 'ResourcesOutOfSyncCondition' was not set in NodeCacheRevision")
 		}
 	})
 }
