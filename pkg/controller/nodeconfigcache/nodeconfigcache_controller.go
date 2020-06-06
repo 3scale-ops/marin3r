@@ -9,6 +9,7 @@ import (
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -69,6 +70,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+
+	// Watch for owned resources NodeConfigRevision
+	err = c.Watch(&source.Kind{Type: &cachesv1alpha1.NodeConfigRevision{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &cachesv1alpha1.NodeConfigCache{},
+	})
 
 	if err != nil {
 		return err
@@ -139,10 +146,22 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		}
 	}
 
-	version := calculateRevisionHash(ncc.Spec.Resources)
+	// desiredVersion is the version that matches the resources described in the spec
+	desiredVersion := calculateRevisionHash(ncc.Spec.Resources)
 
-	// Create a NodeConfigRevision for this config
-	if err := r.ensureNodeConfigRevision(ctx, ncc, version); err != nil {
+	// ensure that the desiredVersion has a matching revision object
+	if err := r.ensureNodeConfigRevision(ctx, ncc, desiredVersion); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Update the ConfigRevisions list in the status
+	if err := r.consolidateRevisionList(ctx, ncc, desiredVersion); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// determine the version that should be published
+	version, err := r.getVersionToPublish(ctx, ncc)
+	if err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -163,7 +182,7 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// Update the status with the pusblished version
+	// Update the status with the published version
 	if ncc.Status.PublishedVersion != version {
 		patch := client.MergeFrom(ncc.DeepCopy())
 		ncc.Status.PublishedVersion = version
@@ -172,17 +191,42 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		}
 	}
 
-	// Update the ConfigRevisions list in the status
-	if err := r.consolidateRevisionList(ctx, ncc, version); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Cleanup unreferenced NodeConfigRevision objects
 	if err := r.deleteUnreferencedRevisions(ctx, ncc); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) (string, error) {
+	// Get the list of revisions for this nodeID
+	ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
+	})
+	if err != nil {
+		return "", newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
+	}
+	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return "", newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
+	}
+
+	// Starting from the highest index in the ConfigRevision list and going
+	// down, return the first version found that is not tainted
+	for i := len(ncc.Status.ConfigRevisions) - 1; i >= 0; i-- {
+		for _, ncr := range ncrList.Items {
+			if ncc.Status.ConfigRevisions[i].Version == ncr.Spec.Version && !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) {
+				return ncc.Status.ConfigRevisions[i].Version, nil
+			}
+		}
+	}
+
+	// If we get here it means that ther is not untainted revision
+	// TODO: set a condition
+
+	return "", nil
 }
 
 func (r *ReconcileNodeConfigCache) finalizeNodeConfigCache(nodeID string) {
