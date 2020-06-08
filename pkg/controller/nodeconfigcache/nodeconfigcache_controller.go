@@ -202,11 +202,11 @@ func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc 
 		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
 	})
 	if err != nil {
-		return "", newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
+		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
 	}
 	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
-		return "", newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
+		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
 	}
 
 	// Starting from the highest index in the ConfigRevision list and going
@@ -219,7 +219,7 @@ func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc 
 		}
 	}
 
-	// If we get here it means that ther is not untainted revision
+	// If we get here it means that there is not untainted revision
 	// TODO: set a condition
 
 	return "", nil
