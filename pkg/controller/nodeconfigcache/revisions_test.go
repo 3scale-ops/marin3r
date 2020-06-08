@@ -10,22 +10,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
-
-var s *runtime.Scheme = scheme.Scheme
-
-func init() {
-	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
-		&cachesv1alpha1.NodeConfigRevision{},
-		&cachesv1alpha1.NodeConfigRevisionList{},
-		&cachesv1alpha1.NodeConfigCache{},
-	)
-}
 
 func TestReconcileNodeConfigCache_ensureNodeConfigRevision(t *testing.T) {
 

@@ -8,6 +8,9 @@ import (
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	"github.com/operator-framework/operator-sdk/pkg/status"
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,6 +19,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+var s *runtime.Scheme = scheme.Scheme
+
+func init() {
+	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
+		&cachesv1alpha1.NodeConfigRevision{},
+		&cachesv1alpha1.NodeConfigRevisionList{},
+		&cachesv1alpha1.NodeConfigCache{},
+	)
+}
 
 func fakeTestCache() *xds_cache.SnapshotCache {
 
@@ -319,5 +332,181 @@ func Test_contains(t *testing.T) {
 				t.Errorf("contains() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		ncc     *cachesv1alpha1.NodeConfigCache
+		ncrList *cachesv1alpha1.NodeConfigRevisionList
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "Returns the desiredVersion on seeing a new version",
+			ncc: &cachesv1alpha1.NodeConfigCache{
+				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+					NodeID:    "node1",
+					Resources: &cachesv1alpha1.EnvoyResources{},
+				},
+				Status: cachesv1alpha1.NodeConfigCacheStatus{
+					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+						{Version: "xxx", Ref: v1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+					},
+				},
+			},
+			ncrList: &cachesv1alpha1.NodeConfigRevisionList{
+				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
+				Items: []cachesv1alpha1.NodeConfigRevision{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ncr1",
+							Namespace: "default",
+							Labels:    map[string]string{nodeIDTag: "node1"},
+						},
+						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+							NodeID:    "node1",
+							Version:   "xxx",
+							Resources: &cachesv1alpha1.EnvoyResources{},
+						},
+					},
+				},
+			},
+			want:    "xxx",
+			wantErr: false,
+		},
+		{
+			name: "Returns the highest index untainted revision of the ConfigRevision list",
+			ncc: &cachesv1alpha1.NodeConfigCache{
+				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+					NodeID:    "node1",
+					Resources: &cachesv1alpha1.EnvoyResources{},
+				},
+				Status: cachesv1alpha1.NodeConfigCacheStatus{
+					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+						{Version: "xxx", Ref: v1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+						{Version: "zzz", Ref: v1.ObjectReference{Name: "ncr2", Namespace: "default"}},
+					},
+				},
+			},
+			ncrList: &cachesv1alpha1.NodeConfigRevisionList{
+				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
+				Items: []cachesv1alpha1.NodeConfigRevision{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ncr1",
+							Namespace: "default",
+							Labels:    map[string]string{nodeIDTag: "node1"},
+						},
+						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+							NodeID:    "node1",
+							Version:   "xxx",
+							Resources: &cachesv1alpha1.EnvoyResources{},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ncr2",
+							Namespace: "default",
+							Labels:    map[string]string{nodeIDTag: "node1"},
+						},
+						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+							NodeID:    "node1",
+							Version:   "zzz",
+							Resources: &cachesv1alpha1.EnvoyResources{},
+						},
+						Status: cachesv1alpha1.NodeConfigRevisionStatus{
+							Conditions: status.NewConditions(status.Condition{
+								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							}),
+						},
+					},
+				},
+			},
+			want:    "xxx",
+			wantErr: false,
+		},
+		{
+			name: "Returns an error if all revisions are tainted",
+			ncc: &cachesv1alpha1.NodeConfigCache{
+				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+					NodeID:    "node1",
+					Resources: &cachesv1alpha1.EnvoyResources{},
+				},
+				Status: cachesv1alpha1.NodeConfigCacheStatus{
+					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+						{Version: "xxx", Ref: v1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+						{Version: "zzz", Ref: v1.ObjectReference{Name: "ncr2", Namespace: "default"}},
+					},
+				},
+			},
+			ncrList: &cachesv1alpha1.NodeConfigRevisionList{
+				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
+				Items: []cachesv1alpha1.NodeConfigRevision{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ncr1",
+							Namespace: "default",
+							Labels:    map[string]string{nodeIDTag: "node1"},
+						},
+						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+							NodeID:    "node1",
+							Version:   "xxx",
+							Resources: &cachesv1alpha1.EnvoyResources{},
+						},
+						Status: cachesv1alpha1.NodeConfigRevisionStatus{
+							Conditions: status.NewConditions(status.Condition{
+								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							}),
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "ncr2",
+							Namespace: "default",
+							Labels:    map[string]string{nodeIDTag: "node1"},
+						},
+						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+							NodeID:    "node1",
+							Version:   "zzz",
+							Resources: &cachesv1alpha1.EnvoyResources{},
+						},
+						Status: cachesv1alpha1.NodeConfigRevisionStatus{
+							Conditions: status.NewConditions(status.Condition{
+								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							}),
+						},
+					},
+				},
+			},
+			want:    "",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &ReconcileNodeConfigCache{
+				client:   fake.NewFakeClient(tt.ncc, tt.ncrList),
+				scheme:   s,
+				adsCache: fakeTestCache(),
+			}
+			got, err := r.getVersionToPublish(context.TODO(), tt.ncc)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReconcileNodeConfigCache.getVersionToPublish() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ReconcileNodeConfigCache.getVersionToPublish() = %v, want %v", got, tt.want)
+			}
+		})
+
 	}
 }
