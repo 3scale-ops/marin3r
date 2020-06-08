@@ -6,7 +6,9 @@ import (
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,6 +164,16 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	// determine the version that should be published
 	version, err := r.getVersionToPublish(ctx, ncc)
 	if err != nil {
+		if err.(cacheError).ErrorType == AllRevisionsTaintedError {
+			if err := r.setRollbackFailed(ctx, ncc, cachesv1alpha1.RollbackFailedCondition,
+				string(err.(cacheError).ErrorType), err.Error()); err != nil {
+				return reconcile.Result{}, err
+			}
+			// This is an unrecoverable error because there are no
+			// revisions to try and the controller cannot reconcile fix
+			// this by . Set the RollbackFailedCOndition and exit without requeuing
+			return reconcile.Result{}, nil
+		}
 		return reconcile.Result{}, err
 	}
 
@@ -219,10 +231,9 @@ func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc 
 		}
 	}
 
-	// If we get here it means that there is not untainted revision
-	// TODO: set a condition
-
-	return "", nil
+	// If we get here it means that there is not untainted revision. Return a specific
+	// error to the controller loop so it gets handled appropriately
+	return "", newCacheError(AllRevisionsTaintedError, "getVersionToPublish", "All available revisions are tainted")
 }
 
 func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache, desired, published string) error {
@@ -240,12 +251,27 @@ func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *caches
 		changed = true
 	}
 
-	if desired == published {
-		ncc.Status.CacheState = cachesv1alpha1.InSyncState
-	} else {
+	// Set the cacheStatus fiel
+	if desired != published && ncc.Status.CacheState != cachesv1alpha1.RollbackState {
 		ncc.Status.CacheState = cachesv1alpha1.RollbackState
+		changed = true
+	}
+	if desired == published && ncc.Status.CacheState != cachesv1alpha1.InSyncState {
+		ncc.Status.CacheState = cachesv1alpha1.InSyncState
+		changed = true
 	}
 
+	// Clear the RollbackFailedCondition
+	if ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.RollbackFailedCondition) {
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:   cachesv1alpha1.RollbackFailedCondition,
+			Reason: "Recovered",
+			Status: corev1.ConditionFalse,
+		})
+		changed = true
+	}
+
+	// Only write if something needs changing to reduce API calls
 	if changed {
 		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
 			return err
@@ -277,4 +303,22 @@ func contains(list []string, s string) bool {
 		}
 	}
 	return false
+}
+
+func (r *ReconcileNodeConfigCache) setRollbackFailed(ctx context.Context, ncr *cachesv1alpha1.NodeConfigCache, ctype status.ConditionType, reason, msg string) error {
+	if !ncr.Status.Conditions.IsTrueFor(ctype) {
+		patch := client.MergeFrom(ncr.DeepCopy())
+		ncr.Status.Conditions.SetCondition(status.Condition{
+			Type:    ctype,
+			Status:  corev1.ConditionTrue,
+			Reason:  status.ConditionReason(reason),
+			Message: msg,
+		})
+		ncr.Status.CacheState = cachesv1alpha1.RollbackFailedState
+
+		if err := r.client.Status().Patch(ctx, ncr, patch); err != nil {
+			return err
+		}
+	}
+	return nil
 }

@@ -15,6 +15,11 @@ const (
 	// in the envoy clients
 	CacheOutOfSyncCondition status.ConditionType = "CacheOutOfSync"
 
+	// RollbackFailedCondition indicates that the NodeConfigCache object
+	// is not able to publish a config revision because all revisions are
+	// tainted
+	RollbackFailedCondition status.ConditionType = "CacheOutOfSync"
+
 	/* Finalizers */
 
 	// NodeConfigCacheFinalizer is the finalizer for NodeConfigCache objects
@@ -25,9 +30,14 @@ const (
 	//InSyncState indicates that a NodeCacheConfig object has its resources spec
 	// in sync with the xds server cache
 	InSyncState string = "InSync"
+
 	// RollbackState indicates that a NodeConfigCache object has performed a
 	// rollback to a previous version of the resources spec
 	RollbackState string = "Rollback"
+
+	// RollbackFailedState indicates that there is no untainted revision that
+	// can be pusblished in the xds server cache
+	RollbackFailedState string = "RollbackFailed"
 )
 
 // NodeConfigCacheSpec defines the desired state of NodeConfigCache
@@ -65,8 +75,10 @@ type EnvoySecretResource struct {
 
 // NodeConfigCacheStatus defines the observed state of NodeConfigCache
 type NodeConfigCacheStatus struct {
-	// State is used to sumarize xds server cache status information
-	// mainly for user consumption with kubectl get
+	// CacheState summarizes all the observations about the NodeCacheConfig
+	// to give the user a concrete idea on the general status of the cache. It is intended
+	// only for human consumption. Other controllers should relly on conditions to determine
+	// the status of the cache
 	CacheState string `json:"cacheState,omitempty"`
 	// PublishedVersion is the config version currently
 	// served by the envoy control plane for the node-id

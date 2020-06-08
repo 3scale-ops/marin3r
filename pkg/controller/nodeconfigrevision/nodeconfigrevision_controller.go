@@ -121,8 +121,7 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 			// and that is not a transitory error (some other higher level resource
 			// probaly needs fixing)
 			reqLogger.Error(err, "Errors occured while loading resources from CR")
-			if err := r.setConditionSelf(ctx, ncr, cachesv1alpha1.RevisionTaintedCondition,
-				"FailedLoadingResources", err.Error()); err != nil {
+			if err := r.taintSelf(ctx, ncr, "FailedLoadingResources", err.Error()); err != nil {
 				return reconcile.Result{}, err
 			}
 			// This is an unrecoverable error because resources are wrong
@@ -267,15 +266,16 @@ func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.P
 	)
 }
 
-func (r *ReconcileNodeConfigRevision) setConditionSelf(ctx context.Context, ncr *cachesv1alpha1.NodeConfigRevision, ctype status.ConditionType, reason, msg string) error {
-	if !ncr.Status.Conditions.IsTrueFor(ctype) {
+func (r *ReconcileNodeConfigRevision) taintSelf(ctx context.Context, ncr *cachesv1alpha1.NodeConfigRevision, reason, msg string) error {
+	if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
 		patch := client.MergeFrom(ncr.DeepCopy())
 		ncr.Status.Conditions.SetCondition(status.Condition{
-			Type:    ctype,
+			Type:    cachesv1alpha1.RevisionTaintedCondition,
 			Status:  corev1.ConditionTrue,
 			Reason:  status.ConditionReason(reason),
 			Message: msg,
 		})
+		ncr.Status.Tainted = true
 
 		if err := r.client.Status().Patch(ctx, ncr, patch); err != nil {
 			return err
