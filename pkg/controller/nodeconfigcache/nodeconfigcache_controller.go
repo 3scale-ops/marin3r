@@ -213,7 +213,7 @@ func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc 
 	// down, return the first version found that is not tainted
 	for i := len(ncc.Status.ConfigRevisions) - 1; i >= 0; i-- {
 		for _, ncr := range ncrList.Items {
-			if ncc.Status.ConfigRevisions[i].Version == ncr.Spec.Version && !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) {
+			if ncc.Status.ConfigRevisions[i].Version == ncr.Spec.Version && !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
 				return ncc.Status.ConfigRevisions[i].Version, nil
 			}
 		}

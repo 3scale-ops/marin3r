@@ -55,9 +55,9 @@ func OnError(cfg *rest.Config, namespace string) func(nodeID, version, msg strin
 		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
 			patch := client.MergeFrom(ncr.DeepCopy())
 			ncr.Status.Conditions.SetCondition(status.Condition{
-				Type:    "ResourcesUpdateUnsuccessful",
+				Type:    cachesv1alpha1.RevisionTaintedCondition,
 				Status:  "True",
-				Reason:  status.ConditionReason(fmt.Sprintf("%s%s", previousVersionPrefix, version)),
+				Reason:  status.ConditionReason("GatewayReturnedNACK"),
 				Message: fmt.Sprintf("A gateway returned NACK to the discovery response: '%s'", msg),
 			})
 
