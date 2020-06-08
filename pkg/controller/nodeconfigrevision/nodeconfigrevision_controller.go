@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	"time"
 
+	"github.com/3scale/marin3r/pkg/envoy"
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
@@ -13,12 +14,12 @@ import (
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/golang/protobuf/proto"
-	"github.com/operator-framework/operator-sdk/pkg/status"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
-	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -106,45 +107,44 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
-		// Not the published config revision, exit and don't
-		// requeue
-		return reconcile.Result{}, nil
-	}
+	// If this ncr has the RevisionPublishedCondition set to "True" pusblish the resources
+	// to the xds server cache
+	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
 
-	nodeID := ncr.Spec.NodeID
-	version := ncr.Spec.Version
-	snap := newNodeSnapshot(nodeID, version)
+		nodeID := ncr.Spec.NodeID
+		version := ncr.Spec.Version
+		snap := newNodeSnapshot(nodeID, version)
 
-	// Deserialize envoy resources from the spec and create a new snapshot with them
-	if err := r.loadResources(ctx, request.Name, request.Namespace,
-		ncr.Spec.Serialization, ncr.Spec.Resources, field.NewPath("spec", "resources"), snap); err != nil {
-		// Requeue with delay, as the envoy resources syntax is probably wrong
-		// and that is not a transitory error (some other higher level resource
-		// probaly needs fixing)
-		reqLogger.Error(err, "Errors occured while loading resources from CR")
-		// TODO: set a condition in NCC owner resource
-		return reconcile.Result{RequeueAfter: 30 * time.Second}, err
-	}
-
-	// Push the snapshot to the xds server cache
-	oldSnap, err := (*r.adsCache).GetSnapshot(nodeID)
-	if !snapshotIsEqual(snap, &oldSnap) {
-		// TODO: check snapshot consistency using "snap.Consistent()". Consider also validating
-		// consistency between clusters and listeners, as this is not done by snap.Consistent()
-		// because listeners and clusters are not requested by name by the envoy gateways
-
-		// Publish the in-memory cache to the envoy control-plane
-		reqLogger.Info("Publishing new snapshot for nodeID", "Version", version, "NodeID", nodeID)
-		if err := (*r.adsCache).SetSnapshot(nodeID, *snap); err != nil {
-			return reconcile.Result{}, err
+		// Deserialize envoy resources from the spec and create a new snapshot with them
+		if err := r.loadResources(ctx, request.Name, request.Namespace,
+			ncr.Spec.Serialization, ncr.Spec.Resources, field.NewPath("spec", "resources"), snap); err != nil {
+			// Requeue with delay, as the envoy resources syntax is probably wrong
+			// and that is not a transitory error (some other higher level resource
+			// probaly needs fixing)
+			reqLogger.Error(err, "Errors occured while loading resources from CR")
+			// TODO: set a condition in NCC owner resource
+			return reconcile.Result{RequeueAfter: 30 * time.Second}, err
 		}
-	} else {
-		reqLogger.Info("Generated snapshot is equal to published one, avoiding push to xds server cache", "NodeID", nodeID)
+
+		// Push the snapshot to the xds server cache
+		oldSnap, _ := (*r.adsCache).GetSnapshot(nodeID)
+		if !snapshotIsEqual(snap, &oldSnap) {
+			// TODO: check snapshot consistency using "snap.Consistent()". Consider also validating
+			// consistency between clusters and listeners, as this is not done by snap.Consistent()
+			// because listeners and clusters are not requested by name by the envoy gateways
+
+			// Publish the in-memory cache to the envoy control-plane
+			reqLogger.Info("Publishing new snapshot for nodeID", "Version", version, "NodeID", nodeID)
+			if err := (*r.adsCache).SetSnapshot(nodeID, *snap); err != nil {
+				return reconcile.Result{}, err
+			}
+		} else {
+			reqLogger.Info("Generated snapshot is equal to published one, avoiding push to xds server cache", "NodeID", nodeID)
+		}
 	}
 
-	// Clear any ResourcesOutOfSyncCondition
-	if err := r.clearResourcesOutOfSyncCondition(ctx, ncr); err != nil {
+	// Update status
+	if err := r.updateStatus(ctx, ncr); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -263,17 +263,46 @@ func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.P
 	)
 }
 
-func (r *ReconcileNodeConfigRevision) clearResourcesOutOfSyncCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigRevision) error {
+func (r *ReconcileNodeConfigRevision) updateStatus(ctx context.Context, ncr *cachesv1alpha1.NodeConfigRevision) error {
 
-	if ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
-		patch := client.MergeFrom(ncc.DeepCopy())
-		ncc.Status.Conditions.SetCondition(status.Condition{
+	changed := false
+	patch := client.MergeFrom(ncr.DeepCopy())
+
+	// Clear ResourcesOutOfSyncCondition
+	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+		ncr.Status.Conditions.SetCondition(status.Condition{
 			Type:    cachesv1alpha1.ResourcesOutOfSyncCondition,
 			Reason:  "NodeConficRevisionSynced",
 			Status:  corev1.ConditionFalse,
 			Message: "NodeConfigRevision successfully synced",
 		})
-		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+		changed = true
+
+	}
+
+	// Set status.published and status.lastPublishedAt fields
+	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) && !ncr.Status.Published {
+		ncr.Status.Published = true
+		ncr.Status.LastPublishedAt = metav1.Now()
+		// We also initialise the "tainted" status property to false
+		ncr.Status.Tainted = false
+		changed = true
+	} else if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) && ncr.Status.Published {
+		ncr.Status.Published = false
+		changed = true
+	}
+
+	// Set status.failed field
+	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) && !ncr.Status.Tainted {
+		ncr.Status.Tainted = true
+		changed = true
+	} else if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) && ncr.Status.Tainted {
+		ncr.Status.Tainted = false
+		changed = true
+	}
+
+	if changed {
+		if err := r.client.Status().Patch(ctx, ncr, patch); err != nil {
 			return err
 		}
 	}

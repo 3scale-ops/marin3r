@@ -32,6 +32,15 @@ type NodeConfigRevisionSpec struct {
 
 // NodeConfigRevisionStatus defines the observed state of NodeConfigRevision
 type NodeConfigRevisionStatus struct {
+	// Published signals if the NodeConfigRevision is the one currently published
+	// in the xds server cache
+	Published bool `json:"published,omitempty"`
+	// LastPublishedAt indicates the last time this config review transitioned to
+	// published
+	LastPublishedAt metav1.Time `json:"lastPublishedAt,omitempty"`
+	// Tainted indicates whether the NodeConfigRevision is eligible for publishing
+	// or not
+	Tainted bool `json:"tainted,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	Conditions status.Conditions `json:"conditions"`
 }
@@ -41,6 +50,12 @@ type NodeConfigRevisionStatus struct {
 // NodeConfigRevision is the Schema for the nodeconfigrevisions API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodeconfigrevisions,scope=Namespaced,shortName=ncr
+// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.version",name=Version,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.published",name=Published,type=boolean
+// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Created At",type=string,format=date-time
+// +kubebuilder:printcolumn:JSONPath=".status.lastPublishedAt",name="Last Published At",type=string,format=date-time
+// +kubebuilder:printcolumn:JSONPath=".status.tainted",name=Tainted,type=boolean
 type NodeConfigRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -182,13 +182,9 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// Update the status with the published version
-	if ncc.Status.PublishedVersion != version {
-		patch := client.MergeFrom(ncc.DeepCopy())
-		ncc.Status.PublishedVersion = version
-		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
-			return reconcile.Result{}, err
-		}
+	// Update the status
+	if err := r.updateStatus(ctx, ncc, desiredVersion, version); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// Cleanup unreferenced NodeConfigRevision objects
@@ -227,6 +223,36 @@ func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc 
 	// TODO: set a condition
 
 	return "", nil
+}
+
+func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache, desired, published string) error {
+
+	changed := false
+	patch := client.MergeFrom(ncc.DeepCopy())
+
+	if ncc.Status.PublishedVersion != published {
+		ncc.Status.PublishedVersion = published
+		changed = true
+	}
+
+	if ncc.Status.DesiredVersion != desired {
+		ncc.Status.DesiredVersion = desired
+		changed = true
+	}
+
+	if desired == published {
+		ncc.Status.CacheState = cachesv1alpha1.InSyncState
+	} else {
+		ncc.Status.CacheState = cachesv1alpha1.RollbackState
+	}
+
+	if changed {
+		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (r *ReconcileNodeConfigCache) finalizeNodeConfigCache(nodeID string) {

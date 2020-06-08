@@ -19,6 +19,15 @@ const (
 
 	// NodeConfigCacheFinalizer is the finalizer for NodeConfigCache objects
 	NodeConfigCacheFinalizer string = "finalizer.caches.marin3r.3scale.net"
+
+	/* State */
+
+	//InSyncState indicates that a NodeCacheConfig object has its resources spec
+	// in sync with the xds server cache
+	InSyncState string = "InSync"
+	// RollbackState indicates that a NodeConfigCache object has performed a
+	// rollback to a previous version of the resources spec
+	RollbackState string = "Rollback"
 )
 
 // NodeConfigCacheSpec defines the desired state of NodeConfigCache
@@ -56,12 +65,19 @@ type EnvoySecretResource struct {
 
 // NodeConfigCacheStatus defines the observed state of NodeConfigCache
 type NodeConfigCacheStatus struct {
+	// State is used to sumarize xds server cache status information
+	// mainly for user consumption with kubectl get
+	CacheState string `json:"cacheState,omitempty"`
 	// PublishedVersion is the config version currently
 	// served by the envoy control plane for the node-id
 	PublishedVersion string `json:"publishedVersion,omitempty"`
-	// Status
+	// DesiredVersion represents the resources version described in
+	// the spec of the nodeconfigrevision object
+	DesiredVersion string `json:"desiredVersion,omitempty"`
 	// Conditions represent the latest available observations of an object's state
-	Conditions      status.Conditions   `json:"conditions,omitempty"`
+	Conditions status.Conditions `json:"conditions,omitempty"`
+	// ConfigRevisions is an ordered list of references to the nodeconfigrevision
+	// object
 	ConfigRevisions []ConfigRevisionRef `json:"revisions,omitempty"`
 }
 
@@ -77,7 +93,9 @@ type ConfigRevisionRef struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodeconfigcaches,scope=Namespaced,shortName=ncc
 // +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.desiredVersion",name=Desired Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=Published Version,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.cacheState",name=Cache State,type=string
 type NodeConfigCache struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
