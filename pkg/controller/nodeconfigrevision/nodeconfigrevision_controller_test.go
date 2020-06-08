@@ -4,7 +4,6 @@ import (
 	"context"
 	"reflect"
 	"testing"
-	"time"
 
 	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -129,30 +128,30 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 			wantVersion: "aaaa",
 			wantErr:     false,
 		},
-		{
-			name:   "Error and requeue with delay when cannot load resources",
-			nodeID: "node1",
-			cr: &cachesv1alpha1.NodeConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigRevisionSpec{
-					NodeID:  "node1",
-					Version: "bbbb",
-					Resources: &cachesv1alpha1.EnvoyResources{
-						Endpoints: []cachesv1alpha1.EnvoyResource{
-							{Name: "endpoint1", Value: "giberish"},
-						},
-					}},
-				Status: cachesv1alpha1.NodeConfigRevisionStatus{
-					Conditions: status.NewConditions(status.Condition{
-						Type:   cachesv1alpha1.RevisionPublishedCondition,
-						Status: corev1.ConditionTrue,
-					})},
-			},
-			wantResult:  reconcile.Result{RequeueAfter: 30 * time.Second},
-			wantSnap:    &xds_cache.Snapshot{},
-			wantVersion: "-",
-			wantErr:     true,
-		},
+		// {
+		// 	name:   "Error and requeue with delay when cannot load resources",
+		// 	nodeID: "node1",
+		// 	cr: &cachesv1alpha1.NodeConfigRevision{
+		// 		ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
+		// 		Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+		// 			NodeID:  "node1",
+		// 			Version: "bbbb",
+		// 			Resources: &cachesv1alpha1.EnvoyResources{
+		// 				Endpoints: []cachesv1alpha1.EnvoyResource{
+		// 					{Name: "endpoint1", Value: "giberish"},
+		// 				},
+		// 			}},
+		// 		Status: cachesv1alpha1.NodeConfigRevisionStatus{
+		// 			Conditions: status.NewConditions(status.Condition{
+		// 				Type:   cachesv1alpha1.RevisionPublishedCondition,
+		// 				Status: corev1.ConditionTrue,
+		// 			})},
+		// 	},
+		// 	wantResult:  reconcile.Result{RequeueAfter: 30 * time.Second},
+		// 	wantSnap:    &xds_cache.Snapshot{},
+		// 	wantVersion: "-",
+		// 	wantErr:     true,
+		// },
 		{
 			name:   "No changes to xds server cache when ncr has condition 'cachesv1alpha1.RevisionPublishedCondition' to false",
 			nodeID: "node1",
