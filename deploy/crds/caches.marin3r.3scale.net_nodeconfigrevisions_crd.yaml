@@ -3,6 +3,27 @@ kind: CustomResourceDefinition
 metadata:
   name: nodeconfigrevisions.caches.marin3r.3scale.net
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.nodeID
+    name: NodeID
+    type: string
+  - JSONPath: .spec.version
+    name: Version
+    type: string
+  - JSONPath: .status.published
+    name: Published
+    type: boolean
+  - JSONPath: .metadata.creationTimestamp
+    format: date-time
+    name: Created At
+    type: string
+  - JSONPath: .status.lastPublishedAt
+    format: date-time
+    name: Last Published At
+    type: string
+  - JSONPath: .status.tainted
+    name: Tainted
+    type: boolean
   group: caches.marin3r.3scale.net
   names:
     kind: NodeConfigRevision
@@ -192,6 +213,19 @@ spec:
                 - type
                 type: object
               type: array
+            lastPublishedAt:
+              description: LastPublishedAt indicates the last time this config review
+                transitioned to published
+              format: date-time
+              type: string
+            published:
+              description: Published signals if the NodeConfigRevision is the one
+                currently published in the xds server cache
+              type: boolean
+            tainted:
+              description: Tainted indicates whether the NodeConfigRevision is eligible
+                for publishing or not
+              type: boolean
           required:
           - conditions
           type: object
