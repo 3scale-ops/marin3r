@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
-	"time"
 
 	"github.com/3scale/marin3r/pkg/envoy"
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -122,8 +121,13 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 			// and that is not a transitory error (some other higher level resource
 			// probaly needs fixing)
 			reqLogger.Error(err, "Errors occured while loading resources from CR")
-			// TODO: set a condition in NCC owner resource
-			return reconcile.Result{RequeueAfter: 30 * time.Second}, err
+			if err := r.setConditionSelf(ctx, ncr, cachesv1alpha1.RevisionTaintedCondition,
+				"FailedLoadingResources", err.Error()); err != nil {
+				return reconcile.Result{}, err
+			}
+			// This is an unrecoverable error because resources are wrong
+			// so do not reque
+			return reconcile.Result{}, nil
 		}
 
 		// Push the snapshot to the xds server cache
@@ -263,6 +267,23 @@ func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.P
 	)
 }
 
+func (r *ReconcileNodeConfigRevision) setConditionSelf(ctx context.Context, ncr *cachesv1alpha1.NodeConfigRevision, ctype status.ConditionType, reason, msg string) error {
+	if !ncr.Status.Conditions.IsTrueFor(ctype) {
+		patch := client.MergeFrom(ncr.DeepCopy())
+		ncr.Status.Conditions.SetCondition(status.Condition{
+			Type:    ctype,
+			Status:  corev1.ConditionTrue,
+			Reason:  status.ConditionReason(reason),
+			Message: msg,
+		})
+
+		if err := r.client.Status().Patch(ctx, ncr, patch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *ReconcileNodeConfigRevision) updateStatus(ctx context.Context, ncr *cachesv1alpha1.NodeConfigRevision) error {
 
 	changed := false
@@ -293,10 +314,10 @@ func (r *ReconcileNodeConfigRevision) updateStatus(ctx context.Context, ncr *cac
 	}
 
 	// Set status.failed field
-	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) && !ncr.Status.Tainted {
+	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) && !ncr.Status.Tainted {
 		ncr.Status.Tainted = true
 		changed = true
-	} else if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) && ncr.Status.Tainted {
+	} else if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) && ncr.Status.Tainted {
 		ncr.Status.Tainted = false
 		changed = true
 	}

@@ -193,10 +193,10 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 	}
 
 	// We need to validate that the revision that mathes 'version' has not been marked with the
-	// 'ResourcesUpdateUnsuccessfulCondition' 	// in which case the revision won't be pusblished
+	// 'RevisionTainted' in which case the revision won't be pusblished
 	for _, ncr := range ncrList.Items {
-		if ncr.Spec.Version == version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesUpdateUnsuccessfulCondition) {
-			return newCacheError(RevisionTaintedError, "markRevisionPublished", "NodeCacheRevision has active condition 'ResourcesUpdateUnsuccessful'")
+		if ncr.Spec.Version == version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
+			return newCacheError(RevisionTaintedError, "markRevisionPublished", "NodeCacheRevision has active condition 'RevisionTainted'")
 		}
 	}
 

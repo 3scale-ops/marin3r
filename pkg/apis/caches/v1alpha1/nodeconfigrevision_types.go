@@ -14,10 +14,9 @@ const (
 	// that the respurces need resync
 	ResourcesOutOfSyncCondition status.ConditionType = "ResourcesOutOfSync"
 
-	// ResourcesUpdateUnsuccessfulCondition is a condition type that's used to report
-	// back to the controller that a resources' update has been unsuccesful
-	// so the controller can act accordingly
-	ResourcesUpdateUnsuccessfulCondition status.ConditionType = "ResourcesUpdateUnsuccessful"
+	// RevisionTaintedCondition is a condition type that's used to report that this
+	// problems have been observed with this revision and should not be published
+	RevisionTaintedCondition status.ConditionType = "RevisionTainted"
 )
 
 // NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
