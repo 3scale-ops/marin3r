@@ -166,19 +166,15 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	case 1:
 		// NodeConfigCache exists, updating it
 		ncc := &nccList.Items[0]
-		reqLogger.Info("Triggered NodeConfigCache reconcile",
-			"NodeConfigCache_Name", ncc.ObjectMeta.Name, "NodeConfigCache_Namespace", request.Namespace)
 
 		// patch operation to update Spec.Version in the cache
-		patch := client.MergeFrom(ncc.DeepCopy())
 
 		// Populate resources, loaded from ConfigMap data
-		er, err := populateResources(cm.Data[configMapKey])
+		resources, err := populateResources(cm.Data[configMapKey])
 		if err != nil {
 			reqLogger.Error(err, "Error populating resources in the config cache")
 			return reconcile.Result{}, err
 		}
-		ncc.Spec.Resources = er
 
 		// Populate secret resources, referencing the cert-manager created
 		// secrets in the current namespace
@@ -187,14 +183,23 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 			reqLogger.Error(err, "Error populating secret resources in the config cache")
 			return reconcile.Result{}, err
 		}
-		ncc.Spec.Resources.Secrets = secrets
+		resources.Secrets = secrets
 
-		r.client.Patch(ctx, ncc, patch)
+		// If the set of resources has changed, update the NodeConfigCache
+		if fmt.Sprintf("%v", resources) != fmt.Sprintf("%v", ncc.Spec.Resources) {
+			reqLogger.Info("Set of resources has changed, updating NodeConfigCache")
+			reqLogger.Info(fmt.Sprintf("%v ##### %v", resources, ncc.Spec.Resources))
+			patch := client.MergeFrom(ncc.DeepCopy())
+			ncc.Spec.Resources = resources
+			if err := r.client.Patch(ctx, ncc, patch); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
 
 	default:
 		// There should always be just one cachesalpha1v1.NodeConfigCache per envoy node-id
 		if len(nccList.Items) > 1 {
-			err := fmt.Errorf("More than 1 cachesv1alpha1.NodeConfigCache object found for node-id '%s', refusing to reconcile", nodeID)
+			err := fmt.Errorf("More than 1 NodeConfigCache object found for NodeID '%s', cannot reconcile", nodeID)
 			reqLogger.Error(err, "")
 			// Don't flood the controlle with reconciles that are likely to fail
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, err
