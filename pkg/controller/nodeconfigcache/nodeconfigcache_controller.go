@@ -165,8 +165,7 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	version, err := r.getVersionToPublish(ctx, ncc)
 	if err != nil {
 		if err.(cacheError).ErrorType == AllRevisionsTaintedError {
-			if err := r.setRollbackFailed(ctx, ncc, cachesv1alpha1.RollbackFailedCondition,
-				string(err.(cacheError).ErrorType), err.Error()); err != nil {
+			if err := r.setRollbackFailed(ctx, ncc); err != nil {
 				return reconcile.Result{}, err
 			}
 			// This is an unrecoverable error because there are no
@@ -177,20 +176,8 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// Mark the revision as published
+	// Mark the "version" as teh published revision
 	if err := r.markRevisionPublished(ctx, ncc.Spec.NodeID, version, "VersionPublished", fmt.Sprintf("Version '%s' has been published", version)); err != nil {
-		if err.(cacheError).ErrorType == RevisionTaintedError {
-			// The revision that matches the current spec is tainted and
-			// cannot be published. Set the "CacheOutOfSync" condition
-			if err := r.setCacheOutOfSyncCondition(ctx, ncc, "DesiredRevisionTainted",
-				"The revision thas describes the current spec is tainted due to detected failures"); err != nil {
-				return reconcile.Result{}, err
-			}
-			reqLogger.Info("The revision described by the spec is tainted, cannot reconcile", "NodeID", ncc.Spec.NodeID, "Version", version)
-			// Do no requeue, the "DesiredRevisionTainted" error needs that the
-			// user fixes the resources in the spec
-			return reconcile.Result{}, nil
-		}
 		return reconcile.Result{}, err
 	}
 
@@ -251,7 +238,7 @@ func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *caches
 		changed = true
 	}
 
-	// Set the cacheStatus fiel
+	// Set the cacheStatus field
 	if desired != published && ncc.Status.CacheState != cachesv1alpha1.RollbackState {
 		ncc.Status.CacheState = cachesv1alpha1.RollbackState
 		changed = true
@@ -261,7 +248,27 @@ func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *caches
 		changed = true
 	}
 
-	// Clear the RollbackFailedCondition
+	// Set the CacheOutOfSyncCondition
+	if desired != published && !ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) {
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:    cachesv1alpha1.CacheOutOfSyncCondition,
+			Status:  corev1.ConditionTrue,
+			Reason:  "CantPublishDesiredVersion",
+			Message: "Desired resources spec cannot be applied",
+		})
+		changed = true
+	} else if desired == published && !ncc.Status.Conditions.IsFalseFor(cachesv1alpha1.CacheOutOfSyncCondition) {
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:    cachesv1alpha1.CacheOutOfSyncCondition,
+			Status:  corev1.ConditionFalse,
+			Reason:  "DesiredVersionPublished",
+			Message: "Desired version successfully published",
+		})
+		changed = true
+	}
+
+	// Clear the RollbackFailedCondition (if we have reached this code it means that
+	// at least one untainted revision exists)
 	if ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.RollbackFailedCondition) {
 		ncc.Status.Conditions.SetCondition(status.Condition{
 			Type:   cachesv1alpha1.RollbackFailedCondition,
@@ -305,18 +312,24 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-func (r *ReconcileNodeConfigCache) setRollbackFailed(ctx context.Context, ncr *cachesv1alpha1.NodeConfigCache, ctype status.ConditionType, reason, msg string) error {
-	if !ncr.Status.Conditions.IsTrueFor(ctype) {
-		patch := client.MergeFrom(ncr.DeepCopy())
-		ncr.Status.Conditions.SetCondition(status.Condition{
-			Type:    ctype,
+func (r *ReconcileNodeConfigCache) setRollbackFailed(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
+	if !ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.RollbackFailedCondition) {
+		patch := client.MergeFrom(ncc.DeepCopy())
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:    cachesv1alpha1.RollbackFailedCondition,
 			Status:  corev1.ConditionTrue,
-			Reason:  status.ConditionReason(reason),
-			Message: msg,
+			Reason:  "AllRevisionsTainted",
+			Message: "All revisions are tainted, rollback failed",
 		})
-		ncr.Status.CacheState = cachesv1alpha1.RollbackFailedState
+		ncc.Status.Conditions.SetCondition(status.Condition{
+			Type:    cachesv1alpha1.CacheOutOfSyncCondition,
+			Status:  corev1.ConditionTrue,
+			Reason:  "AllRevisionsTainted",
+			Message: "All revisions are tainted, rollback failed",
+		})
+		ncc.Status.CacheState = cachesv1alpha1.RollbackFailedState
 
-		if err := r.client.Status().Patch(ctx, ncr, patch); err != nil {
+		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
 			return err
 		}
 	}

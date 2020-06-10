@@ -104,7 +104,10 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			return
 		}
 		version := calculateRevisionHash(ncc.Spec.Resources)
-		if ncc.Status.PublishedVersion != version || ncc.Status.DesiredVersion != version || ncc.Status.CacheState != cachesv1alpha1.InSyncState {
+		if ncc.Status.PublishedVersion != version ||
+			ncc.Status.DesiredVersion != version ||
+			ncc.Status.CacheState != cachesv1alpha1.InSyncState ||
+			!ncc.Status.Conditions.IsFalseFor(cachesv1alpha1.CacheOutOfSyncCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
@@ -169,7 +172,10 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			t.Errorf("ConfigRevisions list was not updated")
 			return
 		}
-		if ncc.Status.PublishedVersion != version || ncc.Status.DesiredVersion != version || ncc.Status.CacheState != cachesv1alpha1.InSyncState {
+		if ncc.Status.PublishedVersion != version ||
+			ncc.Status.DesiredVersion != version ||
+			ncc.Status.CacheState != cachesv1alpha1.InSyncState ||
+			!ncc.Status.Conditions.IsFalseFor(cachesv1alpha1.CacheOutOfSyncCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
@@ -254,14 +260,16 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		}
 
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
-		if ncc.Status.PublishedVersion != "aaaa" || ncc.Status.DesiredVersion != version || ncc.Status.CacheState != cachesv1alpha1.RollbackState {
+		if ncc.Status.PublishedVersion != "aaaa" ||
+			ncc.Status.DesiredVersion != version ||
+			ncc.Status.CacheState != cachesv1alpha1.RollbackState ||
+			!ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
 	})
 
-	// TODO: test RollbackFailed state
-	t.Run("FSet RollbackFailed state if all versions are tainted", func(t *testing.T) {
+	t.Run("Set RollbackFailed state if all versions are tainted", func(t *testing.T) {
 		version := calculateRevisionHash(&cachesv1alpha1.EnvoyResources{})
 		ncc := &cachesv1alpha1.NodeConfigCache{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
@@ -350,7 +358,9 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		}
 
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
-		if ncc.Status.CacheState != cachesv1alpha1.RollbackFailedState {
+		if ncc.Status.CacheState != cachesv1alpha1.RollbackFailedState ||
+			!ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) ||
+			!ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.RollbackFailedCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}

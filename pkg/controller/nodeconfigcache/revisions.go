@@ -192,14 +192,6 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
-	// We need to validate that the revision that mathes 'version' has not been marked with the
-	// 'RevisionTainted' in which case the revision won't be pusblished
-	for _, ncr := range ncrList.Items {
-		if ncr.Spec.Version == version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
-			return newCacheError(RevisionTaintedError, "markRevisionPublished", "NodeCacheRevision has active condition 'RevisionTainted'")
-		}
-	}
-
 	// Set 'RevisionPublished' to false for all revisions
 	for _, ncr := range ncrList.Items {
 		if ncr.Spec.Version != version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
@@ -254,24 +246,6 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
-	return nil
-}
-
-func (r *ReconcileNodeConfigCache) setCacheOutOfSyncCondition(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache, reason, msg string) error {
-
-	if !ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) {
-		patch := client.MergeFrom(ncc.DeepCopy())
-		ncc.Status.Conditions.SetCondition(status.Condition{
-			Type:    cachesv1alpha1.CacheOutOfSyncCondition,
-			Status:  corev1.ConditionTrue,
-			Reason:  status.ConditionReason(reason),
-			Message: msg,
-		})
-
-		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
-			return newCacheError(UnknownError, "setCacheOutOfSyncCondition", err.Error())
-		}
-	}
 	return nil
 }
 
