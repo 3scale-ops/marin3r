@@ -25,6 +25,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+var s *runtime.Scheme = scheme.Scheme
+
+func init() {
+	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
+		&cachesv1alpha1.NodeConfigRevision{},
+		&cachesv1alpha1.NodeConfigRevisionList{},
+		&cachesv1alpha1.NodeConfigCache{},
+	)
+}
+
 func fakeTestCache() *xds_cache.SnapshotCache {
 
 	snapshotCache := xds_cache.NewSnapshotCache(true, xds_cache.IDHash{}, nil)
@@ -128,30 +138,6 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 			wantVersion: "aaaa",
 			wantErr:     false,
 		},
-		// {
-		// 	name:   "Error and requeue with delay when cannot load resources",
-		// 	nodeID: "node1",
-		// 	cr: &cachesv1alpha1.NodeConfigRevision{
-		// 		ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-		// 		Spec: cachesv1alpha1.NodeConfigRevisionSpec{
-		// 			NodeID:  "node1",
-		// 			Version: "bbbb",
-		// 			Resources: &cachesv1alpha1.EnvoyResources{
-		// 				Endpoints: []cachesv1alpha1.EnvoyResource{
-		// 					{Name: "endpoint1", Value: "giberish"},
-		// 				},
-		// 			}},
-		// 		Status: cachesv1alpha1.NodeConfigRevisionStatus{
-		// 			Conditions: status.NewConditions(status.Condition{
-		// 				Type:   cachesv1alpha1.RevisionPublishedCondition,
-		// 				Status: corev1.ConditionTrue,
-		// 			})},
-		// 	},
-		// 	wantResult:  reconcile.Result{RequeueAfter: 30 * time.Second},
-		// 	wantSnap:    &xds_cache.Snapshot{},
-		// 	wantVersion: "-",
-		// 	wantErr:     true,
-		// },
 		{
 			name:   "No changes to xds server cache when ncr has condition 'cachesv1alpha1.RevisionPublishedCondition' to false",
 			nodeID: "node1",
@@ -185,42 +171,15 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 			wantVersion: "aaaa",
 			wantErr:     false,
 		},
-		{
-			name:   "No changes to xds server cache when ncr has condition 'cachesv1alpha1.RevisionPublishedCondition' not present",
-			nodeID: "node1",
-			cr: &cachesv1alpha1.NodeConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigRevisionSpec{
-					NodeID:    "node1",
-					Version:   "bbbb",
-					Resources: &cachesv1alpha1.EnvoyResources{},
-				},
-			},
-			wantResult: reconcile.Result{},
-			wantSnap: &xds_cache.Snapshot{
-				Resources: [6]xds_cache.Resources{
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-						"endpoint1": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint1"},
-					}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-						"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-					}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-				}},
-			wantVersion: "aaaa",
-			wantErr:     false,
-		},
 	}
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-			s := scheme.Scheme
-			s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion, tt.cr)
-			cl := fake.NewFakeClient(tt.cr)
-			r := &ReconcileNodeConfigRevision{client: cl, scheme: s, adsCache: fakeTestCache()}
+			r := &ReconcileNodeConfigRevision{
+				client:   fake.NewFakeClient(tt.cr),
+				scheme:   s,
+				adsCache: fakeTestCache(),
+			}
 			req := reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      "ncr",
@@ -247,6 +206,126 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("No error if ncr not found", func(t *testing.T) {
+		r := &ReconcileNodeConfigRevision{
+			client:   fake.NewFakeClient(),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      "ncr",
+				Namespace: "default",
+			},
+		}
+
+		_, gotErr := r.Reconcile(req)
+		if gotErr != nil {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			return
+		}
+	})
+
+	t.Run("Taints itself if it fails to load resources", func(t *testing.T) {
+		ncr := &cachesv1alpha1.NodeConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				NodeID:  "node1",
+				Version: "xxxx",
+				Resources: &cachesv1alpha1.EnvoyResources{
+					Endpoints: []cachesv1alpha1.EnvoyResource{
+						{Name: "endpoint", Value: "{\"wrong_property\": \"abcd\"}"},
+					}}},
+			Status: cachesv1alpha1.NodeConfigRevisionStatus{
+				Conditions: status.NewConditions(status.Condition{
+					Type:   cachesv1alpha1.RevisionPublishedCondition,
+					Status: corev1.ConditionTrue,
+				})},
+		}
+
+		r := &ReconcileNodeConfigRevision{
+			client:   fake.NewFakeClient(ncr),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      "ncr",
+				Namespace: "default",
+			},
+		}
+
+		_, gotErr := r.Reconcile(req)
+		if gotErr != nil {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			return
+		}
+
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
+		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() ncr has not been tainted")
+		}
+	})
+}
+
+func TestReconcileNodeConfigRevision_taintSelf(t *testing.T) {
+
+	t.Run("Taints the ncr object", func(t *testing.T) {
+		ncr := &cachesv1alpha1.NodeConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				NodeID:    "node1",
+				Version:   "bbbb",
+				Resources: &cachesv1alpha1.EnvoyResources{},
+			},
+		}
+		r := &ReconcileNodeConfigRevision{
+			client:   fake.NewFakeClient(ncr),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		if err := r.taintSelf(context.TODO(), ncr, "test", "test"); err != nil {
+			t.Errorf("ReconcileNodeConfigRevision.taintSelf() error = %v", err)
+		}
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
+		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
+			t.Errorf("ReconcileNodeConfigRevision.taintSelf() ncr is not tainted")
+		}
+	})
+}
+
+func TestReconcileNodeConfigRevision_updateStatus(t *testing.T) {
+	t.Run("Updates the status of the ncr object", func(t *testing.T) {
+		ncr := &cachesv1alpha1.NodeConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				NodeID:    "node1",
+				Version:   "bbbb",
+				Resources: &cachesv1alpha1.EnvoyResources{},
+			},
+			Status: cachesv1alpha1.NodeConfigRevisionStatus{
+				Conditions: status.NewConditions(
+					status.Condition{
+						Type:   cachesv1alpha1.ResourcesOutOfSyncCondition,
+						Status: corev1.ConditionTrue,
+					},
+				),
+			},
+		}
+		r := &ReconcileNodeConfigRevision{
+			client:   fake.NewFakeClient(ncr),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		if err := r.updateStatus(context.TODO(), ncr); err != nil {
+			t.Errorf("ReconcileNodeConfigRevision.updateStatus() error = %v", err)
+		}
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
+		if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+			t.Errorf("ReconcileNodeConfigRevision.updateStatus() status not updated")
+		}
+	})
 }
 
 func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
