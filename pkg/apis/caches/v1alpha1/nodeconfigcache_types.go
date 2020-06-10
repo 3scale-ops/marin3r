@@ -18,7 +18,7 @@ const (
 	// RollbackFailedCondition indicates that the NodeConfigCache object
 	// is not able to publish a config revision because all revisions are
 	// tainted
-	RollbackFailedCondition status.ConditionType = "CacheOutOfSync"
+	RollbackFailedCondition status.ConditionType = "RollbackFailed"
 
 	/* Finalizers */
 
