@@ -52,132 +52,386 @@ func fakeTestCache() *xds_cache.SnapshotCache {
 	return &snapshotCache
 }
 
-// func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
+func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 
-// 	tests := []struct {
-// 		name        string
-// 		nodeID      string
-// 		cr          *cachesv1alpha1.NodeConfigCache
-// 		wantResult  reconcile.Result
-// 		wantSnap    *xds_cache.Snapshot
-// 		wantVersion string
-// 		wantErr     bool
-// 	}{
-// 		{
-// 			name:   "Creates new snapshot for nodeID",
-// 			nodeID: "node3",
-// 			cr: &cachesv1alpha1.NodeConfigCache{
-// 				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-// 				Spec: cachesv1alpha1.NodeConfigCacheSpec{
-// 					NodeID:  "node3",
-// 					Version: "1",
-// 					Resources: &cachesv1alpha1.EnvoyResources{
-// 						Endpoints: []cachesv1alpha1.EnvoyResource{
-// 							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-// 						}}}},
-// 			wantResult: reconcile.Result{},
-// 			wantSnap: &xds_cache.Snapshot{Resources: [6]xds_cache.Resources{
-// 				{Version: "1", Items: map[string]xds_cache_types.Resource{
-// 					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-// 				{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-// 				{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-// 				{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-// 				{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-// 				{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-// 			}},
-// 			wantVersion: "1",
-// 			wantErr:     false,
-// 		},
-// 		{
-// 			name:   "Does not update snapshot if resources don't change",
-// 			nodeID: "node1",
-// 			cr: &cachesv1alpha1.NodeConfigCache{
-// 				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-// 				Spec: cachesv1alpha1.NodeConfigCacheSpec{
-// 					NodeID:  "node1",
-// 					Version: "44",
-// 					Resources: &cachesv1alpha1.EnvoyResources{
-// 						Endpoints: []cachesv1alpha1.EnvoyResource{
-// 							{Name: "endpoint1", Value: "{\"cluster_name\": \"endpoint1\"}"},
-// 						},
-// 						Clusters: []cachesv1alpha1.EnvoyResource{
-// 							{Name: "cluster1", Value: "{\"name\": \"cluster1\"}"},
-// 						},
-// 					}}},
-// 			wantResult: reconcile.Result{},
-// 			wantSnap: &xds_cache.Snapshot{
-// 				Resources: [6]xds_cache.Resources{
-// 					{Version: "43", Items: map[string]xds_cache_types.Resource{
-// 						"endpoint1": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint1"},
-// 					}},
-// 					{Version: "43", Items: map[string]xds_cache_types.Resource{
-// 						"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-// 					}},
-// 					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
-// 					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
-// 					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
-// 					{Version: "43", Items: map[string]xds_cache_types.Resource{}},
-// 				}},
-// 			wantVersion: "43",
-// 			wantErr:     false,
-// 		},
-// 		{
-// 			name:   "Error and requeue with delay when cannot load resources",
-// 			nodeID: "node1",
-// 			cr: &cachesv1alpha1.NodeConfigCache{
-// 				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-// 				Spec: cachesv1alpha1.NodeConfigCacheSpec{
-// 					NodeID:  "node1",
-// 					Version: "44",
-// 					Resources: &cachesv1alpha1.EnvoyResources{
-// 						Endpoints: []cachesv1alpha1.EnvoyResource{
-// 							{Name: "endpoint1", Value: "giberish"},
-// 						},
-// 					}}},
-// 			wantResult:  reconcile.Result{RequeueAfter: 30 * time.Second},
-// 			wantSnap:    &xds_cache.Snapshot{},
-// 			wantVersion: "-",
-// 			wantErr:     true,
-// 		},
-// 	}
-// 	for _, tt := range tests {
+	t.Run("Creates a new NodeConfigRevision and publishes it", func(t *testing.T) {
+		ncc := &cachesv1alpha1.NodeConfigCache{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				NodeID:    "node1",
+				Resources: &cachesv1alpha1.EnvoyResources{},
+			},
+		}
+		r := &ReconcileNodeConfigCache{
+			client:   fake.NewFakeClient(ncc),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      "ncc",
+				Namespace: "default",
+			},
+		}
 
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			s := scheme.Scheme
-// 			s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
-// 				tt.cr,
-// 				&cachesv1alpha1.NodeConfigRevisionList{},
-// 				&cachesv1alpha1.NodeConfigRevision{},
-// 			)
-// 			cl := fake.NewFakeClient(tt.cr)
-// 			r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
-// 			req := reconcile.Request{
-// 				NamespacedName: types.NamespacedName{
-// 					Name:      "ncc",
-// 					Namespace: "default",
-// 				},
-// 			}
+		_, gotErr := r.Reconcile(req)
+		if gotErr != nil {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			return
+		}
 
-// 			gotResult, gotErr := r.Reconcile(req)
-// 			gotSnap, _ := (*r.adsCache).GetSnapshot(tt.nodeID)
-// 			if (gotErr != nil) != tt.wantErr {
-// 				t.Errorf("ReconcileNodeConfigCache.Reconcile() error = %v, wantErr %v", gotErr, tt.wantErr)
-// 				return
-// 			}
-// 			if !reflect.DeepEqual(gotResult, tt.wantResult) {
-// 				t.Errorf("ReconcileNodeConfigCache.Reconcile() = %v, want %v", gotResult, tt.wantResult)
-// 			}
-// 			if !tt.wantErr && !reflect.DeepEqual(&gotSnap, tt.wantSnap) {
-// 				t.Errorf("Snapshot = %v, want %v", &gotSnap, tt.wantSnap)
-// 			}
-// 			// NOTE: we are keep the same version for all resource types
-// 			gotVersion := gotSnap.GetVersion("type.googleapis.com/envoy.api.v2.ClusterLoadAssignment")
-// 			if !tt.wantErr && gotVersion != tt.wantVersion {
-// 				t.Errorf("Snapshot version = %v, want %v", gotVersion, tt.wantVersion)
-// 			}
-// 		})
-// 	}
-// }
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
+		})
+		r.client.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
+		if len(ncrList.Items) != 1 {
+			t.Errorf("Got wrong number of nodeconfigrevisions: %v", len(ncrList.Items))
+			return
+		}
+		ncr := ncrList.Items[0]
+		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+			t.Errorf("Revision created but not marked as published")
+			return
+		}
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
+		if ncc.ObjectMeta.Finalizers[0] != cachesv1alpha1.NodeConfigCacheFinalizer {
+			t.Errorf("NodeCacheConfig missing finalizer")
+			return
+		}
+		if len(ncc.Status.ConfigRevisions) != 1 {
+			t.Errorf("ConfigRevisions list was not updated")
+			return
+		}
+		version := calculateRevisionHash(ncc.Spec.Resources)
+		if ncc.Status.PublishedVersion != version || ncc.Status.DesiredVersion != version || ncc.Status.CacheState != cachesv1alpha1.InSyncState {
+			t.Errorf("Status was not correctly updated")
+			return
+		}
+	})
+
+	t.Run("Publishes an already existent revision if versions (the resources hash) match", func(t *testing.T) {
+		version := calculateRevisionHash(&cachesv1alpha1.EnvoyResources{})
+		ncc := &cachesv1alpha1.NodeConfigCache{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				NodeID:    "node1",
+				Resources: &cachesv1alpha1.EnvoyResources{},
+			},
+		}
+		ncr := &cachesv1alpha1.NodeConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ncr",
+				Namespace: "default",
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
+			},
+			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				NodeID:    "node1",
+				Version:   version,
+				Resources: &cachesv1alpha1.EnvoyResources{},
+			},
+		}
+
+		r := &ReconcileNodeConfigCache{
+			client:   fake.NewFakeClient(ncc, ncr),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      "ncc",
+				Namespace: "default",
+			},
+		}
+
+		_, gotErr := r.Reconcile(req)
+		if gotErr != nil {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			return
+		}
+
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
+		})
+		r.client.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
+		if len(ncrList.Items) != 1 {
+			t.Errorf("Got wrong number of nodeconfigrevisions: %v", len(ncrList.Items))
+			return
+		}
+		ncr = &ncrList.Items[0]
+		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+			t.Errorf("Revision not marked as published")
+			return
+		}
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
+		if len(ncc.Status.ConfigRevisions) != 1 {
+			t.Errorf("ConfigRevisions list was not updated")
+			return
+		}
+		if ncc.Status.PublishedVersion != version || ncc.Status.DesiredVersion != version || ncc.Status.CacheState != cachesv1alpha1.InSyncState {
+			t.Errorf("Status was not correctly updated")
+			return
+		}
+	})
+
+	t.Run("From top to bottom, publishes the first non tainted revision of the ConfigRevisions list", func(t *testing.T) {
+		version := calculateRevisionHash(&cachesv1alpha1.EnvoyResources{})
+		ncc := &cachesv1alpha1.NodeConfigCache{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				NodeID:    "node1",
+				Resources: &cachesv1alpha1.EnvoyResources{},
+			},
+			Status: cachesv1alpha1.NodeConfigCacheStatus{
+				ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+					{Version: version, Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
+				},
+			},
+		}
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{
+			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
+			Items: []cachesv1alpha1.NodeConfigRevision{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ncr1",
+						Namespace: "default",
+						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
+					},
+					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						NodeID:    "node1",
+						Version:   "aaaa",
+						Resources: &cachesv1alpha1.EnvoyResources{},
+					}},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ncr2",
+						Namespace: "default",
+						Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
+					},
+					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						NodeID:    "node1",
+						Version:   version,
+						Resources: &cachesv1alpha1.EnvoyResources{},
+					},
+					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+						Conditions: status.NewConditions(
+							status.Condition{
+								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							},
+						),
+					}}},
+		}
+
+		r := &ReconcileNodeConfigCache{
+			client:   fake.NewFakeClient(ncc, ncrList),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      "ncc",
+				Namespace: "default",
+			},
+		}
+
+		_, gotErr := r.Reconcile(req)
+		if gotErr != nil {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			return
+		}
+
+		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
+		})
+		r.client.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
+
+		if !ncrList.Items[0].Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+			t.Errorf("Revision not marked as published")
+			return
+		}
+
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
+		if ncc.Status.PublishedVersion != "aaaa" || ncc.Status.DesiredVersion != version || ncc.Status.CacheState != cachesv1alpha1.RollbackState {
+			t.Errorf("Status was not correctly updated")
+			return
+		}
+	})
+
+	// TODO: test RollbackFailed state
+	t.Run("FSet RollbackFailed state if all versions are tainted", func(t *testing.T) {
+		version := calculateRevisionHash(&cachesv1alpha1.EnvoyResources{})
+		ncc := &cachesv1alpha1.NodeConfigCache{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				NodeID:    "node1",
+				Resources: &cachesv1alpha1.EnvoyResources{},
+			},
+			Status: cachesv1alpha1.NodeConfigCacheStatus{
+				ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+					{Version: version, Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
+				},
+			},
+		}
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{
+			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
+			Items: []cachesv1alpha1.NodeConfigRevision{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ncr1",
+						Namespace: "default",
+						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
+					},
+					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						NodeID:    "node1",
+						Version:   "aaaa",
+						Resources: &cachesv1alpha1.EnvoyResources{},
+					},
+					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+						Conditions: status.NewConditions(
+							status.Condition{
+								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							},
+						),
+					}},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ncr2",
+						Namespace: "default",
+						Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
+					},
+					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						NodeID:    "node1",
+						Version:   version,
+						Resources: &cachesv1alpha1.EnvoyResources{},
+					},
+					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+						Conditions: status.NewConditions(
+							status.Condition{
+								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							},
+						),
+					}}},
+		}
+
+		r := &ReconcileNodeConfigCache{
+			client:   fake.NewFakeClient(ncc, ncrList),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      "ncc",
+				Namespace: "default",
+			},
+		}
+
+		_, gotErr := r.Reconcile(req)
+		if gotErr != nil {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			return
+		}
+
+		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
+		})
+		r.client.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
+
+		for _, ncr := range ncrList.Items {
+			if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+				t.Errorf("A revison is marked as published and it shouldn't")
+				return
+			}
+		}
+
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
+		if ncc.Status.CacheState != cachesv1alpha1.RollbackFailedState {
+			t.Errorf("Status was not correctly updated")
+			return
+		}
+	})
+
+	// TODO:test the clearance of the Rollback failed condition
+	t.Run("Set RollbackFailed state if all versions are tainted", func(t *testing.T) {
+		ncc := &cachesv1alpha1.NodeConfigCache{
+			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
+			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				NodeID: "node1",
+				Resources: &cachesv1alpha1.EnvoyResources{
+					Endpoints: []cachesv1alpha1.EnvoyResource{
+						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+					},
+				},
+			},
+			Status: cachesv1alpha1.NodeConfigCacheStatus{
+				CacheState: cachesv1alpha1.RollbackFailedState,
+				ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+				},
+				Conditions: status.NewConditions(status.Condition{
+					Type:   cachesv1alpha1.RollbackFailedCondition,
+					Status: corev1.ConditionTrue,
+				}),
+			},
+		}
+		ncrList := &cachesv1alpha1.NodeConfigRevisionList{
+			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
+			Items: []cachesv1alpha1.NodeConfigRevision{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ncr1",
+						Namespace: "default",
+						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
+					},
+					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						NodeID:    "node1",
+						Version:   "aaaa",
+						Resources: &cachesv1alpha1.EnvoyResources{},
+					},
+					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+						Conditions: status.NewConditions(
+							status.Condition{
+								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							},
+						),
+					}},
+			},
+		}
+
+		r := &ReconcileNodeConfigCache{
+			client:   fake.NewFakeClient(ncc, ncrList),
+			scheme:   s,
+			adsCache: fakeTestCache(),
+		}
+		req := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      "ncc",
+				Namespace: "default",
+			},
+		}
+
+		_, gotErr := r.Reconcile(req)
+		if gotErr != nil {
+			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			return
+		}
+
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
+		if ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.RollbackFailedCondition) ||
+			ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) ||
+			ncc.Status.CacheState != cachesv1alpha1.InSyncState {
+			t.Errorf("Status was not correctly updated")
+			return
+		}
+	})
+
+}
 
 func TestReconcileNodeConfigCache_Reconcile_Finalizer(t *testing.T) {
 
