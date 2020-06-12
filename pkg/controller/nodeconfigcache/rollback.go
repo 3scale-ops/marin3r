@@ -19,7 +19,7 @@ const (
 
 // OnError returns a function that should be called when the envoy control plane receives
 // a NACK to a discovery response from any of the gateways
-func OnError(cfg *rest.Config, namespace string) func(nodeID, version, msg string) error {
+func OnError(cfg *rest.Config) func(nodeID, version, msg string) error {
 
 	return func(nodeID, version, msg string) error {
 

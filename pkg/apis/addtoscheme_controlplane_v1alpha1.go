@@ -1,7 +1,7 @@
 package apis
 
 import (
-	"github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	"github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
 )
 
 func init() {

@@ -72,7 +72,14 @@ start: certs
 		--certificate certs/marin3r.default.svc.crt \
 		--private-key certs/marin3r.default.svc.key \
 		--ca certs/ca.crt \
-		--zap-devel
+		--zap-
+
+start-operator: ## locally starts marin3r-operator
+start-operator: export KUBECONFIG=tmp/kubeconfig
+start-operator: certs
+	WATCH_NAMESPACE="" go run cmd/manager/main.go \
+		--zap-devel \
+		--operator
 
 ###################################
 #### Targets to test with Kind ####
