@@ -162,8 +162,10 @@ spec:
           description: NodeConfigCacheStatus defines the observed state of NodeConfigCache
           properties:
             cacheState:
-              description: State is used to sumarize xds server cache status information
-                mainly for user consumption with kubectl get
+              description: CacheState summarizes all the observations about the NodeCacheConfig
+                to give the user a concrete idea on the general status of the cache.
+                It is intended only for human consumption. Other controllers should
+                relly on conditions to determine the status of the cache
               type: string
             conditions:
               description: Conditions represent the latest available observations
