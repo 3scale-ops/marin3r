@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
-	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/ghodss/yaml"
@@ -143,43 +143,33 @@ func (s JSON) Marshal(res xds_cache_types.Resource) (string, error) {
 
 func (s JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
 
+	var err error
 	switch o := res.(type) {
 
 	case *envoyapi.ClusterLoadAssignment:
-		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
-			return fmt.Errorf("Error deserializing listener: '%s'", err)
-		}
-		return nil
+		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
 	case *envoyapi.Cluster:
-		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
-			return fmt.Errorf("Error deserializing cluster: '%s'", err)
-		}
-		return nil
+		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *route.Route:
-		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
-			return fmt.Errorf("Error deserializing route: '%s'", err)
-		}
-		return nil
+	case *envoyapi_route.Route:
+		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
 	case *envoyapi.Listener:
-		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
-			return fmt.Errorf("Error deserializing listener: '%s'", err)
-		}
-		return nil
+		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *discovery.Runtime:
-		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
-			return fmt.Errorf("Error deserializing runtime: '%s'", err)
-		}
-		return nil
+	case *envoyapi_discovery.Runtime:
+		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *auth.Secret:
-		if err := jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o); err != nil {
-			return fmt.Errorf("Error deserializing secret: '%s'", err)
-		}
+	case *envoyapi_auth.Secret:
+		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
+	default:
+		err = fmt.Errorf("Unknown resource type")
+	}
+
+	if err != nil {
+		return fmt.Errorf("Error deserializing resource: '%s'", err)
 	}
 	return nil
 }
