@@ -59,11 +59,21 @@ envoy: ## executes an envoy process in a container that will try to connect to a
 envoy: certs
 	docker run -ti --rm \
 		--network=host \
-		--add-host marin3r:127.0.0.1 \
+		--add-host marin3r.default.svc:127.0.0.1 \
 		-v $$(pwd)/certs:/etc/envoy/tls \
-		-v $$(pwd)/example:/config \
+		-v $$(pwd)/deploy/local:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config/envoy-bootstrap.yaml $(ARGS)
+		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
+
+grpc-proxy: ## executes an envoy process in a container that will try to connect to a local marin3r control plane
+grpc-proxy: certs
+	docker run -ti --rm \
+		--network=host \
+		--add-host marin3r.default.svc:127.0.0.1 \
+		-v $$(pwd)/certs:/etc/envoy/tls \
+		-v $$(pwd)/deploy/local:/config \
+		envoyproxy/envoy:$(ENVOY_VERSION) \
+		envoy -c /config/discovery-service-proxy.yaml $(ARGS)
 
 start: ## locally starts marin3r
 start: export KUBECONFIG=tmp/kubeconfig
@@ -72,7 +82,7 @@ start: certs
 		--certificate certs/marin3r.default.svc.crt \
 		--private-key certs/marin3r.default.svc.key \
 		--ca certs/ca.crt \
-		--zap-
+		--zap-devel
 
 start-operator: ## locally starts marin3r-operator
 start-operator: export KUBECONFIG=tmp/kubeconfig
