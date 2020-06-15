@@ -116,6 +116,10 @@ kind-docker-build: clean-dirty-builds build
 	docker push ${IMAGE_NAME}:$(RELEASE)
 	docker push ${IMAGE_NAME}:test
 
+kind-install-certmanager:
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.crds.yaml
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.yaml
+
 kind-start-marin3r: ## deploys marin3r inside the kind k8s cluster
 kind-start-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
 kind-start-marin3r: certs kind-docker-build kind-apply-crds

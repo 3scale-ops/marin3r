@@ -1,0 +1,41 @@
+apiVersion: controlplane.marin3r.3scale.net/v1alpha1
+kind: DiscoveryServiceCertificate
+metadata:
+  name: marin3r-ca
+  # might need to make this configurable ...
+  namespace: cert-manager
+spec:
+  commonName: marin3r-ca
+  validFor: 86400
+  isCA: true
+  signer:
+    selfSigned: {}
+  secretRef:
+    name: marin3r-ca
+    namespace: cert-manager
+
+---
+apiVersion: cert-manager.io/v1alpha2
+kind: ClusterIssuer
+metadata:
+  name: marin3r-ca-issuer
+spec:
+  ca:
+    secretName: marin3r-ca
+
+---
+apiVersion: controlplane.marin3r.3scale.net/v1alpha1
+kind: DiscoveryServiceCertificate
+metadata:
+  name: test-cert
+  namespace: default
+spec:
+  commonName: test-client
+  validFor: 3600
+  signer:
+    certManager:
+      # clusterIssuer: marin3r-ca-issuer
+      clusterIssuer: marin3r-ca-issuer
+  secretRef:
+    name: test-cert
+    namespace: default

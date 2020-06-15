@@ -25,7 +25,7 @@ type NodeConfigRevisionSpec struct {
 	NodeID  string `json:"nodeID"`
 	Version string `json:"version"`
 	// +kubebuilder:validation:Enum=json;b64json;yaml
-	Serialization string          `json:"serialization,omitifempty"`
+	Serialization string          `json:"serialization,omitempty"`
 	Resources     *EnvoyResources `json:"revision"`
 }
 

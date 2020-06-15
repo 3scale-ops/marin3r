@@ -18,6 +18,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kubernetes v1.13.0
 	sigs.k8s.io/controller-runtime v0.5.2
+	github.com/jetstack/cert-manager v0.14.3
 )
 
 replace (
