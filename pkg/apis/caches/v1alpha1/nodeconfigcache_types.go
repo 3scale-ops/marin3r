@@ -45,7 +45,7 @@ type NodeConfigCacheSpec struct {
 	// +kubebuilder:validation:Pattern:[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
 	NodeID string `json:"nodeID"`
 	// +kubebuilder:validation:Enum=json;b64json;yaml
-	Serialization string          `json:"serialization,omitifempty"`
+	Serialization string          `json:"serialization,omitempty"`
 	Resources     *EnvoyResources `json:"resources"`
 }
 

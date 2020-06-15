@@ -156,7 +156,6 @@ spec:
           required:
           - nodeID
           - resources
-          - serialization
           type: object
         status:
           description: NodeConfigCacheStatus defines the observed state of NodeConfigCache

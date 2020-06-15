@@ -166,7 +166,6 @@ spec:
           required:
           - nodeID
           - revision
-          - serialization
           - version
           type: object
         status:

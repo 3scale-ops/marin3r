@@ -2,13 +2,15 @@ package controller
 
 import (
 	"github.com/3scale/marin3r/pkg/controller/configmap"
+	"github.com/3scale/marin3r/pkg/controller/discoveryservicecertificate"
 	"github.com/3scale/marin3r/pkg/controller/nodeconfigcache"
 	"github.com/3scale/marin3r/pkg/controller/nodeconfigrevision"
 	"github.com/3scale/marin3r/pkg/controller/secret"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"github.com/3scale/marin3r/pkg/controller/discoveryservice"
-	"github.com/3scale/marin3r/pkg/controller/servicediscoverycertificate"
-	"github.com/3scale/marin3r/pkg/controller/sidecarconfig"
+	// "github.com/3scale/marin3r/pkg/controller/discoveryservice"
+
+	// "github.com/3scale/marin3r/pkg/controller/sidecarconfig"
 
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -25,10 +27,10 @@ func AddToManager(m manager.Manager, c *xds_cache.SnapshotCache) error {
 }
 
 // AddToOperatorManager adds the Operator Controllers to the OperatorManager
-func AddToOperatorManager(m manager.Manager) error {
-	discoveryservice.Add(m)
-	sidecarconfig.Add(m)
-	servicediscoverycertificate.Add(m)
+func AddToOperatorManager(m manager.Manager, autodetectChannel chan schema.GroupVersionKind) error {
+	// discoveryservice.Add(m)
+	// sidecarconfig.Add(m)
+	discoveryservicecertificate.Add(m, autodetectChannel)
 
 	return nil
 }

@@ -10,7 +10,6 @@ import (
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -618,7 +617,7 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 				},
 				Status: cachesv1alpha1.NodeConfigCacheStatus{
 					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
-						{Version: "xxx", Ref: v1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+						{Version: "xxx", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
 					},
 				},
 			},
@@ -652,8 +651,8 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 				},
 				Status: cachesv1alpha1.NodeConfigCacheStatus{
 					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
-						{Version: "xxx", Ref: v1.ObjectReference{Name: "ncr1", Namespace: "default"}},
-						{Version: "zzz", Ref: v1.ObjectReference{Name: "ncr2", Namespace: "default"}},
+						{Version: "xxx", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+						{Version: "zzz", Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
 					},
 				},
 			},
@@ -705,8 +704,8 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 				},
 				Status: cachesv1alpha1.NodeConfigCacheStatus{
 					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
-						{Version: "xxx", Ref: v1.ObjectReference{Name: "ncr1", Namespace: "default"}},
-						{Version: "zzz", Ref: v1.ObjectReference{Name: "ncr2", Namespace: "default"}},
+						{Version: "xxx", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
+						{Version: "zzz", Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
 					},
 				},
 			},

@@ -25,7 +25,6 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -85,7 +84,7 @@ func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 	// availability problems.
 	grpcServer := grpc.NewServer(
 		grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams),
-		grpc.Creds(credentials.NewTLS(xdss.tlsConfig)),
+		// grpc.Creds(credentials.NewTLS(xdss.tlsConfig)),
 	)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", xdss.adsPort))
 	if err != nil {

@@ -29,6 +29,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	"github.com/3scale/marin3r/pkg/apis"
+	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/controller"
 	controller_nodeconfigcache "github.com/3scale/marin3r/pkg/controller/nodeconfigcache"
 	"github.com/3scale/marin3r/pkg/envoy"
@@ -254,6 +255,14 @@ func runOperator(ctx context.Context, cfg *rest.Config, stopCh <-chan struct{}, 
 		os.Exit(1)
 	}
 
+	// Create and start a new auto detect process for this operator
+	autodetect, err := common.NewAutoDetect(mgr)
+	if err != nil {
+		logger.Error(err, "failed to start the background process to auto-detect the operator capabilities")
+	} else {
+		autodetect.Start()
+	}
+
 	logger.Info("Registering Operator Components.")
 
 	// Setup Scheme for all resources
@@ -263,7 +272,7 @@ func runOperator(ctx context.Context, cfg *rest.Config, stopCh <-chan struct{}, 
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToOperatorManager(mgr); err != nil {
+	if err := controller.AddToOperatorManager(mgr, autodetect.SubscriptionChannel); err != nil {
 		logger.Error(err, "")
 		os.Exit(1)
 	}
