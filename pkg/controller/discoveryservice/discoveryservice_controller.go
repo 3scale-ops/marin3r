@@ -6,10 +6,13 @@ import (
 	"time"
 
 	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	"github.com/go-logr/logr"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -17,6 +20,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	// cert-manager
+	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
+)
+
+const (
+	// as there is currently no renewal mechanism for the CA
+	// set a validity sufficiently high. This might be configurable
+	// in the future when renewal is managed by the operator
+	caValidFor                 int64         = 94610000 // 3
+	caCommonName               string        = "marin3r"
+	caCertSecretNamePrefix     string        = "marin3r-ca-cert"
+	serverCertSecretNamePrefix string        = "marin3r-server-cert"
+	pollingPeriod              time.Duration = 10
 )
 
 var log = logf.Log.WithName("controller_dicoveryservice")
@@ -29,7 +46,13 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileDiscoveryService{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	dc, _ := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
+	return &ReconcileDiscoveryService{
+		client:             mgr.GetClient(),
+		scheme:             mgr.GetScheme(),
+		discoveryClient:    dc,
+		clusterIssuerWatch: false,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -46,15 +69,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for events in Namespaces to ensure the marin3r label is always properly set
-	// in the marin3r enabled namespaces
-	err = c.Watch(&source.Kind{Type: &corev1.Namespace{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	// Watch for Secret resources owned by the DiscoveryService resource
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
+	// Watch for DiscoveryServiceCertificate resources owned by the DiscoveryService resource
+	err = c.Watch(&source.Kind{Type: &controlplanev1alpha1.DiscoveryServiceCertificate{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
 	})
@@ -62,14 +78,95 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for ConfigMap resources owned by the DiscoveryService resource
-	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
+	// Watch for Deployment resources owned by the DiscoveryService resource
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
 	}
+
+	// Watch for Service resources owned by the DiscoveryService resource
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for ClusterRole resources owned by the DiscoveryService resource
+	err = c.Watch(&source.Kind{Type: &rbacv1.ClusterRole{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for ClusterRoleBinding resources owned by the DiscoveryService resource
+	err = c.Watch(&source.Kind{Type: &rbacv1.ClusterRoleBinding{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for ServiceAccount resources owned by the DiscoveryService resource
+	err = c.Watch(&source.Kind{Type: &corev1.ServiceAccount{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for Namespace resources owned by the DiscoveryService resource
+	err = c.Watch(&source.Kind{Type: &corev1.Namespace{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Set up a goroutine to autodetect if required 3rd party apis are available
+	go func() {
+
+		discoverFn := func() {
+			rec := r.(*ReconcileDiscoveryService)
+			resourceExists, _ := k8sutil.ResourceExists(
+				rec.discoveryClient,
+				certmanagerv1alpha2.SchemeGroupVersion.String(),
+				certmanagerv1alpha2.ClusterIssuerKind,
+			)
+			if resourceExists && !rec.clusterIssuerWatch {
+
+				err := c.Watch(&source.Kind{Type: &certmanagerv1alpha2.ClusterIssuer{}}, &handler.EnqueueRequestForOwner{
+					IsController: true,
+					OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+				})
+
+				if err != nil {
+					log.Error(err, "Failed setting a watch on certmanagerv1alpha2.ClusterIssuer type")
+				} else {
+					// Mark the watch was correctly set
+					log.Info("Discovered certmanagerv1alpha2 api, watching type 'ClusterIssuer'")
+					// WARNING: this is not thread safe
+					rec.clusterIssuerWatch = true
+				}
+			}
+		}
+
+		ticker := time.NewTicker(pollingPeriod * time.Second)
+
+		discoverFn()
+		for range ticker.C {
+			discoverFn()
+		}
+	}()
 
 	return nil
 }
@@ -78,85 +175,114 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 var _ reconcile.Reconciler = &ReconcileDiscoveryService{}
 
 // ReconcileDiscoveryService reconciles a DiscoveryService object
+// This is not currently thread safe, so use just one worker for
+// the controller
 type ReconcileDiscoveryService struct {
-	// This client, initialized using mgr.Client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client             client.Client
+	scheme             *runtime.Scheme
+	ds                 *controlplanev1alpha1.DiscoveryService
+	logger             logr.Logger
+	discoveryClient    discovery.DiscoveryInterface
+	clusterIssuerWatch bool
 }
 
 // Reconcile reads that state of the cluster for a DiscoveryService object and makes changes based on the state read
 // and what is in the DiscoveryService.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling DiscoveryService")
+	r.logger = log.WithValues("Request.Name", request.Name)
+	r.logger.Info("Reconciling DiscoveryService")
 	ctx := context.Background()
 
 	// Fetch the DiscoveryService instance
-	cpList := &controlplanev1alpha1.DiscoveryServiceList{}
-	err := r.client.List(ctx, cpList)
+	dsList := &controlplanev1alpha1.DiscoveryServiceList{}
+	err := r.client.List(ctx, dsList)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return reconcile.Result{}, nil
-		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	if len(cpList.Items) > 1 {
+	if len(dsList.Items) == 0 {
+		// Request object not found, could have been deleted after reconcile request.
+		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+		// Return and don't requeue
+		return reconcile.Result{}, nil
+	}
+
+	if len(dsList.Items) > 1 {
 		err := fmt.Errorf("More than one DiscoveryService object in the cluster, refusing to reconcile")
-		reqLogger.Error(err, "Only one marin3r installation per cluster is supported")
+		r.logger.Error(err, "Only one marin3r installation per cluster is supported")
 		return reconcile.Result{RequeueAfter: 10 * time.Second}, err
 	}
 
-	// CertManagerSigner object??
-	//        ensureCA: create it if it does not exist
-	//        ensure cert-manager CA issuer
+	// Call reconcilers in the proper installation order
+	var result reconcile.Result
+	r.ds = &dsList.Items[0]
 
-	// ensureServerCert
-	//   if signerType == CertManagerSigner {
-	//		create a cert-manager issued certificate using the CA issuer
-	//      or better create a ServiceDiscoveryCertificate object with signer = CertManagerSigner??
-	//   }
+	result, err = r.reconcileCA(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
 
-	// ensureDeployment -> not necessary if we achieve single deployment setup with envoy proxy for mTLS
+	result, err = r.reconcileSigner(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
 
-	// ensureService
+	result, err = r.reconcileServerCertificate(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
 
-	// ensureWebhookConfig - use CA and service to create the service
+	result, err = r.reconcileServiceAccount(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
 
-	// create a SidecarConfig onject per namespace in the ServiceDiscovery objgit ect
+	result, err = r.reconcileClusterRole(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
+
+	result, err = r.reconcileClusterRoleBinding(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
+
+	result, err = r.reconcileDeployment(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
+
+	result, err = r.reconcileService(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
+
+	// result, err = r.reconcileNamespaces(ctx)
+	// if result.Requeue || err != nil {
+	// 	return result, err
+	// }
+
+	// result, err = r.reconcileMutatingWebhook(ctx)
+	// if result.Requeue || err != nil {
+	// 	return result, err
+	// }
 
 	return reconcile.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *controlplanev1alpha1.DiscoveryService) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
-	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
-	}
+// reconcileNamespaces is in charge of keep the resources that envoy sidecars require available in all
+// the active namespaces:
+//     - a Secret holding a client certificate for mTLS with the DiscoveryService
+//     - a ConfigMap with the envoy bootstrap configuration to allow envoy sidecars to talk to the DiscoveryService
+//     - a label in the Namespace object that marks it as active for a given ServiceDiscovery instance
+func (r *ReconcileDiscoveryService) reconcileNamespaces(ctx context.Context) (reconcile.Result, error) {
+
+	return reconcile.Result{}, nil
+}
+
+// reconcileMutatingWebhook keeps the marin3r MutatingWebhookConfiguration object in sync with the desired state
+func (r *ReconcileDiscoveryService) reconcileMutatingWebhook(ctx context.Context) (reconcile.Result, error) {
+
+	return reconcile.Result{}, nil
 }

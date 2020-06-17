@@ -31,7 +31,7 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileCertManagerCertificate(c
 
 	// Fetch the certmanagerv1alpha2.Certificate instance
 	cert := &certmanagerv1alpha2.Certificate{}
-	err = r.client.Get(context.TODO(),
+	err = r.client.Get(ctx,
 		types.NamespacedName{
 			Name:      sdcert.Spec.SecretRef.Name,
 			Namespace: sdcert.Spec.SecretRef.Namespace,

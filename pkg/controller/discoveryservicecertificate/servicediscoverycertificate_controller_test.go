@@ -8,7 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -58,8 +57,7 @@ func TestReconcileDiscoveryServiceCertificate_Reconcile(t *testing.T) {
 
 func TestAdd(t *testing.T) {
 	type args struct {
-		mgr               manager.Manager
-		autodetectChannel chan schema.GroupVersionKind
+		mgr manager.Manager
 	}
 	tests := []struct {
 		name    string
@@ -70,7 +68,7 @@ func TestAdd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Add(tt.args.mgr, tt.args.autodetectChannel); (err != nil) != tt.wantErr {
+			if err := Add(tt.args.mgr); (err != nil) != tt.wantErr {
 				t.Errorf("Add() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -99,9 +97,8 @@ func Test_newReconciler(t *testing.T) {
 
 func Test_add(t *testing.T) {
 	type args struct {
-		mgr               manager.Manager
-		r                 reconcile.Reconciler
-		autodetectChannel chan schema.GroupVersionKind
+		mgr manager.Manager
+		r   reconcile.Reconciler
 	}
 	tests := []struct {
 		name    string
@@ -112,7 +109,7 @@ func Test_add(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := add(tt.args.mgr, tt.args.r, tt.args.autodetectChannel); (err != nil) != tt.wantErr {
+			if err := add(tt.args.mgr, tt.args.r); (err != nil) != tt.wantErr {
 				t.Errorf("add() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

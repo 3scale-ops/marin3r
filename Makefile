@@ -110,6 +110,7 @@ kind-create: tmp $(KIND)
 	hack/kind-with-registry.sh
 
 kind-docker-build: ## builds the docker image  $(RELEASE) or HEAD of the current branch when unset and pushes it to the kind local registry in "localhost:5000"
+kind-docker-build: export IMAGE_NAME = localhost:5000/${NAME}
 kind-docker-build: clean-dirty-builds build
 	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
 	docker tag ${IMAGE_NAME}:$(RELEASE) ${IMAGE_NAME}:test
@@ -121,7 +122,6 @@ kind-install-certmanager:
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.yaml
 
 kind-start-marin3r: ## deploys marin3r inside the kind k8s cluster
-kind-start-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
 kind-start-marin3r: certs kind-docker-build kind-apply-crds
 	kubectl label namespace/default marin3r.3scale.net/status="enabled" || true
 	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r.default.svc.crt --key=certs/marin3r.default.svc.key || true
@@ -135,7 +135,7 @@ kind-start-envoy: ## runs an envoy pod inside the k8s kind cluster that connects
 kind-start-envoy: certs
 	kubectl create secret tls envoy1-cert --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key || true
 	kubectl annotate secret envoy1-cert cert-manager.io/common-name=envoy-server1 || true
-	kubectl apply -f deploy/kind/envoy-pod.yaml
+	kubectl apply -f deploy/kind/envoy1-pod.yaml
 	while [[ $$(kubectl get pods envoy1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do sleep 5; done
 	kubectl logs -f envoy1
 
