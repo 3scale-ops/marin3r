@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -10,8 +9,24 @@ import (
 
 // DiscoveryServiceSpec defines the desired state of DiscoveryService
 type DiscoveryServiceSpec struct {
-	Namespaces           []string               `json:"namespaces,omitempty"`
-	ServerCertificateRef corev1.SecretReference `json:"serverCertificateRef,omitempty"`
+	DiscoveryServiceNamespace string       `json:"discoveryServiceNamespace"`
+	EnabledNamespaces         []string     `json:"enabledNamespaces,omitempty"`
+	Signer                    SignerConfig `json:"signer"`
+	Image                     string       `json:"image"`
+}
+
+// SignerConfig holds the config for the marin3r instance certificate signer
+type SignerConfig struct {
+	CertManager *CertManagerSignerConfig `json:"certManager,omitempty"`
+}
+
+// CertManagerSignerConfig holds the specific config for the cert-manager signer
+type CertManagerSignerConfig struct {
+	// When using cert-manager, the CA needs to be syncronized to the namespace where
+	// cert-manager runs. To deploy the CA in a different namespace a command line flag
+	// has to be passed to cert-manager, which is not ideal.
+	// See https://cert-manager.io/docs/configuration/ca/#deployment.
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // SidecarInjectorConfig contains config options for the configuration
@@ -33,7 +48,7 @@ type DiscoveryServiceStatus struct {
 
 // DiscoveryService is the Schema for the DiscoveryServices API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=discoveryservices,scope=Namespaced
+// +kubebuilder:resource:path=discoveryservices,scope=Cluster
 type DiscoveryService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
