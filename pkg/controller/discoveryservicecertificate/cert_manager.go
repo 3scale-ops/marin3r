@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/3scale/marin3r/pkg/apis/external"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +21,7 @@ import (
 func (r *ReconcileDiscoveryServiceCertificate) reconcileCertManagerCertificate(ctx context.Context, sdcert *controlplanev1alpha1.DiscoveryServiceCertificate) error {
 
 	// Validate the cert-manager apis are available
-	exists, err := r.hasCertManagerCertificate()
+	exists, err := external.HasCertManagerCertificate(r.discoveryClient)
 	if err != nil {
 		return err
 	}
@@ -64,14 +64,6 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileCertManagerCertificate(c
 	}
 
 	return nil
-}
-
-func (r *ReconcileDiscoveryServiceCertificate) hasCertManagerCertificate() (bool, error) {
-	return k8sutil.ResourceExists(
-		r.discoveryClient,
-		certmanagerv1alpha2.SchemeGroupVersion.String(),
-		certmanagerv1alpha2.CertificateKind,
-	)
 }
 
 func genCertManagerCertificateObject(cfg controlplanev1alpha1.DiscoveryServiceCertificateSpec) *certmanagerv1alpha2.Certificate {
