@@ -44,13 +44,16 @@ const (
 	paramEnvoyExtraArgs    = "envoy-extra-args"
 
 	// default values
-	DefaultContainerName      = "envoy-sidecar"
-	DefaultImage              = "envoyproxy/envoy:v1.14.1"
-	DefaultBootstrapConfigMap = "envoy-sidecar-bootstrap"
-	DefaultConfigVolume       = "envoy-sidecar-bootstrap"
-	DefaultTLSVolume          = "envoy-sidecar-tls"
-	DefaultClientCertificate  = "envoy-sidecar-client-cert"
-	DefaultEnvoyExtraArgs     = ""
+	DefaultContainerName       = "envoy-sidecar"
+	DefaultImage               = "envoyproxy/envoy:v1.14.1"
+	DefaultBootstrapConfigMap  = "envoy-sidecar-bootstrap"
+	DefaultConfigVolume        = "envoy-sidecar-bootstrap"
+	DefaultTLSVolume           = "envoy-sidecar-tls"
+	DefaultClientCertificate   = "envoy-sidecar-client-cert"
+	DefaultEnvoyExtraArgs      = ""
+	DefaultEnvoyConfigBasePath = "/etc/envoy/bootstrap"
+	DefaultEnvoyConfigFileName = "config.json"
+	DefaultEnvoyTLSBasePath    = "/etc/envoy/tls/client"
 
 	marin3rAnnotationsDomain = "marin3r.3scale.net"
 )
@@ -227,7 +230,7 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 		Command: []string{"envoy"},
 		Args: []string{
 			"-c",
-			"/etc/envoy/bootstrap/config.yaml",
+			fmt.Sprintf("%s.%s", DefaultEnvoyConfigBasePath, DefaultEnvoyConfigFileName),
 			"--service-node",
 			esc.nodeID,
 			"--service-cluster",
@@ -238,12 +241,12 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 			{
 				Name:      esc.tlsVolume,
 				ReadOnly:  true,
-				MountPath: "/etc/envoy/tls/client",
+				MountPath: DefaultEnvoyTLSBasePath,
 			},
 			{
 				Name:      esc.configVolume,
 				ReadOnly:  true,
-				MountPath: "/etc/envoy/bootstrap",
+				MountPath: DefaultEnvoyConfigBasePath,
 			},
 		},
 	}

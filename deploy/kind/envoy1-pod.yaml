@@ -3,6 +3,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: envoy1
+  namespace: test1
 spec:
   containers:
     - name: envoy-sidecar
@@ -11,7 +12,9 @@ spec:
       args:
         [
           "-c",
-          "/etc/envoy/bootstrap/config.yaml",
+          "/etc/envoy/bootstrap/config.json",
+          "--component-log-level",
+          "http:debug,connection:debug",
           "--service-cluster",
           "envoy1",
           "--service-node",
