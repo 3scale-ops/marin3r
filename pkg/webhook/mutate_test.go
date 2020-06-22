@@ -83,7 +83,7 @@ func TestMutatePod(t *testing.T) {
 						Name:    "envoy-sidecar",
 						Image:   "envoyproxy/envoy:v1.14.1",
 						Command: []string{"envoy"},
-						Args:    []string{"-c", "/etc/envoy/bootstrap/config.yaml", "--service-node", "test", "--service-cluster", "test"},
+						Args:    []string{"-c", "/etc/envoy/bootstrap/config.json", "--service-node", "test", "--service-cluster", "test"},
 						Ports:   []corev1.ContainerPort{},
 						VolumeMounts: []corev1.VolumeMount{
 							{

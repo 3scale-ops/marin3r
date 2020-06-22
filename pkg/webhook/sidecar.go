@@ -230,7 +230,7 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 		Command: []string{"envoy"},
 		Args: []string{
 			"-c",
-			fmt.Sprintf("%s.%s", DefaultEnvoyConfigBasePath, DefaultEnvoyConfigFileName),
+			fmt.Sprintf("%s/%s", DefaultEnvoyConfigBasePath, DefaultEnvoyConfigFileName),
 			"--service-node",
 			esc.nodeID,
 			"--service-cluster",
