@@ -5,6 +5,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	DiscoveryServiceCertificateKind string = "DiscoveryServiceCertificate"
+)
+
 // DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate
 type DiscoveryServiceCertificateSpec struct {
 	CommonName          string                            `json:"commonName"`

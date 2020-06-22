@@ -44,13 +44,13 @@ const (
 	paramEnvoyExtraArgs    = "envoy-extra-args"
 
 	// default values
-	defaultContainerName     = "envoy-sidecar"
-	defaultImage             = "envoyproxy/envoy:v1.14.1"
-	defaultADSConfigMap      = "envoy-sidecar-bootstrap"
-	defaultConfigVolume      = "envoy-sidecar-bootstrap"
-	defaultTLSVolume         = "envoy-sidecar-tls"
-	defaultClientCertificate = "envoy-sidecar-client-cert"
-	defaultEnvoyExtraArgs    = ""
+	DefaultContainerName      = "envoy-sidecar"
+	DefaultImage              = "envoyproxy/envoy:v1.14.1"
+	DefaultBootstrapConfigMap = "envoy-sidecar-bootstrap"
+	DefaultConfigVolume       = "envoy-sidecar-bootstrap"
+	DefaultTLSVolume          = "envoy-sidecar-tls"
+	DefaultClientCertificate  = "envoy-sidecar-client-cert"
+	DefaultEnvoyExtraArgs     = ""
 
 	marin3rAnnotationsDomain = "marin3r.3scale.net"
 )
@@ -71,13 +71,13 @@ type envoySidecarConfig struct {
 func getStringParam(key string, annotations map[string]string) string {
 
 	var defaults = map[string]string{
-		paramContainerName:     defaultContainerName,
-		paramImage:             defaultImage,
-		paramADSConfigMap:      defaultADSConfigMap,
-		paramConfigVolume:      defaultConfigVolume,
-		paramTLSVolume:         defaultTLSVolume,
-		paramClientCertificate: defaultClientCertificate,
-		paramEnvoyExtraArgs:    defaultEnvoyExtraArgs,
+		paramContainerName:     DefaultContainerName,
+		paramImage:             DefaultImage,
+		paramADSConfigMap:      DefaultBootstrapConfigMap,
+		paramConfigVolume:      DefaultConfigVolume,
+		paramTLSVolume:         DefaultTLSVolume,
+		paramClientCertificate: DefaultClientCertificate,
+		paramEnvoyExtraArgs:    DefaultEnvoyExtraArgs,
 	}
 
 	// return the value specified in the corresponding annotation, if any

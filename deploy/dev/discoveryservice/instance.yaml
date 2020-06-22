@@ -8,3 +8,6 @@ spec:
   signer:
     certManager:
       namespace: cert-manager
+  enabledNamespaces:
+    - test1
+    - test2

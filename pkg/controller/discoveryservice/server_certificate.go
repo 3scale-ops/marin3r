@@ -66,7 +66,7 @@ func (r *ReconcileDiscoveryService) getServerCertObject() *controlplanev1alpha1.
 		Spec: controlplanev1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: r.getServerCertCommonName(),
 			IsCA:       true,
-			ValidFor:   caValidFor,
+			ValidFor:   serverValidFor,
 			Signer: controlplanev1alpha1.DiscoveryServiceCertificateSigner{
 				CertManager: &controlplanev1alpha1.CertManagerConfig{
 					ClusterIssuer: r.getClusterIssuerName(),
