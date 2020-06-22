@@ -67,6 +67,21 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileCertManagerCertificate(c
 }
 
 func genCertManagerCertificateObject(cfg controlplanev1alpha1.DiscoveryServiceCertificateSpec) *certmanagerv1alpha2.Certificate {
+
+	hosts := []string{}
+	if cfg.IsServerCertificate && len(cfg.Hosts) == 0 {
+		hosts = []string{cfg.CommonName}
+	} else {
+		hosts = cfg.Hosts
+	}
+
+	usages := []certmanagerv1alpha2.KeyUsage{
+		certmanagerv1alpha2.UsageClientAuth,
+	}
+	if cfg.IsServerCertificate {
+		usages = append(usages, certmanagerv1alpha2.UsageServerAuth)
+	}
+
 	return &certmanagerv1alpha2.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      cfg.SecretRef.Name,
@@ -79,6 +94,8 @@ func genCertManagerCertificateObject(cfg controlplanev1alpha1.DiscoveryServiceCe
 				Name: cfg.Signer.CertManager.ClusterIssuer,
 				Kind: "ClusterIssuer",
 			},
+			DNSNames: hosts,
+			Usages:   usages,
 		},
 	}
 }

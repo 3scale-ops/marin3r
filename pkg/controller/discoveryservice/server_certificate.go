@@ -64,14 +64,15 @@ func (r *ReconcileDiscoveryService) getServerCertObject() *controlplanev1alpha1.
 			Namespace: r.getNamespace(),
 		},
 		Spec: controlplanev1alpha1.DiscoveryServiceCertificateSpec{
-			CommonName: r.getServerCertCommonName(),
-			IsCA:       true,
-			ValidFor:   serverValidFor,
+			CommonName:          r.getServerCertCommonName(),
+			IsServerCertificate: true,
+			ValidFor:            serverValidFor,
 			Signer: controlplanev1alpha1.DiscoveryServiceCertificateSigner{
 				CertManager: &controlplanev1alpha1.CertManagerConfig{
 					ClusterIssuer: r.getClusterIssuerName(),
 				},
 			},
+			Hosts: []string{r.getDiscoveryServiceHost()},
 			SecretRef: corev1.SecretReference{
 				Name:      r.getServerCertName(),
 				Namespace: r.getNamespace(),
