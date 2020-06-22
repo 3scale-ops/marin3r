@@ -367,7 +367,7 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 				Command: []string{"envoy"},
 				Args: []string{
 					"-c",
-					"/etc/envoy/bootstrap/config.yaml",
+					"/etc/envoy/bootstrap/config.json",
 					"--service-node",
 					"test-id",
 					"--service-cluster",
@@ -428,7 +428,7 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 				Command: []string{"envoy"},
 				Args: []string{
 					"-c",
-					"/etc/envoy/bootstrap/config.yaml",
+					"/etc/envoy/bootstrap/config.json",
 					"--service-node",
 					"test-id",
 					"--service-cluster",
