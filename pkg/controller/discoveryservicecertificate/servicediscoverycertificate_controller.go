@@ -5,7 +5,7 @@ import (
 	"time"
 
 	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/3scale/marin3r/pkg/apis/external"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -63,11 +63,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 		discoverFn := func() {
 			rec := r.(*ReconcileDiscoveryServiceCertificate)
-			resourceExists, _ := k8sutil.ResourceExists(
-				rec.discoveryClient,
-				certmanagerv1alpha2.SchemeGroupVersion.String(),
-				certmanagerv1alpha2.CertificateKind,
-			)
+			resourceExists, _ := external.HasCertManagerCertificate(rec.discoveryClient)
 			if resourceExists && !rec.certificateWatch {
 
 				err := c.Watch(&source.Kind{Type: &certmanagerv1alpha2.Certificate{}}, &handler.EnqueueRequestForOwner{

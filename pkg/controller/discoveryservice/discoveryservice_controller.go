@@ -6,8 +6,8 @@ import (
 	"time"
 
 	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	"github.com/3scale/marin3r/pkg/apis/external"
 	"github.com/go-logr/logr"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -137,18 +137,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 		discoverFn := func() {
 			rec := r.(*ReconcileDiscoveryService)
-			resourceExists, _ := k8sutil.ResourceExists(
-				rec.discoveryClient,
-				certmanagerv1alpha2.SchemeGroupVersion.String(),
-				certmanagerv1alpha2.ClusterIssuerKind,
-			)
-			if resourceExists && !rec.clusterIssuerWatch {
+			resourceExists, _ := external.HasCertManagerClusterIssuer(rec.discoveryClient)
 
+			if resourceExists && !rec.clusterIssuerWatch {
 				err := c.Watch(&source.Kind{Type: &certmanagerv1alpha2.ClusterIssuer{}}, &handler.EnqueueRequestForOwner{
 					IsController: true,
 					OwnerType:    &controlplanev1alpha1.DiscoveryService{},
 				})
-
 				if err != nil {
 					log.Error(err, "Failed setting a watch on certmanagerv1alpha2.ClusterIssuer type")
 				} else {
@@ -258,31 +253,15 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
-	// result, err = r.reconcileNamespaces(ctx)
-	// if result.Requeue || err != nil {
-	// 	return result, err
-	// }
+	result, err = r.reconcileEnabledNamespaces(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
 
 	// result, err = r.reconcileMutatingWebhook(ctx)
 	// if result.Requeue || err != nil {
 	// 	return result, err
 	// }
-
-	return reconcile.Result{}, nil
-}
-
-// reconcileNamespaces is in charge of keep the resources that envoy sidecars require available in all
-// the active namespaces:
-//     - a Secret holding a client certificate for mTLS with the DiscoveryService
-//     - a ConfigMap with the envoy bootstrap configuration to allow envoy sidecars to talk to the DiscoveryService
-//     - a label in the Namespace object that marks it as active for a given ServiceDiscovery instance
-func (r *ReconcileDiscoveryService) reconcileNamespaces(ctx context.Context) (reconcile.Result, error) {
-
-	return reconcile.Result{}, nil
-}
-
-// reconcileMutatingWebhook keeps the marin3r MutatingWebhookConfiguration object in sync with the desired state
-func (r *ReconcileDiscoveryService) reconcileMutatingWebhook(ctx context.Context) (reconcile.Result, error) {
 
 	return reconcile.Result{}, nil
 }

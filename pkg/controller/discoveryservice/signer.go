@@ -14,8 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	// cert-manager
+	"github.com/3scale/marin3r/pkg/apis/external"
 	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 )
 
 // reconcileSigner is responsible of keeping the signer (certificates emission backend) configuration
@@ -40,7 +40,7 @@ func (r *ReconcileDiscoveryService) reconcileCertManagerSigner(ctx context.Conte
 	r.logger.V(1).Info("Reconciling CertManager ClusterIssuer")
 
 	// Validate the cert-manager apis are available
-	exists, err := r.hasCertManagerClusterIssuer()
+	exists, err := external.HasCertManagerClusterIssuer(r.discoveryClient)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -149,12 +149,4 @@ func (r *ReconcileDiscoveryService) syncCASecret(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (r *ReconcileDiscoveryService) hasCertManagerClusterIssuer() (bool, error) {
-	return k8sutil.ResourceExists(
-		r.discoveryClient,
-		certmanagerv1alpha2.SchemeGroupVersion.String(),
-		certmanagerv1alpha2.ClusterIssuerKind,
-	)
 }
