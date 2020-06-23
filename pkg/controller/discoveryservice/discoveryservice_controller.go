@@ -255,6 +255,11 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
+	// TODO: mechanism to cleanup resorces from namespaces
+	// TODO: finalizer to cleanup labels in namespaces
+	// This is necessary because namespaces are not
+	// resources owned by this controller so the usual
+	// garbage collection mechanisms won't
 	result, err = r.reconcileEnabledNamespaces(ctx)
 	if result.Requeue || err != nil {
 		return result, err
