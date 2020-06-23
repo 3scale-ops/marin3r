@@ -17,7 +17,7 @@ func (r *ReconcileDiscoveryService) getAppLabel() string {
 }
 
 func (r *ReconcileDiscoveryService) getDiscoveryServiceHost() string {
-	return fmt.Sprintf("%s.%s.%s", r.getName(), r.getNamespace(), "svc.cluster.local")
+	return fmt.Sprintf("%s.%s.%s", r.getName(), r.getNamespace(), "svc")
 }
 
 func (r *ReconcileDiscoveryService) getDiscoveryServicePort() uint32 {
