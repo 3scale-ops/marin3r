@@ -39,8 +39,12 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 				return err
 			}
 			// Set DiscoveryServiceCertificate instance as the owner and controller
-			if err := controllerutil.SetControllerReference(sdcert, cert, r.scheme); err != nil {
-				return err
+			// unless it is a CA certificate, in which case we do not want garbage collection
+			// to occur, nor do we want it to be reconciled after initial creation
+			if !sdcert.Spec.IsCA {
+				if err := controllerutil.SetControllerReference(sdcert, cert, r.scheme); err != nil {
+					return err
+				}
 			}
 			// Write the object to the api
 			if err := r.client.Create(ctx, cert); err != nil {
