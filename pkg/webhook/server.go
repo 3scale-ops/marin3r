@@ -23,6 +23,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+const (
+	MutatePath string = "/mutate"
+)
+
 var logger = logf.Log.WithName("mutating_webhook")
 
 type WebhookServer struct {
@@ -45,7 +49,7 @@ func NewWebhookServer(ctx context.Context, port int32, tlsConfig *tls.Config) *W
 func (ws *WebhookServer) Start(stopCh <-chan struct{}) error {
 
 	mux := http.NewServeMux()
-	mux.Handle("/mutate", AdmitFuncHandler(MutatePod))
+	mux.Handle(MutatePath, AdmitFuncHandler(MutatePod))
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%v", ws.port),

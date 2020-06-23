@@ -265,10 +265,10 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
-	// result, err = r.reconcileMutatingWebhook(ctx)
-	// if result.Requeue || err != nil {
-	// 	return result, err
-	// }
+	result, err = r.reconcileMutatingWebhook(ctx)
+	if result.Requeue || err != nil {
+		return result, err
+	}
 
 	return reconcile.Result{}, nil
 }
