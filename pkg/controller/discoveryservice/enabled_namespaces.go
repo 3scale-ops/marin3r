@@ -78,7 +78,7 @@ func (r *ReconcileDiscoveryService) reconcileEnabledNamespace(ctx context.Contex
 		}
 
 		// Set namespace labels
-		ns.ObjectMeta.Labels[controlplanev1alpha1.EnabledNamespaceLabelKey] = controlplanev1alpha1.EnabledNamespaceLabelValue
+		ns.ObjectMeta.Labels[controlplanev1alpha1.DiscoveryServiceEnabledKey] = controlplanev1alpha1.DiscoveryServiceEnabledValue
 		ns.ObjectMeta.Labels[controlplanev1alpha1.DiscoveryServiceLabelKey] = r.ds.GetName()
 
 		if err := r.client.Patch(ctx, ns, patch); err != nil {
@@ -113,8 +113,8 @@ func isOwner(owner metav1.Object, object metav1.Object) (bool, error) {
 
 func hasEnabledLabel(object metav1.Object) bool {
 
-	value, ok := object.GetLabels()[controlplanev1alpha1.EnabledNamespaceLabelKey]
-	if ok && value == controlplanev1alpha1.EnabledNamespaceLabelValue {
+	value, ok := object.GetLabels()[controlplanev1alpha1.DiscoveryServiceEnabledKey]
+	if ok && value == controlplanev1alpha1.DiscoveryServiceEnabledValue {
 		return true
 	}
 
