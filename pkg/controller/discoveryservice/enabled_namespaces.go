@@ -43,6 +43,8 @@ func (r *ReconcileDiscoveryService) reconcileEnabledNamespaces(ctx context.Conte
 	}
 
 	if err != nil {
+		// TODO: this will surface just the last error, change it so if several errors
+		// occur in different namespaces all of them are reported to the caller
 		return reconcile.Result{}, fmt.Errorf("Failed reconciling enabled namespaces: %s", err)
 	}
 
@@ -62,17 +64,23 @@ func (r *ReconcileDiscoveryService) reconcileEnabledNamespace(ctx context.Contex
 	}
 
 	owner, err := isOwner(r.ds, ns)
+	if err != nil {
+		return err
+	}
 
 	if !owner || !hasEnabledLabel(ns) {
+
 		patch := client.MergeFrom(ns.DeepCopy())
-		controllerutil.SetOwnerReference(r.ds, ns, r.scheme)
+
+		// Init label's map
 		if ns.GetLabels() == nil {
-			ns.SetLabels(map[string]string{
-				controlplanev1alpha1.EnabledNamespaceLabelKey: controlplanev1alpha1.EnabledNamespaceLabelValue,
-			})
-		} else {
-			ns.ObjectMeta.Labels[controlplanev1alpha1.EnabledNamespaceLabelKey] = controlplanev1alpha1.EnabledNamespaceLabelValue
+			ns.SetLabels(map[string]string{})
 		}
+
+		// Set namespace labels
+		ns.ObjectMeta.Labels[controlplanev1alpha1.EnabledNamespaceLabelKey] = controlplanev1alpha1.EnabledNamespaceLabelValue
+		ns.ObjectMeta.Labels[controlplanev1alpha1.DiscoveryServiceLabelKey] = r.ds.GetName()
+
 		if err := r.client.Patch(ctx, ns, patch); err != nil {
 			return err
 		}
@@ -91,19 +99,16 @@ func (r *ReconcileDiscoveryService) reconcileEnabledNamespace(ctx context.Contex
 }
 
 func isOwner(owner metav1.Object, object metav1.Object) (bool, error) {
-	flag := false
-	for _, or := range object.GetOwnerReferences() {
-		if or.Kind == controlplanev1alpha1.DiscoveryServiceKind {
-			// Only a single DiscoveryService can own a namespace at a given point in time
-			if or.Name == owner.GetName() {
-				flag = true
-			} else {
-				err := fmt.Errorf("marin3r instance '%s' already enabled in namespace '%s'", or.Name, object)
-				return false, err
-			}
+
+	value, ok := object.GetLabels()[controlplanev1alpha1.DiscoveryServiceLabelKey]
+	if ok {
+		if value == owner.GetName() {
+			return true, nil
 		}
+		return false, fmt.Errorf("Namespace already onwed by %s", value)
 	}
-	return flag, nil
+
+	return false, nil
 }
 
 func hasEnabledLabel(object metav1.Object) bool {

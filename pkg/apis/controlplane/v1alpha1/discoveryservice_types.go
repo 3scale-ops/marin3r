@@ -8,6 +8,7 @@ const (
 	DiscoveryServiceKind       string = "DiscoveryService"
 	EnabledNamespaceLabelKey   string = "marin3r.3scale.net/status"
 	EnabledNamespaceLabelValue string = "enabled"
+	DiscoveryServiceLabelKey   string = "marin3r.3scale.net/discovery-service"
 )
 
 // DiscoveryServiceSpec defines the desired state of DiscoveryService
