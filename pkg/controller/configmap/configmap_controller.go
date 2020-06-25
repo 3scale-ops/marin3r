@@ -124,48 +124,48 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 
 	reqLogger.Info("Reconciling from ConfigMap")
 
-	// Get corresponding NodeConfigCache
-	nccList := &marin3rv1alpha1.NodeConfigCacheList{}
+	// Get corresponding EnvoyConfig
+	ecList := &marin3rv1alpha1.EnvoyConfigList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{nodeIDTag: nodeID},
 	})
 	if err != nil {
-		reqLogger.Error(err, "Could not create selector to get cachesalpha1v1.NodeConfigCache resource")
+		reqLogger.Error(err, "Could not create selector to get cachesalpha1v1.EnvoyConfig resource")
 		return reconcile.Result{}, err
 	}
-	err = r.client.List(ctx, nccList, &client.ListOptions{LabelSelector: selector})
+	err = r.client.List(ctx, ecList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		// Error reading the resource - requeue the request.
-		reqLogger.Error(err, "Error listing cachesalpha1v1.nodeconfigcaches")
+		reqLogger.Error(err, "Error listing cachesalpha1v1.envoyconfigs")
 		return reconcile.Result{}, err
 	}
 
-	switch count := len(nccList.Items); count {
+	switch count := len(ecList.Items); count {
 
 	case 0:
-		// NodeConfigCache resource not found, create it
-		reqLogger.Info("Creating new NodeConfigCache")
-		ncc, err := createNodeConfigCache(ctx, r.client, *cm, nodeID, request.Name, request.Namespace)
+		// EnvoyConfig resource not found, create it
+		reqLogger.Info("Creating new EnvoyConfig")
+		ec, err := createEnvoyConfig(ctx, r.client, *cm, nodeID, request.Name, request.Namespace)
 		if err != nil {
-			reqLogger.Error(err, "Error building new cachesalpha1v1.nodeconfigcache")
+			reqLogger.Error(err, "Error building new cachesalpha1v1.envoyconfig")
 			return reconcile.Result{}, err
 		}
 
 		// Set ConfigMap cm as the owner and controller
-		if err := controllerutil.SetControllerReference(cm, ncc, r.scheme); err != nil {
+		if err := controllerutil.SetControllerReference(cm, ec, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
 
 		// Create the object
-		err = r.client.Create(ctx, ncc)
+		err = r.client.Create(ctx, ec)
 		if err != nil {
-			reqLogger.Error(err, "Error creating new cachesalpha1v1.nodeconfigcache")
+			reqLogger.Error(err, "Error creating new cachesalpha1v1.envoyconfig")
 			return reconcile.Result{}, err
 		}
 
 	case 1:
-		// NodeConfigCache exists, updating it
-		ncc := &nccList.Items[0]
+		// EnvoyConfig exists, updating it
+		ec := &ecList.Items[0]
 
 		// patch operation to update Spec.Version in the cache
 
@@ -185,21 +185,21 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 		resources.Secrets = secrets
 
-		// If the set of resources has changed, update the NodeConfigCache
-		if fmt.Sprintf("%v", resources) != fmt.Sprintf("%v", ncc.Spec.Resources) {
-			reqLogger.Info("Set of resources has changed, updating NodeConfigCache")
-			reqLogger.Info(fmt.Sprintf("%v ##### %v", resources, ncc.Spec.Resources))
-			patch := client.MergeFrom(ncc.DeepCopy())
-			ncc.Spec.Resources = resources
-			if err := r.client.Patch(ctx, ncc, patch); err != nil {
+		// If the set of resources has changed, update the EnvoyConfig
+		if fmt.Sprintf("%v", resources) != fmt.Sprintf("%v", ec.Spec.Resources) {
+			reqLogger.Info("Set of resources has changed, updating EnvoyConfig")
+			reqLogger.Info(fmt.Sprintf("%v ##### %v", resources, ec.Spec.Resources))
+			patch := client.MergeFrom(ec.DeepCopy())
+			ec.Spec.Resources = resources
+			if err := r.client.Patch(ctx, ec, patch); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
 
 	default:
-		// There should always be just one cachesalpha1v1.NodeConfigCache per envoy node-id
-		if len(nccList.Items) > 1 {
-			err := fmt.Errorf("More than 1 NodeConfigCache object found for NodeID '%s', cannot reconcile", nodeID)
+		// There should always be just one cachesalpha1v1.EnvoyConfig per envoy node-id
+		if len(ecList.Items) > 1 {
+			err := fmt.Errorf("More than 1 EnvoyConfig object found for NodeID '%s', cannot reconcile", nodeID)
 			reqLogger.Error(err, "")
 			// Don't flood the controlle with reconciles that are likely to fail
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, err
@@ -210,9 +210,9 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcile.Result{RequeueAfter: reconcileInterval * time.Second}, nil
 }
 
-func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.ConfigMap, nodeID, name, namespace string) (*marin3rv1alpha1.NodeConfigCache, error) {
+func createEnvoyConfig(ctx context.Context, c client.Client, cm corev1.ConfigMap, nodeID, name, namespace string) (*marin3rv1alpha1.EnvoyConfig, error) {
 
-	ncc := marin3rv1alpha1.NodeConfigCache{
+	ec := marin3rv1alpha1.EnvoyConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -220,7 +220,7 @@ func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.Confi
 				nodeIDTag: nodeID,
 			},
 		},
-		Spec: marin3rv1alpha1.NodeConfigCacheSpec{
+		Spec: marin3rv1alpha1.EnvoyConfigSpec{
 			NodeID:        nodeID,
 			Serialization: defaultSerialization,
 		},
@@ -230,15 +230,15 @@ func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.Confi
 	if err != nil {
 		return nil, err
 	}
-	ncc.Spec.Resources = er
+	ec.Spec.Resources = er
 
 	secrets, err := populateSecrets(ctx, c, namespace)
 	if err != nil {
 		return nil, err
 	}
-	ncc.Spec.Resources.Secrets = secrets
+	ec.Spec.Resources.Secrets = secrets
 
-	return &ncc, nil
+	return &ec, nil
 }
 
 func populateResources(data string) (*marin3rv1alpha1.EnvoyResources, error) {

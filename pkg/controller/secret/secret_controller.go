@@ -98,7 +98,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	err := r.client.Get(ctx, request.NamespacedName, secret)
 	if err != nil {
 		// Error reading the object - requeue the request.
-		// NOTE: We skip the IsNotFound error because we want to trigger NodeConfigCache
+		// NOTE: We skip the IsNotFound error because we want to trigger EnvoyConfig
 		// reconciles when referred secrets are deleted so the envoy control-plane
 		// stops publishing them. This might cause errors if the reference hasn't been
 		// removed from the NodeCacheConfig, but that's ok as we do want to surface this
@@ -113,33 +113,33 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 
 	// Get the list of NoceConfigRevisions published and
 	// check which of them contain refs to this secret
-	list := &marin3rv1alpha1.NodeConfigRevisionList{}
+	list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 	if err := r.client.List(ctx, list); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	for _, ncr := range list.Items {
+	for _, ecr := range list.Items {
 
-		if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+		if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 
-			for _, secret := range ncr.Spec.Resources.Secrets {
+			for _, secret := range ecr.Spec.Resources.Secrets {
 				if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
-					logger.Info("Triggered NodeConfigRevision reconcile",
-						"NodeConfigRevision_Name", ncr.ObjectMeta.Name, "NodeConfigRevision_Namespace", ncr.ObjectMeta.Namespace)
+					logger.Info("Triggered EnvoyConfigRevision reconcile",
+						"EnvoyConfigRevision_Name", ecr.ObjectMeta.Name, "EnvoyConfigRevision_Namespace", ecr.ObjectMeta.Namespace)
 					if err != nil {
 						return reconcile.Result{}, err
 					}
 
-					if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
+					if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
 						// patch operation to update Spec.Version in the cache
-						patch := client.MergeFrom(ncr.DeepCopy())
-						ncr.Status.Conditions.SetCondition(status.Condition{
+						patch := client.MergeFrom(ecr.DeepCopy())
+						ecr.Status.Conditions.SetCondition(status.Condition{
 							Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
 							Reason:  "SecretChanged",
-							Message: "A secret relevant to this nodeconfigrevision changed",
+							Message: "A secret relevant to this envoyconfigrevision changed",
 							Status:  corev1.ConditionTrue,
 						})
-						if err := r.client.Status().Patch(ctx, &ncr, patch); err != nil {
+						if err := r.client.Status().Patch(ctx, &ecr, patch); err != nil {
 							return reconcile.Result{}, err
 						}
 						logger.V(1).Info("Condition should have been added ...")

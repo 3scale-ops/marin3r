@@ -130,7 +130,7 @@ func (r *ReconcileDiscoveryService) syncCASecret(ctx context.Context) error {
 			if err := r.client.Create(ctx, syncedSecret); err != nil {
 				return err
 			}
-			r.logger.Info("Syncronized CA secret")
+			r.logger.Info("Syecronized CA secret")
 
 		} else {
 			return err
@@ -145,7 +145,7 @@ func (r *ReconcileDiscoveryService) syncCASecret(ctx context.Context) error {
 		if err := r.client.Patch(ctx, syncedSecret, patch); err != nil {
 			return err
 		}
-		r.logger.Info("Syncronized CA secret")
+		r.logger.Info("Syecronized CA secret")
 	}
 
 	return nil

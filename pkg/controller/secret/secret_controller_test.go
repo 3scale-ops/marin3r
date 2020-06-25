@@ -19,9 +19,9 @@ var s *runtime.Scheme = scheme.Scheme
 
 func init() {
 	s.AddKnownTypes(marin3rv1alpha1.SchemeGroupVersion,
-		&marin3rv1alpha1.NodeConfigRevision{},
-		&marin3rv1alpha1.NodeConfigRevisionList{},
-		&marin3rv1alpha1.NodeConfigCache{},
+		&marin3rv1alpha1.EnvoyConfigRevision{},
+		&marin3rv1alpha1.EnvoyConfigRevisionList{},
+		&marin3rv1alpha1.EnvoyConfig{},
 	)
 }
 
@@ -38,12 +38,12 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 				"tls.crt": []byte("xxxxx"),
 			},
 		}
-		ncr := &marin3rv1alpha1.NodeConfigRevision{
+		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ncr",
+				Name:      "ecr",
 				Namespace: "default",
 			},
-			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
+			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 				NodeID:  "node1",
 				Version: "xxxx",
 				Resources: &marin3rv1alpha1.EnvoyResources{
@@ -54,12 +54,12 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 							Namespace: "default",
 						}}}},
 			},
-			Status: marin3rv1alpha1.NodeConfigRevisionStatus{
+			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: []status.Condition{{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue}},
 			},
 		}
 
-		cl := fake.NewFakeClient(secret, ncr)
+		cl := fake.NewFakeClient(secret, ecr)
 		r := &ReconcileSecret{client: cl, scheme: s}
 
 		_, gotErr := r.Reconcile(reconcile.Request{
@@ -74,8 +74,8 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 			return
 		}
 
-		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
-		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
 			t.Errorf("TestReconcileSecret_Reconcile() condition 'ResourcesOutOfSyncCondition' was not set in NodeCacheRevision")
 		}
 	})

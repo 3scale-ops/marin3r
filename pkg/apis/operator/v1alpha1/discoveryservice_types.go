@@ -27,7 +27,7 @@ type SignerConfig struct {
 
 // CertManagerSignerConfig holds the specific config for the cert-manager signer
 type CertManagerSignerConfig struct {
-	// When using cert-manager, the CA needs to be syncronized to the namespace where
+	// When using cert-manager, the CA needs to be syecronized to the namespace where
 	// cert-manager runs. To deploy the CA in a different namespace a command line flag
 	// has to be passed to cert-manager, which is not ideal.
 	// See https://cert-manager.io/docs/configuration/ca/#deployment.

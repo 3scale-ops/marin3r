@@ -1,4 +1,4 @@
-package nodeconfigrevision
+package envoyconfigrevision
 
 import (
 	"context"
@@ -39,9 +39,9 @@ const (
 	secretPrivateKey  = "tls.key"
 )
 
-var log = logf.Log.WithName("controller_nodeconfigrevision")
+var log = logf.Log.WithName("controller_envoyconfigrevision")
 
-// Add creates a new NodeConfigRevision Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new EnvoyConfigRevision Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, cache *xds_cache.SnapshotCache) error {
 	return add(mgr, newReconciler(mgr, cache))
@@ -49,7 +49,7 @@ func Add(mgr manager.Manager, cache *xds_cache.SnapshotCache) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, c *xds_cache.SnapshotCache) reconcile.Reconciler {
-	return &ReconcileNodeConfigRevision{client: mgr.GetClient(),
+	return &ReconcileEnvoyConfigRevision{client: mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
 		adsCache: c,
 	}
@@ -58,13 +58,13 @@ func newReconciler(mgr manager.Manager, c *xds_cache.SnapshotCache) reconcile.Re
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("nodeconfigrevision-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("envoyconfigrevision-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to primary resource NodeConfigRevision
-	err = c.Watch(&source.Kind{Type: &marin3rv1alpha1.NodeConfigRevision{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource EnvoyConfigRevision
+	err = c.Watch(&source.Kind{Type: &marin3rv1alpha1.EnvoyConfigRevision{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -72,29 +72,29 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileNodeConfigRevision implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileNodeConfigRevision{}
+// blank assignment to verify that ReconcileEnvoyConfigRevision implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileEnvoyConfigRevision{}
 
-// ReconcileNodeConfigRevision reconciles a NodeConfigRevision object
-type ReconcileNodeConfigRevision struct {
+// ReconcileEnvoyConfigRevision reconciles a EnvoyConfigRevision object
+type ReconcileEnvoyConfigRevision struct {
 	client   client.Client
 	scheme   *runtime.Scheme
 	adsCache *xds_cache.SnapshotCache
 }
 
-// Reconcile reads that state of the cluster for a NodeConfigRevision object and makes changes based on the state read
-// and what is in the NodeConfigRevision.Spec
+// Reconcile reads that state of the cluster for a EnvoyConfigRevision object and makes changes based on the state read
+// and what is in the EnvoyConfigRevision.Spec
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileEnvoyConfigRevision) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling NodeConfigRevision")
+	reqLogger.Info("Reconciling EnvoyConfigRevision")
 
 	ctx := context.TODO()
 
-	// Fetch the NodeConfigRevision instance
-	ncr := &marin3rv1alpha1.NodeConfigRevision{}
-	err := r.client.Get(ctx, request.NamespacedName, ncr)
+	// Fetch the EnvoyConfigRevision instance
+	ecr := &marin3rv1alpha1.EnvoyConfigRevision{}
+	err := r.client.Get(ctx, request.NamespacedName, ecr)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -106,22 +106,22 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	// If this ncr has the RevisionPublishedCondition set to "True" pusblish the resources
+	// If this ecr has the RevisionPublishedCondition set to "True" pusblish the resources
 	// to the xds server cache
-	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 
-		nodeID := ncr.Spec.NodeID
-		version := ncr.Spec.Version
+		nodeID := ecr.Spec.NodeID
+		version := ecr.Spec.Version
 		snap := newNodeSnapshot(nodeID, version)
 
 		// Deserialize envoy resources from the spec and create a new snapshot with them
 		if err := r.loadResources(ctx, request.Name, request.Namespace,
-			ncr.Spec.Serialization, ncr.Spec.Resources, field.NewPath("spec", "resources"), snap); err != nil {
+			ecr.Spec.Serialization, ecr.Spec.Resources, field.NewPath("spec", "resources"), snap); err != nil {
 			// Requeue with delay, as the envoy resources syntax is probably wrong
 			// and that is not a transitory error (some other higher level resource
 			// probaly needs fixing)
 			reqLogger.Error(err, "Errors occured while loading resources from CR")
-			if err := r.taintSelf(ctx, ncr, "FailedLoadingResources", err.Error()); err != nil {
+			if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error()); err != nil {
 				return reconcile.Result{}, err
 			}
 			// This is an unrecoverable error because resources are wrong
@@ -147,14 +147,14 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 	}
 
 	// Update status
-	if err := r.updateStatus(ctx, ncr); err != nil {
+	if err := r.updateStatus(ctx, ecr); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileNodeConfigRevision) loadResources(ctx context.Context, name, namespace, serialization string,
+func (r *ReconcileEnvoyConfigRevision) loadResources(ctx context.Context, name, namespace, serialization string,
 	resources *marin3rv1alpha1.EnvoyResources, resPath *field.Path, snap *xds_cache.Snapshot) error {
 
 	var ds envoy.ResourceUnmarshaller
@@ -266,64 +266,64 @@ func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.P
 	)
 }
 
-func (r *ReconcileNodeConfigRevision) taintSelf(ctx context.Context, ncr *marin3rv1alpha1.NodeConfigRevision, reason, msg string) error {
-	if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
-		patch := client.MergeFrom(ncr.DeepCopy())
-		ncr.Status.Conditions.SetCondition(status.Condition{
+func (r *ReconcileEnvoyConfigRevision) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision, reason, msg string) error {
+	if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
+		patch := client.MergeFrom(ecr.DeepCopy())
+		ecr.Status.Conditions.SetCondition(status.Condition{
 			Type:    marin3rv1alpha1.RevisionTaintedCondition,
 			Status:  corev1.ConditionTrue,
 			Reason:  status.ConditionReason(reason),
 			Message: msg,
 		})
-		ncr.Status.Tainted = true
+		ecr.Status.Tainted = true
 
-		if err := r.client.Status().Patch(ctx, ncr, patch); err != nil {
+		if err := r.client.Status().Patch(ctx, ecr, patch); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *ReconcileNodeConfigRevision) updateStatus(ctx context.Context, ncr *marin3rv1alpha1.NodeConfigRevision) error {
+func (r *ReconcileEnvoyConfigRevision) updateStatus(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision) error {
 
 	changed := false
-	patch := client.MergeFrom(ncr.DeepCopy())
+	patch := client.MergeFrom(ecr.DeepCopy())
 
 	// Clear ResourcesOutOfSyncCondition
-	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
-		ncr.Status.Conditions.SetCondition(status.Condition{
+	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
+		ecr.Status.Conditions.SetCondition(status.Condition{
 			Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
 			Reason:  "NodeConficRevisionSynced",
 			Status:  corev1.ConditionFalse,
-			Message: "NodeConfigRevision successfully synced",
+			Message: "EnvoyConfigRevision successfully synced",
 		})
 		changed = true
 
 	}
 
 	// Set status.published and status.lastPublishedAt fields
-	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && !ncr.Status.Published {
-		ncr.Status.Published = true
-		ncr.Status.LastPublishedAt = metav1.Now()
+	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && !ecr.Status.Published {
+		ecr.Status.Published = true
+		ecr.Status.LastPublishedAt = metav1.Now()
 		// We also initialise the "tainted" status property to false
-		ncr.Status.Tainted = false
+		ecr.Status.Tainted = false
 		changed = true
-	} else if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && ncr.Status.Published {
-		ncr.Status.Published = false
+	} else if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && ecr.Status.Published {
+		ecr.Status.Published = false
 		changed = true
 	}
 
 	// Set status.failed field
-	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && !ncr.Status.Tainted {
-		ncr.Status.Tainted = true
+	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && !ecr.Status.Tainted {
+		ecr.Status.Tainted = true
 		changed = true
-	} else if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && ncr.Status.Tainted {
-		ncr.Status.Tainted = false
+	} else if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && ecr.Status.Tainted {
+		ecr.Status.Tainted = false
 		changed = true
 	}
 
 	if changed {
-		if err := r.client.Status().Patch(ctx, ncr, patch); err != nil {
+		if err := r.client.Status().Patch(ctx, ecr, patch); err != nil {
 			return err
 		}
 	}

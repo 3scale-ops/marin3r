@@ -1,4 +1,4 @@
-package nodeconfigrevision
+package envoyconfigrevision
 
 import (
 	"context"
@@ -29,9 +29,9 @@ var s *runtime.Scheme = scheme.Scheme
 
 func init() {
 	s.AddKnownTypes(marin3rv1alpha1.SchemeGroupVersion,
-		&marin3rv1alpha1.NodeConfigRevision{},
-		&marin3rv1alpha1.NodeConfigRevisionList{},
-		&marin3rv1alpha1.NodeConfigCache{},
+		&marin3rv1alpha1.EnvoyConfigRevision{},
+		&marin3rv1alpha1.EnvoyConfigRevisionList{},
+		&marin3rv1alpha1.EnvoyConfig{},
 	)
 }
 
@@ -57,12 +57,12 @@ func fakeTestCache() *xds_cache.SnapshotCache {
 	return &snapshotCache
 }
 
-func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
+func TestReconcileEnvoyConfigRevision_Reconcile(t *testing.T) {
 
 	tests := []struct {
 		name        string
 		nodeID      string
-		cr          *marin3rv1alpha1.NodeConfigRevision
+		cr          *marin3rv1alpha1.EnvoyConfigRevision
 		wantResult  reconcile.Result
 		wantSnap    *xds_cache.Snapshot
 		wantVersion string
@@ -71,16 +71,16 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 		{
 			name:   "Creates new snapshot for nodeID",
 			nodeID: "node3",
-			cr: &marin3rv1alpha1.NodeConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
+			cr: &marin3rv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:  "node3",
 					Version: "xxxx",
 					Resources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
 							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
-				Status: marin3rv1alpha1.NodeConfigRevisionStatus{
+				Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 					Conditions: status.NewConditions(status.Condition{
 						Type:   marin3rv1alpha1.RevisionPublishedCondition,
 						Status: corev1.ConditionTrue,
@@ -102,9 +102,9 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 		{
 			name:   "Does not update snapshot if resources don't change",
 			nodeID: "node1",
-			cr: &marin3rv1alpha1.NodeConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
+			cr: &marin3rv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:  "node1",
 					Version: "bbbb",
 					Resources: &marin3rv1alpha1.EnvoyResources{
@@ -115,7 +115,7 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 							{Name: "cluster1", Value: "{\"name\": \"cluster1\"}"},
 						},
 					}},
-				Status: marin3rv1alpha1.NodeConfigRevisionStatus{
+				Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 					Conditions: status.NewConditions(status.Condition{
 						Type:   marin3rv1alpha1.RevisionPublishedCondition,
 						Status: corev1.ConditionTrue,
@@ -139,16 +139,16 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:   "No changes to xds server cache when ncr has condition 'marin3rv1alpha1.RevisionPublishedCondition' to false",
+			name:   "No changes to xds server cache when ecr has condition 'marin3rv1alpha1.RevisionPublishedCondition' to false",
 			nodeID: "node1",
-			cr: &marin3rv1alpha1.NodeConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
+			cr: &marin3rv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:    "node1",
 					Version:   "bbbb",
 					Resources: &marin3rv1alpha1.EnvoyResources{},
 				},
-				Status: marin3rv1alpha1.NodeConfigRevisionStatus{
+				Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 					Conditions: status.NewConditions(status.Condition{
 						Type:   marin3rv1alpha1.RevisionPublishedCondition,
 						Status: corev1.ConditionFalse,
@@ -175,14 +175,14 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ReconcileNodeConfigRevision{
+			r := &ReconcileEnvoyConfigRevision{
 				client:   fake.NewFakeClient(tt.cr),
 				scheme:   s,
 				adsCache: fakeTestCache(),
 			}
 			req := reconcile.Request{
 				NamespacedName: types.NamespacedName{
-					Name:      "ncr",
+					Name:      "ecr",
 					Namespace: "default",
 				},
 			}
@@ -190,11 +190,11 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 			gotResult, gotErr := r.Reconcile(req)
 			gotSnap, _ := (*r.adsCache).GetSnapshot(tt.nodeID)
 			if (gotErr != nil) != tt.wantErr {
-				t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v, wantErr %v", gotErr, tt.wantErr)
+				t.Errorf("ReconcileEnvoyConfigRevision.Reconcile() error = %v, wantErr %v", gotErr, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(gotResult, tt.wantResult) {
-				t.Errorf("ReconcileNodeConfigRevision.Reconcile() = %v, want %v", gotResult, tt.wantResult)
+				t.Errorf("ReconcileEnvoyConfigRevision.Reconcile() = %v, want %v", gotResult, tt.wantResult)
 			}
 			if !tt.wantErr && !reflect.DeepEqual(&gotSnap, tt.wantSnap) {
 				t.Errorf("Snapshot = %v, want %v", &gotSnap, tt.wantSnap)
@@ -207,104 +207,104 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 		})
 	}
 
-	t.Run("No error if ncr not found", func(t *testing.T) {
-		r := &ReconcileNodeConfigRevision{
+	t.Run("No error if ecr not found", func(t *testing.T) {
+		r := &ReconcileEnvoyConfigRevision{
 			client:   fake.NewFakeClient(),
 			scheme:   s,
 			adsCache: fakeTestCache(),
 		}
 		req := reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      "ncr",
+				Name:      "ecr",
 				Namespace: "default",
 			},
 		}
 
 		_, gotErr := r.Reconcile(req)
 		if gotErr != nil {
-			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			t.Errorf("ReconcileEnvoyConfigRevision.Reconcile() error = %v", gotErr)
 			return
 		}
 	})
 
 	t.Run("Taints itself if it fails to load resources", func(t *testing.T) {
-		ncr := &marin3rv1alpha1.NodeConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
+		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 				NodeID:  "node1",
 				Version: "xxxx",
 				Resources: &marin3rv1alpha1.EnvoyResources{
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "{\"wrong_property\": \"abcd\"}"},
 					}}},
-			Status: marin3rv1alpha1.NodeConfigRevisionStatus{
+			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: status.NewConditions(status.Condition{
 					Type:   marin3rv1alpha1.RevisionPublishedCondition,
 					Status: corev1.ConditionTrue,
 				})},
 		}
 
-		r := &ReconcileNodeConfigRevision{
-			client:   fake.NewFakeClient(ncr),
+		r := &ReconcileEnvoyConfigRevision{
+			client:   fake.NewFakeClient(ecr),
 			scheme:   s,
 			adsCache: fakeTestCache(),
 		}
 		req := reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      "ncr",
+				Name:      "ecr",
 				Namespace: "default",
 			},
 		}
 
 		_, gotErr := r.Reconcile(req)
 		if gotErr != nil {
-			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			t.Errorf("ReconcileEnvoyConfigRevision.Reconcile() error = %v", gotErr)
 			return
 		}
 
-		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
-		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
-			t.Errorf("ReconcileNodeConfigRevision.Reconcile() ncr has not been tainted")
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
+			t.Errorf("ReconcileEnvoyConfigRevision.Reconcile() ecr has not been tainted")
 		}
 	})
 }
 
-func TestReconcileNodeConfigRevision_taintSelf(t *testing.T) {
+func TestReconcileEnvoyConfigRevision_taintSelf(t *testing.T) {
 
-	t.Run("Taints the ncr object", func(t *testing.T) {
-		ncr := &marin3rv1alpha1.NodeConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
+	t.Run("Taints the ecr object", func(t *testing.T) {
+		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 				NodeID:    "node1",
 				Version:   "bbbb",
 				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
-		r := &ReconcileNodeConfigRevision{
-			client:   fake.NewFakeClient(ncr),
+		r := &ReconcileEnvoyConfigRevision{
+			client:   fake.NewFakeClient(ecr),
 			scheme:   s,
 			adsCache: fakeTestCache(),
 		}
-		if err := r.taintSelf(context.TODO(), ncr, "test", "test"); err != nil {
-			t.Errorf("ReconcileNodeConfigRevision.taintSelf() error = %v", err)
+		if err := r.taintSelf(context.TODO(), ecr, "test", "test"); err != nil {
+			t.Errorf("ReconcileEnvoyConfigRevision.taintSelf() error = %v", err)
 		}
-		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
-		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
-			t.Errorf("ReconcileNodeConfigRevision.taintSelf() ncr is not tainted")
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
+			t.Errorf("ReconcileEnvoyConfigRevision.taintSelf() ecr is not tainted")
 		}
 	})
 }
 
-func TestReconcileNodeConfigRevision_updateStatus(t *testing.T) {
-	t.Run("Updates the status of the ncr object", func(t *testing.T) {
-		ncr := &marin3rv1alpha1.NodeConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
+func TestReconcileEnvoyConfigRevision_updateStatus(t *testing.T) {
+	t.Run("Updates the status of the ecr object", func(t *testing.T) {
+		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 				NodeID:    "node1",
 				Version:   "bbbb",
 				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
-			Status: marin3rv1alpha1.NodeConfigRevisionStatus{
+			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: status.NewConditions(
 					status.Condition{
 						Type:   marin3rv1alpha1.ResourcesOutOfSyncCondition,
@@ -313,22 +313,22 @@ func TestReconcileNodeConfigRevision_updateStatus(t *testing.T) {
 				),
 			},
 		}
-		r := &ReconcileNodeConfigRevision{
-			client:   fake.NewFakeClient(ncr),
+		r := &ReconcileEnvoyConfigRevision{
+			client:   fake.NewFakeClient(ecr),
 			scheme:   s,
 			adsCache: fakeTestCache(),
 		}
-		if err := r.updateStatus(context.TODO(), ncr); err != nil {
-			t.Errorf("ReconcileNodeConfigRevision.updateStatus() error = %v", err)
+		if err := r.updateStatus(context.TODO(), ecr); err != nil {
+			t.Errorf("ReconcileEnvoyConfigRevision.updateStatus() error = %v", err)
 		}
-		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
-		if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
-			t.Errorf("ReconcileNodeConfigRevision.updateStatus() status not updated")
+		r.client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+		if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
+			t.Errorf("ReconcileEnvoyConfigRevision.updateStatus() status not updated")
 		}
 	})
 }
 
-func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
+func TestReconcileEnvoyConfigRevision_loadResources(t *testing.T) {
 	type fields struct {
 		client   client.Client
 		scheme   *runtime.Scheme
@@ -358,7 +358,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -410,7 +410,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -431,7 +431,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -452,7 +452,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -473,7 +473,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -494,7 +494,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -519,7 +519,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -566,7 +566,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -590,7 +590,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 			},
 			args: args{
 				ctx:           context.TODO(),
-				name:          "ncr",
+				name:          "ecr",
 				namespace:     "default",
 				serialization: "json",
 				resources: &marin3rv1alpha1.EnvoyResources{
@@ -608,15 +608,15 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &ReconcileNodeConfigRevision{
+			r := &ReconcileEnvoyConfigRevision{
 				client:   tt.fields.client,
 				scheme:   tt.fields.scheme,
 				adsCache: tt.fields.adsCache,
 			}
 			if err := r.loadResources(tt.args.ctx, tt.args.name, tt.args.namespace, tt.args.serialization, tt.args.resources, field.NewPath("spec", "resources"), tt.args.snap); (err != nil) != tt.wantErr {
-				t.Errorf("ReconcileNodeConfigRevision.loadResources() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ReconcileEnvoyConfigRevision.loadResources() error = %v, wantErr %v", err, tt.wantErr)
 			} else if !tt.wantErr && !reflect.DeepEqual(tt.args.snap, tt.wantSnap) {
-				t.Errorf("ReconcileNodeConfigRevision.loadResources() got = %v, want %v", tt.args.snap, tt.wantSnap)
+				t.Errorf("ReconcileEnvoyConfigRevision.loadResources() got = %v, want %v", tt.args.snap, tt.wantSnap)
 			}
 		})
 	}

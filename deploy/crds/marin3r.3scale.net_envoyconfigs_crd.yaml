@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: nodeconfigcaches.marin3r.3scale.net
+  name: envoyconfigs.marin3r.3scale.net
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.nodeID
@@ -18,18 +18,18 @@ spec:
     type: string
   group: marin3r.3scale.net
   names:
-    kind: NodeConfigCache
-    listKind: NodeConfigCacheList
-    plural: nodeconfigcaches
+    kind: EnvoyConfig
+    listKind: EnvoyConfigList
+    plural: envoyconfigs
     shortNames:
-    - ncc
-    singular: nodeconfigcache
+    - ec
+    singular: envoyconfig
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: NodeConfigCache is the Schema for the nodeconfigcaches API
+      description: EnvoyConfig is the Schema for the envoyconfigs API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -44,7 +44,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: NodeConfigCacheSpec defines the desired state of NodeConfigCache
+          description: EnvoyConfigSpec defines the desired state of EnvoyConfig
           properties:
             nodeID:
               type: string
@@ -158,7 +158,7 @@ spec:
           - resources
           type: object
         status:
-          description: NodeConfigCacheStatus defines the observed state of NodeConfigCache
+          description: EnvoyConfigStatus defines the observed state of EnvoyConfig
           properties:
             cacheState:
               description: CacheState summarizes all the observations about the NodeCacheConfig
@@ -209,7 +209,7 @@ spec:
               type: array
             desiredVersion:
               description: DesiredVersion represents the resources version described
-                in the spec of the nodeconfigrevision object
+                in the spec of the envoyconfigrevision object
               type: string
             publishedVersion:
               description: PublishedVersion is the config version currently served
@@ -217,9 +217,9 @@ spec:
               type: string
             revisions:
               description: ConfigRevisions is an ordered list of references to the
-                nodeconfigrevision object
+                envoyconfigrevision object
               items:
-                description: ConfigRevisionRef holds a reference to NodeConfigRevision
+                description: ConfigRevisionRef holds a reference to EnvoyConfigRevision
                   object
                 properties:
                   ref:
