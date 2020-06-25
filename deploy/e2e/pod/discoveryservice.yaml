@@ -1,0 +1,14 @@
+apiVersion: controlplane.marin3r.3scale.net/v1alpha1
+kind: DiscoveryService
+metadata:
+  name: instance
+spec:
+  image: localhost:5000/marin3r:test
+  discoveryServiceNamespace: default
+  debug: true
+  signer:
+    certManager:
+      namespace: cert-manager
+  enabledNamespaces:
+    - default
+
