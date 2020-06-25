@@ -31,6 +31,8 @@ spec:
         spec:
           description: DiscoveryServiceSpec defines the desired state of DiscoveryService
           properties:
+            debug:
+              type: boolean
             discoveryServiceNamespace:
               type: string
             enabledNamespaces:

@@ -17,6 +17,7 @@ type DiscoveryServiceSpec struct {
 	EnabledNamespaces         []string     `json:"enabledNamespaces,omitempty"`
 	Signer                    SignerConfig `json:"signer"`
 	Image                     string       `json:"image"`
+	Debug                     bool         `json:"debug,omitempty"`
 }
 
 // SignerConfig holds the config for the marin3r instance certificate signer
