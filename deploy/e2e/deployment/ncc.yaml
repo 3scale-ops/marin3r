@@ -2,6 +2,7 @@ apiVersion: caches.marin3r.3scale.net/v1alpha1
 kind: NodeConfigCache
 metadata:
   name: kuard
+  namespace: test1
 spec:
   # Add fields here
   nodeID: kuard
@@ -9,10 +10,10 @@ spec:
   serialization: yaml
   resources:
     secrets:
-      - name: envoy-server1
+      - name: kuard.test1.svc
         ref:
-          name: envoy1-cert
-          namespace: default
+          name: kuard
+          namespace: test1
     clusters:
       - name: kuard
         value: |
@@ -95,6 +96,6 @@ spec:
                   "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
                   common_tls_context:
                     tls_certificate_sds_secret_configs:
-                      - name: envoy-server1
+                      - name: kuard.test1.svc
                         sds_config:
                           ads: {}

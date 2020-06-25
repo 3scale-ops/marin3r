@@ -3,7 +3,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: envoy1
-  namespace: test1
+  namespace: default
 spec:
   containers:
     - name: envoy-sidecar
