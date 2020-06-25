@@ -1,4 +1,4 @@
-package nodeconfigcache
+package envoyconfig
 
 import "fmt"
 
@@ -18,7 +18,7 @@ const (
 
 type cacheErrorType string
 
-// CacheError custom error types for nodeconfigcache controller
+// CacheError custom error types for envoyconfig controller
 type cacheError struct {
 	ErrorType     cacheErrorType
 	ReconcileTask string

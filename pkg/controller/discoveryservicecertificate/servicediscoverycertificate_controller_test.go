@@ -48,7 +48,7 @@ func TestReconcileDiscoveryServiceCertificate_Reconcile(t *testing.T) {
 
 		_, gotErr := r.Reconcile(req)
 		if gotErr != nil {
-			t.Errorf("ReconcileNodeConfigRevision.Reconcile() error = %v", gotErr)
+			t.Errorf("ReconcileEnvoyConfigRevision.Reconcile() error = %v", gotErr)
 			return
 		}
 

@@ -1,41 +1,36 @@
 apiVersion: caches.marin3r.3scale.net/v1alpha1
-kind: NodeConfigCache
+kind: EnvoyConfig
 metadata:
-  name: envoy1
-  labels:
-    marin3r.3scale.net/node-id: envoy1
+  name: kuard
+  namespace: test1
 spec:
   # Add fields here
-  nodeID: envoy1
+  nodeID: kuard
+  version: "1"
   serialization: yaml
   resources:
     secrets:
-      - name: envoy1.default.svc
+      - name: kuard.test1.svc
         ref:
-          name: envoy1-cert
-          namespace: default
+          name: kuard
+          namespace: test1
     clusters:
-      - name: echo_api
+      - name: kuard
         value: |
-          name: echo_api
+          name: kuard
           connect_timeout: 2s
           type: STRICT_DNS
           dns_lookup_family: V4_ONLY
           lb_policy: ROUND_ROBIN
           load_assignment:
-            cluster_name: echo_api
+            cluster_name: kuard
             endpoints:
               - lb_endpoints:
                   - endpoint:
                       address:
                         socket_address:
-                          address: echo-api.3scale.net
-                          port_value: 443
-          transport_socket:
-            name: envoy.transport_sockets.tls
-            typed_config:
-              "@type": type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext
-              sni: echo-api.3scale.net
+                          address: 127.0.0.1
+                          port_value: 8080
     listeners:
       - name: http
         value: |
@@ -57,14 +52,13 @@ spec:
                   route_config:
                     name: local_route
                     virtual_hosts:
-                      - name: local_service
+                      - name: kuard
                         domains: ["*"]
                         routes:
                           - match:
                               prefix: "/"
                             route:
-                              host_rewrite: echo-api.3scale.net
-                              cluster: echo_api
+                              cluster: kuard
                   http_filters:
                     - name: envoy.router
       - name: https
@@ -87,14 +81,13 @@ spec:
                   route_config:
                     name: local_route
                     virtual_hosts:
-                      - name: local_service
+                      - name: kuard
                         domains: ["*"]
                         routes:
                           - match:
                               prefix: "/"
                             route:
-                              host_rewrite: echo-api.3scale.net
-                              cluster: echo_api
+                              cluster: kuard
                   http_filters:
                     - name: envoy.router
               transport_socket:
@@ -103,6 +96,6 @@ spec:
                   "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
                   common_tls_context:
                     tls_certificate_sds_secret_configs:
-                      - name: envoy1.default.svc
+                      - name: kuard.test1.svc
                         sds_config:
                           ads: {}

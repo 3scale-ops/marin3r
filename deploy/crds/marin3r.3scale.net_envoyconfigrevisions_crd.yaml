@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: nodeconfigrevisions.marin3r.3scale.net
+  name: envoyconfigrevisions.marin3r.3scale.net
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.nodeID
@@ -26,18 +26,19 @@ spec:
     type: boolean
   group: marin3r.3scale.net
   names:
-    kind: NodeConfigRevision
-    listKind: NodeConfigRevisionList
-    plural: nodeconfigrevisions
+    kind: EnvoyConfigRevision
+    listKind: EnvoyConfigRevisionList
+    plural: envoyconfigrevisions
     shortNames:
-    - ncr
-    singular: nodeconfigrevision
+    - ecr
+    singular: envoyconfigrevision
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: NodeConfigRevision is the Schema for the nodeconfigrevisions API
+      description: EnvoyConfigRevision is the Schema for the envoyconfigrevisions
+        API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -52,7 +53,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
+          description: EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
           properties:
             nodeID:
               type: string
@@ -169,7 +170,7 @@ spec:
           - version
           type: object
         status:
-          description: NodeConfigRevisionStatus defines the observed state of NodeConfigRevision
+          description: EnvoyConfigRevisionStatus defines the observed state of EnvoyConfigRevision
           properties:
             conditions:
               description: Conditions represent the latest available observations
@@ -218,11 +219,11 @@ spec:
               format: date-time
               type: string
             published:
-              description: Published signals if the NodeConfigRevision is the one
+              description: Published signals if the EnvoyConfigRevision is the one
                 currently published in the xds server cache
               type: boolean
             tainted:
-              description: Tainted indicates whether the NodeConfigRevision is eligible
+              description: Tainted indicates whether the EnvoyConfigRevision is eligible
                 for publishing or not
               type: boolean
           required:

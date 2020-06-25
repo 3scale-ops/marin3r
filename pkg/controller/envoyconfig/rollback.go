@@ -1,4 +1,4 @@
-package nodeconfigcache
+package envoyconfig
 
 import (
 	"context"
@@ -33,35 +33,35 @@ func OnError(cfg *rest.Config) func(nodeID, version, msg string) error {
 			return err
 		}
 
-		// Get the nodeconfigcache that corresponds to the envoy node that returned the error
-		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
+		// Get the envoyconfig that corresponds to the envoy node that returned the error
+		ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
 		})
 		if err != nil {
 			return err
 		}
-		err = cl.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
+		err = cl.List(context.TODO(), ecrList, &client.ListOptions{LabelSelector: selector})
 		if err != nil {
 			return err
 		}
-		if len(ncrList.Items) != 1 {
-			return fmt.Errorf("Got %v nodeconfigrevision objects when only 1 expected", len(ncrList.Items))
+		if len(ecrList.Items) != 1 {
+			return fmt.Errorf("Got %v envoyconfigrevision objects when only 1 expected", len(ecrList.Items))
 		}
 
-		// Add the "ResourcesUpdateUnsuccessful" condition to the NodeConfigRevision object
+		// Add the "ResourcesUpdateUnsuccessful" condition to the EnvoyConfigRevision object
 		// unless the condition is already set
-		ncr := &ncrList.Items[0]
-		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
-			patch := client.MergeFrom(ncr.DeepCopy())
-			ncr.Status.Conditions.SetCondition(status.Condition{
+		ecr := &ecrList.Items[0]
+		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
+			patch := client.MergeFrom(ecr.DeepCopy())
+			ecr.Status.Conditions.SetCondition(status.Condition{
 				Type:    marin3rv1alpha1.RevisionTaintedCondition,
 				Status:  "True",
 				Reason:  status.ConditionReason("GatewayReturnedNACK"),
 				Message: fmt.Sprintf("A gateway returned NACK to the discovery response: '%s'", msg),
 			})
 
-			if err := cl.Status().Patch(context.TODO(), ncr, patch); err != nil {
+			if err := cl.Status().Patch(context.TODO(), ecr, patch); err != nil {
 				return err
 			}
 		}

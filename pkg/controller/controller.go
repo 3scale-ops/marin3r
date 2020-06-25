@@ -4,8 +4,8 @@ import (
 	"github.com/3scale/marin3r/pkg/controller/configmap"
 	"github.com/3scale/marin3r/pkg/controller/discoveryservice"
 	"github.com/3scale/marin3r/pkg/controller/discoveryservicecertificate"
-	"github.com/3scale/marin3r/pkg/controller/nodeconfigcache"
-	"github.com/3scale/marin3r/pkg/controller/nodeconfigrevision"
+	"github.com/3scale/marin3r/pkg/controller/envoyconfig"
+	"github.com/3scale/marin3r/pkg/controller/envoyconfigrevision"
 	"github.com/3scale/marin3r/pkg/controller/secret"
 
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -14,8 +14,8 @@ import (
 
 // AddToManager adds all Controllers to the Manager
 func AddToManager(m manager.Manager, c *xds_cache.SnapshotCache) error {
-	nodeconfigcache.Add(m, c)
-	nodeconfigrevision.Add(m, c)
+	envoyconfig.Add(m, c)
+	envoyconfigrevision.Add(m, c)
 	secret.Add(m)
 	configmap.Add(m)
 

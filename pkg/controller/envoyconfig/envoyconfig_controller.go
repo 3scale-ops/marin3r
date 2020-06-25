@@ -1,4 +1,4 @@
-package nodeconfigcache
+package envoyconfig
 
 import (
 	"context"
@@ -25,9 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_nodeconfigcache")
+var log = logf.Log.WithName("controller_envoyconfig")
 
-// Add creates a new NodeConfigCache Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new EnvoyConfig Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, cache *xds_cache.SnapshotCache) error {
 	return add(mgr, newReconciler(mgr, cache))
@@ -35,7 +35,7 @@ func Add(mgr manager.Manager, cache *xds_cache.SnapshotCache) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, c *xds_cache.SnapshotCache) reconcile.Reconciler {
-	return &ReconcileNodeConfigCache{
+	return &ReconcileEnvoyConfig{
 		client:   mgr.GetClient(),
 		scheme:   mgr.GetScheme(),
 		adsCache: c,
@@ -45,7 +45,7 @@ func newReconciler(mgr manager.Manager, c *xds_cache.SnapshotCache) reconcile.Re
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("nodeconfigcache-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("envoyconfig-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -57,8 +57,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				// But trigger reconciles on condition updates as this is the way
 				// other controllers communicate with this one
 				if !apiequality.Semantic.DeepEqual(
-					e.ObjectOld.(*marin3rv1alpha1.NodeConfigCache).Status.Conditions,
-					e.ObjectNew.(*marin3rv1alpha1.NodeConfigCache).Status.Conditions,
+					e.ObjectOld.(*marin3rv1alpha1.EnvoyConfig).Status.Conditions,
+					e.ObjectNew.(*marin3rv1alpha1.EnvoyConfig).Status.Conditions,
 				) {
 					return true
 				}
@@ -67,16 +67,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return true
 		},
 	}
-	// Watch for changes to primary resource NodeConfigCache
-	err = c.Watch(&source.Kind{Type: &marin3rv1alpha1.NodeConfigCache{}}, &handler.EnqueueRequestForObject{}, filter)
+	// Watch for changes to primary resource EnvoyConfig
+	err = c.Watch(&source.Kind{Type: &marin3rv1alpha1.EnvoyConfig{}}, &handler.EnqueueRequestForObject{}, filter)
 	if err != nil {
 		return err
 	}
 
-	// Watch for owned resources NodeConfigRevision
-	err = c.Watch(&source.Kind{Type: &marin3rv1alpha1.NodeConfigRevision{}}, &handler.EnqueueRequestForOwner{
+	// Watch for owned resources EnvoyConfigRevision
+	err = c.Watch(&source.Kind{Type: &marin3rv1alpha1.EnvoyConfigRevision{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &marin3rv1alpha1.NodeConfigCache{},
+		OwnerType:    &marin3rv1alpha1.EnvoyConfig{},
 	})
 
 	if err != nil {
@@ -86,29 +86,29 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileNodeConfigCache implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileNodeConfigCache{}
+// blank assignment to verify that ReconcileEnvoyConfig implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileEnvoyConfig{}
 
-// ReconcileNodeConfigCache reconciles a NodeConfigCache object
-type ReconcileNodeConfigCache struct {
+// ReconcileEnvoyConfig reconciles a EnvoyConfig object
+type ReconcileEnvoyConfig struct {
 	client   client.Client
 	scheme   *runtime.Scheme
 	adsCache *xds_cache.SnapshotCache
 }
 
-// Reconcile reads that state of the cluster for a NodeConfigCache object and makes changes based on the state read
-// and what is in the NodeConfigCache.Spec
+// Reconcile reads that state of the cluster for a EnvoyConfig object and makes changes based on the state read
+// and what is in the EnvoyConfig.Spec
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileEnvoyConfig) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling NodeConfigCache")
+	reqLogger.Info("Reconciling EnvoyConfig")
 
 	ctx := context.TODO()
 
-	// Fetch the NodeConfigCache instance
-	ncc := &marin3rv1alpha1.NodeConfigCache{}
-	err := r.client.Get(ctx, request.NamespacedName, ncc)
+	// Fetch the EnvoyConfig instance
+	ec := &marin3rv1alpha1.EnvoyConfig{}
+	err := r.client.Get(ctx, request.NamespacedName, ec)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -120,16 +120,16 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	// Check if the NodeConfigCache instance is marked to be deleted, which is
+	// Check if the EnvoyConfig instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
-	if ncc.GetDeletionTimestamp() != nil {
-		if contains(ncc.GetFinalizers(), marin3rv1alpha1.NodeConfigCacheFinalizer) {
-			r.finalizeNodeConfigCache(ncc.Spec.NodeID)
+	if ec.GetDeletionTimestamp() != nil {
+		if contains(ec.GetFinalizers(), marin3rv1alpha1.EnvoyConfigFinalizer) {
+			r.finalizeEnvoyConfig(ec.Spec.NodeID)
 			reqLogger.V(1).Info("Successfully cleared ads server cache")
 			// Remove memcachedFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
-			controllerutil.RemoveFinalizer(ncc, marin3rv1alpha1.NodeConfigCacheFinalizer)
-			err := r.client.Update(ctx, ncc)
+			controllerutil.RemoveFinalizer(ec, marin3rv1alpha1.EnvoyConfigFinalizer)
+			err := r.client.Update(ctx, ec)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
@@ -140,32 +140,32 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	// TODO: add the label with the nodeID if it is missing
 
 	// Add finalizer for this CR
-	if !contains(ncc.GetFinalizers(), marin3rv1alpha1.NodeConfigCacheFinalizer) {
-		reqLogger.Info("Adding Finalizer for the NodeConfigCache")
-		if err := r.addFinalizer(ctx, ncc); err != nil {
-			reqLogger.Error(err, "Failed adding finalizer for nodecacheconfig")
+	if !contains(ec.GetFinalizers(), marin3rv1alpha1.EnvoyConfigFinalizer) {
+		reqLogger.Info("Adding Finalizer for the EnvoyConfig")
+		if err := r.addFinalizer(ctx, ec); err != nil {
+			reqLogger.Error(err, "Failed adding finalizer for envoyconfig")
 			return reconcile.Result{}, err
 		}
 	}
 
 	// desiredVersion is the version that matches the resources described in the spec
-	desiredVersion := calculateRevisionHash(ncc.Spec.Resources)
+	desiredVersion := calculateRevisionHash(ec.Spec.Resources)
 
 	// ensure that the desiredVersion has a matching revision object
-	if err := r.ensureNodeConfigRevision(ctx, ncc, desiredVersion); err != nil {
+	if err := r.ensureEnvoyConfigRevision(ctx, ec, desiredVersion); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// Update the ConfigRevisions list in the status
-	if err := r.consolidateRevisionList(ctx, ncc, desiredVersion); err != nil {
+	if err := r.consolidateRevisionList(ctx, ec, desiredVersion); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// determine the version that should be published
-	version, err := r.getVersionToPublish(ctx, ncc)
+	version, err := r.getVersionToPublish(ctx, ec)
 	if err != nil {
 		if err.(cacheError).ErrorType == AllRevisionsTaintedError {
-			if err := r.setRollbackFailed(ctx, ncc); err != nil {
+			if err := r.setRollbackFailed(ctx, ec); err != nil {
 				return reconcile.Result{}, err
 			}
 			// This is an unrecoverable error because there are no
@@ -177,43 +177,43 @@ func (r *ReconcileNodeConfigCache) Reconcile(request reconcile.Request) (reconci
 	}
 
 	// Mark the "version" as teh published revision
-	if err := r.markRevisionPublished(ctx, ncc.Spec.NodeID, version, "VersionPublished", fmt.Sprintf("Version '%s' has been published", version)); err != nil {
+	if err := r.markRevisionPublished(ctx, ec.Spec.NodeID, version, "VersionPublished", fmt.Sprintf("Version '%s' has been published", version)); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	// Update the status
-	if err := r.updateStatus(ctx, ncc, desiredVersion, version); err != nil {
+	if err := r.updateStatus(ctx, ec, desiredVersion, version); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Cleanup unreferenced NodeConfigRevision objects
-	if err := r.deleteUnreferencedRevisions(ctx, ncc); err != nil {
+	// Cleanup unreferenced EnvoyConfigRevision objects
+	if err := r.deleteUnreferencedRevisions(ctx, ec); err != nil {
 		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc *marin3rv1alpha1.NodeConfigCache) (string, error) {
+func (r *ReconcileEnvoyConfig) getVersionToPublish(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) (string, error) {
 	// Get the list of revisions for this nodeID
-	ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
+	ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
+		MatchLabels: map[string]string{nodeIDTag: ec.Spec.NodeID},
 	})
 	if err != nil {
 		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
 	}
-	err = r.client.List(ctx, ncrList, &client.ListOptions{LabelSelector: selector})
+	err = r.client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
 	}
 
 	// Starting from the highest index in the ConfigRevision list and going
 	// down, return the first version found that is not tainted
-	for i := len(ncc.Status.ConfigRevisions) - 1; i >= 0; i-- {
-		for _, ncr := range ncrList.Items {
-			if ncc.Status.ConfigRevisions[i].Version == ncr.Spec.Version && !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
-				return ncc.Status.ConfigRevisions[i].Version, nil
+	for i := len(ec.Status.ConfigRevisions) - 1; i >= 0; i-- {
+		for _, ecr := range ecrList.Items {
+			if ec.Status.ConfigRevisions[i].Version == ecr.Spec.Version && !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
+				return ec.Status.ConfigRevisions[i].Version, nil
 			}
 		}
 	}
@@ -223,42 +223,42 @@ func (r *ReconcileNodeConfigCache) getVersionToPublish(ctx context.Context, ncc 
 	return "", newCacheError(AllRevisionsTaintedError, "getVersionToPublish", "All available revisions are tainted")
 }
 
-func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *marin3rv1alpha1.NodeConfigCache, desired, published string) error {
+func (r *ReconcileEnvoyConfig) updateStatus(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, desired, published string) error {
 
 	changed := false
-	patch := client.MergeFrom(ncc.DeepCopy())
+	patch := client.MergeFrom(ec.DeepCopy())
 
-	if ncc.Status.PublishedVersion != published {
-		ncc.Status.PublishedVersion = published
+	if ec.Status.PublishedVersion != published {
+		ec.Status.PublishedVersion = published
 		changed = true
 	}
 
-	if ncc.Status.DesiredVersion != desired {
-		ncc.Status.DesiredVersion = desired
+	if ec.Status.DesiredVersion != desired {
+		ec.Status.DesiredVersion = desired
 		changed = true
 	}
 
 	// Set the cacheStatus field
-	if desired != published && ncc.Status.CacheState != marin3rv1alpha1.RollbackState {
-		ncc.Status.CacheState = marin3rv1alpha1.RollbackState
+	if desired != published && ec.Status.CacheState != marin3rv1alpha1.RollbackState {
+		ec.Status.CacheState = marin3rv1alpha1.RollbackState
 		changed = true
 	}
-	if desired == published && ncc.Status.CacheState != marin3rv1alpha1.InSyncState {
-		ncc.Status.CacheState = marin3rv1alpha1.InSyncState
+	if desired == published && ec.Status.CacheState != marin3rv1alpha1.InSyncState {
+		ec.Status.CacheState = marin3rv1alpha1.InSyncState
 		changed = true
 	}
 
 	// Set the CacheOutOfSyncCondition
-	if desired != published && !ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
-		ncc.Status.Conditions.SetCondition(status.Condition{
+	if desired != published && !ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
+		ec.Status.Conditions.SetCondition(status.Condition{
 			Type:    marin3rv1alpha1.CacheOutOfSyncCondition,
 			Status:  corev1.ConditionTrue,
 			Reason:  "CantPublishDesiredVersion",
 			Message: "Desired resources spec cannot be applied",
 		})
 		changed = true
-	} else if desired == published && !ncc.Status.Conditions.IsFalseFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
-		ncc.Status.Conditions.SetCondition(status.Condition{
+	} else if desired == published && !ec.Status.Conditions.IsFalseFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
+		ec.Status.Conditions.SetCondition(status.Condition{
 			Type:    marin3rv1alpha1.CacheOutOfSyncCondition,
 			Status:  corev1.ConditionFalse,
 			Reason:  "DesiredVersionPublished",
@@ -269,8 +269,8 @@ func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *marin3
 
 	// Clear the RollbackFailedCondition (if we have reached this code it means that
 	// at least one untainted revision exists)
-	if ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
-		ncc.Status.Conditions.SetCondition(status.Condition{
+	if ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
+		ec.Status.Conditions.SetCondition(status.Condition{
 			Type:   marin3rv1alpha1.RollbackFailedCondition,
 			Reason: "Recovered",
 			Status: corev1.ConditionFalse,
@@ -280,7 +280,7 @@ func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *marin3
 
 	// Only write if something needs changing to reduce API calls
 	if changed {
-		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+		if err := r.client.Status().Patch(ctx, ec, patch); err != nil {
 			return err
 		}
 	}
@@ -288,15 +288,15 @@ func (r *ReconcileNodeConfigCache) updateStatus(ctx context.Context, ncc *marin3
 	return nil
 }
 
-func (r *ReconcileNodeConfigCache) finalizeNodeConfigCache(nodeID string) {
+func (r *ReconcileEnvoyConfig) finalizeEnvoyConfig(nodeID string) {
 	(*r.adsCache).ClearSnapshot(nodeID)
 }
 
-func (r *ReconcileNodeConfigCache) addFinalizer(ctx context.Context, ncc *marin3rv1alpha1.NodeConfigCache) error {
-	controllerutil.AddFinalizer(ncc, marin3rv1alpha1.NodeConfigCacheFinalizer)
+func (r *ReconcileEnvoyConfig) addFinalizer(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+	controllerutil.AddFinalizer(ec, marin3rv1alpha1.EnvoyConfigFinalizer)
 
 	// Update CR
-	err := r.client.Update(ctx, ncc)
+	err := r.client.Update(ctx, ec)
 	if err != nil {
 		return err
 	}
@@ -312,24 +312,24 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-func (r *ReconcileNodeConfigCache) setRollbackFailed(ctx context.Context, ncc *marin3rv1alpha1.NodeConfigCache) error {
-	if !ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
-		patch := client.MergeFrom(ncc.DeepCopy())
-		ncc.Status.Conditions.SetCondition(status.Condition{
+func (r *ReconcileEnvoyConfig) setRollbackFailed(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+	if !ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
+		patch := client.MergeFrom(ec.DeepCopy())
+		ec.Status.Conditions.SetCondition(status.Condition{
 			Type:    marin3rv1alpha1.RollbackFailedCondition,
 			Status:  corev1.ConditionTrue,
 			Reason:  "AllRevisionsTainted",
 			Message: "All revisions are tainted, rollback failed",
 		})
-		ncc.Status.Conditions.SetCondition(status.Condition{
+		ec.Status.Conditions.SetCondition(status.Condition{
 			Type:    marin3rv1alpha1.CacheOutOfSyncCondition,
 			Status:  corev1.ConditionTrue,
 			Reason:  "AllRevisionsTainted",
 			Message: "All revisions are tainted, rollback failed",
 		})
-		ncc.Status.CacheState = marin3rv1alpha1.RollbackFailedState
+		ec.Status.CacheState = marin3rv1alpha1.RollbackFailedState
 
-		if err := r.client.Status().Patch(ctx, ncc, patch); err != nil {
+		if err := r.client.Status().Patch(ctx, ec, patch); err != nil {
 			return err
 		}
 	}
