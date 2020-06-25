@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/webhook"
 
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -78,8 +78,8 @@ func (r *ReconcileDiscoveryService) reconcileEnabledNamespace(ctx context.Contex
 		}
 
 		// Set namespace labels
-		ns.ObjectMeta.Labels[controlplanev1alpha1.DiscoveryServiceEnabledKey] = controlplanev1alpha1.DiscoveryServiceEnabledValue
-		ns.ObjectMeta.Labels[controlplanev1alpha1.DiscoveryServiceLabelKey] = r.ds.GetName()
+		ns.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceEnabledKey] = operatorv1alpha1.DiscoveryServiceEnabledValue
+		ns.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceLabelKey] = r.ds.GetName()
 
 		if err := r.client.Patch(ctx, ns, patch); err != nil {
 			return err
@@ -100,7 +100,7 @@ func (r *ReconcileDiscoveryService) reconcileEnabledNamespace(ctx context.Contex
 
 func isOwner(owner metav1.Object, object metav1.Object) (bool, error) {
 
-	value, ok := object.GetLabels()[controlplanev1alpha1.DiscoveryServiceLabelKey]
+	value, ok := object.GetLabels()[operatorv1alpha1.DiscoveryServiceLabelKey]
 	if ok {
 		if value == owner.GetName() {
 			return true, nil
@@ -113,8 +113,8 @@ func isOwner(owner metav1.Object, object metav1.Object) (bool, error) {
 
 func hasEnabledLabel(object metav1.Object) bool {
 
-	value, ok := object.GetLabels()[controlplanev1alpha1.DiscoveryServiceEnabledKey]
-	if ok && value == controlplanev1alpha1.DiscoveryServiceEnabledValue {
+	value, ok := object.GetLabels()[operatorv1alpha1.DiscoveryServiceEnabledKey]
+	if ok && value == operatorv1alpha1.DiscoveryServiceEnabledValue {
 		return true
 	}
 
@@ -123,7 +123,7 @@ func hasEnabledLabel(object metav1.Object) bool {
 
 func (r *ReconcileDiscoveryService) reconcileClientCertificate(ctx context.Context, namespace string) error {
 	r.logger.V(1).Info("Reconciling client certificate", "Namespace", namespace)
-	existent := &controlplanev1alpha1.DiscoveryServiceCertificate{}
+	existent := &operatorv1alpha1.DiscoveryServiceCertificate{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: webhook.DefaultClientCertificate, Namespace: namespace}, existent)
 
 	if err != nil {
@@ -174,17 +174,17 @@ func (r *ReconcileDiscoveryService) reconcileBootstrapConfigMap(ctx context.Cont
 	return nil
 }
 
-func (r *ReconcileDiscoveryService) getClientCertObject(namespace string) *controlplanev1alpha1.DiscoveryServiceCertificate {
-	return &controlplanev1alpha1.DiscoveryServiceCertificate{
+func (r *ReconcileDiscoveryService) getClientCertObject(namespace string) *operatorv1alpha1.DiscoveryServiceCertificate {
+	return &operatorv1alpha1.DiscoveryServiceCertificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      webhook.DefaultClientCertificate,
 			Namespace: namespace,
 		},
-		Spec: controlplanev1alpha1.DiscoveryServiceCertificateSpec{
+		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: r.getName(),
 			ValidFor:   clientValidFor,
-			Signer: controlplanev1alpha1.DiscoveryServiceCertificateSigner{
-				CertManager: &controlplanev1alpha1.CertManagerConfig{
+			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+				CertManager: &operatorv1alpha1.CertManagerConfig{
 					ClusterIssuer: r.getClusterIssuerName(),
 				},
 			},

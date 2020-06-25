@@ -14,7 +14,7 @@ import (
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/golang/protobuf/proto"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -64,7 +64,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource NodeConfigRevision
-	err = c.Watch(&source.Kind{Type: &cachesv1alpha1.NodeConfigRevision{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &marin3rv1alpha1.NodeConfigRevision{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 	ctx := context.TODO()
 
 	// Fetch the NodeConfigRevision instance
-	ncr := &cachesv1alpha1.NodeConfigRevision{}
+	ncr := &marin3rv1alpha1.NodeConfigRevision{}
 	err := r.client.Get(ctx, request.NamespacedName, ncr)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -108,7 +108,7 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 
 	// If this ncr has the RevisionPublishedCondition set to "True" pusblish the resources
 	// to the xds server cache
-	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 
 		nodeID := ncr.Spec.NodeID
 		version := ncr.Spec.Version
@@ -155,7 +155,7 @@ func (r *ReconcileNodeConfigRevision) Reconcile(request reconcile.Request) (reco
 }
 
 func (r *ReconcileNodeConfigRevision) loadResources(ctx context.Context, name, namespace, serialization string,
-	resources *cachesv1alpha1.EnvoyResources, resPath *field.Path, snap *xds_cache.Snapshot) error {
+	resources *marin3rv1alpha1.EnvoyResources, resPath *field.Path, snap *xds_cache.Snapshot) error {
 
 	var ds envoy.ResourceUnmarshaller
 	switch serialization {
@@ -266,11 +266,11 @@ func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.P
 	)
 }
 
-func (r *ReconcileNodeConfigRevision) taintSelf(ctx context.Context, ncr *cachesv1alpha1.NodeConfigRevision, reason, msg string) error {
-	if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
+func (r *ReconcileNodeConfigRevision) taintSelf(ctx context.Context, ncr *marin3rv1alpha1.NodeConfigRevision, reason, msg string) error {
+	if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
 		patch := client.MergeFrom(ncr.DeepCopy())
 		ncr.Status.Conditions.SetCondition(status.Condition{
-			Type:    cachesv1alpha1.RevisionTaintedCondition,
+			Type:    marin3rv1alpha1.RevisionTaintedCondition,
 			Status:  corev1.ConditionTrue,
 			Reason:  status.ConditionReason(reason),
 			Message: msg,
@@ -284,15 +284,15 @@ func (r *ReconcileNodeConfigRevision) taintSelf(ctx context.Context, ncr *caches
 	return nil
 }
 
-func (r *ReconcileNodeConfigRevision) updateStatus(ctx context.Context, ncr *cachesv1alpha1.NodeConfigRevision) error {
+func (r *ReconcileNodeConfigRevision) updateStatus(ctx context.Context, ncr *marin3rv1alpha1.NodeConfigRevision) error {
 
 	changed := false
 	patch := client.MergeFrom(ncr.DeepCopy())
 
 	// Clear ResourcesOutOfSyncCondition
-	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
 		ncr.Status.Conditions.SetCondition(status.Condition{
-			Type:    cachesv1alpha1.ResourcesOutOfSyncCondition,
+			Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
 			Reason:  "NodeConficRevisionSynced",
 			Status:  corev1.ConditionFalse,
 			Message: "NodeConfigRevision successfully synced",
@@ -302,22 +302,22 @@ func (r *ReconcileNodeConfigRevision) updateStatus(ctx context.Context, ncr *cac
 	}
 
 	// Set status.published and status.lastPublishedAt fields
-	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) && !ncr.Status.Published {
+	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && !ncr.Status.Published {
 		ncr.Status.Published = true
 		ncr.Status.LastPublishedAt = metav1.Now()
 		// We also initialise the "tainted" status property to false
 		ncr.Status.Tainted = false
 		changed = true
-	} else if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) && ncr.Status.Published {
+	} else if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && ncr.Status.Published {
 		ncr.Status.Published = false
 		changed = true
 	}
 
 	// Set status.failed field
-	if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) && !ncr.Status.Tainted {
+	if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && !ncr.Status.Tainted {
 		ncr.Status.Tainted = true
 		changed = true
-	} else if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) && ncr.Status.Tainted {
+	} else if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && ncr.Status.Tainted {
 		ncr.Status.Tainted = false
 		changed = true
 	}

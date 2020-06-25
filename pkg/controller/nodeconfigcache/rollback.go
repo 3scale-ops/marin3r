@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/3scale/marin3r/pkg/apis"
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -34,7 +34,7 @@ func OnError(cfg *rest.Config) func(nodeID, version, msg string) error {
 		}
 
 		// Get the nodeconfigcache that corresponds to the envoy node that returned the error
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
 		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
 		})
@@ -52,10 +52,10 @@ func OnError(cfg *rest.Config) func(nodeID, version, msg string) error {
 		// Add the "ResourcesUpdateUnsuccessful" condition to the NodeConfigRevision object
 		// unless the condition is already set
 		ncr := &ncrList.Items[0]
-		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
 			patch := client.MergeFrom(ncr.DeepCopy())
 			ncr.Status.Conditions.SetCondition(status.Condition{
-				Type:    cachesv1alpha1.RevisionTaintedCondition,
+				Type:    marin3rv1alpha1.RevisionTaintedCondition,
 				Status:  "True",
 				Reason:  status.ConditionReason("GatewayReturnedNACK"),
 				Message: fmt.Sprintf("A gateway returned NACK to the discovery response: '%s'", msg),

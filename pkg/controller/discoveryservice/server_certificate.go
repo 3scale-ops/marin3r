@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +23,7 @@ func (r *ReconcileDiscoveryService) reconcileServerCertificate(ctx context.Conte
 
 	r.logger.V(1).Info("Reconciling server certificate")
 
-	cert := &controlplanev1alpha1.DiscoveryServiceCertificate{}
+	cert := &operatorv1alpha1.DiscoveryServiceCertificate{}
 	err := r.client.Get(ctx, types.NamespacedName{Name: r.getServerCertName(), Namespace: r.getNamespace()}, cert)
 
 	if err != nil {
@@ -57,18 +57,18 @@ func (r *ReconcileDiscoveryService) getServerCertCommonName() string {
 	return fmt.Sprintf("%s-%s", caCommonName, r.ds.GetName())
 }
 
-func (r *ReconcileDiscoveryService) getServerCertObject() *controlplanev1alpha1.DiscoveryServiceCertificate {
-	return &controlplanev1alpha1.DiscoveryServiceCertificate{
+func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.DiscoveryServiceCertificate {
+	return &operatorv1alpha1.DiscoveryServiceCertificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.getServerCertName(),
 			Namespace: r.getNamespace(),
 		},
-		Spec: controlplanev1alpha1.DiscoveryServiceCertificateSpec{
+		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName:          r.getServerCertCommonName(),
 			IsServerCertificate: true,
 			ValidFor:            serverValidFor,
-			Signer: controlplanev1alpha1.DiscoveryServiceCertificateSigner{
-				CertManager: &controlplanev1alpha1.CertManagerConfig{
+			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+				CertManager: &operatorv1alpha1.CertManagerConfig{
 					ClusterIssuer: r.getClusterIssuerName(),
 				},
 			},

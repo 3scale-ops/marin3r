@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -125,7 +125,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	reqLogger.Info("Reconciling from ConfigMap")
 
 	// Get corresponding NodeConfigCache
-	nccList := &cachesv1alpha1.NodeConfigCacheList{}
+	nccList := &marin3rv1alpha1.NodeConfigCacheList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{nodeIDTag: nodeID},
 	})
@@ -210,9 +210,9 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcile.Result{RequeueAfter: reconcileInterval * time.Second}, nil
 }
 
-func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.ConfigMap, nodeID, name, namespace string) (*cachesv1alpha1.NodeConfigCache, error) {
+func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.ConfigMap, nodeID, name, namespace string) (*marin3rv1alpha1.NodeConfigCache, error) {
 
-	ncc := cachesv1alpha1.NodeConfigCache{
+	ncc := marin3rv1alpha1.NodeConfigCache{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
@@ -220,7 +220,7 @@ func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.Confi
 				nodeIDTag: nodeID,
 			},
 		},
-		Spec: cachesv1alpha1.NodeConfigCacheSpec{
+		Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 			NodeID:        nodeID,
 			Serialization: defaultSerialization,
 		},
@@ -241,20 +241,20 @@ func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.Confi
 	return &ncc, nil
 }
 
-func populateResources(data string) (*cachesv1alpha1.EnvoyResources, error) {
+func populateResources(data string) (*marin3rv1alpha1.EnvoyResources, error) {
 	// Get envoy resources
 	resources, err := envoy.YAMLtoResources([]byte(data))
 	if err != nil {
 		return nil, err
 	}
 
-	er := &cachesv1alpha1.EnvoyResources{}
+	er := &marin3rv1alpha1.EnvoyResources{}
 	s := envoy.JSON{}
 
 	for _, cluster := range resources.Clusters {
 		sr, _ := s.Marshal(cluster)
 		er.Clusters = append(er.Clusters,
-			cachesv1alpha1.EnvoyResource{
+			marin3rv1alpha1.EnvoyResource{
 				Name:  cluster.Name,
 				Value: sr,
 			})
@@ -263,7 +263,7 @@ func populateResources(data string) (*cachesv1alpha1.EnvoyResources, error) {
 	for _, listener := range resources.Listeners {
 		sr, _ := s.Marshal(listener)
 		er.Listeners = append(er.Listeners,
-			cachesv1alpha1.EnvoyResource{
+			marin3rv1alpha1.EnvoyResource{
 				Name:  listener.Name,
 				Value: sr,
 			})
@@ -272,8 +272,8 @@ func populateResources(data string) (*cachesv1alpha1.EnvoyResources, error) {
 	return er, nil
 }
 
-func populateSecrets(ctx context.Context, c client.Client, namespace string) ([]cachesv1alpha1.EnvoySecretResource, error) {
-	esrl := []cachesv1alpha1.EnvoySecretResource{}
+func populateSecrets(ctx context.Context, c client.Client, namespace string) ([]marin3rv1alpha1.EnvoySecretResource, error) {
+	esrl := []marin3rv1alpha1.EnvoySecretResource{}
 
 	sl := &corev1.SecretList{}
 	err := c.List(ctx, sl, &client.ListOptions{Namespace: namespace})
@@ -283,7 +283,7 @@ func populateSecrets(ctx context.Context, c client.Client, namespace string) ([]
 
 	for _, secret := range sl.Items {
 		if cn, ok := secret.GetAnnotations()[secretAnnotation]; ok {
-			esrl = append(esrl, cachesv1alpha1.EnvoySecretResource{
+			esrl = append(esrl, marin3rv1alpha1.EnvoySecretResource{
 				Name: cn,
 				Ref: corev1.SecretReference{
 					Name:      secret.ObjectMeta.Name,

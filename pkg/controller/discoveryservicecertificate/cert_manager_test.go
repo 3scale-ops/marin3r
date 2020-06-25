@@ -5,14 +5,14 @@ import (
 	"reflect"
 	"testing"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 )
 
 func TestReconcileDiscoveryServiceCertificate_reconcileCertManagerCertificate(t *testing.T) {
 	type args struct {
 		ctx    context.Context
-		sdcert *controlplanev1alpha1.DiscoveryServiceCertificate
+		sdcert *operatorv1alpha1.DiscoveryServiceCertificate
 	}
 	tests := []struct {
 		name    string
@@ -33,7 +33,7 @@ func TestReconcileDiscoveryServiceCertificate_reconcileCertManagerCertificate(t 
 
 func Test_genCertManagerCertificateObject(t *testing.T) {
 	type args struct {
-		cfg controlplanev1alpha1.DiscoveryServiceCertificateSpec
+		cfg operatorv1alpha1.DiscoveryServiceCertificateSpec
 	}
 	tests := []struct {
 		name string

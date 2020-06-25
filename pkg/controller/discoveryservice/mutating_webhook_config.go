@@ -3,7 +3,7 @@ package discoveryservice
 import (
 	"context"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/webhook"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
@@ -76,12 +76,12 @@ func (r *ReconcileDiscoveryService) genMutatingWebhookConfigurationObject(caBund
 				Name: "sidecar-injector.marin3r.3scale.net",
 				NamespaceSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						controlplanev1alpha1.DiscoveryServiceLabelKey: r.ds.GetName(),
+						operatorv1alpha1.DiscoveryServiceLabelKey: r.ds.GetName(),
 					},
 				},
 				ObjectSelector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{
-						controlplanev1alpha1.DiscoveryServiceEnabledKey: controlplanev1alpha1.DiscoveryServiceEnabledValue,
+						operatorv1alpha1.DiscoveryServiceEnabledKey: operatorv1alpha1.DiscoveryServiceEnabledValue,
 					},
 				},
 				SideEffects: func() *admissionregistrationv1.SideEffectClass {

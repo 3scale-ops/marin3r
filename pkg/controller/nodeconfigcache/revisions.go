@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,10 +22,10 @@ const (
 )
 
 func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
-	ncc *cachesv1alpha1.NodeConfigCache, version string) error {
+	ncc *marin3rv1alpha1.NodeConfigCache, version string) error {
 
 	// Get the list of revisions for the current version
-	ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+	ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: version},
 	})
@@ -47,7 +47,7 @@ func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
 	// Revision does not yet exists, create one
 	if len(ncrList.Items) == 0 {
 		// Create the revision for this config version
-		ncr := &cachesv1alpha1.NodeConfigRevision{
+		ncr := &marin3rv1alpha1.NodeConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-%s", ncc.Spec.NodeID, version),
 				Namespace: ncc.ObjectMeta.Namespace,
@@ -56,7 +56,7 @@ func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
 					versionTag: version,
 				},
 			},
-			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 				NodeID:        ncc.Spec.NodeID,
 				Version:       version,
 				Serialization: ncc.Spec.Serialization,
@@ -77,7 +77,7 @@ func (r *ReconcileNodeConfigCache) ensureNodeConfigRevision(ctx context.Context,
 }
 
 func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
-	ncc *cachesv1alpha1.NodeConfigCache, version string) error {
+	ncc *marin3rv1alpha1.NodeConfigCache, version string) error {
 
 	// This code handles the case in which a revision already exists for
 	// this version. We must ensure that this version is at the last position
@@ -100,7 +100,7 @@ func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
 	// for the given version
 	{
 		// Get the revision name that matches nodeID and version
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
 		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID, versionTag: version},
 		})
@@ -118,7 +118,7 @@ func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
 
 			// Update the revision list in the NCC status
 			patch := client.MergeFrom(ncc.DeepCopy())
-			ncc.Status.ConfigRevisions = append(ncc.Status.ConfigRevisions, cachesv1alpha1.ConfigRevisionRef{
+			ncc.Status.ConfigRevisions = append(ncc.Status.ConfigRevisions, marin3rv1alpha1.ConfigRevisionRef{
 				Version: version,
 				Ref: corev1.ObjectReference{
 					Kind:       ncrList.Items[0].Kind,
@@ -145,9 +145,9 @@ func (r *ReconcileNodeConfigCache) consolidateRevisionList(ctx context.Context,
 	return nil
 }
 
-func (r *ReconcileNodeConfigCache) deleteUnreferencedRevisions(ctx context.Context, ncc *cachesv1alpha1.NodeConfigCache) error {
+func (r *ReconcileNodeConfigCache) deleteUnreferencedRevisions(ctx context.Context, ncc *marin3rv1alpha1.NodeConfigCache) error {
 	// Get all revisions that belong to this ncc
-	ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+	ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
 	})
@@ -180,7 +180,7 @@ func (r *ReconcileNodeConfigCache) deleteUnreferencedRevisions(ctx context.Conte
 func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, nodeID, version, reason, msg string) error {
 
 	// Get all revisions for this NCC
-	ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+	ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{nodeIDTag: nodeID},
 	})
@@ -194,10 +194,10 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 
 	// Set 'RevisionPublished' to false for all revisions
 	for _, ncr := range ncrList.Items {
-		if ncr.Spec.Version != version && ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+		if ncr.Spec.Version != version && ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 			patch := client.MergeFrom(ncr.DeepCopy())
 			ncr.Status.Conditions.SetCondition(status.Condition{
-				Type:    cachesv1alpha1.RevisionPublishedCondition,
+				Type:    marin3rv1alpha1.RevisionPublishedCondition,
 				Status:  corev1.ConditionFalse,
 				Reason:  status.ConditionReason("OtherVersionPublished"),
 				Message: msg,
@@ -215,7 +215,7 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 	// in another reconcile
 
 	// Set the the revision that holds the given version with 'RevisionPublished' = True
-	ncrList = &cachesv1alpha1.NodeConfigRevisionList{}
+	ncrList = &marin3rv1alpha1.NodeConfigRevisionList{}
 	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
 	})
@@ -236,7 +236,7 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 	ncr := ncrList.Items[0]
 	patch := client.MergeFrom(ncr.DeepCopy())
 	ncr.Status.Conditions.SetCondition(status.Condition{
-		Type:    cachesv1alpha1.RevisionPublishedCondition,
+		Type:    marin3rv1alpha1.RevisionPublishedCondition,
 		Status:  corev1.ConditionTrue,
 		Reason:  status.ConditionReason(reason),
 		Message: msg,
@@ -249,20 +249,20 @@ func (r *ReconcileNodeConfigCache) markRevisionPublished(ctx context.Context, no
 	return nil
 }
 
-func trimRevisions(list []cachesv1alpha1.ConfigRevisionRef, max int) []cachesv1alpha1.ConfigRevisionRef {
+func trimRevisions(list []marin3rv1alpha1.ConfigRevisionRef, max int) []marin3rv1alpha1.ConfigRevisionRef {
 	for len(list) > max {
 		list = list[1:]
 	}
 	return list
 }
 
-func calculateRevisionHash(resources *cachesv1alpha1.EnvoyResources) string {
+func calculateRevisionHash(resources *marin3rv1alpha1.EnvoyResources) string {
 	resourcesHasher := fnv.New32a()
 	hashutil.DeepHashObject(resourcesHasher, resources)
 	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }
 
-func getRevisionIndex(version string, revisions []cachesv1alpha1.ConfigRevisionRef) *int {
+func getRevisionIndex(version string, revisions []marin3rv1alpha1.ConfigRevisionRef) *int {
 	for idx, rev := range revisions {
 		if rev.Version == version {
 			return &idx
@@ -271,7 +271,7 @@ func getRevisionIndex(version string, revisions []cachesv1alpha1.ConfigRevisionR
 	return nil
 }
 
-func moveRevisionToLast(list []cachesv1alpha1.ConfigRevisionRef, idx int) []cachesv1alpha1.ConfigRevisionRef {
+func moveRevisionToLast(list []marin3rv1alpha1.ConfigRevisionRef, idx int) []marin3rv1alpha1.ConfigRevisionRef {
 
 	return append(list[:idx], append(list[idx+1:], list[idx])...)
 }

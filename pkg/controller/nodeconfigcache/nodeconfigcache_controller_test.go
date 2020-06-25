@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -22,10 +22,10 @@ import (
 var s *runtime.Scheme = scheme.Scheme
 
 func init() {
-	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
-		&cachesv1alpha1.NodeConfigRevision{},
-		&cachesv1alpha1.NodeConfigRevisionList{},
-		&cachesv1alpha1.NodeConfigCache{},
+	s.AddKnownTypes(marin3rv1alpha1.SchemeGroupVersion,
+		&marin3rv1alpha1.NodeConfigRevision{},
+		&marin3rv1alpha1.NodeConfigRevisionList{},
+		&marin3rv1alpha1.NodeConfigCache{},
 	)
 }
 
@@ -54,11 +54,11 @@ func fakeTestCache() *xds_cache.SnapshotCache {
 func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 
 	t.Run("Creates a new NodeConfigRevision and publishes it", func(t *testing.T) {
-		ncc := &cachesv1alpha1.NodeConfigCache{
+		ncc := &marin3rv1alpha1.NodeConfigCache{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+			Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 				NodeID:    "node1",
-				Resources: &cachesv1alpha1.EnvoyResources{},
+				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		r := &ReconcileNodeConfigCache{
@@ -79,7 +79,7 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			return
 		}
 
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
 		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
 		})
@@ -89,12 +89,12 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			return
 		}
 		ncr := ncrList.Items[0]
-		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 			t.Errorf("Revision created but not marked as published")
 			return
 		}
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
-		if ncc.ObjectMeta.Finalizers[0] != cachesv1alpha1.NodeConfigCacheFinalizer {
+		if ncc.ObjectMeta.Finalizers[0] != marin3rv1alpha1.NodeConfigCacheFinalizer {
 			t.Errorf("NodeCacheConfig missing finalizer")
 			return
 		}
@@ -105,32 +105,32 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		version := calculateRevisionHash(ncc.Spec.Resources)
 		if ncc.Status.PublishedVersion != version ||
 			ncc.Status.DesiredVersion != version ||
-			ncc.Status.CacheState != cachesv1alpha1.InSyncState ||
-			!ncc.Status.Conditions.IsFalseFor(cachesv1alpha1.CacheOutOfSyncCondition) {
+			ncc.Status.CacheState != marin3rv1alpha1.InSyncState ||
+			!ncc.Status.Conditions.IsFalseFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
 	})
 
 	t.Run("Publishes an already existent revision if versions (the resources hash) match", func(t *testing.T) {
-		version := calculateRevisionHash(&cachesv1alpha1.EnvoyResources{})
-		ncc := &cachesv1alpha1.NodeConfigCache{
+		version := calculateRevisionHash(&marin3rv1alpha1.EnvoyResources{})
+		ncc := &marin3rv1alpha1.NodeConfigCache{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+			Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 				NodeID:    "node1",
-				Resources: &cachesv1alpha1.EnvoyResources{},
+				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
-		ncr := &cachesv1alpha1.NodeConfigRevision{
+		ncr := &marin3rv1alpha1.NodeConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ncr",
 				Namespace: "default",
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
 			},
-			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 				NodeID:    "node1",
 				Version:   version,
-				Resources: &cachesv1alpha1.EnvoyResources{},
+				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 
@@ -152,7 +152,7 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			return
 		}
 
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{}
+		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{}
 		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{nodeIDTag: ncc.Spec.NodeID},
 		})
@@ -162,7 +162,7 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 			return
 		}
 		ncr = &ncrList.Items[0]
-		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 			t.Errorf("Revision not marked as published")
 			return
 		}
@@ -173,41 +173,41 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		}
 		if ncc.Status.PublishedVersion != version ||
 			ncc.Status.DesiredVersion != version ||
-			ncc.Status.CacheState != cachesv1alpha1.InSyncState ||
-			!ncc.Status.Conditions.IsFalseFor(cachesv1alpha1.CacheOutOfSyncCondition) {
+			ncc.Status.CacheState != marin3rv1alpha1.InSyncState ||
+			!ncc.Status.Conditions.IsFalseFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
 	})
 
 	t.Run("From top to bottom, publishes the first non tainted revision of the ConfigRevisions list", func(t *testing.T) {
-		version := calculateRevisionHash(&cachesv1alpha1.EnvoyResources{})
-		ncc := &cachesv1alpha1.NodeConfigCache{
+		version := calculateRevisionHash(&marin3rv1alpha1.EnvoyResources{})
+		ncc := &marin3rv1alpha1.NodeConfigCache{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+			Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 				NodeID:    "node1",
-				Resources: &cachesv1alpha1.EnvoyResources{},
+				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
-			Status: cachesv1alpha1.NodeConfigCacheStatus{
-				ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+			Status: marin3rv1alpha1.NodeConfigCacheStatus{
+				ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
 					{Version: version, Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
 				},
 			},
 		}
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{
+		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{
 			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-			Items: []cachesv1alpha1.NodeConfigRevision{
+			Items: []marin3rv1alpha1.NodeConfigRevision{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "ncr1",
 						Namespace: "default",
 						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
 					},
-					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+					Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 						NodeID:    "node1",
 						Version:   "aaaa",
-						Resources: &cachesv1alpha1.EnvoyResources{},
+						Resources: &marin3rv1alpha1.EnvoyResources{},
 					}},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -215,15 +215,15 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 						Namespace: "default",
 						Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
 					},
-					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+					Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 						NodeID:    "node1",
 						Version:   version,
-						Resources: &cachesv1alpha1.EnvoyResources{},
+						Resources: &marin3rv1alpha1.EnvoyResources{},
 					},
-					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+					Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 						Conditions: status.NewConditions(
 							status.Condition{
-								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
 								Status: corev1.ConditionTrue,
 							},
 						),
@@ -253,7 +253,7 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		})
 		r.client.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
 
-		if !ncrList.Items[0].Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+		if !ncrList.Items[0].Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 			t.Errorf("Revision not marked as published")
 			return
 		}
@@ -261,46 +261,46 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
 		if ncc.Status.PublishedVersion != "aaaa" ||
 			ncc.Status.DesiredVersion != version ||
-			ncc.Status.CacheState != cachesv1alpha1.RollbackState ||
-			!ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) {
+			ncc.Status.CacheState != marin3rv1alpha1.RollbackState ||
+			!ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
 	})
 
 	t.Run("Set RollbackFailed state if all versions are tainted", func(t *testing.T) {
-		version := calculateRevisionHash(&cachesv1alpha1.EnvoyResources{})
-		ncc := &cachesv1alpha1.NodeConfigCache{
+		version := calculateRevisionHash(&marin3rv1alpha1.EnvoyResources{})
+		ncc := &marin3rv1alpha1.NodeConfigCache{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+			Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 				NodeID:    "node1",
-				Resources: &cachesv1alpha1.EnvoyResources{},
+				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
-			Status: cachesv1alpha1.NodeConfigCacheStatus{
-				ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+			Status: marin3rv1alpha1.NodeConfigCacheStatus{
+				ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
 					{Version: version, Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
 				},
 			},
 		}
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{
+		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{
 			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-			Items: []cachesv1alpha1.NodeConfigRevision{
+			Items: []marin3rv1alpha1.NodeConfigRevision{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "ncr1",
 						Namespace: "default",
 						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
 					},
-					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+					Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 						NodeID:    "node1",
 						Version:   "aaaa",
-						Resources: &cachesv1alpha1.EnvoyResources{},
+						Resources: &marin3rv1alpha1.EnvoyResources{},
 					},
-					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+					Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 						Conditions: status.NewConditions(
 							status.Condition{
-								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
 								Status: corev1.ConditionTrue,
 							},
 						),
@@ -311,15 +311,15 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 						Namespace: "default",
 						Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
 					},
-					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+					Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 						NodeID:    "node1",
 						Version:   version,
-						Resources: &cachesv1alpha1.EnvoyResources{},
+						Resources: &marin3rv1alpha1.EnvoyResources{},
 					},
-					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+					Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 						Conditions: status.NewConditions(
 							status.Condition{
-								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
 								Status: corev1.ConditionTrue,
 							},
 						),
@@ -350,16 +350,16 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		r.client.List(context.TODO(), ncrList, &client.ListOptions{LabelSelector: selector})
 
 		for _, ncr := range ncrList.Items {
-			if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionPublishedCondition) {
+			if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 				t.Errorf("A revison is marked as published and it shouldn't")
 				return
 			}
 		}
 
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
-		if ncc.Status.CacheState != cachesv1alpha1.RollbackFailedState ||
-			!ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) ||
-			!ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.RollbackFailedCondition) {
+		if ncc.Status.CacheState != marin3rv1alpha1.RollbackFailedState ||
+			!ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition) ||
+			!ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
@@ -367,45 +367,45 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 
 	// TODO:test the clearance of the Rollback failed condition
 	t.Run("Set RollbackFailed state if all versions are tainted", func(t *testing.T) {
-		ncc := &cachesv1alpha1.NodeConfigCache{
+		ncc := &marin3rv1alpha1.NodeConfigCache{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigCacheSpec{
+			Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 				NodeID: "node1",
-				Resources: &cachesv1alpha1.EnvoyResources{
-					Endpoints: []cachesv1alpha1.EnvoyResource{
+				Resources: &marin3rv1alpha1.EnvoyResources{
+					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
 					},
 				},
 			},
-			Status: cachesv1alpha1.NodeConfigCacheStatus{
-				CacheState: cachesv1alpha1.RollbackFailedState,
-				ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+			Status: marin3rv1alpha1.NodeConfigCacheStatus{
+				CacheState: marin3rv1alpha1.RollbackFailedState,
+				ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
 				},
 				Conditions: status.NewConditions(status.Condition{
-					Type:   cachesv1alpha1.RollbackFailedCondition,
+					Type:   marin3rv1alpha1.RollbackFailedCondition,
 					Status: corev1.ConditionTrue,
 				}),
 			},
 		}
-		ncrList := &cachesv1alpha1.NodeConfigRevisionList{
+		ncrList := &marin3rv1alpha1.NodeConfigRevisionList{
 			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-			Items: []cachesv1alpha1.NodeConfigRevision{
+			Items: []marin3rv1alpha1.NodeConfigRevision{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "ncr1",
 						Namespace: "default",
 						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
 					},
-					Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+					Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 						NodeID:    "node1",
 						Version:   "aaaa",
-						Resources: &cachesv1alpha1.EnvoyResources{},
+						Resources: &marin3rv1alpha1.EnvoyResources{},
 					},
-					Status: cachesv1alpha1.NodeConfigRevisionStatus{
+					Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 						Conditions: status.NewConditions(
 							status.Condition{
-								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
 								Status: corev1.ConditionTrue,
 							},
 						),
@@ -432,9 +432,9 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 		}
 
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
-		if ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.RollbackFailedCondition) ||
-			ncc.Status.Conditions.IsTrueFor(cachesv1alpha1.CacheOutOfSyncCondition) ||
-			ncc.Status.CacheState != cachesv1alpha1.InSyncState {
+		if ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) ||
+			ncc.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition) ||
+			ncc.Status.CacheState != marin3rv1alpha1.InSyncState {
 			t.Errorf("Status was not correctly updated")
 			return
 		}
@@ -444,23 +444,23 @@ func TestReconcileNodeConfigCache_Reconcile(t *testing.T) {
 
 func TestReconcileNodeConfigCache_Reconcile_Finalizer(t *testing.T) {
 
-	cr := &cachesv1alpha1.NodeConfigCache{
+	cr := &marin3rv1alpha1.NodeConfigCache{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "ncc",
 			Namespace:         "default",
 			DeletionTimestamp: func() *metav1.Time { t := metav1.Now(); return &t }(),
-			Finalizers:        []string{cachesv1alpha1.NodeConfigCacheFinalizer},
+			Finalizers:        []string{marin3rv1alpha1.NodeConfigCacheFinalizer},
 		},
-		Spec: cachesv1alpha1.NodeConfigCacheSpec{
+		Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 			NodeID:    "node1",
-			Resources: &cachesv1alpha1.EnvoyResources{},
+			Resources: &marin3rv1alpha1.EnvoyResources{},
 		}}
 
 	s := scheme.Scheme
-	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
+	s.AddKnownTypes(marin3rv1alpha1.SchemeGroupVersion,
 		cr,
-		&cachesv1alpha1.NodeConfigRevisionList{},
-		&cachesv1alpha1.NodeConfigRevision{},
+		&marin3rv1alpha1.NodeConfigRevisionList{},
+		&marin3rv1alpha1.NodeConfigRevision{},
 	)
 	cl := fake.NewFakeClient(cr)
 	r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
@@ -483,7 +483,7 @@ func TestReconcileNodeConfigCache_Reconcile_Finalizer(t *testing.T) {
 		return
 	}
 
-	ncc := &cachesv1alpha1.NodeConfigCache{}
+	ncc := &marin3rv1alpha1.NodeConfigCache{}
 	cl.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
 	if len(ncc.GetObjectMeta().GetFinalizers()) != 0 {
 		t.Errorf("ReconcileNodeConfigCache.Reconcile_Finalizer() - finalizer not deleted from object")
@@ -533,16 +533,16 @@ func TestReconcileNodeConfigCache_finalizeNodeConfigCache(t *testing.T) {
 func TestReconcileNodeConfigCache_addFinalizer(t *testing.T) {
 	tests := []struct {
 		name    string
-		cr      *cachesv1alpha1.NodeConfigCache
+		cr      *marin3rv1alpha1.NodeConfigCache
 		wantErr bool
 	}{
 		{
 			name: "Adds finalizer to NodecacheConfig",
-			cr: &cachesv1alpha1.NodeConfigCache{
+			cr: &marin3rv1alpha1.NodeConfigCache{
 				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 					NodeID:    "node1",
-					Resources: &cachesv1alpha1.EnvoyResources{},
+					Resources: &marin3rv1alpha1.EnvoyResources{},
 				}},
 			wantErr: false,
 		},
@@ -550,7 +550,7 @@ func TestReconcileNodeConfigCache_addFinalizer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := scheme.Scheme
-			s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion, tt.cr)
+			s.AddKnownTypes(marin3rv1alpha1.SchemeGroupVersion, tt.cr)
 			cl := fake.NewFakeClient(tt.cr)
 			r := &ReconcileNodeConfigCache{client: cl, scheme: s, adsCache: fakeTestCache()}
 
@@ -558,7 +558,7 @@ func TestReconcileNodeConfigCache_addFinalizer(t *testing.T) {
 				t.Errorf("ReconcileNodeConfigCache.addFinalizer() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !tt.wantErr {
-				ncc := &cachesv1alpha1.NodeConfigCache{}
+				ncc := &marin3rv1alpha1.NodeConfigCache{}
 				r.client.Get(context.TODO(), types.NamespacedName{Name: "ncc", Namespace: "default"}, ncc)
 				if len(ncc.ObjectMeta.Finalizers) != 1 {
 					t.Error("ReconcileNodeConfigCache.addFinalizer() wrong number of finalizers present in object")
@@ -602,38 +602,38 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		ncc     *cachesv1alpha1.NodeConfigCache
-		ncrList *cachesv1alpha1.NodeConfigRevisionList
+		ncc     *marin3rv1alpha1.NodeConfigCache
+		ncrList *marin3rv1alpha1.NodeConfigRevisionList
 		want    string
 		wantErr bool
 	}{
 		{
 			name: "Returns the desiredVersion on seeing a new version",
-			ncc: &cachesv1alpha1.NodeConfigCache{
+			ncc: &marin3rv1alpha1.NodeConfigCache{
 				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 					NodeID:    "node1",
-					Resources: &cachesv1alpha1.EnvoyResources{},
+					Resources: &marin3rv1alpha1.EnvoyResources{},
 				},
-				Status: cachesv1alpha1.NodeConfigCacheStatus{
-					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+				Status: marin3rv1alpha1.NodeConfigCacheStatus{
+					ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 						{Version: "xxx", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
 					},
 				},
 			},
-			ncrList: &cachesv1alpha1.NodeConfigRevisionList{
+			ncrList: &marin3rv1alpha1.NodeConfigRevisionList{
 				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-				Items: []cachesv1alpha1.NodeConfigRevision{
+				Items: []marin3rv1alpha1.NodeConfigRevision{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "ncr1",
 							Namespace: "default",
 							Labels:    map[string]string{nodeIDTag: "node1"},
 						},
-						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 							NodeID:    "node1",
 							Version:   "xxx",
-							Resources: &cachesv1alpha1.EnvoyResources{},
+							Resources: &marin3rv1alpha1.EnvoyResources{},
 						},
 					},
 				},
@@ -643,32 +643,32 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 		},
 		{
 			name: "Returns the highest index untainted revision of the ConfigRevision list",
-			ncc: &cachesv1alpha1.NodeConfigCache{
+			ncc: &marin3rv1alpha1.NodeConfigCache{
 				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 					NodeID:    "node1",
-					Resources: &cachesv1alpha1.EnvoyResources{},
+					Resources: &marin3rv1alpha1.EnvoyResources{},
 				},
-				Status: cachesv1alpha1.NodeConfigCacheStatus{
-					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+				Status: marin3rv1alpha1.NodeConfigCacheStatus{
+					ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 						{Version: "xxx", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
 						{Version: "zzz", Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
 					},
 				},
 			},
-			ncrList: &cachesv1alpha1.NodeConfigRevisionList{
+			ncrList: &marin3rv1alpha1.NodeConfigRevisionList{
 				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-				Items: []cachesv1alpha1.NodeConfigRevision{
+				Items: []marin3rv1alpha1.NodeConfigRevision{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "ncr1",
 							Namespace: "default",
 							Labels:    map[string]string{nodeIDTag: "node1"},
 						},
-						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 							NodeID:    "node1",
 							Version:   "xxx",
-							Resources: &cachesv1alpha1.EnvoyResources{},
+							Resources: &marin3rv1alpha1.EnvoyResources{},
 						},
 					},
 					{
@@ -677,14 +677,14 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 							Namespace: "default",
 							Labels:    map[string]string{nodeIDTag: "node1"},
 						},
-						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 							NodeID:    "node1",
 							Version:   "zzz",
-							Resources: &cachesv1alpha1.EnvoyResources{},
+							Resources: &marin3rv1alpha1.EnvoyResources{},
 						},
-						Status: cachesv1alpha1.NodeConfigRevisionStatus{
+						Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 							Conditions: status.NewConditions(status.Condition{
-								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
 								Status: corev1.ConditionTrue,
 							}),
 						},
@@ -696,36 +696,36 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 		},
 		{
 			name: "Returns an error if all revisions are tainted",
-			ncc: &cachesv1alpha1.NodeConfigCache{
+			ncc: &marin3rv1alpha1.NodeConfigCache{
 				ObjectMeta: metav1.ObjectMeta{Name: "ncc", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigCacheSpec{
+				Spec: marin3rv1alpha1.NodeConfigCacheSpec{
 					NodeID:    "node1",
-					Resources: &cachesv1alpha1.EnvoyResources{},
+					Resources: &marin3rv1alpha1.EnvoyResources{},
 				},
-				Status: cachesv1alpha1.NodeConfigCacheStatus{
-					ConfigRevisions: []cachesv1alpha1.ConfigRevisionRef{
+				Status: marin3rv1alpha1.NodeConfigCacheStatus{
+					ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 						{Version: "xxx", Ref: corev1.ObjectReference{Name: "ncr1", Namespace: "default"}},
 						{Version: "zzz", Ref: corev1.ObjectReference{Name: "ncr2", Namespace: "default"}},
 					},
 				},
 			},
-			ncrList: &cachesv1alpha1.NodeConfigRevisionList{
+			ncrList: &marin3rv1alpha1.NodeConfigRevisionList{
 				TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-				Items: []cachesv1alpha1.NodeConfigRevision{
+				Items: []marin3rv1alpha1.NodeConfigRevision{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "ncr1",
 							Namespace: "default",
 							Labels:    map[string]string{nodeIDTag: "node1"},
 						},
-						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 							NodeID:    "node1",
 							Version:   "xxx",
-							Resources: &cachesv1alpha1.EnvoyResources{},
+							Resources: &marin3rv1alpha1.EnvoyResources{},
 						},
-						Status: cachesv1alpha1.NodeConfigRevisionStatus{
+						Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 							Conditions: status.NewConditions(status.Condition{
-								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
 								Status: corev1.ConditionTrue,
 							}),
 						},
@@ -736,14 +736,14 @@ func TestReconcileNodeConfigCache_getVersionToPublish(t *testing.T) {
 							Namespace: "default",
 							Labels:    map[string]string{nodeIDTag: "node1"},
 						},
-						Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+						Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 							NodeID:    "node1",
 							Version:   "zzz",
-							Resources: &cachesv1alpha1.EnvoyResources{},
+							Resources: &marin3rv1alpha1.EnvoyResources{},
 						},
-						Status: cachesv1alpha1.NodeConfigRevisionStatus{
+						Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 							Conditions: status.NewConditions(status.Condition{
-								Type:   cachesv1alpha1.RevisionTaintedCondition,
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
 								Status: corev1.ConditionTrue,
 							}),
 						},

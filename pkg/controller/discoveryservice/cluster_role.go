@@ -3,7 +3,7 @@ package discoveryservice
 import (
 	"context"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -71,7 +71,7 @@ func (r *ReconcileDiscoveryService) genClusterRoleObject() *rbacv1.ClusterRole {
 				Verbs:     []string{"get", "list", "watch", "create"},
 			},
 			{
-				APIGroups: []string{cachesv1alpha1.SchemeGroupVersion.Group},
+				APIGroups: []string{marin3rv1alpha1.SchemeGroupVersion.Group},
 				Resources: []string{rbacv1.ResourceAll},
 				Verbs:     []string{rbacv1.VerbAll},
 			},

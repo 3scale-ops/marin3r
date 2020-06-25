@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoyapi_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -28,10 +28,10 @@ import (
 var s *runtime.Scheme = scheme.Scheme
 
 func init() {
-	s.AddKnownTypes(cachesv1alpha1.SchemeGroupVersion,
-		&cachesv1alpha1.NodeConfigRevision{},
-		&cachesv1alpha1.NodeConfigRevisionList{},
-		&cachesv1alpha1.NodeConfigCache{},
+	s.AddKnownTypes(marin3rv1alpha1.SchemeGroupVersion,
+		&marin3rv1alpha1.NodeConfigRevision{},
+		&marin3rv1alpha1.NodeConfigRevisionList{},
+		&marin3rv1alpha1.NodeConfigCache{},
 	)
 }
 
@@ -62,7 +62,7 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 	tests := []struct {
 		name        string
 		nodeID      string
-		cr          *cachesv1alpha1.NodeConfigRevision
+		cr          *marin3rv1alpha1.NodeConfigRevision
 		wantResult  reconcile.Result
 		wantSnap    *xds_cache.Snapshot
 		wantVersion string
@@ -71,18 +71,18 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 		{
 			name:   "Creates new snapshot for nodeID",
 			nodeID: "node3",
-			cr: &cachesv1alpha1.NodeConfigRevision{
+			cr: &marin3rv1alpha1.NodeConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 					NodeID:  "node3",
 					Version: "xxxx",
-					Resources: &cachesv1alpha1.EnvoyResources{
-						Endpoints: []cachesv1alpha1.EnvoyResource{
+					Resources: &marin3rv1alpha1.EnvoyResources{
+						Endpoints: []marin3rv1alpha1.EnvoyResource{
 							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
-				Status: cachesv1alpha1.NodeConfigRevisionStatus{
+				Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 					Conditions: status.NewConditions(status.Condition{
-						Type:   cachesv1alpha1.RevisionPublishedCondition,
+						Type:   marin3rv1alpha1.RevisionPublishedCondition,
 						Status: corev1.ConditionTrue,
 					})},
 			},
@@ -102,22 +102,22 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 		{
 			name:   "Does not update snapshot if resources don't change",
 			nodeID: "node1",
-			cr: &cachesv1alpha1.NodeConfigRevision{
+			cr: &marin3rv1alpha1.NodeConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 					NodeID:  "node1",
 					Version: "bbbb",
-					Resources: &cachesv1alpha1.EnvoyResources{
-						Endpoints: []cachesv1alpha1.EnvoyResource{
+					Resources: &marin3rv1alpha1.EnvoyResources{
+						Endpoints: []marin3rv1alpha1.EnvoyResource{
 							{Name: "endpoint1", Value: "{\"cluster_name\": \"endpoint1\"}"},
 						},
-						Clusters: []cachesv1alpha1.EnvoyResource{
+						Clusters: []marin3rv1alpha1.EnvoyResource{
 							{Name: "cluster1", Value: "{\"name\": \"cluster1\"}"},
 						},
 					}},
-				Status: cachesv1alpha1.NodeConfigRevisionStatus{
+				Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 					Conditions: status.NewConditions(status.Condition{
-						Type:   cachesv1alpha1.RevisionPublishedCondition,
+						Type:   marin3rv1alpha1.RevisionPublishedCondition,
 						Status: corev1.ConditionTrue,
 					})},
 			},
@@ -139,18 +139,18 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 			wantErr:     false,
 		},
 		{
-			name:   "No changes to xds server cache when ncr has condition 'cachesv1alpha1.RevisionPublishedCondition' to false",
+			name:   "No changes to xds server cache when ncr has condition 'marin3rv1alpha1.RevisionPublishedCondition' to false",
 			nodeID: "node1",
-			cr: &cachesv1alpha1.NodeConfigRevision{
+			cr: &marin3rv1alpha1.NodeConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-				Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+				Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 					NodeID:    "node1",
 					Version:   "bbbb",
-					Resources: &cachesv1alpha1.EnvoyResources{},
+					Resources: &marin3rv1alpha1.EnvoyResources{},
 				},
-				Status: cachesv1alpha1.NodeConfigRevisionStatus{
+				Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 					Conditions: status.NewConditions(status.Condition{
-						Type:   cachesv1alpha1.RevisionPublishedCondition,
+						Type:   marin3rv1alpha1.RevisionPublishedCondition,
 						Status: corev1.ConditionFalse,
 					})},
 			},
@@ -228,18 +228,18 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 	})
 
 	t.Run("Taints itself if it fails to load resources", func(t *testing.T) {
-		ncr := &cachesv1alpha1.NodeConfigRevision{
+		ncr := &marin3rv1alpha1.NodeConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 				NodeID:  "node1",
 				Version: "xxxx",
-				Resources: &cachesv1alpha1.EnvoyResources{
-					Endpoints: []cachesv1alpha1.EnvoyResource{
+				Resources: &marin3rv1alpha1.EnvoyResources{
+					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "{\"wrong_property\": \"abcd\"}"},
 					}}},
-			Status: cachesv1alpha1.NodeConfigRevisionStatus{
+			Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 				Conditions: status.NewConditions(status.Condition{
-					Type:   cachesv1alpha1.RevisionPublishedCondition,
+					Type:   marin3rv1alpha1.RevisionPublishedCondition,
 					Status: corev1.ConditionTrue,
 				})},
 		}
@@ -263,7 +263,7 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 		}
 
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
-		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
+		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
 			t.Errorf("ReconcileNodeConfigRevision.Reconcile() ncr has not been tainted")
 		}
 	})
@@ -272,12 +272,12 @@ func TestReconcileNodeConfigRevision_Reconcile(t *testing.T) {
 func TestReconcileNodeConfigRevision_taintSelf(t *testing.T) {
 
 	t.Run("Taints the ncr object", func(t *testing.T) {
-		ncr := &cachesv1alpha1.NodeConfigRevision{
+		ncr := &marin3rv1alpha1.NodeConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 				NodeID:    "node1",
 				Version:   "bbbb",
-				Resources: &cachesv1alpha1.EnvoyResources{},
+				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		r := &ReconcileNodeConfigRevision{
@@ -289,7 +289,7 @@ func TestReconcileNodeConfigRevision_taintSelf(t *testing.T) {
 			t.Errorf("ReconcileNodeConfigRevision.taintSelf() error = %v", err)
 		}
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
-		if !ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.RevisionTaintedCondition) {
+		if !ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
 			t.Errorf("ReconcileNodeConfigRevision.taintSelf() ncr is not tainted")
 		}
 	})
@@ -297,17 +297,17 @@ func TestReconcileNodeConfigRevision_taintSelf(t *testing.T) {
 
 func TestReconcileNodeConfigRevision_updateStatus(t *testing.T) {
 	t.Run("Updates the status of the ncr object", func(t *testing.T) {
-		ncr := &cachesv1alpha1.NodeConfigRevision{
+		ncr := &marin3rv1alpha1.NodeConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{Name: "ncr", Namespace: "default"},
-			Spec: cachesv1alpha1.NodeConfigRevisionSpec{
+			Spec: marin3rv1alpha1.NodeConfigRevisionSpec{
 				NodeID:    "node1",
 				Version:   "bbbb",
-				Resources: &cachesv1alpha1.EnvoyResources{},
+				Resources: &marin3rv1alpha1.EnvoyResources{},
 			},
-			Status: cachesv1alpha1.NodeConfigRevisionStatus{
+			Status: marin3rv1alpha1.NodeConfigRevisionStatus{
 				Conditions: status.NewConditions(
 					status.Condition{
-						Type:   cachesv1alpha1.ResourcesOutOfSyncCondition,
+						Type:   marin3rv1alpha1.ResourcesOutOfSyncCondition,
 						Status: corev1.ConditionTrue,
 					},
 				),
@@ -322,7 +322,7 @@ func TestReconcileNodeConfigRevision_updateStatus(t *testing.T) {
 			t.Errorf("ReconcileNodeConfigRevision.updateStatus() error = %v", err)
 		}
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ncr", Namespace: "default"}, ncr)
-		if ncr.Status.Conditions.IsTrueFor(cachesv1alpha1.ResourcesOutOfSyncCondition) {
+		if ncr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
 			t.Errorf("ReconcileNodeConfigRevision.updateStatus() status not updated")
 		}
 	})
@@ -339,7 +339,7 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 		name          string
 		namespace     string
 		serialization string
-		resources     *cachesv1alpha1.EnvoyResources
+		resources     *marin3rv1alpha1.EnvoyResources
 		snap          *xds_cache.Snapshot
 	}
 	tests := []struct {
@@ -361,20 +361,20 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Endpoints: []cachesv1alpha1.EnvoyResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
 					},
-					Clusters: []cachesv1alpha1.EnvoyResource{
+					Clusters: []marin3rv1alpha1.EnvoyResource{
 						{Name: "cluster", Value: "{\"name\": \"cluster\"}"},
 					},
-					Routes: []cachesv1alpha1.EnvoyResource{
+					Routes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "route", Value: "{\"name\": \"route\"}"},
 					},
-					Listeners: []cachesv1alpha1.EnvoyResource{
+					Listeners: []marin3rv1alpha1.EnvoyResource{
 						{Name: "listener", Value: "{\"name\": \"listener\"}"},
 					},
-					Runtimes: []cachesv1alpha1.EnvoyResource{
+					Runtimes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "runtime", Value: "{\"name\": \"runtime\"}"},
 					}},
 				snap: newNodeSnapshot("node1", "1"),
@@ -413,8 +413,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Endpoints: []cachesv1alpha1.EnvoyResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "giberish"},
 					}},
 				snap: newNodeSnapshot("node1", "1"),
@@ -434,8 +434,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Clusters: []cachesv1alpha1.EnvoyResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Clusters: []marin3rv1alpha1.EnvoyResource{
 						{Name: "cluster", Value: "giberish"},
 					}},
 				snap: newNodeSnapshot("node1", "1"),
@@ -455,8 +455,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Routes: []cachesv1alpha1.EnvoyResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Routes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "route", Value: "giberish"},
 					}},
 				snap: newNodeSnapshot("node1", "1"),
@@ -476,8 +476,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Listeners: []cachesv1alpha1.EnvoyResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Listeners: []marin3rv1alpha1.EnvoyResource{
 						{Name: "listener", Value: "giberish"},
 					}},
 				snap: newNodeSnapshot("node1", "1"),
@@ -497,8 +497,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Runtimes: []cachesv1alpha1.EnvoyResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Runtimes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "runtime", Value: "giberish"},
 					}},
 				snap: newNodeSnapshot("node1", "1"),
@@ -522,8 +522,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Secrets: []cachesv1alpha1.EnvoySecretResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Secrets: []marin3rv1alpha1.EnvoySecretResource{
 						{Name: "secret", Ref: corev1.SecretReference{
 							Name:      "secret",
 							Namespace: "default",
@@ -569,8 +569,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Secrets: []cachesv1alpha1.EnvoySecretResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Secrets: []marin3rv1alpha1.EnvoySecretResource{
 						{Name: "secret", Ref: corev1.SecretReference{
 							Name:      "secret",
 							Namespace: "default",
@@ -593,8 +593,8 @@ func TestReconcileNodeConfigRevision_loadResources(t *testing.T) {
 				name:          "ncr",
 				namespace:     "default",
 				serialization: "json",
-				resources: &cachesv1alpha1.EnvoyResources{
-					Secrets: []cachesv1alpha1.EnvoySecretResource{
+				resources: &marin3rv1alpha1.EnvoyResources{
+					Secrets: []marin3rv1alpha1.EnvoySecretResource{
 						{Name: "secret", Ref: corev1.SecretReference{
 							Name:      "secret",
 							Namespace: "default",

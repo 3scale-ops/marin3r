@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
 	"github.com/3scale/marin3r/pkg/apis/external"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -66,15 +66,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource DiscoveryService
-	err = c.Watch(&source.Kind{Type: &controlplanev1alpha1.DiscoveryService{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &operatorv1alpha1.DiscoveryService{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	// Watch for DiscoveryServiceCertificate resources owned by the DiscoveryService resource
-	err = c.Watch(&source.Kind{Type: &controlplanev1alpha1.DiscoveryServiceCertificate{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &operatorv1alpha1.DiscoveryServiceCertificate{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+		OwnerType:    &operatorv1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
@@ -83,7 +83,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for Deployment resources owned by the DiscoveryService resource
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+		OwnerType:    &operatorv1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
@@ -92,7 +92,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for Service resources owned by the DiscoveryService resource
 	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+		OwnerType:    &operatorv1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for ClusterRole resources owned by the DiscoveryService resource
 	err = c.Watch(&source.Kind{Type: &rbacv1.ClusterRole{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+		OwnerType:    &operatorv1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
@@ -110,7 +110,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for ClusterRoleBinding resources owned by the DiscoveryService resource
 	err = c.Watch(&source.Kind{Type: &rbacv1.ClusterRoleBinding{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+		OwnerType:    &operatorv1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
@@ -119,7 +119,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for ServiceAccount resources owned by the DiscoveryService resource
 	err = c.Watch(&source.Kind{Type: &corev1.ServiceAccount{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+		OwnerType:    &operatorv1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
@@ -128,7 +128,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for Namespace resources owned by the DiscoveryService resource
 	err = c.Watch(&source.Kind{Type: &corev1.Namespace{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+		OwnerType:    &operatorv1alpha1.DiscoveryService{},
 	})
 	if err != nil {
 		return err
@@ -144,7 +144,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			if resourceExists && !rec.clusterIssuerWatch {
 				err := c.Watch(&source.Kind{Type: &certmanagerv1alpha2.ClusterIssuer{}}, &handler.EnqueueRequestForOwner{
 					IsController: true,
-					OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+					OwnerType:    &operatorv1alpha1.DiscoveryService{},
 				})
 				if err != nil {
 					log.Error(err, "Failed setting a watch on certmanagerv1alpha2.ClusterIssuer type")
@@ -177,7 +177,7 @@ var _ reconcile.Reconciler = &ReconcileDiscoveryService{}
 type ReconcileDiscoveryService struct {
 	client             client.Client
 	scheme             *runtime.Scheme
-	ds                 *controlplanev1alpha1.DiscoveryService
+	ds                 *operatorv1alpha1.DiscoveryService
 	logger             logr.Logger
 	discoveryClient    discovery.DiscoveryInterface
 	clusterIssuerWatch bool
@@ -191,7 +191,7 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 	ctx := context.Background()
 
 	// Fetch the DiscoveryService instance
-	dsList := &controlplanev1alpha1.DiscoveryServiceList{}
+	dsList := &operatorv1alpha1.DiscoveryServiceList{}
 	err := r.client.List(ctx, dsList)
 	if err != nil {
 		// Error reading the object - requeue the request.
