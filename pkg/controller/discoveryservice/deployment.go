@@ -61,7 +61,7 @@ func (r *ReconcileDiscoveryService) reconcileDeployment(ctx context.Context) (re
 
 func (r *ReconcileDiscoveryService) getDeploymentObject() *appsv1.Deployment {
 
-	return &appsv1.Deployment{
+	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      r.getName(),
 			Namespace: r.getNamespace(),
@@ -187,4 +187,10 @@ func (r *ReconcileDiscoveryService) getDeploymentObject() *appsv1.Deployment {
 			ProgressDeadlineSeconds: pointer.Int32Ptr(600),
 		},
 	}
+
+	if r.ds.Spec.Debug {
+		dep.Spec.Template.Spec.Containers[0].Args = append(dep.Spec.Template.Spec.Containers[0].Args, "--zap-devel")
+	}
+
+	return dep
 }
