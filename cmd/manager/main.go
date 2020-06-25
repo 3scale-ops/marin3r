@@ -30,7 +30,7 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	"github.com/3scale/marin3r/pkg/apis"
 	"github.com/3scale/marin3r/pkg/controller"
-	controller_nodeconfigcache "github.com/3scale/marin3r/pkg/controller/nodeconfigcache"
+	controller_envoyconfig "github.com/3scale/marin3r/pkg/controller/envoyconfig"
 	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/webhook"
 	"github.com/3scale/marin3r/version"
@@ -174,7 +174,7 @@ func runADSServer(ctx context.Context, cfg *rest.Config, wait *sync.WaitGroup, s
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
 		&envoy.Callbacks{
-			OnError: controller_nodeconfigcache.OnError(cfg),
+			OnError: controller_envoyconfig.OnError(cfg),
 		},
 	)
 
