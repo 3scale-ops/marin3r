@@ -64,13 +64,13 @@ rules:
     verbs:
       - "*"
   - apiGroups:
-      - controlplane.marin3r.3scale.net
+      - operator.marin3r.3scale.net
     resources:
       - "*"
     verbs:
       - "*"
   - apiGroups:
-      - caches.marin3r.3scale.net
+      - marin3r.3scale.net
     resources:
       - "*"
     verbs:
