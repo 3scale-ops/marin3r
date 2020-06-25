@@ -23,7 +23,7 @@ const (
 	/* Finalizers */
 
 	// NodeConfigCacheFinalizer is the finalizer for NodeConfigCache objects
-	NodeConfigCacheFinalizer string = "finalizer.caches.marin3r.3scale.net"
+	NodeConfigCacheFinalizer string = "finalizer.marin3r.3scale.net"
 
 	/* State */
 

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,19 +18,19 @@ import (
 var s *runtime.Scheme = scheme.Scheme
 
 func init() {
-	s.AddKnownTypes(controlplanev1alpha1.SchemeGroupVersion, &controlplanev1alpha1.DiscoveryServiceCertificate{})
+	s.AddKnownTypes(operatorv1alpha1.SchemeGroupVersion, &operatorv1alpha1.DiscoveryServiceCertificate{})
 }
 
 func TestReconcileDiscoveryServiceCertificate_Reconcile(t *testing.T) {
 
 	t.Run("New DiscoveryServiceCertificate creates SelfSigned certificate", func(t *testing.T) {
-		sdcert := &controlplanev1alpha1.DiscoveryServiceCertificate{
+		sdcert := &operatorv1alpha1.DiscoveryServiceCertificate{
 			ObjectMeta: metav1.ObjectMeta{Name: "sdcert", Namespace: "default"},
-			Spec: controlplanev1alpha1.DiscoveryServiceCertificateSpec{
+			Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 				CommonName: "www.example.com",
 				ValidFor:   86400,
-				Signer: controlplanev1alpha1.DiscoveryServiceCertificateSigner{
-					SelfSigned: &controlplanev1alpha1.SelfSignedConfig{},
+				Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+					SelfSigned: &operatorv1alpha1.SelfSignedConfig{},
 				},
 				SecretRef: corev1.SecretReference{Name: "sdcert", Namespace: "default"},
 			},

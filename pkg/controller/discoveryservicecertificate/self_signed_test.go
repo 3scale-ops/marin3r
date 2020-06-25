@@ -3,22 +3,22 @@ package discoveryservicecertificate
 import (
 	"testing"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 )
 
 func Test_genSelfSignedCertificateObject(t *testing.T) {
 	tests := []struct {
 		name    string
-		cfg     controlplanev1alpha1.DiscoveryServiceCertificateSpec
+		cfg     operatorv1alpha1.DiscoveryServiceCertificateSpec
 		wantErr bool
 	}{
 		{
 			name: "Generates a new self-signed client certificate",
-			cfg: controlplanev1alpha1.DiscoveryServiceCertificateSpec{
+			cfg: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 				CommonName: "test",
 				ValidFor:   86400,
-				Signer: controlplanev1alpha1.DiscoveryServiceCertificateSigner{
-					SelfSigned: &controlplanev1alpha1.SelfSignedConfig{},
+				Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+					SelfSigned: &operatorv1alpha1.SelfSignedConfig{},
 				},
 			},
 		},

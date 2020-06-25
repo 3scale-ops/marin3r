@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
 	"github.com/3scale/marin3r/pkg/apis/external"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,7 +18,7 @@ import (
 	cmmeta "github.com/jetstack/cert-manager/pkg/apis/meta/v1"
 )
 
-func (r *ReconcileDiscoveryServiceCertificate) reconcileCertManagerCertificate(ctx context.Context, sdcert *controlplanev1alpha1.DiscoveryServiceCertificate) error {
+func (r *ReconcileDiscoveryServiceCertificate) reconcileCertManagerCertificate(ctx context.Context, sdcert *operatorv1alpha1.DiscoveryServiceCertificate) error {
 
 	// Validate the cert-manager apis are available
 	exists, err := external.HasCertManagerCertificate(r.discoveryClient)
@@ -66,7 +66,7 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileCertManagerCertificate(c
 	return nil
 }
 
-func genCertManagerCertificateObject(cfg controlplanev1alpha1.DiscoveryServiceCertificateSpec) *certmanagerv1alpha2.Certificate {
+func genCertManagerCertificateObject(cfg operatorv1alpha1.DiscoveryServiceCertificateSpec) *certmanagerv1alpha2.Certificate {
 
 	hosts := []string{}
 	if cfg.IsServerCertificate && len(cfg.Hosts) == 0 {

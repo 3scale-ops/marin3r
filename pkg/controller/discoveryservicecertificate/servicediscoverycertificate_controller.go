@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
 	"github.com/3scale/marin3r/pkg/apis/external"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -53,7 +53,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource DiscoveryServiceCertificate
-	err = c.Watch(&source.Kind{Type: &controlplanev1alpha1.DiscoveryServiceCertificate{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &operatorv1alpha1.DiscoveryServiceCertificate{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 				err := c.Watch(&source.Kind{Type: &certmanagerv1alpha2.Certificate{}}, &handler.EnqueueRequestForOwner{
 					IsController: true,
-					OwnerType:    &controlplanev1alpha1.DiscoveryService{},
+					OwnerType:    &operatorv1alpha1.DiscoveryService{},
 				})
 
 				if err != nil {
@@ -114,7 +114,7 @@ func (r *ReconcileDiscoveryServiceCertificate) Reconcile(request reconcile.Reque
 	ctx := context.Background()
 
 	// Fetch the DiscoveryServiceCertificate instance
-	dsc := &controlplanev1alpha1.DiscoveryServiceCertificate{}
+	dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, dsc)
 	if err != nil {
 		if errors.IsNotFound(err) {

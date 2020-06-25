@@ -12,7 +12,7 @@ import (
 	"net"
 	"time"
 
-	controlplanev1alpha1 "github.com/3scale/marin3r/pkg/apis/controlplane/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ctx context.Context, sdcert *controlplanev1alpha1.DiscoveryServiceCertificate) error {
+func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ctx context.Context, sdcert *operatorv1alpha1.DiscoveryServiceCertificate) error {
 
 	// Fetch the certmanagerv1alpha2.Certificate instance
 	cert := &corev1.Secret{}
@@ -58,7 +58,7 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 	return nil
 }
 
-func genSelfSignedCertificateObject(cfg controlplanev1alpha1.DiscoveryServiceCertificateSpec) (*corev1.Secret, error) {
+func genSelfSignedCertificateObject(cfg operatorv1alpha1.DiscoveryServiceCertificateSpec) (*corev1.Secret, error) {
 
 	crt, key, err := genCertificate(
 		cfg.CommonName,

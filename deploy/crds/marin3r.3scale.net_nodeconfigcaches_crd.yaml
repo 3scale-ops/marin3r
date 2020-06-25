@@ -1,43 +1,35 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: nodeconfigrevisions.caches.marin3r.3scale.net
+  name: nodeconfigcaches.marin3r.3scale.net
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.nodeID
     name: NodeID
     type: string
-  - JSONPath: .spec.version
-    name: Version
+  - JSONPath: .status.desiredVersion
+    name: Desired Version
     type: string
-  - JSONPath: .status.published
-    name: Published
-    type: boolean
-  - JSONPath: .metadata.creationTimestamp
-    format: date-time
-    name: Created At
+  - JSONPath: .status.publishedVersion
+    name: Published Version
     type: string
-  - JSONPath: .status.lastPublishedAt
-    format: date-time
-    name: Last Published At
+  - JSONPath: .status.cacheState
+    name: Cache State
     type: string
-  - JSONPath: .status.tainted
-    name: Tainted
-    type: boolean
-  group: caches.marin3r.3scale.net
+  group: marin3r.3scale.net
   names:
-    kind: NodeConfigRevision
-    listKind: NodeConfigRevisionList
-    plural: nodeconfigrevisions
+    kind: NodeConfigCache
+    listKind: NodeConfigCacheList
+    plural: nodeconfigcaches
     shortNames:
-    - ncr
-    singular: nodeconfigrevision
+    - ncc
+    singular: nodeconfigcache
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: NodeConfigRevision is the Schema for the nodeconfigrevisions API
+      description: NodeConfigCache is the Schema for the nodeconfigcaches API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -52,11 +44,11 @@ spec:
         metadata:
           type: object
         spec:
-          description: NodeConfigRevisionSpec defines the desired state of NodeConfigRevision
+          description: NodeConfigCacheSpec defines the desired state of NodeConfigCache
           properties:
             nodeID:
               type: string
-            revision:
+            resources:
               description: EnvoyResources holds each envoy api resource type
               properties:
                 clusters:
@@ -161,16 +153,19 @@ spec:
               - b64json
               - yaml
               type: string
-            version:
-              type: string
           required:
           - nodeID
-          - revision
-          - version
+          - resources
           type: object
         status:
-          description: NodeConfigRevisionStatus defines the observed state of NodeConfigRevision
+          description: NodeConfigCacheStatus defines the observed state of NodeConfigCache
           properties:
+            cacheState:
+              description: CacheState summarizes all the observations about the NodeCacheConfig
+                to give the user a concrete idea on the general status of the cache.
+                It is intended only for human consumption. Other controllers should
+                relly on conditions to determine the status of the cache
+              type: string
             conditions:
               description: Conditions represent the latest available observations
                 of an object's state
@@ -212,21 +207,65 @@ spec:
                 - type
                 type: object
               type: array
-            lastPublishedAt:
-              description: LastPublishedAt indicates the last time this config review
-                transitioned to published
-              format: date-time
+            desiredVersion:
+              description: DesiredVersion represents the resources version described
+                in the spec of the nodeconfigrevision object
               type: string
-            published:
-              description: Published signals if the NodeConfigRevision is the one
-                currently published in the xds server cache
-              type: boolean
-            tainted:
-              description: Tainted indicates whether the NodeConfigRevision is eligible
-                for publishing or not
-              type: boolean
-          required:
-          - conditions
+            publishedVersion:
+              description: PublishedVersion is the config version currently served
+                by the envoy control plane for the node-id
+              type: string
+            revisions:
+              description: ConfigRevisions is an ordered list of references to the
+                nodeconfigrevision object
+              items:
+                description: ConfigRevisionRef holds a reference to NodeConfigRevision
+                  object
+                properties:
+                  ref:
+                    description: ObjectReference contains enough information to let
+                      you inspect or modify the referred object.
+                    properties:
+                      apiVersion:
+                        description: API version of the referent.
+                        type: string
+                      fieldPath:
+                        description: 'If referring to a piece of an object instead
+                          of an entire object, this string should contain a valid
+                          JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within
+                          a pod, this would take on a value like: "spec.containers{name}"
+                          (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]"
+                          (container with index 2 in this pod). This syntax is chosen
+                          only to have some well-defined way of referencing a part
+                          of an object. TODO: this design is not final and this field
+                          is subject to change in the future.'
+                        type: string
+                      kind:
+                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        type: string
+                      namespace:
+                        description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                        type: string
+                      resourceVersion:
+                        description: 'Specific resourceVersion to which this reference
+                          is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                        type: string
+                      uid:
+                        description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                        type: string
+                    type: object
+                  version:
+                    type: string
+                required:
+                - ref
+                - version
+                type: object
+              type: array
           type: object
       type: object
   version: v1alpha1
