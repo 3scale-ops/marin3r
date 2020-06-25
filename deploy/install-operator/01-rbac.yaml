@@ -1,0 +1,91 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: marin3r-operator
+  namespace: marin3r
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: marin3r-operator
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - services
+      - serviceaccounts
+      - configmaps
+      - secrets
+    verbs:
+      - "*"
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - "*"
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterroles
+      - clusterrolebindings
+    verbs:
+      - create
+      - watch
+      - list
+      - patch
+  - apiGroups:
+      - admissionregistration.k8s.io
+    resources:
+      - mutatingwebhookconfigurations
+    verbs:
+      - get
+      - watch
+      - create
+      - list
+      - patch
+  - apiGroups:
+      - cert-manager.io
+    resources:
+      - certificates
+      - clusterissuers
+    verbs:
+      - "*"
+  - apiGroups:
+      - controlplane.marin3r.3scale.net
+    resources:
+      - "*"
+    verbs:
+      - "*"
+  - apiGroups:
+      - caches.marin3r.3scale.net
+    resources:
+      - "*"
+    verbs:
+      - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: marin3r-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: marin3r-operator
+subjects:
+  - kind: ServiceAccount
+    name: marin3r-operator
+    namespace: marin3r
