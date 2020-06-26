@@ -116,7 +116,7 @@ func (r *ReconcileEnvoyConfigRevision) Reconcile(request reconcile.Request) (rec
 
 		// Deserialize envoy resources from the spec and create a new snapshot with them
 		if err := r.loadResources(ctx, request.Name, request.Namespace,
-			ecr.Spec.Serialization, ecr.Spec.Resources, field.NewPath("spec", "resources"), snap); err != nil {
+			ecr.Spec.Serialization, ecr.Spec.EnvoyResources, field.NewPath("spec", "resources"), snap); err != nil {
 			// Requeue with delay, as the envoy resources syntax is probably wrong
 			// and that is not a transitory error (some other higher level resource
 			// probaly needs fixing)

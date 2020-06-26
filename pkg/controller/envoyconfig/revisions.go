@@ -57,10 +57,10 @@ func (r *ReconcileEnvoyConfig) ensureEnvoyConfigRevision(ctx context.Context,
 				},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				NodeID:        ec.Spec.NodeID,
-				Version:       version,
-				Serialization: ec.Spec.Serialization,
-				Resources:     ec.Spec.Resources,
+				NodeID:         ec.Spec.NodeID,
+				Version:        version,
+				Serialization:  ec.Spec.Serialization,
+				EnvoyResources: ec.Spec.EnvoyResources,
 			},
 		}
 		// Set the ec as the owner and controller of the revision

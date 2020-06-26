@@ -1,11 +1,12 @@
 ---
 apiVersion: marin3r.3scale.net/v1alpha1
-kind: EnvoyConfig
+kind: EnvoyConfigRevision
 metadata:
   name: example
   namespace: my-namespace
 spec:
   nodeID: example
+  version: hash
   resources:
     secrets:
       - name: example.com

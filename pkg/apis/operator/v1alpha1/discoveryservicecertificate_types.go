@@ -11,25 +11,50 @@ const (
 
 // DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate
 type DiscoveryServiceCertificateSpec struct {
-	CommonName          string                            `json:"commonName"`
-	IsServerCertificate bool                              `json:"server,omitempty"`
-	IsCA                bool                              `json:"isCA,omitempty"`
-	ValidFor            int64                             `json:"validFor"`
-	Hosts               []string                          `json:"hosts,omitempty"`
-	Signer              DiscoveryServiceCertificateSigner `json:"signer"`
-	SecretRef           corev1.SecretReference            `json:"secretRef"`
+	// CommonName is the CommonName of the certificate
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	CommonName string `json:"commonName"`
+	// IsServerCertificate is a boolean specifying if the certificate should be
+	// issued with server auth usage enabled
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	IsServerCertificate bool `json:"server,omitempty"`
+	// IsCA is a boolean specifying that the certificate is a CA
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	IsCA bool `json:"isCA,omitempty"`
+	// ValidFor specifies the validity of the certificate in seconds
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	ValidFor int64 `json:"validFor"`
+	// Hosts is the list of hosts the certificate is valid for. Only
+	// use when 'IsServerCertificate' is true. If unset, the CommonName
+	// field will be used to populate the valid hosts of the certificate.
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	Hosts []string `json:"hosts,omitempty"`
+	// Signer specifies  the signer to use to create this certificate. Supported
+	// signers are CertManager and SelfSigned.
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	Signer DiscoveryServiceCertificateSigner `json:"signer"`
+	// SecretRef is a reference to the secret that will hold the certificate
+	// and the private key.
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	SecretRef corev1.SecretReference `json:"secretRef"`
 }
 
 // DiscoveryServiceCertificateSigner specifies the signer to use to provision the certificate
 type DiscoveryServiceCertificateSigner struct {
+	// CertManager holds specific configuration for the CertManager signer
 	// +kubebuilder:validation:Optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	CertManager *CertManagerConfig `json:"certManager,omitempty"`
+	// SelfSigned holds specific configuration for the SelfSigned signer
 	// +kubebuilder:validation:Optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	SelfSigned *SelfSignedConfig `json:"selfSigned,omitempty"`
 }
 
 // CertManagerConfig is used to generate certificates using the given cert-manager issuer
 type CertManagerConfig struct {
+	// The name of the cert-manager ClusterIssuer to be used to sign the
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	ClusterIssuer string `json:"clusterIssuer"`
 }
 
@@ -41,9 +66,15 @@ type DiscoveryServiceCertificateStatus struct{}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// DiscoveryServiceCertificate is the Schema for the DiscoveryServicecertificates API
+// DiscoveryServiceCertificate is used to create certificates, either self-signed
+// or by using a cert-manager CA issuer. This object is used by the DiscoveryService
+// controller to create the required certificates for the diferent components of the
+// discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced
+// +operator-sdk:gen-csv:customresourcedefinitions.displayName="DiscoveryServiceCertificate"
+// +operator-sdk:gen-csv:customresourcedefinitions.resources=`Certificate,v1alpha2`
+// +operator-sdk:gen-csv:customresourcedefinitions.resources=`Secret,v1`
 type DiscoveryServiceCertificate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

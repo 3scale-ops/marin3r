@@ -149,7 +149,7 @@ func (r *ReconcileEnvoyConfig) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	// desiredVersion is the version that matches the resources described in the spec
-	desiredVersion := calculateRevisionHash(ec.Spec.Resources)
+	desiredVersion := calculateRevisionHash(ec.Spec.EnvoyResources)
 
 	// ensure that the desiredVersion has a matching revision object
 	if err := r.ensureEnvoyConfigRevision(ctx, ec, desiredVersion); err != nil {
