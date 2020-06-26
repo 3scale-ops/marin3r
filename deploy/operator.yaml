@@ -1,33 +1,32 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: marin3r
+  name: marin3r-operator
+  namespace: marin3r
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: marin3r
+      app: marin3r-operator
   template:
     metadata:
       labels:
-        name: marin3r
+        app: marin3r-operator
     spec:
-      serviceAccountName: marin3r
+      serviceAccountName: marin3r-operator
       containers:
-        - name: marin3r
-          # Replace this with the built image name
-          image: REPLACE_IMAGE
-          command:
-          - marin3r
+        - name: marin3r-operator
+          image: quay.io/3scale/marin3r:latest
           imagePullPolicy: Always
+          args:
+            - --operator
           env:
             - name: WATCH_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
+              value: ""
             - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "marin3r"
+              value: "marin3r-operator"
