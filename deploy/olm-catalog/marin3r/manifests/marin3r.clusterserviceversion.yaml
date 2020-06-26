@@ -1,0 +1,533 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "marin3r.3scale.net/v1alpha1",
+          "kind": "EnvoyConfig",
+          "metadata": {
+            "name": "example",
+            "namespace": "my-namespace"
+          },
+          "spec": {
+            "nodeID": "example",
+            "resources": {
+              "clusters": [
+                {
+                  "name": "example",
+                  "value": "name: example\nconnect_timeout: 2s\ntype: STRICT_DNS\nlb_policy: ROUND_ROBIN\nload_assignment:\n  cluster_name: example\n  endpoints: []\n"
+                }
+              ],
+              "listeners": [
+                {
+                  "name": "http",
+                  "value": "name: http\naddress:\n  socket_address:\n    address: 0.0.0.0\n    port_value: 8080\nfilter_chains:\n  - filters:\n    - name: envoy.http_connection_manager\n      typed_config:\n        \"@type\": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager\n        stat_prefix: ingress_http\n        route_config:\n          name: local_route\n          virtual_hosts:\n            - name: example\n              domains: [\"*\"]\n              routes:\n                - match:\n                    prefix: \"/\"\n                  route:\n                    cluster: example\n        http_filters:\n          - name: envoy.router\n"
+                }
+              ],
+              "secrets": [
+                {
+                  "name": "example.com",
+                  "ref": {
+                    "name": "example-cert",
+                    "namespace": "my-namespace"
+                  }
+                }
+              ]
+            },
+            "serialization": "yaml"
+          }
+        },
+        {
+          "apiVersion": "operator.marin3r.3scale.net/v1alpha1",
+          "kind": "DiscoveryServiceCertificate",
+          "metadata": {
+            "name": "test-cert",
+            "namespace": "default"
+          },
+          "spec": {
+            "commonName": "test-client",
+            "secretRef": {
+              "name": "test-cert",
+              "namespace": "default"
+            },
+            "signer": {
+              "certManager": {
+                "clusterIssuer": "marin3r-instance"
+              }
+            },
+            "validFor": 3600
+          }
+        },
+        {
+          "apiVersion": "operator.marin3r.3scale.net/v1alpha1",
+          "kind": "DiscoveryService",
+          "metadata": {
+            "name": "instance"
+          },
+          "spec": {
+            "debug": true,
+            "discoveryServiceNamespace": "default",
+            "enabledNamespaces": [
+              "test1",
+              "test2"
+            ],
+            "image": "quay.io/3scale/marin3r:latest",
+            "signer": {
+              "certManager": {
+                "namespace": "cert-manager"
+              }
+            }
+          }
+        }
+      ]
+    capabilities: Basic Install
+    certified: "false"
+    containerImage: quay.io/3scale/marin3r:v0.4.0
+    description: Operator to deploy and manage an Envoy Discovery Service.
+    repository: https://github.com/3scale/marin3r
+    support: Red Hat, Inc.
+  name: marin3r.v0.4.0-2
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: DiscoveryServiceCertificate is used to create certificates, either
+        self-signed or by using a cert-manager CA issuer. This object is used by the
+        DiscoveryService controller to create the required certificates for the diferent
+        components of the discovery service. Direct use of DiscoveryServiceCertificate
+        objects is discouraged.
+      displayName: DiscoveryServiceCertificate
+      kind: DiscoveryServiceCertificate
+      name: discoveryservicecertificates.operator.marin3r.3scale.net
+      resources:
+      - kind: Certificate
+        name: ""
+        version: v1alpha2
+      - kind: Secret
+        name: ""
+        version: v1
+      specDescriptors:
+      - description: CommonName is the CommonName of the certificate
+        displayName: Common Name
+        path: commonName
+      - description: Hosts is the list of hosts the certificate is valid for. Only
+          use when 'IsServerCertificate' is true. If unset, the CommonName field will
+          be used to populate the valid hosts of the certificate.
+        displayName: Hosts
+        path: hosts
+      - description: IsCA is a boolean specifying that the certificate is a CA
+        displayName: Is CA
+        path: isCA
+      - description: SecretRef is a reference to the secret that will hold the certificate
+          and the private key.
+        displayName: Secret Ref
+        path: secretRef
+      - description: IsServerCertificate is a boolean specifying if the certificate
+          should be issued with server auth usage enabled
+        displayName: Is Server Certificate
+        path: server
+      - description: Signer specifies  the signer to use to create this certificate.
+          Supported signers are CertManager and SelfSigned.
+        displayName: Signer
+        path: signer
+      - description: CertManager holds specific configuration for the CertManager
+          signer
+        displayName: Cert Manager
+        path: signer.certManager
+      - description: The name of the cert-manager ClusterIssuer to be used to sign
+          the
+        displayName: Cluster Issuer
+        path: signer.certManager.clusterIssuer
+      - description: SelfSigned holds specific configuration for the SelfSigned signer
+        displayName: Self Signed
+        path: signer.selfSigned
+      - description: ValidFor specifies the validity of the certificate in seconds
+        displayName: Valid For
+        path: validFor
+      version: v1alpha1
+    - description: DiscoveryService represents an envoy discovery service server.
+        Currently only one DiscoveryService per cluster is supported.
+      displayName: DiscoveryService
+      kind: DiscoveryService
+      name: discoveryservices.operator.marin3r.3scale.net
+      resources:
+      - kind: Deployment
+        name: ""
+        version: v1
+      - kind: DiscoveryServiceCertificate
+        name: ""
+        version: v1alpha1
+      - kind: MutatingWebhookConfiguration
+        name: ""
+        version: v1
+      - kind: Service
+        name: ""
+        version: v1
+      specDescriptors:
+      - description: Debug enables debugging log level for the discovery service controllers.
+          It is safe to use since secret data is never shown in the logs.
+        displayName: Debug
+        path: debug
+      - description: DiscoveryServiceNamespcae is the name of the namespace where
+          the envoy discovery service server should be deployed.
+        displayName: Discovery Service Namespace
+        path: discoveryServiceNamespace
+      - description: EnabledNamespaces is a list of namespaces where the envoy discovery
+          service is enabled. In order to be able to use marin3r from a given namespace
+          its name needs to be included in this list because the operator needs to
+          add some required resources in that namespace.
+        displayName: Enabled Namespaces
+        path: enabledNamespaces
+      - description: Image holds the image to use for the discovery service Deployment
+        displayName: Image
+        path: image
+      - description: Signer holds the configuration for a certificate signer. This
+          signer will be used to setup mTLS between envoy clients and the discovery
+          service server. Currently only the CertManager signer is supported.
+        displayName: Signer
+        path: signer
+      - description: CertManager holds specific config for the CertManager signer.
+        displayName: Cert Manager
+        path: signer.certManager
+      - description: Namespace is the name of the namespace where the cert-manager
+          controller runs. This field is required due to the fact that a CA ClusterIssuer
+          needs the CA Secret to be present in its own namespace. The marin3r-operator
+          syncs the CA Secret from its original namespace to the cert-manager namespace.
+          See https://cert-manager.io/docs/configuration/ca/#deployment.
+        displayName: Namespace
+        path: signer.certManager.namespace
+      version: v1alpha1
+    - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig
+        resources. EnvoyConfigRevisions are automatically created and deleted  by
+        the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig
+        objects instead.
+      kind: EnvoyConfigRevision
+      name: envoyconfigrevisions.marin3r.3scale.net
+      specDescriptors:
+      - description: EnvoyResources holds the different types of resources suported
+          by the envoy discovery service
+        displayName: Envoy Resources
+        path: envoyResources
+      - description: 'Clusters is a list of the envoy Cluster resource type. Reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto'
+        displayName: Clusters
+        path: envoyResources.clusters
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource
+          type. Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto'
+        displayName: Endpoints
+        path: envoyResources.endpoints
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:endpointList
+      - description: 'Listeners is a list of the envoy Listener resource type. Referece:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto'
+        displayName: Listeners
+        path: envoyResources.listeners
+      - description: 'Routes is a list of the envoy Route resource type. Reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto'
+        displayName: Routes
+        path: envoyResources.routes
+      - description: 'Runtimes is a list of the envoy Runtime resource type. Reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto'
+        displayName: Runtimes
+        path: envoyResources.runtime
+      - description: Secrets is a list of references to Kubernetes Secret objects.
+        displayName: Secrets
+        path: envoyResources.secrets
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.secrets[0].name
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls"
+          from which an envoy Secret resource will be automatically created.
+        displayName: Ref
+        path: envoyResources.secrets[0].ref
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:SecretReference
+      - description: NodeID holds the envoy identifier for the discovery service to
+          know which set of resources to send to each of the envoy clients that connect
+          to it.
+        displayName: Node ID
+        path: nodeID
+      - description: Serialization specicifies the serialization format used to describe
+          the resources. "json" and "yaml" are supported. "json" is used if unset.
+        displayName: Serialization
+        path: serialization
+      statusDescriptors:
+      - description: Conditions represent the latest available observations of an
+          object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
+      - description: LastPublishedAt indicates the last time this config review transitioned
+          to published
+        displayName: Last Published At
+        path: lastPublishedAt
+      - description: Published signals if the EnvoyConfigRevision is the one currently
+          published in the xds server cache
+        displayName: Published
+        path: published
+      - description: Tainted indicates whether the EnvoyConfigRevision is eligible
+          for publishing or not
+        displayName: Tainted
+        path: tainted
+      version: v1alpha1
+    - description: EnvoyConfig holds the configuration for a given envoy nodeID. The
+        spec of an EnvoyConfig object holds the envoy resources that conform the desired
+        configuration for the given nodeID and that the discovery service will send
+        to any envoy client that identifies itself with that nodeID.
+      displayName: EnvoyConfig
+      kind: EnvoyConfig
+      name: envoyconfigs.marin3r.3scale.net
+      resources:
+      - kind: EnvoyConfigRevision
+        name: ""
+        version: v1alpha1
+      specDescriptors:
+      - description: EnvoyResources holds the different types of resources suported
+          by the envoy discovery service
+        displayName: Envoy Resources
+        path: envoyResources
+      - description: 'Clusters is a list of the envoy Cluster resource type. Reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto'
+        displayName: Clusters
+        path: envoyResources.clusters
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource
+          type. Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto'
+        displayName: Endpoints
+        path: envoyResources.endpoints
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:endpointList
+      - description: 'Listeners is a list of the envoy Listener resource type. Referece:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto'
+        displayName: Listeners
+        path: envoyResources.listeners
+      - description: 'Routes is a list of the envoy Route resource type. Reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto'
+        displayName: Routes
+        path: envoyResources.routes
+      - description: 'Runtimes is a list of the envoy Runtime resource type. Reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto'
+        displayName: Runtimes
+        path: envoyResources.runtime
+      - description: Secrets is a list of references to Kubernetes Secret objects.
+        displayName: Secrets
+        path: envoyResources.secrets
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.secrets[0].name
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls"
+          from which an envoy Secret resource will be automatically created.
+        displayName: Ref
+        path: envoyResources.secrets[0].ref
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:SecretReference
+      - description: NodeID holds the envoy identifier for the discovery service to
+          know which set of resources to send to each of the envoy clients that connect
+          to it.
+        displayName: Node ID
+        path: nodeID
+      - description: Serialization specicifies the serialization format used to describe
+          the resources. "json" and "yaml" are supported. "json" is used if unset.
+        displayName: Serialization
+        path: serialization
+      statusDescriptors:
+      - description: CacheState summarizes all the observations about the NodeCacheConfig
+          to give the user a concrete idea on the general status of the discovery
+          servie cache. It is intended only for human consumption. Other controllers
+          should relly on conditions to determine the status of the discovery server
+          cache.
+        displayName: Cache State
+        path: cacheState
+      - description: Conditions represent the latest available observations of an
+          object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
+      - description: DesiredVersion represents the resources version described in
+          the spec of the EnvoyConfig object
+        displayName: Desired Version
+        path: desiredVersion
+      - description: PublishedVersion is the config version currently served by the
+          envoy discovery service for the give nodeID
+        displayName: Published Version
+        path: publishedVersion
+      - description: ConfigRevisions is an ordered list of references to EnvoyConfigRevision
+          objects
+        displayName: Config Revisions
+        path: revisions
+      - description: Ref is a reference to the EnvoyConfigRevision object that holds
+          the configuration matching the Version field.
+        displayName: Ref
+        path: revisions[0].ref
+      - description: Version is a hash of the EnvoyResources field
+        displayName: Version
+        path: revisions[0].version
+      version: v1alpha1
+    required:
+    - description: A cert-manager Certificate
+      displayName: cert-manager Certificate
+      kind: Certificate
+      name: cert-manager.io
+      version: v1alpha2
+    - description: A cert-manager ClusterIssuer object
+      displayName: cert-manager ClusterIssuer
+      kind: ClusterIssuer
+      name: cert-manager.io
+      version: v1alpha2
+  description: |
+    marin3r is an operator to deploy and manage an envoy discovery service. It's main purpose is to provide
+    an easy way to deploy a discovery service with the basic functionality already in place so you
+    can focus on developing your envoy configs or even new CRDs leveraging the ones that marin3r provides.
+
+
+    ## Managed installation (kind DiscoveryService)
+
+    * Basic installation and setup of an envoy discovery service
+    * Automatic deployment of a kubernetes mutating admission webhook to inject envoy sidecars in your pods
+    * Automatic configuration of envoy sidecars to find the discovery service within the cluster
+    * Mututal TLS authentication between envoy sidecars and the discovery service
+    * The admisson webhook is enabled only in user selected namespaces
+    * Currenly only a cluster wide installation is supported
+
+
+    ## Deploy envoy configurations as kubernetes custom resources (kind EnvoyConfig)
+
+    * Each EnvoyConfig object holds envoy resources that will be "pushed" to the appropriate set of pods
+    * Control which config goes to which pod directly using annotations on the pod
+    * The whole envoy v2 API is supported
+    * Envoy resources can be both expressed as json or yaml
+    * A history of the last 10 configurations is kept per EnvoyConfig object
+    * Self-healing is attempted when the envoy sidecars are not able to load the resources defined in the
+      EnvoyConfig by rolling back to a previous working config version
+
+    ## License
+    marin3r is licensed under the [Apache 2.0 license](https://github.com/3scale/prometheus-exporter-operator/blob/master/LICENSE)
+  displayName: marin3r
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - serviceaccounts
+          - configmaps
+          - secrets
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+          - list
+          - watch
+          - patch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          verbs:
+          - '*'
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles
+          - clusterrolebindings
+          verbs:
+          - create
+          - watch
+          - list
+          - patch
+        - apiGroups:
+          - admissionregistration.k8s.io
+          resources:
+          - mutatingwebhookconfigurations
+          verbs:
+          - get
+          - watch
+          - create
+          - list
+          - patch
+        - apiGroups:
+          - cert-manager.io
+          resources:
+          - certificates
+          - clusterissuers
+          verbs:
+          - '*'
+        - apiGroups:
+          - operator.marin3r.3scale.net
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        - apiGroups:
+          - marin3r.3scale.net
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        serviceAccountName: marin3r-operator
+      deployments:
+      - name: marin3r-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: marin3r-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                app: marin3r-operator
+            spec:
+              containers:
+              - args:
+                - --zap-devel
+                - --operator
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: marin3r-operator
+                image: quay.io/3scale/marin3r:latest
+                imagePullPolicy: Always
+                name: marin3r-operator
+                resources: {}
+              serviceAccountName: marin3r-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - envoy
+  - discovery
+  - mesh
+  - proxy
+  links:
+  - name: GitHub
+    url: https://github.com/3scale/marin3r
+  maintainers:
+  - email: 3scale-operations@redhat.com
+    name: 3scale Ops
+  maturity: alpha
+  provider:
+    name: Red Hat
+  version: 0.4.0-2

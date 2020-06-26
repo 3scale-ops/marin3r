@@ -1,46 +1,38 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: envoyconfigrevisions.marin3r.3scale.net
+  name: envoyconfigs.marin3r.3scale.net
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.nodeID
     name: NodeID
     type: string
-  - JSONPath: .spec.version
-    name: Version
+  - JSONPath: .status.desiredVersion
+    name: Desired Version
     type: string
-  - JSONPath: .status.published
-    name: Published
-    type: boolean
-  - JSONPath: .metadata.creationTimestamp
-    format: date-time
-    name: Created At
+  - JSONPath: .status.publishedVersion
+    name: Published Version
     type: string
-  - JSONPath: .status.lastPublishedAt
-    format: date-time
-    name: Last Published At
+  - JSONPath: .status.cacheState
+    name: Cache State
     type: string
-  - JSONPath: .status.tainted
-    name: Tainted
-    type: boolean
   group: marin3r.3scale.net
   names:
-    kind: EnvoyConfigRevision
-    listKind: EnvoyConfigRevisionList
-    plural: envoyconfigrevisions
+    kind: EnvoyConfig
+    listKind: EnvoyConfigList
+    plural: envoyconfigs
     shortNames:
-    - ecr
-    singular: envoyconfigrevision
+    - ec
+    singular: envoyconfig
   scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: EnvoyConfigRevision holds an specific version of the EnvoyConfig
-        resources. EnvoyConfigRevisions are automatically created and deleted  by
-        the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig
-        objects instead.
+      description: EnvoyConfig holds the configuration for a given envoy nodeID. The
+        spec of an EnvoyConfig object holds the envoy resources that conform the desired
+        configuration for the given nodeID and that the discovery service will send
+        to any envoy client that identifies itself with that nodeID.
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -55,7 +47,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
+          description: EnvoyConfigSpec defines the desired state of EnvoyConfig
           properties:
             envoyResources:
               description: EnvoyResources holds the different types of resources suported
@@ -200,17 +192,19 @@ spec:
               - b64json
               - yaml
               type: string
-            version:
-              description: Version is a hash of the EnvoyResources field
-              type: string
           required:
           - envoyResources
           - nodeID
-          - version
           type: object
         status:
-          description: EnvoyConfigRevisionStatus defines the observed state of EnvoyConfigRevision
+          description: EnvoyConfigStatus defines the observed state of EnvoyConfig
           properties:
+            cacheState:
+              description: CacheState summarizes all the observations about the NodeCacheConfig
+                to give the user a coecrete idea on the general status of the cache.
+                It is intended only for human consumption. Other controllers should
+                relly on conditions to determine the status of the
+              type: string
             conditions:
               description: Conditions represent the latest available observations
                 of an object's state
@@ -252,21 +246,66 @@ spec:
                 - type
                 type: object
               type: array
-            lastPublishedAt:
-              description: LastPublishedAt indicates the last time this config review
-                transitioned to published
-              format: date-time
+            desiredVersion:
+              description: DesiredVersion represents the resources version described
+                in the spec of the envoyconfigrevision object
               type: string
-            published:
-              description: Published signals if the EnvoyConfigRevision is the one
-                currently published in the xds server cache
-              type: boolean
-            tainted:
-              description: Tainted indicates whether the EnvoyConfigRevision is eligible
-                for publishing or not
-              type: boolean
-          required:
-          - conditions
+            publishedVersion:
+              description: PublishedVersion is the config version currently served
+                by the envoy control plane for the node-id
+              type: string
+            revisions:
+              description: ConfigRevisions is an ordered list of references to the
+                envoyconfigrevision object
+              items:
+                description: ConfigRevisionRef holds a reference to EnvoyConfigRevision
+                  object
+                properties:
+                  ref:
+                    description: Ref is a reference to the EnvoyConfigRevision object
+                      that holds the configuration matching the Version field.
+                    properties:
+                      apiVersion:
+                        description: API version of the referent.
+                        type: string
+                      fieldPath:
+                        description: 'If referring to a piece of an object instead
+                          of an entire object, this string should contain a valid
+                          JSON/Go field access statement, such as desiredState.manifest.containers[2].
+                          For example, if the object reference is to a container within
+                          a pod, this would take on a value like: "spec.containers{name}"
+                          (where "name" refers to the name of the container that triggered
+                          the event) or if no container name is specified "spec.containers[2]"
+                          (container with index 2 in this pod). This syntax is chosen
+                          only to have some well-defined way of referencing a part
+                          of an object. TODO: this design is not final and this field
+                          is subject to change in the future.'
+                        type: string
+                      kind:
+                        description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                        type: string
+                      name:
+                        description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                        type: string
+                      namespace:
+                        description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                        type: string
+                      resourceVersion:
+                        description: 'Specific resourceVersion to which this reference
+                          is made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                        type: string
+                      uid:
+                        description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                        type: string
+                    type: object
+                  version:
+                    description: Version is a hash of the EnvoyResources field
+                    type: string
+                required:
+                - ref
+                - version
+                type: object
+              type: array
           type: object
       type: object
   version: v1alpha1

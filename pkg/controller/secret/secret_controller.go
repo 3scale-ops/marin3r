@@ -122,7 +122,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 
 		if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 
-			for _, secret := range ecr.Spec.Resources.Secrets {
+			for _, secret := range ecr.Spec.EnvoyResources.Secrets {
 				if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
 					logger.Info("Triggered EnvoyConfigRevision reconcile",
 						"EnvoyConfigRevision_Name", ecr.ObjectMeta.Name, "EnvoyConfigRevision_Namespace", ecr.ObjectMeta.Namespace)

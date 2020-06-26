@@ -159,3 +159,12 @@ test-envoy-config:
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config.yaml $(ARGS)
 
+AUTH_TOKEN = $(shell curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '{"user": {"username": "${QUAY_USERNAME}", "password": "${QUAY_PASSWORD}"}}' | jq -r '.token')
+
+olm-generate-csv: ## OPERATOR OLM CSV - Generate CSV Manifests
+	operator-sdk generate csv --csv-version $(RELEASE) --update-crds
+
+olm-bundle: ## OPERATOR OLM CSV - Verify CSV manifests
+	operator-sdk bundle create --channels alpha --generate-only
+	operator-sdk bundle validate deploy/olm-catalog/marin3r
+

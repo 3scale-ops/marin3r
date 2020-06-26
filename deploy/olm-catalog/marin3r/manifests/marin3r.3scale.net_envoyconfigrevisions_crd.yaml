@@ -58,8 +58,7 @@ spec:
           description: EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
           properties:
             envoyResources:
-              description: EnvoyResources holds the different types of resources suported
-                by the envoy discovery service
+              description: EnvoyResources holds each envoy api resource type
               properties:
                 clusters:
                   description: 'Clusters is a list of the envoy Cluster resource type.
@@ -187,21 +186,14 @@ spec:
                   type: array
               type: object
             nodeID:
-              description: NodeID holds the envoy identifier for the discovery service
-                to know which set of resources to send to each of the envoy clients
-                that connect to it.
               type: string
             serialization:
-              description: Serialization specicifies the serialization format used
-                to describe the resources. "json" and "yaml" are supported. "json"
-                is used if unset.
               enum:
               - json
               - b64json
               - yaml
               type: string
             version:
-              description: Version is a hash of the EnvoyResources field
               type: string
           required:
           - envoyResources

@@ -20,6 +20,7 @@ spec:
           image: quay.io/3scale/marin3r:latest
           imagePullPolicy: Always
           args:
+            - --zap-devel
             - --operator
           env:
             - name: WATCH_NAMESPACE

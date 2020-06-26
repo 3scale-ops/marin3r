@@ -76,7 +76,7 @@ func TestReconcileEnvoyConfigRevision_Reconcile(t *testing.T) {
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:  "node3",
 					Version: "xxxx",
-					Resources: &marin3rv1alpha1.EnvoyResources{
+					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
 							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
@@ -107,7 +107,7 @@ func TestReconcileEnvoyConfigRevision_Reconcile(t *testing.T) {
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:  "node1",
 					Version: "bbbb",
-					Resources: &marin3rv1alpha1.EnvoyResources{
+					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
 							{Name: "endpoint1", Value: "{\"cluster_name\": \"endpoint1\"}"},
 						},
@@ -144,9 +144,9 @@ func TestReconcileEnvoyConfigRevision_Reconcile(t *testing.T) {
 			cr: &marin3rv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-					NodeID:    "node1",
-					Version:   "bbbb",
-					Resources: &marin3rv1alpha1.EnvoyResources{},
+					NodeID:         "node1",
+					Version:        "bbbb",
+					EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 				},
 				Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 					Conditions: status.NewConditions(status.Condition{
@@ -233,7 +233,7 @@ func TestReconcileEnvoyConfigRevision_Reconcile(t *testing.T) {
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 				NodeID:  "node1",
 				Version: "xxxx",
-				Resources: &marin3rv1alpha1.EnvoyResources{
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "{\"wrong_property\": \"abcd\"}"},
 					}}},
@@ -275,9 +275,9 @@ func TestReconcileEnvoyConfigRevision_taintSelf(t *testing.T) {
 		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				NodeID:    "node1",
-				Version:   "bbbb",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				NodeID:         "node1",
+				Version:        "bbbb",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		r := &ReconcileEnvoyConfigRevision{
@@ -300,9 +300,9 @@ func TestReconcileEnvoyConfigRevision_updateStatus(t *testing.T) {
 		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				NodeID:    "node1",
-				Version:   "bbbb",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				NodeID:         "node1",
+				Version:        "bbbb",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: status.NewConditions(

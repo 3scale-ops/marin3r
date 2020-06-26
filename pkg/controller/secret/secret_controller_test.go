@@ -46,7 +46,7 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 				NodeID:  "node1",
 				Version: "xxxx",
-				Resources: &marin3rv1alpha1.EnvoyResources{
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{{
 						Name: "secret",
 						Ref: corev1.SecretReference{

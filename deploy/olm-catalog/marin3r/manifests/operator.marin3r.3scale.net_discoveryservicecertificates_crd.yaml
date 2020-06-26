@@ -37,22 +37,16 @@ spec:
             DiscoveryServiceCertificate
           properties:
             commonName:
-              description: CommonName is the CommonName of the certificate
               type: string
             hosts:
-              description: Hosts is the list of hosts the certificate is valid for.
-                Only use when 'IsServerCertificate' is true. If unset, the CommonName
-                field will be used to populate the valid hosts of the certificate.
               items:
                 type: string
               type: array
             isCA:
-              description: IsCA is a boolean specifying that the certificate is a
-                CA
               type: boolean
             secretRef:
-              description: SecretRef is a reference to the secret that will hold the
-                certificate and the private key.
+              description: SecretReference represents a Secret Reference. It has enough
+                information to retrieve secret in any namespace
               properties:
                 name:
                   description: Name is unique within a namespace to reference a secret
@@ -64,31 +58,26 @@ spec:
                   type: string
               type: object
             server:
-              description: IsServerCertificate is a boolean specifying if the certificate
-                should be issued with server auth usage enabled
               type: boolean
             signer:
-              description: Signer specifies  the signer to use to create this certificate.
-                Supported signers are CertManager and SelfSigned.
+              description: DiscoveryServiceCertificateSigner specifies the signer
+                to use to provision the certificate
               properties:
                 certManager:
-                  description: CertManager holds specific configuration for the CertManager
-                    signer
+                  description: CertManagerConfig is used to generate certificates
+                    using the given cert-manager issuer
                   properties:
                     clusterIssuer:
-                      description: The name of the cert-manager ClusterIssuer to be
-                        used to sign the
                       type: string
                   required:
                   - clusterIssuer
                   type: object
                 selfSigned:
-                  description: SelfSigned holds specific configuration for the SelfSigned
-                    signer
+                  description: SelfSignedConfig is an empty struct to refer to the
+                    selfsiged certificates provisioner
                   type: object
               type: object
             validFor:
-              description: ValidFor specifies the validity of the certificate in seconds
               format: int64
               type: integer
           required:
