@@ -29,3 +29,5 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "marin3r-operator"
