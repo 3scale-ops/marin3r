@@ -1,11 +1,11 @@
----
 apiVersion: operators.coreos.com/v1
 kind: OperatorSource
 metadata:
-  name: roivaz-source
+  name: threescale-ops-source
+  namespace: openshift-marketplace
 spec:
-  displayName: Roi's dev operator source
+  displayName: 3scale Ops Operators
   type: appregistry
   endpoint: https://quay.io/cnr
   registryNamespace: roivaz
-  publisher: "Roi Vazquez"
+  publisher: "3scale Ops Operators"

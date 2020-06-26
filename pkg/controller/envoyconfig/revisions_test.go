@@ -25,7 +25,7 @@ func TestReconcileEnvoyConfig_ensureEnvoyConfigRevision(t *testing.T) {
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigSpec{
 				NodeID: "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
 					}},
@@ -53,8 +53,8 @@ func TestReconcileEnvoyConfig_ensureEnvoyConfigRevision(t *testing.T) {
 			return
 		}
 
-		if !apiequality.Semantic.DeepEqual(ecrList.Items[0].Spec.Resources, ec.Spec.Resources) {
-			t.Errorf("TestReconcileEnvoyConfig_ensureEnvoyConfigRevision() - resources '%v', want '%v'", &ecrList.Items[0].Spec.Resources, ec.Spec.Resources)
+		if !apiequality.Semantic.DeepEqual(ecrList.Items[0].Spec.EnvoyResources, ec.Spec.EnvoyResources) {
+			t.Errorf("TestReconcileEnvoyConfig_ensureEnvoyConfigRevision() - resources '%v', want '%v'", &ecrList.Items[0].Spec.EnvoyResources, ec.Spec.EnvoyResources)
 			return
 		}
 	})
@@ -70,9 +70,9 @@ func TestReconcileEnvoyConfig_ensureEnvoyConfigRevision(t *testing.T) {
 				},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "xxxx",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "xxxx",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		ec := &marin3rv1alpha1.EnvoyConfig{
@@ -81,8 +81,8 @@ func TestReconcileEnvoyConfig_ensureEnvoyConfigRevision(t *testing.T) {
 				Namespace: "default",
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigSpec{
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			}}
 
 		cl := fake.NewFakeClient(ec, ecr)
@@ -122,9 +122,9 @@ func TestReconcileEnvoyConfig_consolidateRevisionList(t *testing.T) {
 				},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "xxxx",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "xxxx",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		ec := &marin3rv1alpha1.EnvoyConfig{
@@ -133,8 +133,8 @@ func TestReconcileEnvoyConfig_consolidateRevisionList(t *testing.T) {
 				Namespace: "default",
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigSpec{
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 
@@ -167,9 +167,9 @@ func TestReconcileEnvoyConfig_consolidateRevisionList(t *testing.T) {
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "1",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "1",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		ecr2 := &marin3rv1alpha1.EnvoyConfigRevision{
@@ -179,9 +179,9 @@ func TestReconcileEnvoyConfig_consolidateRevisionList(t *testing.T) {
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "2",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "2",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		ecr3 := &marin3rv1alpha1.EnvoyConfigRevision{
@@ -191,9 +191,9 @@ func TestReconcileEnvoyConfig_consolidateRevisionList(t *testing.T) {
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "3"},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "3",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "3",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 		}
 		ec := &marin3rv1alpha1.EnvoyConfig{
@@ -202,8 +202,8 @@ func TestReconcileEnvoyConfig_consolidateRevisionList(t *testing.T) {
 				Namespace: "default",
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigSpec{
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigStatus{
 				ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
@@ -241,7 +241,7 @@ func TestReconcileEnvoyConfig_consolidateRevisionList(t *testing.T) {
 func TestReconcileEnvoyConfig_deleteUnreferencedRevisions(t *testing.T) {
 	type args struct {
 		ctx context.Context
-		ec *marin3rv1alpha1.EnvoyConfig
+		ec  *marin3rv1alpha1.EnvoyConfig
 	}
 	tests := []struct {
 		name    string
@@ -269,9 +269,9 @@ func TestReconcileEnvoyConfig_markRevisionPublished(t *testing.T) {
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "1",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "1",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: []status.Condition{{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionFalse}},
@@ -285,9 +285,9 @@ func TestReconcileEnvoyConfig_markRevisionPublished(t *testing.T) {
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "2",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "2",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: []status.Condition{{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue}},
@@ -326,9 +326,9 @@ func TestReconcileEnvoyConfig_markRevisionPublished(t *testing.T) {
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "1",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "1",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: []status.Condition{{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionFalse}},
@@ -342,9 +342,9 @@ func TestReconcileEnvoyConfig_markRevisionPublished(t *testing.T) {
 				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
 			},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				Version:   "2",
-				NodeID:    "node1",
-				Resources: &marin3rv1alpha1.EnvoyResources{},
+				Version:        "2",
+				NodeID:         "node1",
+				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: []status.Condition{{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue}},

@@ -159,3 +159,20 @@ test-envoy-config:
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config.yaml $(ARGS)
 
+AUTH_TOKEN = $(shell curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '{"user": {"username": "${QUAY_USERNAME}", "password": "${QUAY_PASSWORD}"}}' | jq -r '.token')
+
+olm-install:
+	operator-sdk olm install --timeout=5m
+
+olm-generate-package-manifests: ## OPERATOR OLM CSV - Generate CSV Manifests
+	operator-sdk generate csv --csv-version=$(RELEASE) --update-crds --make-manifests=false
+
+olm-test-package-manifests:
+	operator-sdk run packagemanifests --operator-version=$(RELEASE) --timeout=5m --install-mode='AllNamespaces=""'
+
+olm-verify-package-manifests:
+		operator-courier --verbose verify --ui_validate_io deploy/olm-catalog/marin3r
+
+olm-push-package-manifests: ## OPERATOR OLM CSV - Push CSV manifests to remote application registry
+olm-push-package-manifests: olm-verify-package-manifests
+	operator-courier --verbose push deploy/olm-catalog/marin3r/ 3scaleops marin3r $(RELEASE) "$(AUTH_TOKEN)"

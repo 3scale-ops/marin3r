@@ -186,11 +186,11 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		resources.Secrets = secrets
 
 		// If the set of resources has changed, update the EnvoyConfig
-		if fmt.Sprintf("%v", resources) != fmt.Sprintf("%v", ec.Spec.Resources) {
+		if fmt.Sprintf("%v", resources) != fmt.Sprintf("%v", ec.Spec.EnvoyResources) {
 			reqLogger.Info("Set of resources has changed, updating EnvoyConfig")
-			reqLogger.Info(fmt.Sprintf("%v ##### %v", resources, ec.Spec.Resources))
+			reqLogger.Info(fmt.Sprintf("%v ##### %v", resources, ec.Spec.EnvoyResources))
 			patch := client.MergeFrom(ec.DeepCopy())
-			ec.Spec.Resources = resources
+			ec.Spec.EnvoyResources = resources
 			if err := r.client.Patch(ctx, ec, patch); err != nil {
 				return reconcile.Result{}, err
 			}
@@ -230,13 +230,13 @@ func createEnvoyConfig(ctx context.Context, c client.Client, cm corev1.ConfigMap
 	if err != nil {
 		return nil, err
 	}
-	ec.Spec.Resources = er
+	ec.Spec.EnvoyResources = er
 
 	secrets, err := populateSecrets(ctx, c, namespace)
 	if err != nil {
 		return nil, err
 	}
-	ec.Spec.Resources.Secrets = secrets
+	ec.Spec.EnvoyResources.Secrets = secrets
 
 	return &ec, nil
 }
