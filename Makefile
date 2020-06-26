@@ -24,17 +24,17 @@ clean: ## remove temporary resources from the repo
 #### Build targets ####
 #######################
 build: ## builds $(RELEASE) or HEAD of the current branch when $(RELEASE) is unset
-build: build/$(NAME)_amd64_$(RELEASE)
+build: build/bin/$(NAME)_amd64_$(RELEASE)
 
-build/$(NAME)_amd64_$(RELEASE):
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/$(NAME)_amd64_$(RELEASE) cmd/manager/main.go
+build/bin/$(NAME)_amd64_$(RELEASE):
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/bin/$(NAME)_amd64_$(RELEASE) cmd/manager/main.go
 
 clean-dirty-builds:
-	rm -rf build/*-dirty
+	rm -rf build/bin/*-dirty
 
 docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-docker-build: build/$(NAME)_amd64_$(RELEASE)
-	docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
+docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
+	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
 
 docker-push: ## pushes the image built from $(RELEASE) to quay.io
 	docker push ${IMAGE_NAME}:$(RELEASE)
@@ -59,11 +59,21 @@ envoy: ## executes an envoy process in a container that will try to connect to a
 envoy: certs
 	docker run -ti --rm \
 		--network=host \
-		--add-host marin3r:127.0.0.1 \
+		--add-host marin3r.default.svc:127.0.0.1 \
 		-v $$(pwd)/certs:/etc/envoy/tls \
-		-v $$(pwd)/example:/config \
+		-v $$(pwd)/deploy/local:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config/envoy-bootstrap.yaml $(ARGS)
+		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
+
+grpc-proxy: ## executes an envoy process in a container that will try to connect to a local marin3r control plane
+grpc-proxy: certs
+	docker run -ti --rm \
+		--network=host \
+		--add-host marin3r.default.svc:127.0.0.1 \
+		-v $$(pwd)/certs:/etc/envoy/tls \
+		-v $$(pwd)/deploy/local:/config \
+		envoyproxy/envoy:$(ENVOY_VERSION) \
+		envoy -c /config/discovery-service-proxy.yaml $(ARGS)
 
 start: ## locally starts marin3r
 start: export KUBECONFIG=tmp/kubeconfig
@@ -73,6 +83,13 @@ start: certs
 		--private-key certs/marin3r.default.svc.key \
 		--ca certs/ca.crt \
 		--zap-devel
+
+start-operator: ## locally starts marin3r-operator
+start-operator: export KUBECONFIG=tmp/kubeconfig
+start-operator: certs
+	WATCH_NAMESPACE="" go run cmd/manager/main.go \
+		--zap-devel \
+		--operator
 
 ###################################
 #### Targets to test with Kind ####
@@ -93,14 +110,18 @@ kind-create: tmp $(KIND)
 	hack/kind-with-registry.sh
 
 kind-docker-build: ## builds the docker image  $(RELEASE) or HEAD of the current branch when unset and pushes it to the kind local registry in "localhost:5000"
+kind-docker-build: export IMAGE_NAME = localhost:5000/${NAME}
 kind-docker-build: clean-dirty-builds build
-	docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
+	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
 	docker tag ${IMAGE_NAME}:$(RELEASE) ${IMAGE_NAME}:test
 	docker push ${IMAGE_NAME}:$(RELEASE)
 	docker push ${IMAGE_NAME}:test
 
+kind-install-certmanager:
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.crds.yaml
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.yaml
+
 kind-start-marin3r: ## deploys marin3r inside the kind k8s cluster
-kind-start-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
 kind-start-marin3r: certs kind-docker-build kind-apply-crds
 	kubectl label namespace/default marin3r.3scale.net/status="enabled" || true
 	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r.default.svc.crt --key=certs/marin3r.default.svc.key || true
@@ -114,7 +135,7 @@ kind-start-envoy: ## runs an envoy pod inside the k8s kind cluster that connects
 kind-start-envoy: certs
 	kubectl create secret tls envoy1-cert --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key || true
 	kubectl annotate secret envoy1-cert cert-manager.io/common-name=envoy-server1 || true
-	kubectl apply -f deploy/kind/envoy-pod.yaml
+	kubectl apply -f deploy/kind/envoy1-pod.yaml
 	while [[ $$(kubectl get pods envoy1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do sleep 5; done
 	kubectl logs -f envoy1
 
@@ -123,7 +144,7 @@ kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind regis
 kind-refresh-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
 kind-refresh-marin3r: kind-docker-build kind-apply-crds
 	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
-	kubectl delete pod -l app=marin3r
+	kubectl delete pod -l app=marin3r --force --grace-period=0
 
 kind-delete: ## deletes the kind cluster and the registry
 kind-delete: $(KIND)

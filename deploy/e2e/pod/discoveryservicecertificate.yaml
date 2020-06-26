@@ -1,0 +1,14 @@
+---
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: DiscoveryServiceCertificate
+metadata:
+  name: envoy1
+spec:
+  commonName: envoy1.default.svc
+  validFor: 3600
+  signer:
+    certManager:
+      clusterIssuer: marin3r-instance
+  secretRef:
+    name: envoy1-cert
+    namespace: default

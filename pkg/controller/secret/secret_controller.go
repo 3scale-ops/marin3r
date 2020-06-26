@@ -3,8 +3,8 @@ package secret
 import (
 	"context"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
-	"github.com/3scale/marin3r/pkg/envoy"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -50,30 +50,20 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	filter := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			switch o := e.Object.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					return true
-				}
+			if e.Object.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				return true
 			}
 			return false
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			switch o := e.ObjectNew.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					// Ignore updates to resource status in which case metadata.Generation does not change
-					return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
-				}
+			if e.ObjectNew.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				return true
 			}
 			return false
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			switch o := e.Object.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					return true
-				}
+			if e.Object.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				return true
 			}
 			return false
 		},
@@ -84,15 +74,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
-
-	// // Watch for changes to secondary resource Pods and requeue the owner Secret
-	// err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-	// 	IsController: true,
-	// 	OwnerType:    &corev1.Secret{},
-	// })
-	// if err != nil {
-	// 	return err
-	// }
 
 	return nil
 }
@@ -117,7 +98,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	err := r.client.Get(ctx, request.NamespacedName, secret)
 	if err != nil {
 		// Error reading the object - requeue the request.
-		// NOTE: We skip the IsNotFound error because we want to trigger NodeConfigCache
+		// NOTE: We skip the IsNotFound error because we want to trigger EnvoyConfig
 		// reconciles when referred secrets are deleted so the envoy control-plane
 		// stops publishing them. This might cause errors if the reference hasn't been
 		// removed from the NodeCacheConfig, but that's ok as we do want to surface this
@@ -130,26 +111,40 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 	logger := log.WithValues("Namespace", request.Namespace, "Name", request.Name)
 	logger.Info("Reconciling from 'kubernetes.io/tls' Secret")
 
-	// Get the list of NoceConfigCaches and check which of them
-	// contain refs to this secret
-	list := &cachesv1alpha1.NodeConfigCacheList{}
-	err = r.client.List(ctx, list)
+	// Get the list of NoceConfigRevisions published and
+	// check which of them contain refs to this secret
+	list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
+	if err := r.client.List(ctx, list); err != nil {
+		return reconcile.Result{}, err
+	}
 
-	for _, ncc := range list.Items {
-		// TODO: Might need to look inside specific revision instead,
-		// when revisions are implemented
-		for _, secret := range ncc.Spec.Resources.Secrets {
-			if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
-				logger.Info("Triggered NodeConfigCache reconcile",
-					"NodeConfigCache_Name", ncc.ObjectMeta.Name, "NodeConfigCache_Namespace", ncc.ObjectMeta.Namespace)
-				version, err := envoy.BumpVersion(ncc.Spec.Version)
-				if err != nil {
-					return reconcile.Result{}, err
+	for _, ecr := range list.Items {
+
+		if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+
+			for _, secret := range ecr.Spec.Resources.Secrets {
+				if secret.Ref.Name == request.Name && secret.Ref.Namespace == request.Namespace {
+					logger.Info("Triggered EnvoyConfigRevision reconcile",
+						"EnvoyConfigRevision_Name", ecr.ObjectMeta.Name, "EnvoyConfigRevision_Namespace", ecr.ObjectMeta.Namespace)
+					if err != nil {
+						return reconcile.Result{}, err
+					}
+
+					if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
+						// patch operation to update Spec.Version in the cache
+						patch := client.MergeFrom(ecr.DeepCopy())
+						ecr.Status.Conditions.SetCondition(status.Condition{
+							Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
+							Reason:  "SecretChanged",
+							Message: "A secret relevant to this envoyconfigrevision changed",
+							Status:  corev1.ConditionTrue,
+						})
+						if err := r.client.Status().Patch(ctx, &ecr, patch); err != nil {
+							return reconcile.Result{}, err
+						}
+						logger.V(1).Info("Condition should have been added ...")
+					}
 				}
-				// patch operation to update Spec.Version in the cache
-				patch := client.MergeFrom(ncc.DeepCopy())
-				ncc.Spec.Version = version
-				r.client.Patch(ctx, &ncc, patch)
 			}
 		}
 	}

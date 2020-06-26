@@ -1,0 +1,15 @@
+---
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: DiscoveryServiceCertificate
+metadata:
+  name: kuard
+  namespace: test1
+spec:
+  commonName: kuard.test1.svc
+  validFor: 3600
+  signer:
+    certManager:
+      clusterIssuer: marin3r-instance
+  secretRef:
+    name: kuard
+    namespace: test1

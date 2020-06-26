@@ -103,3 +103,18 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - controlplane.marin3r.3scale.net
+  resources:
+  - '*'
+  - sidecarconfigs
+  - pkis
+  - servicediscoverycertificates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	cachesv1alpha1 "github.com/3scale/marin3r/pkg/apis/caches/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/pkg/apis/marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	configMapAnnotation  = "marin3r.3scale.net/node-id"
+	nodeIDTag            = "marin3r.3scale.net/node-id"
 	configMapKey         = "config.yaml"
 	secretAnnotation     = "cert-manager.io/common-name"
 	defaultSerialization = "json"
@@ -59,12 +59,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	filter := predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
 			// ConfigMap has marin3r annotation
-			_, ok := e.Meta.GetAnnotations()[configMapAnnotation]
+			_, ok := e.Meta.GetAnnotations()[nodeIDTag]
 			return ok
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			// ConfigMap has marin3r annotation
-			if _, ok := e.MetaNew.GetAnnotations()[configMapAnnotation]; ok {
+			if _, ok := e.MetaNew.GetAnnotations()[nodeIDTag]; ok {
 				// Ignore updates to CR status in which case metadata.ResourceVersion does not change
 				return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 				// return ok
@@ -73,7 +73,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			// ConfigMap has marin3r annotation
-			_, ok := e.Meta.GetAnnotations()[configMapAnnotation]
+			_, ok := e.Meta.GetAnnotations()[nodeIDTag]
 			return ok
 		},
 	}
@@ -116,7 +116,7 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	nodeID := cm.GetAnnotations()[configMapAnnotation]
+	nodeID := cm.GetAnnotations()[nodeIDTag]
 	reqLogger := log.WithValues(
 		"Namespace", request.Namespace,
 		"Name", request.Name,
@@ -124,69 +124,57 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 
 	reqLogger.Info("Reconciling from ConfigMap")
 
-	// Get corresponding NodeConfigCache
-	nccList := &cachesv1alpha1.NodeConfigCacheList{}
+	// Get corresponding EnvoyConfig
+	ecList := &marin3rv1alpha1.EnvoyConfigList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{configMapAnnotation: nodeID},
+		MatchLabels: map[string]string{nodeIDTag: nodeID},
 	})
 	if err != nil {
-		reqLogger.Error(err, "Could not create selector to get cachesalpha1v1.NodeConfigCache resource")
+		reqLogger.Error(err, "Could not create selector to get cachesalpha1v1.EnvoyConfig resource")
 		return reconcile.Result{}, err
 	}
-	err = r.client.List(ctx, nccList, &client.ListOptions{LabelSelector: selector})
+	err = r.client.List(ctx, ecList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
 		// Error reading the resource - requeue the request.
-		reqLogger.Error(err, "Error listing cachesalpha1v1.nodeconfigcaches")
+		reqLogger.Error(err, "Error listing cachesalpha1v1.envoyconfigs")
 		return reconcile.Result{}, err
 	}
 
-	switch count := len(nccList.Items); count {
+	switch count := len(ecList.Items); count {
 
 	case 0:
-		// NodeConfigCache resource not found, create it
-		reqLogger.Info("Creating new NodeConfigCache")
-		ncc, err := createNodeConfigCache(ctx, r.client, *cm, nodeID, request.Name, request.Namespace)
+		// EnvoyConfig resource not found, create it
+		reqLogger.Info("Creating new EnvoyConfig")
+		ec, err := createEnvoyConfig(ctx, r.client, *cm, nodeID, request.Name, request.Namespace)
 		if err != nil {
-			reqLogger.Error(err, "Error building new cachesalpha1v1.nodeconfigcache")
+			reqLogger.Error(err, "Error building new cachesalpha1v1.envoyconfig")
 			return reconcile.Result{}, err
 		}
 
 		// Set ConfigMap cm as the owner and controller
-		if err := controllerutil.SetControllerReference(cm, ncc, r.scheme); err != nil {
+		if err := controllerutil.SetControllerReference(cm, ec, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
 
 		// Create the object
-		err = r.client.Create(ctx, ncc)
+		err = r.client.Create(ctx, ec)
 		if err != nil {
-			reqLogger.Error(err, "Error creating new cachesalpha1v1.nodeconfigcache")
+			reqLogger.Error(err, "Error creating new cachesalpha1v1.envoyconfig")
 			return reconcile.Result{}, err
 		}
 
 	case 1:
-		// NodeConfigCache exists, updating it
-		ncc := &nccList.Items[0]
-		reqLogger.Info("Triggered NodeConfigCache reconcile",
-			"NodeConfigCache_Name", ncc.ObjectMeta.Name, "NodeConfigCache_Namespace", request.Namespace)
+		// EnvoyConfig exists, updating it
+		ec := &ecList.Items[0]
 
 		// patch operation to update Spec.Version in the cache
-		patch := client.MergeFrom(ncc.DeepCopy())
-
-		// Bump NodeConfigCache version
-		version, err := envoy.BumpVersion(ncc.Spec.Version)
-		if err != nil {
-			reqLogger.Error(err, "Unable to bump config version")
-			return reconcile.Result{}, err
-		}
-		ncc.Spec.Version = version
 
 		// Populate resources, loaded from ConfigMap data
-		er, err := populateResources(cm.Data[configMapKey])
+		resources, err := populateResources(cm.Data[configMapKey])
 		if err != nil {
 			reqLogger.Error(err, "Error populating resources in the config cache")
 			return reconcile.Result{}, err
 		}
-		ncc.Spec.Resources = er
 
 		// Populate secret resources, referencing the cert-manager created
 		// secrets in the current namespace
@@ -195,14 +183,23 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 			reqLogger.Error(err, "Error populating secret resources in the config cache")
 			return reconcile.Result{}, err
 		}
-		ncc.Spec.Resources.Secrets = secrets
+		resources.Secrets = secrets
 
-		r.client.Patch(ctx, ncc, patch)
+		// If the set of resources has changed, update the EnvoyConfig
+		if fmt.Sprintf("%v", resources) != fmt.Sprintf("%v", ec.Spec.Resources) {
+			reqLogger.Info("Set of resources has changed, updating EnvoyConfig")
+			reqLogger.Info(fmt.Sprintf("%v ##### %v", resources, ec.Spec.Resources))
+			patch := client.MergeFrom(ec.DeepCopy())
+			ec.Spec.Resources = resources
+			if err := r.client.Patch(ctx, ec, patch); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
 
 	default:
-		// There should always be just one cachesalpha1v1.NodeConfigCache per envoy node-id
-		if len(nccList.Items) > 1 {
-			err := fmt.Errorf("More than 1 cachesv1alpha1.NodeConfigCache object found for node-id '%s', refusing to reconcile", nodeID)
+		// There should always be just one cachesalpha1v1.EnvoyConfig per envoy node-id
+		if len(ecList.Items) > 1 {
+			err := fmt.Errorf("More than 1 EnvoyConfig object found for NodeID '%s', cannot reconcile", nodeID)
 			reqLogger.Error(err, "")
 			// Don't flood the controlle with reconciles that are likely to fail
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, err
@@ -213,19 +210,18 @@ func (r *ReconcileConfigMap) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcile.Result{RequeueAfter: reconcileInterval * time.Second}, nil
 }
 
-func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.ConfigMap, nodeID, name, namespace string) (*cachesv1alpha1.NodeConfigCache, error) {
+func createEnvoyConfig(ctx context.Context, c client.Client, cm corev1.ConfigMap, nodeID, name, namespace string) (*marin3rv1alpha1.EnvoyConfig, error) {
 
-	ncc := cachesv1alpha1.NodeConfigCache{
+	ec := marin3rv1alpha1.EnvoyConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 			Labels: map[string]string{
-				configMapAnnotation: nodeID,
+				nodeIDTag: nodeID,
 			},
 		},
-		Spec: cachesv1alpha1.NodeConfigCacheSpec{
+		Spec: marin3rv1alpha1.EnvoyConfigSpec{
 			NodeID:        nodeID,
-			Version:       "1",
 			Serialization: defaultSerialization,
 		},
 	}
@@ -234,31 +230,31 @@ func createNodeConfigCache(ctx context.Context, c client.Client, cm corev1.Confi
 	if err != nil {
 		return nil, err
 	}
-	ncc.Spec.Resources = er
+	ec.Spec.Resources = er
 
 	secrets, err := populateSecrets(ctx, c, namespace)
 	if err != nil {
 		return nil, err
 	}
-	ncc.Spec.Resources.Secrets = secrets
+	ec.Spec.Resources.Secrets = secrets
 
-	return &ncc, nil
+	return &ec, nil
 }
 
-func populateResources(data string) (*cachesv1alpha1.EnvoyResources, error) {
+func populateResources(data string) (*marin3rv1alpha1.EnvoyResources, error) {
 	// Get envoy resources
 	resources, err := envoy.YAMLtoResources([]byte(data))
 	if err != nil {
 		return nil, err
 	}
 
-	er := &cachesv1alpha1.EnvoyResources{}
+	er := &marin3rv1alpha1.EnvoyResources{}
 	s := envoy.JSON{}
 
 	for _, cluster := range resources.Clusters {
 		sr, _ := s.Marshal(cluster)
 		er.Clusters = append(er.Clusters,
-			cachesv1alpha1.EnvoyResource{
+			marin3rv1alpha1.EnvoyResource{
 				Name:  cluster.Name,
 				Value: sr,
 			})
@@ -267,7 +263,7 @@ func populateResources(data string) (*cachesv1alpha1.EnvoyResources, error) {
 	for _, listener := range resources.Listeners {
 		sr, _ := s.Marshal(listener)
 		er.Listeners = append(er.Listeners,
-			cachesv1alpha1.EnvoyResource{
+			marin3rv1alpha1.EnvoyResource{
 				Name:  listener.Name,
 				Value: sr,
 			})
@@ -276,8 +272,8 @@ func populateResources(data string) (*cachesv1alpha1.EnvoyResources, error) {
 	return er, nil
 }
 
-func populateSecrets(ctx context.Context, c client.Client, namespace string) ([]cachesv1alpha1.EnvoySecretResource, error) {
-	esrl := []cachesv1alpha1.EnvoySecretResource{}
+func populateSecrets(ctx context.Context, c client.Client, namespace string) ([]marin3rv1alpha1.EnvoySecretResource, error) {
+	esrl := []marin3rv1alpha1.EnvoySecretResource{}
 
 	sl := &corev1.SecretList{}
 	err := c.List(ctx, sl, &client.ListOptions{Namespace: namespace})
@@ -287,7 +283,7 @@ func populateSecrets(ctx context.Context, c client.Client, namespace string) ([]
 
 	for _, secret := range sl.Items {
 		if cn, ok := secret.GetAnnotations()[secretAnnotation]; ok {
-			esrl = append(esrl, cachesv1alpha1.EnvoySecretResource{
+			esrl = append(esrl, marin3rv1alpha1.EnvoySecretResource{
 				Name: cn,
 				Ref: corev1.SecretReference{
 					Name:      secret.ObjectMeta.Name,

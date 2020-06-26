@@ -1,0 +1,73 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: discoveryservices.operator.marin3r.3scale.net
+spec:
+  group: operator.marin3r.3scale.net
+  names:
+    kind: DiscoveryService
+    listKind: DiscoveryServiceList
+    plural: discoveryservices
+    singular: discoveryservice
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: DiscoveryService is the Schema for the DiscoveryServices API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: DiscoveryServiceSpec defines the desired state of DiscoveryService
+          properties:
+            debug:
+              type: boolean
+            discoveryServiceNamespace:
+              type: string
+            enabledNamespaces:
+              items:
+                type: string
+              type: array
+            image:
+              type: string
+            signer:
+              description: SignerConfig holds the config for the marin3r instance
+                certificate signer
+              properties:
+                certManager:
+                  description: CertManagerSignerConfig holds the specific config for
+                    the cert-manager signer
+                  properties:
+                    namespace:
+                      description: When using cert-manager, the CA needs to be syncronized
+                        to the namespace where cert-manager runs. To deploy the CA
+                        in a different namespace a command line flag has to be passed
+                        to cert-manager, which is not ideal. See https://cert-manager.io/docs/configuration/ca/#deployment.
+                      type: string
+                  type: object
+              type: object
+          required:
+          - discoveryServiceNamespace
+          - image
+          - signer
+          type: object
+        status:
+          description: DiscoveryServiceStatus defines the observed state of DiscoveryService
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

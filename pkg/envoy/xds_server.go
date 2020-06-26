@@ -43,6 +43,7 @@ type XdsServer struct {
 	tlsConfig     *tls.Config
 	server        xds.Server
 	snapshotCache cache.SnapshotCache
+	callbacks     *Callbacks
 }
 
 // hasher returns node ID as an ID
@@ -57,9 +58,13 @@ func (h hasher) ID(node *core.Node) string {
 }
 
 // NewXdsServer creates a new XdsServer object fron the given params
-func NewXdsServer(ctx context.Context, adsPort uint,
-	tlsConfig *tls.Config, callbacks xds.Callbacks) *XdsServer {
+func NewXdsServer(ctx context.Context, adsPort uint, tlsConfig *tls.Config,
+	callbacks *Callbacks) *XdsServer {
+
 	snapshotCache := cache.NewSnapshotCache(true, hasher{}, nil)
+	// Pass snapshotCache to the callback object so it can
+	// inspect the cache when necessary
+	callbacks.SnapshotCache = &snapshotCache
 	srv := xds.NewServer(ctx, snapshotCache, callbacks)
 
 	return &XdsServer{
@@ -68,6 +73,7 @@ func NewXdsServer(ctx context.Context, adsPort uint,
 		tlsConfig:     tlsConfig,
 		server:        srv,
 		snapshotCache: snapshotCache,
+		callbacks:     callbacks,
 	}
 }
 

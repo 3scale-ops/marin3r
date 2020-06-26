@@ -44,13 +44,16 @@ const (
 	paramEnvoyExtraArgs    = "envoy-extra-args"
 
 	// default values
-	defaultContainerName     = "envoy-sidecar"
-	defaultImage             = "envoyproxy/envoy:v1.14.1"
-	defaultADSConfigMap      = "envoy-sidecar-bootstrap"
-	defaultConfigVolume      = "envoy-sidecar-bootstrap"
-	defaultTLSVolume         = "envoy-sidecar-tls"
-	defaultClientCertificate = "envoy-sidecar-client-cert"
-	defaultEnvoyExtraArgs    = ""
+	DefaultContainerName       = "envoy-sidecar"
+	DefaultImage               = "envoyproxy/envoy:v1.14.1"
+	DefaultBootstrapConfigMap  = "envoy-sidecar-bootstrap"
+	DefaultConfigVolume        = "envoy-sidecar-bootstrap"
+	DefaultTLSVolume           = "envoy-sidecar-tls"
+	DefaultClientCertificate   = "envoy-sidecar-client-cert"
+	DefaultEnvoyExtraArgs      = ""
+	DefaultEnvoyConfigBasePath = "/etc/envoy/bootstrap"
+	DefaultEnvoyConfigFileName = "config.json"
+	DefaultEnvoyTLSBasePath    = "/etc/envoy/tls/client"
 
 	marin3rAnnotationsDomain = "marin3r.3scale.net"
 )
@@ -71,13 +74,13 @@ type envoySidecarConfig struct {
 func getStringParam(key string, annotations map[string]string) string {
 
 	var defaults = map[string]string{
-		paramContainerName:     defaultContainerName,
-		paramImage:             defaultImage,
-		paramADSConfigMap:      defaultADSConfigMap,
-		paramConfigVolume:      defaultConfigVolume,
-		paramTLSVolume:         defaultTLSVolume,
-		paramClientCertificate: defaultClientCertificate,
-		paramEnvoyExtraArgs:    defaultEnvoyExtraArgs,
+		paramContainerName:     DefaultContainerName,
+		paramImage:             DefaultImage,
+		paramADSConfigMap:      DefaultBootstrapConfigMap,
+		paramConfigVolume:      DefaultConfigVolume,
+		paramTLSVolume:         DefaultTLSVolume,
+		paramClientCertificate: DefaultClientCertificate,
+		paramEnvoyExtraArgs:    DefaultEnvoyExtraArgs,
 	}
 
 	// return the value specified in the corresponding annotation, if any
@@ -227,7 +230,7 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 		Command: []string{"envoy"},
 		Args: []string{
 			"-c",
-			"/etc/envoy/bootstrap/config.yaml",
+			fmt.Sprintf("%s/%s", DefaultEnvoyConfigBasePath, DefaultEnvoyConfigFileName),
 			"--service-node",
 			esc.nodeID,
 			"--service-cluster",
@@ -238,12 +241,12 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 			{
 				Name:      esc.tlsVolume,
 				ReadOnly:  true,
-				MountPath: "/etc/envoy/tls/client",
+				MountPath: DefaultEnvoyTLSBasePath,
 			},
 			{
 				Name:      esc.configVolume,
 				ReadOnly:  true,
-				MountPath: "/etc/envoy/bootstrap",
+				MountPath: DefaultEnvoyConfigBasePath,
 			},
 		},
 	}

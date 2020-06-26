@@ -28,18 +28,14 @@ import (
 	"sync"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"k8s.io/client-go/rest"
-
 	"github.com/3scale/marin3r/pkg/apis"
 	"github.com/3scale/marin3r/pkg/controller"
+	controller_envoyconfig "github.com/3scale/marin3r/pkg/controller/envoyconfig"
 	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/webhook"
 	"github.com/3scale/marin3r/version"
+	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/go-logr/logr"
-
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -47,6 +43,10 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -67,6 +67,7 @@ var (
 	tlsCertificatePath string
 	tlsKeyPath         string
 	tlsCAPath          string
+	isOperator         bool
 )
 
 var logger = logf.Log.WithName("cmd")
@@ -83,6 +84,7 @@ func main() {
 	pflag.StringVar(&tlsCertificatePath, "certificate", "/etc/marin3r/tls/server.crt", "Server certificate")
 	pflag.StringVar(&tlsKeyPath, "private-key", "/etc/marin3r/tls/server.key", "The private key of the server certificate")
 	pflag.StringVar(&tlsCAPath, "ca", "/etc/marin3r/tls/ca.crt", "The CA of the server certificate")
+	pflag.BoolVar(&isOperator, "operator", false, "Run in operator mode")
 
 	pflag.CommandLine.AddFlagSet(zap.FlagSet())
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
@@ -107,20 +109,54 @@ func main() {
 
 	ctx := context.Background()
 
-	// Become the leader before proceeding
-	err = leader.Become(ctx, "marin3r-lock")
-	if err != nil {
-		logger.Error(err, "")
-		os.Exit(1)
+	if !isOperator {
+
+		// Become the leader before proceeding
+		err = leader.Become(ctx, "marin3r-lock")
+		if err != nil {
+			logger.Error(err, "")
+			os.Exit(1)
+		}
+
+		// watch for syscalls
+		stopCh := signals.SetupSignalHandler()
+
+		var wait sync.WaitGroup
+
+		// Add the Metrics Service
+		addMetrics(ctx, cfg)
+
+		// Start envoy's aggregated discovery service
+		xdss := runADSServer(ctx, cfg, &wait, stopCh)
+
+		// Start controllers
+		runControllers(ctx, cfg, &wait, stopCh, namespace, xdss.GetSnapshotCache())
+
+		// Start webhook server
+		runWebhookServer(ctx, cfg, &wait, stopCh)
+
+		// Wait for shutdown
+		wait.Wait()
+		logger.Info("Controller has shut down")
+
+	} else {
+		// Become the leader before proceeding
+		err = leader.Become(ctx, "marin3r-operator-lock")
+		if err != nil {
+			logger.Error(err, "")
+			os.Exit(1)
+		}
+
+		// watch for syscalls
+		stopCh := signals.SetupSignalHandler()
+
+		// Start controllers
+		runOperator(ctx, cfg, stopCh, namespace)
 	}
 
-	stopCh := signals.SetupSignalHandler()
-	var wait sync.WaitGroup
+}
 
-	//---------------------------
-	//---- Start aDS server -----
-	//---------------------------
-
+func runADSServer(ctx context.Context, cfg *rest.Config, wait *sync.WaitGroup, stopCh <-chan struct{}) *envoy.XdsServer {
 	xdss := envoy.NewXdsServer(
 		ctx,
 		envoyControlPlanePort,
@@ -137,7 +173,9 @@ func main() {
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    getCA(tlsCAPath, logger),
 		},
-		&envoy.Callbacks{},
+		&envoy.Callbacks{
+			OnError: controller_envoyconfig.OnError(cfg),
+		},
 	)
 
 	wait.Add(1)
@@ -149,10 +187,10 @@ func main() {
 		}
 	}()
 
-	//----------------------------------
-	//----- Start controller manager ---
-	//----------------------------------
+	return xdss
+}
 
+func runControllers(ctx context.Context, cfg *rest.Config, wait *sync.WaitGroup, stopCh <-chan struct{}, namespace string, c *xds_cache.SnapshotCache) {
 	// Set default manager options
 	options := manager.Options{
 		Namespace:          namespace,
@@ -184,13 +222,10 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr, xdss.GetSnapshotCache()); err != nil {
+	if err := controller.AddToManager(mgr, c); err != nil {
 		logger.Error(err, "")
 		os.Exit(1)
 	}
-
-	// Add the Metrics Service
-	addMetrics(ctx, cfg)
 
 	logger.Info("Starting the controller.")
 
@@ -203,11 +238,45 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+}
 
-	//---------------------------
-	//------- Start webhook -----
-	//---------------------------
+func runOperator(ctx context.Context, cfg *rest.Config, stopCh <-chan struct{}, namespace string) {
+	// Set default manager options
+	options := manager.Options{
+		Namespace:          namespace,
+		MetricsBindAddress: fmt.Sprintf("%s:%d", host, metricsPort),
+	}
 
+	// Create a new manager to provide shared dependencies and start components
+	mgr, err := manager.New(cfg, options)
+	if err != nil {
+		logger.Error(err, "")
+		os.Exit(1)
+	}
+
+	logger.Info("Registering Operator Components.")
+
+	// Setup Scheme for all resources
+	if err := apis.AddToOperatorScheme(mgr.GetScheme()); err != nil {
+		logger.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Setup all Controllers
+	if err := controller.AddToOperatorManager(mgr); err != nil {
+		logger.Error(err, "")
+		os.Exit(1)
+	}
+
+	logger.Info("Starting the Operator.")
+
+	if err := mgr.Start(stopCh); err != nil {
+		logger.Error(err, "Controller manager exited non-zero")
+		os.Exit(1)
+	}
+}
+
+func runWebhookServer(ctx context.Context, cfg *rest.Config, wait *sync.WaitGroup, stopCh <-chan struct{}) {
 	webhook := webhook.NewWebhookServer(
 		context.TODO(),
 		webhookPort,
@@ -229,18 +298,10 @@ func main() {
 	go func() {
 		defer wait.Done()
 		if err := webhook.Start(stopCh); err != nil {
-			logger.Error(err, "ADS server returned an unrecoverable error, shutting down")
+			logger.Error(err, "Webhook server returned an unrecoverable error, shutting down")
 			os.Exit(1)
 		}
 	}()
-
-	//--------------------------
-	//---- Wait for shutdown ---
-	//--------------------------
-
-	wait.Wait()
-	logger.Info("Controller has shut down")
-
 }
 
 // addMetrics will create the Services and Service Monitors to allow the operator export the metrics by using
