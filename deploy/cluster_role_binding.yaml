@@ -1,0 +1,13 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: marin3r-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: marin3r-operator
+subjects:
+  - kind: ServiceAccount
+    name: marin3r-operator
+    namespace: marin3r
