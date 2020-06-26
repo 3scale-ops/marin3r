@@ -24,14 +24,16 @@ import (
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
 	grpcMaxConcurrentStreams = 1000000
 )
+
+var logger = logf.Log.WithName("envoy_control_plane")
 
 // XdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server
@@ -41,8 +43,6 @@ type XdsServer struct {
 	tlsConfig     *tls.Config
 	server        xds.Server
 	snapshotCache cache.SnapshotCache
-
-	logger *zap.SugaredLogger
 }
 
 // hasher returns node ID as an ID
@@ -58,7 +58,7 @@ func (h hasher) ID(node *core.Node) string {
 
 // NewXdsServer creates a new XdsServer object fron the given params
 func NewXdsServer(ctx context.Context, adsPort uint,
-	tlsConfig *tls.Config, callbacks xds.Callbacks, logger *zap.SugaredLogger) *XdsServer {
+	tlsConfig *tls.Config, callbacks xds.Callbacks) *XdsServer {
 	snapshotCache := cache.NewSnapshotCache(true, hasher{}, nil)
 	srv := xds.NewServer(ctx, snapshotCache, callbacks)
 
@@ -68,12 +68,11 @@ func NewXdsServer(ctx context.Context, adsPort uint,
 		tlsConfig:     tlsConfig,
 		server:        srv,
 		snapshotCache: snapshotCache,
-		logger:        logger,
 	}
 }
 
-// RunADSServer starts an xDS server at the given port.
-func (xdss *XdsServer) RunADSServer() error {
+// Start starts an xDS server at the given port.
+func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
 	// a single connection to the management server, then it might lead to
@@ -84,23 +83,40 @@ func (xdss *XdsServer) RunADSServer() error {
 	)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", xdss.adsPort))
 	if err != nil {
-		xdss.logger.Fatal(err)
+		logger.Error(err, "Error starting aDS server")
+		return err
 	}
 
-	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
-	go func() error {
-		if err = grpcServer.Serve(lis); err != nil {
-			xdss.logger.Error(err)
-			return err
-		}
-		return nil
-	}()
-	xdss.logger.Infof("Aggregated discovery service listening on %d\n", xdss.adsPort)
-	<-xdss.ctx.Done()
+	// channel to receive errors from the gorutine running the server
+	errCh := make(chan error)
 
-	xdss.logger.Infof("Shutting down ads server")
-	grpcServer.GracefulStop()
-	return nil
+	// goroutine to run server
+	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
+	go func() {
+		if err = grpcServer.Serve(lis); err != nil {
+			errCh <- err
+		}
+	}()
+
+	logger.Info(fmt.Sprintf("Aggregated discovery service listening on %d\n", xdss.adsPort))
+
+	// wait until channel stopCh closed or an error is received
+	select {
+	case <-stopCh:
+		grpcServer.GracefulStop()
+		select {
+		case err := <-errCh:
+			logger.Error(err, "Server graceful stop failed")
+			return err
+		default:
+			logger.Info("Server stopped gracefully")
+			return nil
+		}
+	case err := <-errCh:
+		logger.Error(err, "Server failed")
+		return err
+	}
+
 }
 
 // GetSnapshotCache returns the xds_cache.SnapshotCache

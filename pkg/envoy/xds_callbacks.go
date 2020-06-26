@@ -19,36 +19,34 @@ import (
 	"fmt"
 
 	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	"go.uber.org/zap"
 )
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
-type Callbacks struct {
-	Logger *zap.SugaredLogger
-}
+type Callbacks struct{}
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) error {
-	cb.Logger.Debugf("OnStreamOpen for id %v", id)
+	logger.V(1).Info("Stream opened", "StreamId", id)
 	return nil
 }
 
 // OnStreamClosed implements go-control-plane/pkg/server/Callbacks.OnStreamClosed
 // OnStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
 func (cb *Callbacks) OnStreamClosed(id int64) {
-	cb.Logger.Debugf("OnStreamClosed for id %v", id)
+	logger.V(1).Info("Stream closed", "StreamID", id)
 }
 
 // OnStreamRequest implements go-control-plane/pkg/server/Callbacks.OnStreamRequest
 // OnStreamRequest is called once a request is received on a stream.
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
-	cb.Logger.Debugf("OnStreamRequest. Node: '%s'. ResourceNames: '%s'. TypeURL: '%s' ", req.Node.Id, req.ResourceNames, req.TypeUrl)
+	logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 
 	if req.ErrorDetail != nil {
-		cb.Logger.Errorf("OnStreamRequest error pushing snapshot to gateway: code: %v message %s", req.ErrorDetail.Code, req.ErrorDetail.Message)
-		return fmt.Errorf("OnStreamRequest error pushing snapshot to gateway %v", req.ErrorDetail.Message)
+		err := fmt.Errorf(req.ErrorDetail.Message)
+		logger.Error(err, "A gateway reported an error", "NodeID", req.Node.Id, "StreamID", id)
+		return err
 	}
 	return nil
 }
@@ -56,10 +54,17 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 // OnStreamResponse implements go-control-plane/pkg/server/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
 func (cb *Callbacks) OnStreamResponse(id int64, req *v2.DiscoveryRequest, rsp *v2.DiscoveryResponse) {
+	resources := []string{}
+	for _, r := range rsp.Resources {
+		j, _ := ResourcesToJSON(r)
+		resources = append(resources, string(j))
+	}
 	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v2.auth.Secret" {
-		cb.Logger.Debugf("OnStreamResponse. Node: '%s'. Resources: 'Resources are secrets, refusing to log'. TypeURL: '%s' ", req.Node.Id, rsp.TypeUrl)
+		logger.V(1).Info("Response sent to gateway",
+			"ResourcesNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 	} else {
-		cb.Logger.Debugf("OnStreamResponse. Node: '%s'. Resources: '%s'. TypeURL: '%s' ", req.Node.Id, rsp.Resources, rsp.TypeUrl)
+		logger.V(1).Info("Response sent to gateway",
+			"Resources", resources, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 	}
 }
 

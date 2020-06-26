@@ -17,8 +17,6 @@ package webhook
 import (
 	"fmt"
 
-	"go.uber.org/zap"
-
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,13 +28,13 @@ var (
 
 // MutatePod returns the PatchOperation required to inject the envoy sidecar
 // container and its volumes in the pod
-func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]PatchOperation, error) {
+func MutatePod(req *admissionv1.AdmissionRequest) ([]PatchOperation, error) {
 
 	// This handler should only get called on Pod objects as per the MutatingWebhookConfiguration in the YAML file.
 	// However, if (for whatever reason) this gets invoked on an object of a different kind, issue a log message but
 	// let the object request pass through otherwise.
 	if req.Resource != podResource {
-		logger.Warnf("expect resource to be %s", podResource)
+		logger.Info(fmt.Sprintf("expected resource to be %s", podResource))
 		return nil, nil
 	}
 
@@ -47,12 +45,12 @@ func MutatePod(req *admissionv1.AdmissionRequest, logger *zap.SugaredLogger) ([]
 		return nil, fmt.Errorf("could not deserialize pod object: %v", err)
 	}
 
-	logger.Infof("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v PatchOperation=%v UserInfo=%v",
-		req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo)
+	logger.Info(fmt.Sprintf("AdmissionReview for Kind=%v, Namespace=%v Name=%v (%v) UID=%v PatchOperation=%v UserInfo=%v",
+		req.Kind, req.Namespace, req.Name, pod.Name, req.UID, req.Operation, req.UserInfo))
 
 	if _, ok := pod.GetAnnotations()[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID)]; !ok {
-		logger.Infof("skipping mutation for %s/%s due to missing '%s' annotation", pod.Namespace,
-			pod.Name, fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID))
+		logger.Info(fmt.Sprintf("skipping mutation for %s/%s due to missing '%s/%s' annotation", pod.Namespace,
+			pod.Name, marin3rAnnotationsDomain, paramNodeID))
 		return nil, nil
 	}
 
