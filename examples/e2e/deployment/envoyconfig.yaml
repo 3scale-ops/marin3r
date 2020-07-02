@@ -8,7 +8,7 @@ spec:
   nodeID: kuard
   version: "1"
   serialization: yaml
-  resources:
+  envoyResources:
     secrets:
       - name: kuard.test1.svc
         ref:

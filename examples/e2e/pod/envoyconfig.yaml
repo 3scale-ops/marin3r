@@ -8,7 +8,7 @@ spec:
   # Add fields here
   nodeID: envoy1
   serialization: yaml
-  resources:
+  envoyResources:
     secrets:
       - name: envoy1.default.svc
         ref:
