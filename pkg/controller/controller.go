@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"github.com/3scale/marin3r/pkg/controller/configmap"
 	"github.com/3scale/marin3r/pkg/controller/discoveryservice"
 	"github.com/3scale/marin3r/pkg/controller/discoveryservicecertificate"
 	"github.com/3scale/marin3r/pkg/controller/envoyconfig"
@@ -17,7 +16,6 @@ func AddToManager(m manager.Manager, c *xds_cache.SnapshotCache) error {
 	envoyconfig.Add(m, c)
 	envoyconfigrevision.Add(m, c)
 	secret.Add(m)
-	configmap.Add(m)
 
 	return nil
 }
