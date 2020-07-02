@@ -6,7 +6,8 @@ metadata:
   namespace: my-namespace
 spec:
   nodeID: example
-  resources:
+  serialization: yaml
+  envoyResources:
     secrets:
       - name: example.com
         ref:
@@ -15,65 +16,37 @@ spec:
     clusters:
       - name: example
         value: |
-          {
-            "name": "example",
-            "connect_timeout": "2s",
-            "type": "STRICT_DNS",
-            "lb_policy": "ROUND_ROBIN",
-            "load_assignment": {
-              "cluster_name": "example",
-              "endpoints": []
-            }
-          }
+          name: example
+          connect_timeout: 2s
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: example
+            endpoints: []
     listeners:
       - name: http
         value: |
-          {
-            "name": "http",
-            "address": {
-              "socket_address": {
-                "address": "0.0.0.0",
-                "port_value": 8080
-              }
-            },
-            "filter_chains": [
-              {
-                "filters": [
-                  {
-                    "name": "envoy.http_connection_manager",
-                    "typed_config": {
-                      "@type": "type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager",
-                      "stat_prefix": "ingress_http",
-                      "route_config": {
-                        "name": "local_route",
-                        "virtual_hosts": [
-                          {
-                            "name": "example",
-                            "domains": [
-                              "*"
-                            ],
-                            "routes": [
-                              {
-                                "match": {
-                                  "prefix": "/"
-                                },
-                                "route": {
-                                  "cluster": "example"
-                                }
-                              }
-                            ]
-                          }
-                        ]
-                      },
-                      "http_filters": [
-                        {
-                          "name": "envoy.router"
-                        }
-                      ]
-                    }
-                  }
-                ]
-              }
-            ]
-          }
+          name: http
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 8080
+          filter_chains:
+          - filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                  - name: example
+                    domains: ["*"]
+                    routes:
+                    - match:
+                        prefix: "/"
+                      route:
+                        cluster: example
+                http_filters:
+                - name: envoy.router
 
