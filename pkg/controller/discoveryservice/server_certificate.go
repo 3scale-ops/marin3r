@@ -53,7 +53,7 @@ func getServerCertName(ds *operatorv1alpha1.DiscoveryService) string {
 }
 
 func getServerCertCommonName(ds *operatorv1alpha1.DiscoveryService) string {
-	return fmt.Sprintf("%s-%s", caCommonName, ds.GetName())
+	return fmt.Sprintf("%s-%s", serverCommonName, ds.GetName())
 }
 
 func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.DiscoveryServiceCertificate {
@@ -67,9 +67,11 @@ func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.Disc
 			IsServerCertificate: true,
 			ValidFor:            serverValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
-				CertManager: &operatorv1alpha1.CertManagerConfig{
-					ClusterIssuer: r.getClusterIssuerName(),
-				},
+				CASigned: &operatorv1alpha1.CASignedConfig{
+					SecretRef: corev1.SecretReference{
+						Name:      getCACertName(r.ds),
+						Namespace: OwnedObjectNamespace(r.ds),
+					}},
 			},
 			Hosts: []string{getDiscoveryServiceHost(r.ds)},
 			SecretRef: corev1.SecretReference{

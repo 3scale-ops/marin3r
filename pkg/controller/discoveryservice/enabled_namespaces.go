@@ -169,12 +169,14 @@ func (r *ReconcileDiscoveryService) getClientCertObject(namespace string) *opera
 			Namespace: namespace,
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-			CommonName: OwnedObjectName(r.ds),
+			CommonName: fmt.Sprintf("%s-client", OwnedObjectName(r.ds)),
 			ValidFor:   clientValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
-				CertManager: &operatorv1alpha1.CertManagerConfig{
-					ClusterIssuer: r.getClusterIssuerName(),
-				},
+				CASigned: &operatorv1alpha1.CASignedConfig{
+					SecretRef: corev1.SecretReference{
+						Name:      getCACertName(r.ds),
+						Namespace: OwnedObjectNamespace(r.ds),
+					}},
 			},
 			SecretRef: corev1.SecretReference{
 				Name:      webhook.DefaultClientCertificate,

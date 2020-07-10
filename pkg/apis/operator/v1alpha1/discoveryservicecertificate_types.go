@@ -49,6 +49,10 @@ type DiscoveryServiceCertificateSigner struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	SelfSigned *SelfSignedConfig `json:"selfSigned,omitempty"`
+	// CASigned holds specific configuration for the CASigned signer
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	CASigned *CASignedConfig `json:"caSigned,omitempty"`
 }
 
 // CertManagerConfig is used to generate certificates using the given cert-manager issuer
@@ -60,6 +64,12 @@ type CertManagerConfig struct {
 
 // SelfSignedConfig is an empty struct to refer to the selfsiged certificates provisioner
 type SelfSignedConfig struct{}
+
+// CASignedConfig is used ti generate certificates signed by a CA contained in a Secret
+type CASignedConfig struct {
+	// A reference to a Secret containing the CA
+	SecretRef corev1.SecretReference `json:"caSecretRef"`
+}
 
 // DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
 type DiscoveryServiceCertificateStatus struct{}

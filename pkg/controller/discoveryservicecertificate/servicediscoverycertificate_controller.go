@@ -129,6 +129,11 @@ func (r *ReconcileDiscoveryServiceCertificate) Reconcile(request reconcile.Reque
 		if err := r.reconcileCertManagerCertificate(ctx, dsc); err != nil {
 			return reconcile.Result{}, err
 		}
+	} else if dsc.Spec.Signer.CASigned != nil {
+		reqLogger.Info("Reconciling ca-signed certificate")
+		if err := r.reconcileCASignedCertificate(ctx, dsc); err != nil {
+			return reconcile.Result{}, err
+		}
 	} else {
 		reqLogger.Info("Reconciling self-signed certificate")
 		if err := r.reconcileSelfSignedCertificate(ctx, dsc); err != nil {

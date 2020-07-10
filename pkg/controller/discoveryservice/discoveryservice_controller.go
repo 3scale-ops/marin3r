@@ -36,8 +36,9 @@ const (
 	caValidFor                 int64         = 94610000 // 3 years
 	serverValidFor             int64         = 31536000 // 1 year
 	clientValidFor             int64         = 7776000  // 90 days
-	caCommonName               string        = "marin3r"
+	caCommonName               string        = "marin3r-ca"
 	caCertSecretNamePrefix     string        = "marin3r-ca-cert"
+	serverCommonName           string        = "marin3r-server"
 	serverCertSecretNamePrefix string        = "marin3r-server-cert"
 	pollingPeriod              time.Duration = 10
 )
@@ -224,10 +225,10 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
-	result, err = r.reconcileSigner(ctx)
-	if result.Requeue || err != nil {
-		return result, err
-	}
+	// result, err = r.reconcileSigner(ctx)
+	// if result.Requeue || err != nil {
+	// 	return result, err
+	// }
 
 	result, err = r.reconcileServerCertificate(ctx)
 	if result.Requeue || err != nil {
