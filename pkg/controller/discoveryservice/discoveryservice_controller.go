@@ -7,11 +7,13 @@ import (
 
 	"github.com/3scale/marin3r/pkg/apis/external"
 	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
+	"github.com/3scale/marin3r/pkg/reconcilers"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -245,7 +247,15 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
-	result, err = r.reconcileDeployment(ctx)
+	// result, err = r.reconcileDeployment(ctx)
+	// if result.Requeue || err != nil {
+	// 	return result, err
+	// }
+	dr := reconcilers.NewDeploymentReconciler(ctx, r.logger, r.client, r.scheme, r.ds)
+	result, err = dr.Reconcile(
+		types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)},
+		deploymentGeneratorFn(r.ds),
+	)
 	if result.Requeue || err != nil {
 		return result, err
 	}

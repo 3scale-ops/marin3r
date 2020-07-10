@@ -90,7 +90,7 @@ func (r *ReconcileDiscoveryService) getClusterIssuerObject() *certmanagerv1alpha
 		Spec: certmanagerv1alpha2.IssuerSpec{
 			IssuerConfig: certmanagerv1alpha2.IssuerConfig{
 				CA: &certmanagerv1alpha2.CAIssuer{
-					SecretName: r.getCACertName(),
+					SecretName: getCACertName(r.ds),
 				},
 			},
 		},
@@ -104,8 +104,8 @@ func (r *ReconcileDiscoveryService) syncCASecret(ctx context.Context) error {
 	// Get the CA secret
 	secret := &corev1.Secret{}
 	err := r.client.Get(ctx, types.NamespacedName{
-		Name:      r.getCACertName(),
-		Namespace: r.getNamespace(),
+		Name:      getCACertName(r.ds),
+		Namespace: OwnedObjectNamespace(r.ds),
 	}, secret)
 	if err != nil {
 		return err
@@ -114,14 +114,14 @@ func (r *ReconcileDiscoveryService) syncCASecret(ctx context.Context) error {
 	// Get the synced secret
 	syncedSecret := &corev1.Secret{}
 	err = r.client.Get(ctx, types.NamespacedName{
-		Name:      r.getCACertName(),
+		Name:      getCACertName(r.ds),
 		Namespace: r.ds.Spec.Signer.CertManager.Namespace,
 	}, syncedSecret)
 
 	if err != nil {
 
 		if errors.IsNotFound(err) {
-			syncedSecret.SetName(r.getCACertName())
+			syncedSecret.SetName(getCACertName(r.ds))
 			syncedSecret.SetNamespace(r.ds.Spec.Signer.CertManager.Namespace)
 			syncedSecret.Data = secret.Data
 			if err := controllerutil.SetControllerReference(r.ds, syncedSecret, r.scheme); err != nil {

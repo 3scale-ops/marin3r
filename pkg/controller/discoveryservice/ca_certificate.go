@@ -19,7 +19,7 @@ func (r *ReconcileDiscoveryService) reconcileCA(ctx context.Context) (reconcile.
 
 	r.logger.V(1).Info("Reconciling CA certificate")
 	ca := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: r.getCACertName(), Namespace: r.getNamespace()}, ca)
+	err := r.client.Get(ctx, types.NamespacedName{Name: getCACertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, ca)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -42,35 +42,31 @@ func (r *ReconcileDiscoveryService) reconcileCA(ctx context.Context) (reconcile.
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileDiscoveryService) getCACertName() string {
-	return fmt.Sprintf("%s-%s", caCertSecretNamePrefix, r.ds.GetName())
+func getCACertName(ds *operatorv1alpha1.DiscoveryService) string {
+	return fmt.Sprintf("%s-%s", caCertSecretNamePrefix, ds.GetName())
 }
 
-func (r *ReconcileDiscoveryService) getCACertCommonName() string {
-	return fmt.Sprintf("%s-%s", caCommonName, r.ds.GetName())
-}
-
-func (r *ReconcileDiscoveryService) getCACertNamespace() string {
-	return r.getNamespace()
+func getCACertCommonName(ds *operatorv1alpha1.DiscoveryService) string {
+	return fmt.Sprintf("%s-%s", caCommonName, ds.GetName())
 }
 
 func (r *ReconcileDiscoveryService) genCACertObject() *operatorv1alpha1.DiscoveryServiceCertificate {
 
 	return &operatorv1alpha1.DiscoveryServiceCertificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.getCACertName(),
-			Namespace: r.getCACertNamespace(),
+			Name:      getCACertName(r.ds),
+			Namespace: OwnedObjectNamespace(r.ds),
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-			CommonName: r.getCACertCommonName(),
+			CommonName: getCACertCommonName(r.ds),
 			IsCA:       true,
 			ValidFor:   caValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				SelfSigned: &operatorv1alpha1.SelfSignedConfig{},
 			},
 			SecretRef: corev1.SecretReference{
-				Name:      r.getCACertName(),
-				Namespace: r.getCACertNamespace(),
+				Name:      getCACertName(r.ds),
+				Namespace: OwnedObjectNamespace(r.ds),
 			},
 		},
 	}

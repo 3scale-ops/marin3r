@@ -17,7 +17,7 @@ func (r *ReconcileDiscoveryService) reconcileClusterRoleBinding(ctx context.Cont
 
 	r.logger.V(1).Info("Reconciling CusterRoleBinding")
 	existent := &rbacv1.ClusterRoleBinding{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: r.getName()}, existent)
+	err := r.client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -52,18 +52,18 @@ func (r *ReconcileDiscoveryService) genClusterRoleBindingObject() *rbacv1.Cluste
 
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: r.getName(),
+			Name: OwnedObjectName(r.ds),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
 			Kind:     "ClusterRole",
-			Name:     r.getName(),
+			Name:     OwnedObjectName(r.ds),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      r.getName(),
-				Namespace: r.getNamespace(),
+				Name:      OwnedObjectName(r.ds),
+				Namespace: OwnedObjectNamespace(r.ds),
 			},
 		},
 	}

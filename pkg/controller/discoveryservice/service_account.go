@@ -15,7 +15,7 @@ func (r *ReconcileDiscoveryService) reconcileServiceAccount(ctx context.Context)
 
 	r.logger.V(1).Info("Reconciling ServiceAccount")
 	existent := &corev1.ServiceAccount{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: r.getName(), Namespace: r.getNamespace()}, existent)
+	err := r.client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -40,8 +40,8 @@ func (r *ReconcileDiscoveryService) reconcileServiceAccount(ctx context.Context)
 func (r *ReconcileDiscoveryService) genServiceAccountObject() *corev1.ServiceAccount {
 	return &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.getName(),
-			Namespace: r.getNamespace(),
+			Name:      OwnedObjectName(r.ds),
+			Namespace: OwnedObjectNamespace(r.ds),
 		},
 	}
 }
