@@ -391,6 +391,8 @@ Next time a correct config is applied, the `Rollback` status would go back to `I
 
 ## Configuration
 
+The full marin3r API reference can be found [here](docs/api-reference/reference.asciidoc)
+
 ### EnvoyConfig custom resource
 
 marin3r basic functionality is to feed the envoy configs defined in EnvoyConfig custom resources to an envoy discovery service. The discovery service then sends the resources contained in those configs to the envoy proxies that identify themselves with the same `nodeID` defined in the EnvoyConfig object.

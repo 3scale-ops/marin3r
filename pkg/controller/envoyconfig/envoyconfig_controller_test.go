@@ -95,7 +95,7 @@ func TestReconcileEnvoyConfig_Reconcile(t *testing.T) {
 		}
 		r.client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
 		if ec.ObjectMeta.Finalizers[0] != marin3rv1alpha1.EnvoyConfigFinalizer {
-			t.Errorf("NodeCacheConfig missing finalizer")
+			t.Errorf("EnvoyConfig missing finalizer")
 			return
 		}
 		if len(ec.Status.ConfigRevisions) != 1 {

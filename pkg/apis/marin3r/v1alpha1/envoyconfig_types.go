@@ -27,7 +27,7 @@ const (
 
 	/* State */
 
-	//InSyncState indicates that a NodeCacheConfig object has its resources spec
+	//InSyncState indicates that a EnvoyConfig object has its resources spec
 	// in sync with the xds server cache
 	InSyncState string = "InSync"
 
@@ -110,7 +110,7 @@ type EnvoySecretResource struct {
 
 // EnvoyConfigStatus defines the observed state of EnvoyConfig
 type EnvoyConfigStatus struct {
-	// CacheState summarizes all the observations about the NodeCacheConfig
+	// CacheState summarizes all the observations about the EnvoyConfig
 	// to give the user a concrete idea on the general status of the discovery servie cache.
 	// It is intended only for human consumption. Other controllers should relly on conditions
 	// to determine the status of the discovery server cache.

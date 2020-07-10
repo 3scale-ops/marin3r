@@ -101,7 +101,7 @@ func (r *ReconcileSecret) Reconcile(request reconcile.Request) (reconcile.Result
 		// NOTE: We skip the IsNotFound error because we want to trigger EnvoyConfig
 		// reconciles when referred secrets are deleted so the envoy control-plane
 		// stops publishing them. This might cause errors if the reference hasn't been
-		// removed from the NodeCacheConfig, but that's ok as we do want to surface this
+		// removed from the EnvoyConfig, but that's ok as we do want to surface this
 		// inconsistency instead of silently failing
 		if !errors.IsNotFound(err) {
 			return reconcile.Result{}, err

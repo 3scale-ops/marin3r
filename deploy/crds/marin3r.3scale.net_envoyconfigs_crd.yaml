@@ -200,7 +200,7 @@ spec:
           description: EnvoyConfigStatus defines the observed state of EnvoyConfig
           properties:
             cacheState:
-              description: CacheState summarizes all the observations about the NodeCacheConfig
+              description: CacheState summarizes all the observations about the EnvoyConfig
                 to give the user a concrete idea on the general status of the discovery
                 servie cache. It is intended only for human consumption. Other controllers
                 should relly on conditions to determine the status of the discovery
