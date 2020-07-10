@@ -126,10 +126,6 @@ func (r *ReconcileDiscoveryService) genMutatingWebhookConfigurationObject(caBund
 	}
 }
 
-// func (r *ReconcileDiscoveryService) getMutatingWebhookName() string {
-// 	return fmt.Sprintf("%s-%s", MutatingWebhookPrefix, r.ds.GetName())
-// }
-
 func (r *ReconcileDiscoveryService) getCABundle(ctx context.Context) ([]byte, error) {
 
 	secret := &corev1.Secret{}

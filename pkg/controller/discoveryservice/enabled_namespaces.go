@@ -323,11 +323,6 @@ func getEnvoyBootstrapConfig(host string, port uint32) (string, error) {
 		return "", err
 	}
 
-	// yaml, err := yaml.JSONToYAML(json.Bytes())
-	// if err != nil {
-	// 	return "", err
-	// }
-
 	return string(json.Bytes()), nil
 }
 

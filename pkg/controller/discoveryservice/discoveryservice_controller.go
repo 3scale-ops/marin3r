@@ -247,10 +247,6 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
-	// result, err = r.reconcileDeployment(ctx)
-	// if result.Requeue || err != nil {
-	// 	return result, err
-	// }
 	dr := reconcilers.NewDeploymentReconciler(ctx, r.logger, r.client, r.scheme, r.ds)
 	result, err = dr.Reconcile(
 		types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)},
