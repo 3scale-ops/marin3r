@@ -118,9 +118,18 @@ func (r *ReconcileDiscoveryService) genMutatingWebhookConfigurationObject(caBund
 						Name:      OwnedObjectName(r.ds),
 						Namespace: OwnedObjectNamespace(r.ds),
 						Path:      pointer.StringPtr(webhook.MutatePath),
+						Port:      pointer.Int32Ptr(443),
 					},
 					CABundle: caBundle,
 				},
+				MatchPolicy: func() *admissionregistrationv1.MatchPolicyType {
+					s := admissionregistrationv1.Equivalent
+					return &s
+				}(),
+				ReinvocationPolicy: func() *admissionregistrationv1.ReinvocationPolicyType {
+					s := admissionregistrationv1.NeverReinvocationPolicy
+					return &s
+				}(),
 			},
 		},
 	}
