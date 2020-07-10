@@ -1,0 +1,15 @@
+# Validate with:
+#     kubectl get secrets sdcert -ojsonpath="{.data['tls\.crt']}" | base64 -d | openssl x509 -in - -noout -text
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: DiscoveryServiceCertificate
+metadata:
+  name: sdcert
+  namespace: default
+spec:
+  commonName: www.example.com
+  validFor: 86400
+  signer:
+    selfSigned: {}
+  secretRef:
+    name: sdcert
+    namespace: default

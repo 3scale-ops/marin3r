@@ -83,7 +83,7 @@ func TestMutatePod(t *testing.T) {
 						Name:    "envoy-sidecar",
 						Image:   "envoyproxy/envoy:v1.14.1",
 						Command: []string{"envoy"},
-						Args:    []string{"-c", "/etc/envoy/bootstrap/config.yaml", "--service-node", "test", "--service-cluster", "test"},
+						Args:    []string{"-c", "/etc/envoy/bootstrap/config.json", "--service-node", "test", "--service-cluster", "test"},
 						Ports:   []corev1.ContainerPort{},
 						VolumeMounts: []corev1.VolumeMount{
 							{
@@ -249,7 +249,7 @@ func TestMutatePod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := MutatePod(tt.args.req, tt.args.logger)
+			got, err := MutatePod(tt.args.req)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("MutatePod() error = %v, wantErr %v", err, tt.wantErr)
 				return

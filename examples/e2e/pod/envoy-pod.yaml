@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: envoy1
+  namespace: default
+spec:
+  containers:
+    - name: envoy-sidecar
+      image: envoyproxy/envoy:v1.14.1
+      command: ["envoy"]
+      args:
+        [
+          "-c",
+          "/etc/envoy/bootstrap/config.json",
+          "--component-log-level",
+          "http:debug,connection:debug",
+          "--service-cluster",
+          "envoy1",
+          "--service-node",
+          "envoy1",
+        ]
+      ports:
+        - name: http
+          containerPort: 1080
+          hostPort: 1080
+          protocol: TCP
+        - name: https
+          containerPort: 1443
+          hostPort: 1443
+          protocol: TCP
+      volumeMounts:
+        - name: envoy-sidecar-bootstrap
+          mountPath: /etc/envoy/bootstrap
+        - name: envoy-sidecar-client-cert
+          mountPath: /etc/envoy/tls/client
+  volumes:
+    - name: envoy-sidecar-bootstrap
+      configMap:
+        name: envoy-sidecar-bootstrap
+    - name: envoy-sidecar-client-cert
+      secret:
+        secretName: envoy-sidecar-client-cert

@@ -56,15 +56,15 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				"marin3r.3scale.net/node-id": "node-id",
 			}},
 			&envoySidecarConfig{
-				name:             defaultContainerName,
-				image:            defaultImage,
+				name:             DefaultContainerName,
+				image:            DefaultImage,
 				ports:            []corev1.ContainerPort{},
-				adsConfigMap:     defaultADSConfigMap,
+				adsConfigMap:     DefaultBootstrapConfigMap,
 				nodeID:           "node-id",
 				clusterID:        "node-id",
-				tlsVolume:        defaultTLSVolume,
-				configVolume:     defaultConfigVolume,
-				clientCertSecret: defaultClientCertificate,
+				tlsVolume:        DefaultTLSVolume,
+				configVolume:     DefaultConfigVolume,
+				clientCertSecret: DefaultClientCertificate,
 			},
 			false,
 		},
@@ -367,7 +367,7 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 				Command: []string{"envoy"},
 				Args: []string{
 					"-c",
-					"/etc/envoy/bootstrap/config.yaml",
+					"/etc/envoy/bootstrap/config.json",
 					"--service-node",
 					"test-id",
 					"--service-cluster",
@@ -428,7 +428,7 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 				Command: []string{"envoy"},
 				Args: []string{
 					"-c",
-					"/etc/envoy/bootstrap/config.yaml",
+					"/etc/envoy/bootstrap/config.json",
 					"--service-node",
 					"test-id",
 					"--service-cluster",
@@ -490,7 +490,7 @@ func Test_getStringParam(t *testing.T) {
 		}, {
 			"Return string value from default",
 			args{"envoy-image", map[string]string{}},
-			defaultImage,
+			DefaultImage,
 		}, {
 			"Return cluster-id from annotation",
 			args{"cluster-id", map[string]string{"marin3r.3scale.net/cluster-id": "cluster-id"}},

@@ -1,46 +1,94 @@
-# marin3r
+# **marin3r**
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/3scale/marin3r)](https://goreportcard.com/report/github.com/3scale/marin3r)
 [![codecov](https://codecov.io/gh/3scale/marin3r/branch/master/graph/badge.svg)](https://codecov.io/gh/3scale/marin3r)
-[![build status](https://circleci.com/gh/3scale/marin3r.svg?style=shield)](https://app.circleci.com/pipelines/github/3scale/marin3r)
-[![release](https://badgen.net/github/release/3scale/marin3r)](https://github.com/3scale/marin3r/releases)
+[![build status](https://circleci.com/gh/3scale/marin3r.svg?style=shield)](https://codecov.io/gh/3scale/marin3r/.circleci/config.yml)
 [![license](https://badgen.net/github/license/3scale/marin3r)](https://github.com/3scale/marin3r/blob/master/LICENSE)
 
-Small and simple envoy control plane for kubernetes:
+Lighweight, CRD based envoy control plane for kubernetes:
 
 * Runs in a pod
-* Feeds envoy configurations from configmaps
-* Integrates with cert-manager certificates
+* Feeds envoy configurations from CRDs
+* Easy integration with cert-manager certificates
+* Any secret of type `kubernetes.io/tls` can be used as a certificate source
+* Installation managed by an operator
+* Self-healing capabilities
+* Implements the sidecar pattern: injects envoy sidecar containers based on pod annotations
 
-## Motivation
+## **Motivation**
 
-marin3r started in a weekend (thank you COVID-19 for the countless indoor hours ...) as an exploratory project: is it possible to write a stupid simple yet flexible envoy control plane that meets production requirements? It needed to be able to manage a fleet of envoy sidecars containers without all the hassle of having to perform envoy hot restarts to reload configs (necessary when using file based config). At the same time it needed to be flexible so we could do through the control plane anything that could be done using an envoy config file. The result of the experiment is an envoy control plane that reads envoy configurations from configmaps and feeds them through the envoy discovery services to the envoy containers.
+At Red Hat 3scale operations team we run a SaaS platform based on the Red Hat 3scale API Management product. Running a SaaS poses several challenges that are not usually present on most of the 3scale deployments that our clients run:
 
-## Getting started
+* avoid DDoS attacks
+* easily manage certificates at a higher scale
+* very high platform availability that requires the ability to perform configuration changes without service disruption
+* have a platform wide ingress layer that allows us to apply certain intelligence at the network level: transformations, routing, rate limiting ...
 
-marin3r has two components, an envoy aggregated discovery service (a.k.a "the control plane") and an optional (though recommended) kubernetes mutating admission webhook to inject envoy containers in your pods. With these two components you can very quickly create some service mesh patterns, with the full envoy configuration set available.
+Even if a product/application has these capabilities to some extent, the focus and purpose is different. We want to have these capabilities outside of the application, at the platform level, as it gives us flexibility and quicker reaction times.
 
-NOTE: marin3r is currently scoped to a single namespace, this might change in the future.
+marin3r is the project we created to manage an envoy discovery service and the envoy configurations we need. It currently supports the sidecar pattern (deploy envoy as a sidecar container in your pods) but we plan to add support for deploying envoy as an ingress controller.
 
-NOTE2: currently only cluster, listeners and secrets can be discovered by marin3r.
+The focus of marin3r is on robustness, flexibility, automation and availability. This comes at the cost of having a tougher learning curve because, as of now, proxy configurations make direct use of the envoy API (v2), which can be challenging if you are new to envoy. We plan to refine this approach over time with domain specific CRDs that can take out this complexity to some extent, but having the full envoy API available from the start was important to fullfill our requirements and that is what we focused on so far.
 
-For a quick start, both the control plane and the webhook can be deployed as a single container. Also, some certificates are required both for the webhook server and the ads (aggregated discovery service) grpc server. Some example certicates are already present in `deploy/getting-started` so you can follow this tutorial to deploy and test out marin3r. Issue the following commands in the root of the repository:
+## **Getting started**
+
+### **Installation**
+
+marin3r is a kubernetes operator and as such can be installed by deploying the operator into the cluster and creating custom resources (we plan to release marin3r through operatorhub.io in the future). The only requirement is that [cert-manager](https://cert-manager.io/) must be available in the cluster because marin3r relies on cert-manager to generate the required certificates that the envoy discovery service needs.
+
+To install cert-manager issue the following commands:
 
 ```bash
-kubectl label namespace/default marin3r.3scale.net/status="enabled"
-kubectl create secret tls marin3r-server-cert --cert=deploy/getting-started/certs/marin3r.default.svc.crt --key=deploy/getting-started/certs/marin3r.default.svc.key
-kubectl create secret tls marin3r-ca-cert --cert=deploy/getting-started/certs/ca.crt --key=deploy/getting-started/certs/ca.key
-kubectl create secret tls envoy-sidecar-client-cert --cert=deploy/getting-started/certs/envoy-client.crt --key=deploy/getting-started/certs/envoy-client.key
-kubectl apply -f deploy/getting-started/marin3r.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.crds.yaml
+kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.yaml
 ```
 
-After a few secons seconds you should see the marin3r pod running:
+Once cert-manager is deployed you can proceed and deploy marin3r. From the root directory of the repo issue the following commands:
 
 ```bash
-$ kubectl get pods -l app=marin3r
-NAME                       READY   STATUS    RESTARTS   AGE
-marin3r-76f99458dd-fj7gg   1/1     Running   0          21s
+kubectl create namespace marin3r
+kubectl apply -f deploy/crds/
+kubectl apply -f deploy/
 ```
+
+After a while you should see the `marin3r-operator` pod running.
+
+```bash
+$ kubectl -n marin3r get pods
+NAME                               READY   STATUS    RESTARTS   AGE
+marin3r-operator-96757f5d8-vvk82   1/1     Running   0          31s
+```
+
+You can now deploy a DiscoveryService custom resource, which will cause an envoy discovery service to be spun up:
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: DiscoveryService
+metadata:
+  name: instance
+spec:
+  image: quay.io/3scale/marin3r:latest
+  discoveryServiceNamespace: marin3r
+  debug: true
+  signer:
+    certManager:
+      namespace: cert-manager
+  enabledNamespaces:
+    - default
+EOF
+```
+
+Some more seconds and you should see the envoy discovery service pod running alongside the marin3r-operator pod:
+
+```bash
+▶ k -n marin3r get pods
+NAME                                READY   STATUS    RESTARTS   AGE
+marin3r-instance-86f4dbbf8c-kkh5l   1/1     Running   0          11s
+marin3r-operator-96757f5d8-jskp2    1/1     Running   0          2m
+```
+
+### **TLS offloading with an envoy sidecar**
 
 Now, let's deploy the kubernetes up and running demo app.
 
@@ -64,7 +112,7 @@ spec:
         marin3r.3scale.net/status: "enabled"
       annotations:
         marin3r.3scale.net/node-id: kuard
-        marin3r.3scale.net/ports: envoy-https:1443
+        marin3r.3scale.net/ports: envoy-https:8443
     spec:
       containers:
         - name: kuard
@@ -91,7 +139,7 @@ spec:
 EOF
 ```
 
-You should see that a new pod is running, but is has 2 containers instead of the one we declared. The webhook just added an envoy sidecar to the pod:
+You should see that a new pod is running, but it has 2 containers instead of the one we declared. An envoy container just got added to the pod by marin3r:
 
 ```bash
 kubectl get pods -l app=kuard
@@ -99,91 +147,122 @@ NAME                       READY   STATUS    RESTARTS   AGE
 kuard-6bd9456d55-xbs7m     2/2     Running   0          32s
 ```
 
-We now need to provide the envoy-sidecar with the appropriate config to publish the kuard application through https:
+We need now to provide the envoy-sidecar with the appropriate config to publish the kuard application through https.
 
-* We need first to create a certificate
+#### **Create a certificate**
+
+Use openSSL to create a self-signed certificate that we will be using for this example.
+
+NOTE: you could also generate a certificate with cert-manager. Check [cert-manager documentation](https://cert-manager.io/docs/).
 
 ```bash
-kubectl create secret tls kuard-certificate --cert=deploy/getting-started/certs/envoy-server.crt --key=deploy/getting-started/certs/envoy-server.key
-kubectl annotate secret kuard-certificate cert-manager.io/common-name=envoy-server1
+openssl req -x509 -newkey rsa:4096 -keyout /tmp/key.pem -out /tmp/cert.pem -days 365 -nodes -subj '/CN=localhost'
 ```
 
-* Then apply the following envoy config by applying this ConfigMap to the cluster
+Generate a kubernetes Secret from the certificate.
+
+```bash
+kubectl create secret tls kuard-certificate --cert=/tmp/cert.pem --key=/tmp/key.pem
+```
+
+#### **Add an EnvoyConfig to publish kuard through https**
+
+Apply the following EnvoyConfig custom resource to the cluster. The EnvoyConfig objects are used to apply raw envoy configs that will be loaded by any envoy proxy in the cluster that matches the `nodeID` field defined in the spec (notice the `marin3r.3scale.net/node-id` annotation we added in the kuard Deployment). Any update of an EnvoyConfig object will update the configuration of the corresponding envoy proxies without any kind of restart or reload.
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
-apiVersion: v1
-kind: ConfigMap
+apiVersion: marin3r.3scale.net/v1alpha1
+kind: EnvoyConfig
 metadata:
-  name: envoy-config
-  namespace: default
-  annotations:
-    marin3r.3scale.net/node-id: kuard
-data:
-  config.yaml: |
+  name: kuard
+spec:
+  nodeID: kuard
+  serialization: yaml
+  envoyResources:
+    secrets:
+      - name: kuard-certificate
+        ref:
+          name: kuard-certificate
+          namespace: default
     clusters:
       - name: kuard
-        connect_timeout: 2s
-        type: STRICT_DNS
-        lb_policy: ROUND_ROBIN
-        load_assignment:
-          cluster_name: kuard
-          endpoints:
-            - lb_endpoints:
-                - endpoint:
-                    address:
-                      socket_address:
-                        address: 127.0.0.1
-                        port_value: 8080
+        value: |
+          name: kuard
+          connect_timeout: 2s
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: kuard
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: 127.0.0.1
+                          port_value: 8080
     listeners:
       - name: https
-        address:
-          socket_address:
-            address: 0.0.0.0
-            port_value: 1443
-        filter_chains:
-          - filters:
-            - name: envoy.http_connection_manager
-              typed_config:
-                "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
-                stat_prefix: kuard_https
-                route_config:
-                  name: local_route
-                  virtual_hosts:
-                    - name: kuard
-                      domains: ["*"]
-                      routes:
-                        - match:
-                            prefix: "/"
-                          route:
-                            cluster: kuard
-                http_filters:
-                  - name: envoy.filters.http.router
-            transport_socket:
-              name: envoy.transport_sockets.tls
-              typed_config:
-                "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
-                common_tls_context:
-                  tls_certificate_sds_secret_configs:
-                    - name: envoy-server1
-                      sds_config:
-                        ads: {}
+        value: |
+          name: https
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 8443
+          filter_chains:
+            - filters:
+              - name: envoy.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                  stat_prefix: ingress_http
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: kuard
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/"
+                            route:
+                              cluster: kuard
+                  http_filters:
+                    - name: envoy.router
+              transport_socket:
+                name: envoy.transport_sockets.tls
+                typed_config:
+                  "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
+                  common_tls_context:
+                    tls_certificate_sds_secret_configs:
+                      - name: kuard-certificate
+                        sds_config:
+                          ads: {}
 EOF
 ```
 
-You can now access the kuard service by running `kubectl proxy` (you can also expose the service through an ingress or with a Load Balancer if your cluster provider supports it):
+If you now check the status of the EnvoyConfig object, `CacheState` should show `InSync`.
 
-* Run kubectl proxy in a differen shell:
+```bash
+$ kubectl get envoyconfig
+NAME    NODEID   DESIRED VERSION   PUBLISHED VERSION   CACHE STATE
+kuard   kuard    99d577784         99d577784           InSync
+```
+
+You can now access the kuard service by running `kubectl proxy` (you can also expose the service through an Ingress or with a Service of the LoadBalancer type if your cluster provider supports it).
+
+Run kubectl proxy in a different shell:
 
 ```bash
 $ kubectl proxy
 Starting to serve on 127.0.0.1:8001
 ```
 
-* Then you can access the service by using the k8s API proxy:
+Access the service using https by using the k8s API proxy:
 
 ```bash
-$ curl http://127.0.0.1:8001/api/v1/namespaces/default/services/https:kuard:443/proxy/ -v
+curl http://127.0.0.1:8001/api/v1/namespaces/default/services/https:kuard:443/proxy/ -v --silent
+```
+
+```bash
+$ curl http://127.0.0.1:8001/api/v1/namespaces/default/services/https:kuard:443/proxy/ -v --silent
 *   Trying 127.0.0.1:8001...
 * TCP_NODELAY set
 * Connected to 127.0.0.1 (127.0.0.1) port 8001 (#0)
@@ -191,15 +270,15 @@ $ curl http://127.0.0.1:8001/api/v1/namespaces/default/services/https:kuard:443/
 > Host: 127.0.0.1:8001
 > User-Agent: curl/7.66.0
 > Accept: */*
->
+> 
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
-< Content-Length: 1930
+< Content-Length: 1931
 < Content-Type: text/html
-< Date: Mon, 20 Apr 2020 16:59:36 GMT
+< Date: Wed, 08 Jul 2020 18:42:46 GMT
 < Server: envoy
 < X-Envoy-Upstream-Service-Time: 1
-<
+< 
 <!doctype html>
 
 <html lang="en">
@@ -207,49 +286,195 @@ $ curl http://127.0.0.1:8001/api/v1/namespaces/default/services/https:kuard:443/
   <meta charset="utf-8">
 
   <title>KUAR Demo</title>
+
+  <link rel="stylesheet" href="/api/v1/namespaces/default/services/https:kuard:443/proxy/static/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/api/v1/namespaces/default/services/https:kuard:443/proxy/static/css/styles.css">
+
+  <script>
+var pageContext = {"urlBase":"","hostname":"kuard-6f8fc46b67-vsgn7","addrs":["10.244.0.10"],"version":"v0.10.0-blue","versionColor":"hsl(339,100%,50%)","requestDump":"GET / HTTP/1.1\r\nHost: 127.0.0.1:8001\r\nAccept: */*\r\nAccept-Encoding: gzip\r\nContent-Length: 0\r\nUser-Agent: curl/7.66.0\r\nX-Envoy-Expected-Rq-Timeout-Ms: 15000\r\nX-Forwarded-For: 127.0.0.1, 172.17.0.1\r\nX-Forwarded-Proto: https\r\nX-Forwarded-Uri: /api/v1/namespaces/default/services/https:kuard:443/proxy/\r\nX-Request-Id: 0cba00a2-c5e6-4d56-b02a-c9b8882ed30d","requestProto":"HTTP/1.1","requestAddr":"127.0.0.1:56484"}
+  </script>
+</head>
+
+[...]
 ```
 
 Note the `Server: envoy` header we received, stating that the envoy sidecar is proxying our request to the kuard container.
+You can also 
+
+### Self-healing
+
+marin3r has self-healing capabilities and will detect when an envoy proxy rejects the configuration that the discovery service is sending to it (most tipically due to an invalid configuration or change). When one of such situations occur, marin3r will revert the proxy config back to the previous working one to avoid config drifts, like for example having an updated listener pointing to a non existent cluster (because the proxy has rejected the cluster config for some reason).
+
+Let's do an example using our kuard setup.
+
+First, modify the EnvoyConfig object to change the port that the https listener binds to. This is incorrect and the envoy proxy will reject it because address changes are not allowed on listener resources (the correct way of doing this would be adding a new listener and then removing the old one).
+
+```bash
+cat <<'EOF' | kubectl apply -f -
+apiVersion: marin3r.3scale.net/v1alpha1
+kind: EnvoyConfig
+metadata:
+  name: kuard
+spec:
+  nodeID: kuard
+  serialization: yaml
+  envoyResources:
+    secrets:
+      - name: kuard-certificate
+        ref:
+          name: kuard-certificate
+          namespace: default
+    clusters:
+      - name: kuard
+        value: |
+          name: kuard
+          connect_timeout: 2s
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: kuard
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: 127.0.0.1
+                          port_value: 8080
+    listeners:
+      - name: https
+        value: |
+          name: https
+          address:
+            socket_address:
+              address: 0.0.0.0
+              # Changed port value from 8443 to 5000
+              port_value: 5000
+          filter_chains:
+            - filters:
+              - name: envoy.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                  stat_prefix: ingress_http
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: kuard
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/"
+                            route:
+                              cluster: kuard
+                  http_filters:
+                    - name: envoy.router
+              transport_socket:
+                name: envoy.transport_sockets.tls
+                typed_config:
+                  "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
+                  common_tls_context:
+                    tls_certificate_sds_secret_configs:
+                      - name: kuard-certificate
+                        sds_config:
+                          ads: {}
+EOF
+```
+
+After applying this EnvoyConfig, the `CacheState` of the object will be `Rollback` because the envoy proxy rejected the listener configuration and marin3r detected it and reverted the config to the last working one.
+
+```bash
+▶ kubectl get envoyconfig
+NAME    NODEID   DESIRED VERSION   PUBLISHED VERSION   CACHE STATE
+kuard   kuard    6c8c87788         99d577784           Rollback
+```
+
+Next time a correct config is applied, the `Rollback` status would go back to `InSync`.
 
 ## Configuration
 
-marin3r is configured with 3 different inputs: ConfigMaps, Secrets and Pod annotations.
+### EnvoyConfig custom resource
 
-### ConfigMaps
+marin3r basic functionality is to feed the envoy configs defined in EnvoyConfig custom resources to an envoy discovery service. The discovery service then sends the resources contained in those configs to the envoy proxies that identify themselves with the same `nodeID` defined in the EnvoyConfig object.
 
-marin3r reads envoy clusters and listeners from kubernetes ConfigMap resources annotated with the `marin3r.3scale.net/node-id` annotation. The value in this annotation identifies the envoy `node-id` that the cofinguration belongs to. For example, a common pattern would be to have a deployment with several pods sharing the same `node-id` so the all get the same envoy config.
-
-The contents of the ConfigMap must be a key `config.yaml` whose value follows the structure:
+Commented example of an EnvoyConfig object:
 
 ```yaml
-clusters:
-  - cluster1
-  - cluster2
-lsterners:
-  - listerner1
-  - listerner2
+cat <<'EOF' | kubectl apply -f -
+apiVersion: marin3r.3scale.net/v1alpha1
+kind: EnvoyConfig
+metadata:
+  # name and namespace uniquelly identify an EnvoyConfig but are
+  # not relevant in any other way
+  name: config
+  namespace: default
+spec:
+  # nodeID indicates that the resources defined in this EnvoyConfig are relevant
+  # to envoy proxies that identify themselves to the discovery service with the same
+  # nodeID. The nodeID of an envoy proxy can be specified using the "--node-id" command
+  # line flag
+  nodeID: proxy
+  # Resources can be written either in json or in yaml, being json the default if
+  # not specified
+  serialization: json
+  envoyResources:
+    # the "secrets" field holds references to Kubernetes Secrets. Only Secrets of type
+    # "kubernetes.io/tls" can be referenced. Any certificate referenced from another envoy
+    # resource (for example a listener or a cluster) needs to be present here so marin3r
+    # knows where to get the certificate from.
+    secrets:
+        # name is the name by which the certificate can be referenced to from other resources
+      - name: certificate
+        # ref is the Kubernetes object name and namespace where the Secret lives. Secrets from
+        # other namespaces can be referenced. This is usefull for example if you have a wildcard
+        # certificate that is used in different namespaces.
+        ref:
+          name: some-secret
+          namespace: some-namespace
+    # envoy resources of the type "endpoint"
+    # reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto
+    endpoints:
+      - name: endpoint1
+        value: {"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}
+    # envoy resources of the type "cluster"
+    # reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto
+    clusters:
+      - name: cluster1
+        value: {"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1","endpoints":[]}}
+    # envoy resources of the type "route"
+    # reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto
+    routes:
+      - name: route1
+        value: {"name":"route1","match":{"prefix":"/"},"directResponse":{"status":200}}
+    # envoy resources of the type "listener"
+    # reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto
+    listeners:
+      - name: listener1
+        value: {"name":"listener1","address":{"socketAddress":{"address":"0.0.0.0","portValue":8443}}}
+    # envoy resources of the type "runtime"
+    # reference: https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime
+    runtimes:
+      - name: runtime1
+        value: {"name":"runtime1","layer":{"static_layer_0":"value"}}
 ```
 
 ### Secrets
 
-marin3r is designed to work with [cert-manager](cert-manager.io) certificates, but users can also deploy their own certificates as secrets in the clusters and set te appropriate annotations for marin3r to discover them automatically. The certificate discovery is base in the `"cert-manager.io/common-name"` annotation of secrets. This annotations is expected to hold the common name of the certificate, and it is the name that should be used to refer certificates from the envoy clusters/listeners.
+Secrets are treated in a special way by marin3r as they contain sensitive information. Instead of directly declaring an envoy API secret resource in the EnvoyConfig CR, you have to reference a Kubernetes Secret. marin3r expects this Secret to be of type `kubernetes.io/tls` and will load it into an envoy secret resource. This way you avoid having to insert sensitive data into the EnvoyConfig objects and allows you to use your regular kubernetes Secret deployment workflow for secrets.
 
-For example, if we have the following certificate
+Other approach that can be used is to create certificates using cert-manager because cert-manager also uses `kubernetes.io/tls` Secrets to store the certificates it generates. You just need to point the references in your EnvoyConfig to the proper cert-manager generated Secret.
+
+To use a certificate from a kubernetes Secret refer it like this from an EnvoyConfig:
 
 ```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: test-certificate
-  annotations:
-    cert-manager.io/common-name: test-certificate.local
-type: kubernetes.io/tls
-data:
-  tls.crt: <base64 encoded cert>
-  tls.key: <base64 encoded key>
+spec:
+  envoyResources:
+    secrets:
+      - name: certificate
+        ref:
+          name: some-k8s-secret-name
+          namespace: some-namespace
 ```
 
-This certifica should be referred in an envoy cluster/listener as:
+This certificate can then be referenced in an envoy cluster/listener with the folloing snippet (check the kuard example):
 
 ```yaml
 transport_socket:
@@ -258,17 +483,17 @@ transport_socket:
     "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
     common_tls_context:
       tls_certificate_sds_secret_configs:
-        - name: test-certificate.local
+        - name: certificate
           sds_config:
             ads: {}
 ```
 
-### Annotations
+### Sidecar injection configuration
 
-The marin3r mutating admission webhook will inject envoy sidecars in any pod annotated with `marin3r.3scale.net/node-id`, but there are also other annotations available that allow for some configuration:
+The marin3r mutating admission webhook will inject envoy containers in any pod annotated with `marin3r.3scale.net/node-id` created inside of any of the marin3r enabled namespaces. There are some annotations that can be used in pods to control the behavior of the webhook:
 
 | annotations                           | description                                                                                                                 | default value             |
-|---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------|---------------------------|
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
 | marin3r.3scale.net/node-id            | envoy's node-id                                                                                                             | N/A                       |
 | marin3r.3scale.net/cluster-id         | envoy's cluster-id                                                                                                          | same as node-id           |
 | marin3r.3scale.net/container-name     | the name of the envoy sidecar                                                                                               | envoy-sidecar             |

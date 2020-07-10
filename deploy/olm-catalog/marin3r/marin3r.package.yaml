@@ -1,0 +1,5 @@
+channels:
+- currentCSV: marin3r.v0.4.1-alpha1
+  name: alpha
+defaultChannel: alpha
+packageName: marin3r

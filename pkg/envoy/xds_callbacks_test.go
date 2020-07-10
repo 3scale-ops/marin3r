@@ -16,14 +16,39 @@ package envoy
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/golang/protobuf/ptypes/any"
-	"go.uber.org/zap"
 	"google.golang.org/genproto/googleapis/rpc/status"
 )
+
+func fakeTestCache() *xds_cache.SnapshotCache {
+
+	snapshotCache := xds_cache.NewSnapshotCache(true, xds_cache.IDHash{}, nil)
+
+	snapshotCache.SetSnapshot("node1", xds_cache.Snapshot{
+		Resources: [6]xds_cache.Resources{
+			{Version: "1", Items: map[string]xds_cache_types.Resource{
+				"endpoint1": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint1"},
+			}},
+			{Version: "1", Items: map[string]xds_cache_types.Resource{
+				"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+			}},
+			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+		}},
+	)
+
+	return &snapshotCache
+}
 
 func TestCallbacks_OnStreamOpen(t *testing.T) {
 	type args struct {
@@ -39,7 +64,7 @@ func TestCallbacks_OnStreamOpen(t *testing.T) {
 	}{
 		{
 			"OnStreamOpen()",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{},
 			args{context.Background(), 1, "xxxx"},
 			false,
 		},
@@ -64,7 +89,7 @@ func TestCallbacks_OnStreamClosed(t *testing.T) {
 	}{
 		{
 			"OnStreamClosed()",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{},
 			args{1},
 		}}
 	for _, tt := range tests {
@@ -87,7 +112,7 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 	}{
 		{
 			"OnStreamRequest()",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{},
 			args{1, &v2.DiscoveryRequest{
 				Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
@@ -97,8 +122,39 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 			false,
 		},
 		{
+			"OnStreamRequest() NACK received",
+			&Callbacks{
+				OnError:       func(a, b, c string) error { return nil },
+				SnapshotCache: fakeTestCache(),
+			},
+			args{1, &v2.DiscoveryRequest{
+				Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
+				ResourceNames: []string{"string1", "string2"},
+				TypeUrl:       "some-type",
+				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
+			}},
+			false,
+		},
+		{
 			"OnStreamRequest() error",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{
+				OnError:       func(a, b, c string) error { return nil },
+				SnapshotCache: fakeTestCache(),
+			},
+			args{1, &v2.DiscoveryRequest{
+				Node:          &core.Node{Id: "node2", Cluster: "cluster1"},
+				ResourceNames: []string{"string1", "string2"},
+				TypeUrl:       "some-type",
+				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
+			}},
+			true,
+		},
+		{
+			"OnStreamRequest() error calling OnErrorFn",
+			&Callbacks{
+				OnError:       func(a, b, c string) error { return fmt.Errorf("error") },
+				SnapshotCache: fakeTestCache(),
+			},
 			args{1, &v2.DiscoveryRequest{
 				Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
@@ -130,7 +186,7 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 	}{
 		{
 			"OnStreamResponse()",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{},
 			args{1,
 				&v2.DiscoveryRequest{
 					Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
@@ -148,7 +204,7 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 		},
 		{
 			"OnStreamResponse() special treatment of secret resources",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{},
 			args{1,
 				&v2.DiscoveryRequest{
 					Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
@@ -185,7 +241,7 @@ func TestCallbacks_OnFetchRequest(t *testing.T) {
 	}{
 		{
 			"OnFetchRequest()",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{},
 			args{
 				context.Background(),
 				&v2.DiscoveryRequest{},
@@ -214,7 +270,7 @@ func TestCallbacks_OnFetchResponse(t *testing.T) {
 	}{
 		{
 			"OnFetchResponse()",
-			&Callbacks{Logger: func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }()},
+			&Callbacks{},
 			args{&v2.DiscoveryRequest{}, &v2.DiscoveryResponse{}},
 		},
 	}

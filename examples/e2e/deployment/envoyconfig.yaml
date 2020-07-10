@@ -1,0 +1,101 @@
+apiVersion: marin3r.3scale.net/v1alpha1
+kind: EnvoyConfig
+metadata:
+  name: kuard
+  namespace: test1
+spec:
+  # Add fields here
+  nodeID: kuard
+  version: "1"
+  serialization: yaml
+  envoyResources:
+    secrets:
+      - name: kuard.test1.svc
+        ref:
+          name: kuard
+          namespace: test1
+    clusters:
+      - name: kuard
+        value: |
+          name: kuard
+          connect_timeout: 2s
+          type: STRICT_DNS
+          dns_lookup_family: V4_ONLY
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: kuard
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: 127.0.0.1
+                          port_value: 8080
+    listeners:
+      - name: http
+        value: |
+          name: http
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 1080
+          filter_chains:
+            - filters:
+              - name: envoy.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                  access_log:
+                    - name: envoy.file_access_log
+                      config:
+                        path: /dev/stdout
+                  stat_prefix: ingress_http
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: kuard
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/"
+                            route:
+                              cluster: kuard
+                  http_filters:
+                    - name: envoy.router
+      - name: https
+        value: |
+          name: https
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 1443
+          filter_chains:
+            - filters:
+              - name: envoy.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                  access_log:
+                    - name: envoy.file_access_log
+                      config:
+                        path: /dev/stdout
+                  stat_prefix: ingress_http
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: kuard
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/"
+                            route:
+                              cluster: kuard
+                  http_filters:
+                    - name: envoy.router
+              transport_socket:
+                name: envoy.transport_sockets.tls
+                typed_config:
+                  "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
+                  common_tls_context:
+                    tls_certificate_sds_secret_configs:
+                      - name: kuard.test1.svc
+                        sds_config:
+                          ads: {}

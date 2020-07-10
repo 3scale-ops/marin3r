@@ -23,7 +23,6 @@ import (
 	"reflect"
 	"testing"
 
-	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -105,7 +104,7 @@ func TestAdmitFuncHandler(t *testing.T) {
 									Name:    "envoy-sidecar",
 									Image:   "envoyproxy/envoy:v1.14.1",
 									Command: []string{"envoy"},
-									Args:    []string{"-c", "/etc/envoy/bootstrap/config.yaml", "--service-node", "test", "--service-cluster", "test"},
+									Args:    []string{"-c", "/etc/envoy/bootstrap/config.json", "--service-node", "test", "--service-cluster", "test"},
 									Ports:   []corev1.ContainerPort{},
 									VolumeMounts: []corev1.VolumeMount{
 										{
@@ -258,7 +257,7 @@ func TestAdmitFuncHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
-			handler := AdmitFuncHandler(MutatePod, func() *zap.SugaredLogger { lg, _ := zap.NewDevelopment(); return lg.Sugar() }())
+			handler := AdmitFuncHandler(MutatePod)
 			handler.ServeHTTP(rr, tt.request)
 
 			if (rr.Result().StatusCode != 200) != tt.wantErr {

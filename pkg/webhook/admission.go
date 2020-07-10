@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -45,7 +44,7 @@ type PatchOperation struct {
 
 // admitFunc is a callback for admission controller logic. Given an AdmissionRequest, it returns the sequence of patch
 // operations to be applied in case of success, or the error that will be shown when the operation is rejected.
-type admitFunc func(*admissionv1.AdmissionRequest, *zap.SugaredLogger) ([]PatchOperation, error)
+type admitFunc func(*admissionv1.AdmissionRequest) ([]PatchOperation, error)
 
 // isKubeNamespace checks if the given namespace is a Kubernetes-owned namespace.
 func isKubeNamespace(ns string) bool {
@@ -55,7 +54,7 @@ func isKubeNamespace(ns string) bool {
 // doServeAdmitFunc parses the HTTP request for an admission controller webhook, and -- in case of a well-formed
 // request -- delegates the admission control logic to the given admitFunc. The response body is then returned as raw
 // bytes.
-func doServeAdmitFunc(w http.ResponseWriter, r *http.Request, admit admitFunc, logger *zap.SugaredLogger) ([]byte, error) {
+func doServeAdmitFunc(w http.ResponseWriter, r *http.Request, admit admitFunc) ([]byte, error) {
 	// Step 1: Request validation. Only handle POST requests with a body and json content type.
 
 	if r.Method != http.MethodPost {
@@ -102,7 +101,7 @@ func doServeAdmitFunc(w http.ResponseWriter, r *http.Request, admit admitFunc, l
 	// Apply the admit() function only for non-Kubernetes namespaces. For objects in Kubernetes namespaces, return
 	// an empty set of patch operations.
 	if !isKubeNamespace(admissionReviewReq.Request.Namespace) {
-		patchOps, err = admit(admissionReviewReq.Request, logger)
+		patchOps, err = admit(admissionReviewReq.Request)
 	}
 
 	if err != nil {
@@ -134,12 +133,12 @@ func doServeAdmitFunc(w http.ResponseWriter, r *http.Request, admit admitFunc, l
 }
 
 // serveAdmitFunc is a wrapper around doServeAdmitFunc that adds error handling and logging.
-func serveAdmitFunc(w http.ResponseWriter, r *http.Request, admit admitFunc, logger *zap.SugaredLogger) {
+func serveAdmitFunc(w http.ResponseWriter, r *http.Request, admit admitFunc) {
 	logger.Info("Handling webhook request ...")
 
 	var writeErr error
-	if bytes, err := doServeAdmitFunc(w, r, admit, logger); err != nil {
-		logger.Errorf("Error handling webhook request: %v", err)
+	if bytes, err := doServeAdmitFunc(w, r, admit); err != nil {
+		logger.Error(err, "Error handling webhook request")
 		w.WriteHeader(http.StatusInternalServerError)
 		_, writeErr = w.Write([]byte(err.Error()))
 	} else {
@@ -148,13 +147,13 @@ func serveAdmitFunc(w http.ResponseWriter, r *http.Request, admit admitFunc, log
 	}
 
 	if writeErr != nil {
-		logger.Errorf("Could not write response: %v", writeErr)
+		logger.Error(writeErr, "Could not write response")
 	}
 }
 
 // AdmitFuncHandler takes an admitFunc and wraps it into a http.Handler by means of calling serveAdmitFunc.
-func AdmitFuncHandler(admit admitFunc, logger *zap.SugaredLogger) http.Handler {
+func AdmitFuncHandler(admit admitFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		serveAdmitFunc(w, r, admit, logger)
+		serveAdmitFunc(w, r, admit)
 	})
 }
