@@ -93,7 +93,6 @@ func (r *ReconcileDiscoveryServiceCertificateWatcher) Reconcile(request reconcil
 	// Only the self-signed and ca-signed certificates have its renewal managed
 	// by marin3r. cert-manager already does this for the cert-manager issued ones
 	if dsc.Spec.Signer.SelfSigned != nil || dsc.Spec.Signer.CASigned != nil {
-		// Fetch the certmanagerv1alpha2.Certificate instance
 		secret := &corev1.Secret{}
 		err := r.client.Get(ctx,
 			types.NamespacedName{
@@ -103,9 +102,6 @@ func (r *ReconcileDiscoveryServiceCertificateWatcher) Reconcile(request reconcil
 			secret)
 
 		if err != nil {
-			if errors.IsNotFound(err) {
-				return reconcile.Result{}, nil
-			}
 			return reconcile.Result{}, err
 		}
 
