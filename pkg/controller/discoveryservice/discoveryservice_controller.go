@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/3scale/marin3r/pkg/apis/external"
 	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	"github.com/go-logr/logr"
@@ -16,7 +15,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -24,9 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
 	// cert-manager
-	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 )
 
 const (
@@ -53,12 +49,9 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	dc, _ := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	return &ReconcileDiscoveryService{
-		client:             mgr.GetClient(),
-		scheme:             mgr.GetScheme(),
-		discoveryClient:    dc,
-		clusterIssuerWatch: false,
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
 	}
 }
 
@@ -139,37 +132,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Set up a goroutine to autodetect if required 3rd party apis are available
-	go func() {
-
-		discoverFn := func() {
-			rec := r.(*ReconcileDiscoveryService)
-			resourceExists, _ := external.HasCertManagerClusterIssuer(rec.discoveryClient)
-
-			if resourceExists && !rec.clusterIssuerWatch {
-				err := c.Watch(&source.Kind{Type: &certmanagerv1alpha2.ClusterIssuer{}}, &handler.EnqueueRequestForOwner{
-					IsController: true,
-					OwnerType:    &operatorv1alpha1.DiscoveryService{},
-				})
-				if err != nil {
-					log.Error(err, "Failed setting a watch on certmanagerv1alpha2.ClusterIssuer type")
-				} else {
-					// Mark the watch was correctly set
-					log.Info("Discovered certmanagerv1alpha2 api, watching type 'ClusterIssuer'")
-					// WARNING: this is not thread safe
-					rec.clusterIssuerWatch = true
-				}
-			}
-		}
-
-		ticker := time.NewTicker(pollingPeriod * time.Second)
-
-		discoverFn()
-		for range ticker.C {
-			discoverFn()
-		}
-	}()
-
 	return nil
 }
 
@@ -180,12 +142,10 @@ var _ reconcile.Reconciler = &ReconcileDiscoveryService{}
 // This is not currently thread safe, so use just one worker for
 // the controller
 type ReconcileDiscoveryService struct {
-	client             client.Client
-	scheme             *runtime.Scheme
-	ds                 *operatorv1alpha1.DiscoveryService
-	logger             logr.Logger
-	discoveryClient    discovery.DiscoveryInterface
-	clusterIssuerWatch bool
+	client client.Client
+	scheme *runtime.Scheme
+	ds     *operatorv1alpha1.DiscoveryService
+	logger logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a DiscoveryService object and makes changes based on the state read
