@@ -48,9 +48,6 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService) reconcilers.De
 								},
 							},
 							{
-								// This won't work as the CA is in another namespace
-								// when using cert-manager issued certs. We need to
-								// sync the CA between namespaces.
 								Name: "ca-cert",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
