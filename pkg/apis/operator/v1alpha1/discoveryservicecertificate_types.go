@@ -1,12 +1,17 @@
 package v1alpha1
 
 import (
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
+	// DiscoveryServiceCertificateKind is a string that holds the Kind of DiscoveryServiceCertificate
 	DiscoveryServiceCertificateKind string = "DiscoveryServiceCertificate"
+	// CertificateNotValidCondition is a condition that indicates that a
+	// DiscoveryServiceCertificate is invalid and needs replacement
+	CertificateNotValidCondition status.ConditionType = "CertificateNotValid"
 )
 
 // DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate
@@ -72,7 +77,11 @@ type CASignedConfig struct {
 }
 
 // DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
-type DiscoveryServiceCertificateStatus struct{}
+type DiscoveryServiceCertificateStatus struct {
+	// Conditions represent the latest available observations of an object's state
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	Conditions status.Conditions `json:"conditions"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

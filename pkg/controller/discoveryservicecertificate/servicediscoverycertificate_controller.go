@@ -6,6 +6,7 @@ import (
 
 	"github.com/3scale/marin3r/pkg/apis/external"
 	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -102,6 +103,7 @@ type ReconcileDiscoveryServiceCertificate struct {
 	// that reads objects from the cache and writes to the apiserver
 	client           client.Client
 	scheme           *runtime.Scheme
+	logger           logr.Logger
 	discoveryClient  discovery.DiscoveryInterface
 	certificateWatch bool
 }
@@ -109,8 +111,8 @@ type ReconcileDiscoveryServiceCertificate struct {
 // Reconcile reads that state of the cluster for a DiscoveryServiceCertificate object and makes changes based on the state read
 // and what is in the DiscoveryServiceCertificate.Spec
 func (r *ReconcileDiscoveryServiceCertificate) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling DiscoveryServiceCertificate")
+	r.logger = log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	r.logger.Info("Reconciling DiscoveryServiceCertificate")
 	ctx := context.Background()
 
 	// Fetch the DiscoveryServiceCertificate instance
@@ -125,17 +127,17 @@ func (r *ReconcileDiscoveryServiceCertificate) Reconcile(request reconcile.Reque
 	}
 
 	if dsc.Spec.Signer.CertManager != nil {
-		reqLogger.Info("Reconciling cert-manager certificate")
+		r.logger.Info("Reconciling cert-manager certificate")
 		if err := r.reconcileCertManagerCertificate(ctx, dsc); err != nil {
 			return reconcile.Result{}, err
 		}
 	} else if dsc.Spec.Signer.CASigned != nil {
-		reqLogger.Info("Reconciling ca-signed certificate")
+		r.logger.Info("Reconciling ca-signed certificate")
 		if err := r.reconcileCASignedCertificate(ctx, dsc); err != nil {
 			return reconcile.Result{}, err
 		}
 	} else {
-		reqLogger.Info("Reconciling self-signed certificate")
+		r.logger.Info("Reconciling self-signed certificate")
 		if err := r.reconcileSelfSignedCertificate(ctx, dsc); err != nil {
 			return reconcile.Result{}, err
 		}
