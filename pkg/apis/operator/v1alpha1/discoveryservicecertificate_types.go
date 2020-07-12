@@ -9,9 +9,9 @@ import (
 const (
 	// DiscoveryServiceCertificateKind is a string that holds the Kind of DiscoveryServiceCertificate
 	DiscoveryServiceCertificateKind string = "DiscoveryServiceCertificate"
-	// CertificateNotValidCondition is a condition that indicates that a
+	// CertificateNeedsRenewalCondition is a condition that indicates that a
 	// DiscoveryServiceCertificate is invalid and needs replacement
-	CertificateNotValidCondition status.ConditionType = "CertificateNotValid"
+	CertificateNeedsRenewalCondition status.ConditionType = "CertificateNeedsRenewal"
 )
 
 // DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate

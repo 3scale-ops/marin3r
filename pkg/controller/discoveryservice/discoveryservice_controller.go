@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	// cert-manager
 )
 
 const (
@@ -31,8 +30,8 @@ const (
 	// in the future when renewal is managed by the operator
 	caValidFor     int64 = 94610000 // 3 years
 	serverValidFor int64 = 31536000 // 1 year
-	// clientValidFor             int64         = 7776000  // 90 days
-	clientValidFor             int64         = 60
+	clientValidFor int64 = 86400    // 24 hours
+	// clientValidFor             int64         = 60
 	caCommonName               string        = "marin3r-ca"
 	caCertSecretNamePrefix     string        = "marin3r-ca-cert"
 	serverCommonName           string        = "marin3r-server"
