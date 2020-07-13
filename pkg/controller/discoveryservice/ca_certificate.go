@@ -60,7 +60,7 @@ func (r *ReconcileDiscoveryService) genCACertObject() *operatorv1alpha1.Discover
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: getCACertCommonName(r.ds),
 			IsCA:       true,
-			ValidFor:   caValidFor,
+			ValidFor:   caCertValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				SelfSigned: &operatorv1alpha1.SelfSignedConfig{},
 			},

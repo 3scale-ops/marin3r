@@ -65,7 +65,7 @@ func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.Disc
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName:          getServerCertCommonName(r.ds),
 			IsServerCertificate: true,
-			ValidFor:            serverValidFor,
+			ValidFor:            serverCertValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				CASigned: &operatorv1alpha1.CASignedConfig{
 					SecretRef: corev1.SecretReference{

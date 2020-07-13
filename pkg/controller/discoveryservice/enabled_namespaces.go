@@ -170,7 +170,7 @@ func (r *ReconcileDiscoveryService) getClientCertObject(namespace string) *opera
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: fmt.Sprintf("%s-client", OwnedObjectName(r.ds)),
-			ValidFor:   clientValidFor,
+			ValidFor:   clientCertValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				CASigned: &operatorv1alpha1.CASignedConfig{
 					SecretRef: corev1.SecretReference{
@@ -193,13 +193,19 @@ func (r *ReconcileDiscoveryService) getBootstrapConfigMapObject(namespace string
 		return nil, err
 	}
 
+	tlsConfig, err := envoy.GenerateTlsCertificateSdsConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
+	if err != nil {
+		return nil, err
+	}
+
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      webhook.DefaultBootstrapConfigMap,
 			Namespace: namespace,
 		},
 		Data: map[string]string{
-			"config.json": config,
+			webhook.DefaultEnvoyConfigFileName:      config,
+			webhook.TlsCertificateSdsSecretFileName: tlsConfig,
 		},
 	}
 

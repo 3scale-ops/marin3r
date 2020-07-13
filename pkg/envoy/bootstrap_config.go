@@ -6,12 +6,13 @@ import (
 	"time"
 
 	"github.com/3scale/marin3r/pkg/webhook"
-
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoy_api_v2_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoy_config_bootstrap_v2 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v2"
+	resource_v2 "github.com/envoyproxy/go-control-plane/pkg/resource/v2"
+
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 
 	"github.com/golang/protobuf/jsonpb"
@@ -27,17 +28,13 @@ func GenerateBootstrapConfig(host string, port uint32) (string, error) {
 
 	tlsContext := &envoy_api_v2_auth.UpstreamTlsContext{
 		CommonTlsContext: &envoy_api_v2_auth.CommonTlsContext{
-			TlsCertificates: []*envoy_api_v2_auth.TlsCertificate{
+			TlsCertificateSdsSecretConfigs: []*envoy_api_v2_auth.SdsSecretConfig{
 				{
-					CertificateChain: &envoy_api_v2_core.DataSource{
-						Specifier: &envoy_api_v2_core.DataSource_Filename{
-							Filename: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyTLSBasePath, "tls.crt"),
+					SdsConfig: &envoy_api_v2_core.ConfigSource{
+						ConfigSourceSpecifier: &envoy_api_v2_core.ConfigSource_Path{
+							Path: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyConfigBasePath, webhook.TlsCertificateSdsSecretFileName),
 						},
 					},
-					PrivateKey: &envoy_api_v2_core.DataSource{
-						Specifier: &envoy_api_v2_core.DataSource_Filename{
-							Filename: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyTLSBasePath, "tls.key"),
-						}},
 				},
 			},
 		},
@@ -133,6 +130,47 @@ func GenerateBootstrapConfig(host string, port uint32) (string, error) {
 				},
 			},
 		},
+	}
+
+	m := jsonpb.Marshaler{}
+
+	json := bytes.NewBuffer([]byte{})
+	err = m.Marshal(json, cfg)
+	if err != nil {
+		return "", err
+	}
+
+	return string(json.Bytes()), nil
+}
+
+func GenerateTlsCertificateSdsConfig(host string, port uint32) (string, error) {
+
+	tlsCertificate := &envoy_api_v2_auth.Secret{
+		Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+			TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+				CertificateChain: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_Filename{
+						Filename: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyTLSBasePath, "tls.crt"),
+					},
+				},
+				PrivateKey: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_Filename{
+						Filename: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyTLSBasePath, "tls.key"),
+					}},
+			},
+		},
+	}
+
+	serializedTLSCertificate, err := proto.Marshal(tlsCertificate)
+	if err != nil {
+		return "", err
+	}
+
+	cfg := &envoy_api_v2.DiscoveryResponse{
+		Resources: []*any.Any{{
+			TypeUrl: resource_v2.SecretType,
+			Value:   serializedTLSCertificate,
+		}},
 	}
 
 	m := jsonpb.Marshaler{}

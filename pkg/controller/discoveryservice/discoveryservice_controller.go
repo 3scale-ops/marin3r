@@ -28,10 +28,9 @@ const (
 	// as there is currently no renewal mechanism for the CA
 	// set a validity sufficiently high. This might be configurable
 	// in the future when renewal is managed by the operator
-	caValidFor     int64 = 94610000 // 3 years
-	serverValidFor int64 = 31536000 // 1 year
-	clientValidFor int64 = 86400    // 24 hours
-	// clientValidFor             int64         = 60
+	caCertValidFor             int64         = 3600 * 24 * 365 * 3 // 3 years
+	serverCertValidFor         int64         = 3600 * 24 * 90      // 90 days
+	clientCertValidFor         int64         = 3600 * 48           // 48 hours
 	caCommonName               string        = "marin3r-ca"
 	caCertSecretNamePrefix     string        = "marin3r-ca-cert"
 	serverCommonName           string        = "marin3r-server"
