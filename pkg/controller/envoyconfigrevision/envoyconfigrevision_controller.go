@@ -228,7 +228,7 @@ func (r *ReconcileEnvoyConfigRevision) loadResources(ctx context.Context, name, 
 			setResource(secret.Name, res, snap)
 		} else {
 			return errors.NewInvalid(
-				schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
+				schema.GroupKind{Group: "caches", Kind: "EnvoyConfig"},
 				fmt.Sprintf("%s/%s", namespace, name),
 				field.ErrorList{
 					field.Invalid(
@@ -254,7 +254,7 @@ func (r *ReconcileEnvoyConfigRevision) loadResources(ctx context.Context, name, 
 
 func resourceLoaderError(name, namespace, rtype, rvalue string, resPath *field.Path, idx int) error {
 	return errors.NewInvalid(
-		schema.GroupKind{Group: "caches", Kind: "NodeCacheConfig"},
+		schema.GroupKind{Group: "caches", Kind: "EnvoyConfig"},
 		fmt.Sprintf("%s/%s", namespace, name),
 		field.ErrorList{
 			field.Invalid(

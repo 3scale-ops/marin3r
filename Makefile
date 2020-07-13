@@ -176,3 +176,11 @@ olm-verify-package-manifests:
 olm-push-package-manifests: ## OPERATOR OLM CSV - Push CSV manifests to remote application registry
 olm-push-package-manifests: olm-verify-package-manifests
 	operator-courier --verbose push deploy/olm-catalog/marin3r/ 3scaleops marin3r $(RELEASE) "$(AUTH_TOKEN)"
+
+refdocs: ## Generates api reference documentation from code. Requires https://github.com/elastic/crd-ref-docs binary to be present in the PATH
+	crd-ref-docs \
+		--source-path=pkg/apis \
+		--config=docs/api-reference/config.yaml \
+		--templates-dir=docs/api-reference/templates/asciidoctor \
+		--renderer=asciidoctor \
+		--output-path=docs/api-reference/reference.asciidoc
