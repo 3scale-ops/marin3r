@@ -1,14 +1,16 @@
 package v1alpha1
 
 import (
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	DiscoveryServiceKind         string = "DiscoveryService"
-	DiscoveryServiceEnabledKey   string = "marin3r.3scale.net/status"
-	DiscoveryServiceEnabledValue string = "enabled"
-	DiscoveryServiceLabelKey     string = "marin3r.3scale.net/discovery-service"
+	DiscoveryServiceKind           string               = "DiscoveryService"
+	DiscoveryServiceEnabledKey     string               = "marin3r.3scale.net/status"
+	DiscoveryServiceEnabledValue   string               = "enabled"
+	DiscoveryServiceLabelKey       string               = "marin3r.3scale.net/discovery-service"
+	ServerRestartRequiredCondition status.ConditionType = "ServerRestartRequired"
 )
 
 // DiscoveryServiceSpec defines the desired state of DiscoveryService
@@ -57,9 +59,9 @@ type CertManagerSignerConfig struct {
 
 // DiscoveryServiceStatus defines the observed state of DiscoveryService
 type DiscoveryServiceStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	// Conditions represent the latest available observations of an object's state
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	Conditions status.Conditions `json:"conditions"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

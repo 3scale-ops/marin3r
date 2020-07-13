@@ -68,6 +68,9 @@ func (r *ReconcileDiscoveryService) genCACertObject() *operatorv1alpha1.Discover
 				Name:      getCACertName(r.ds),
 				Namespace: OwnedObjectNamespace(r.ds),
 			},
+			CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{
+				Enabled: false,
+			},
 		},
 	}
 }

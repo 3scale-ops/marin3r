@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,14 +29,13 @@ const (
 	// as there is currently no renewal mechanism for the CA
 	// set a validity sufficiently high. This might be configurable
 	// in the future when renewal is managed by the operator
-	caCertValidFor             int64         = 3600 * 24 * 365 * 3 // 3 years
-	serverCertValidFor         int64         = 3600 * 24 * 90      // 90 days
-	clientCertValidFor         int64         = 3600 * 48           // 48 hours
-	caCommonName               string        = "marin3r-ca"
-	caCertSecretNamePrefix     string        = "marin3r-ca-cert"
-	serverCommonName           string        = "marin3r-server"
-	serverCertSecretNamePrefix string        = "marin3r-server-cert"
-	pollingPeriod              time.Duration = 10
+	caCertValidFor             int64  = 3600 * 24 * 365 * 3 // 3 years
+	serverCertValidFor         int64  = 3600 * 24 * 90      // 90 days
+	clientCertValidFor         int64  = 3600 * 48           // 48 hours
+	caCommonName               string = "marin3r-ca"
+	caCertSecretNamePrefix     string = "marin3r-ca-cert"
+	serverCommonName           string = "marin3r-server"
+	serverCertSecretNamePrefix string = "marin3r-server-cert"
 )
 
 var log = logf.Log.WithName("controller_dicoveryservice")
@@ -184,11 +184,6 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
-	// result, err = r.reconcileSigner(ctx)
-	// if result.Requeue || err != nil {
-	// 	return result, err
-	// }
-
 	result, err = r.reconcileServerCertificate(ctx)
 	if result.Requeue || err != nil {
 		return result, err
@@ -236,6 +231,33 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 	result, err = r.reconcileMutatingWebhook(ctx)
 	if result.Requeue || err != nil {
 		return result, err
+	}
+
+	// Manage server restart when condition is active
+	if r.ds.Status.Conditions.IsTrueFor(operatorv1alpha1.ServerRestartRequiredCondition) {
+
+		// TODO: add an admin port to the DiscoveryService server so an http call can be done
+		// to indicate that the server must shutdown or reload. It is a much safer approach.
+		podList := &corev1.PodList{}
+		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{appLabelKey: OwnedObjectAppLabel(r.ds)},
+		})
+		if err := r.client.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
+			return reconcile.Result{}, err
+		}
+		for _, pod := range podList.Items {
+			err = r.client.Delete(ctx, &pod, client.GracePeriodSeconds(5))
+		}
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Clear condition
+		patch := client.MergeFrom(r.ds.DeepCopy())
+		r.ds.Status.Conditions.RemoveCondition(operatorv1alpha1.ServerRestartRequiredCondition)
+		if err := r.client.Status().Patch(ctx, r.ds, patch); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, nil

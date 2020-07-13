@@ -42,6 +42,10 @@ type DiscoveryServiceCertificateSpec struct {
 	// and the private key.
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	SecretRef corev1.SecretReference `json:"secretRef"`
+	// CertificateRenewalConfig configures the certificate renewal process. If unset default
+	// behavior is to renew the certificate but not notify of renewals.
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	CertificateRenewalConfig *CertificateRenewalConfig `json:"certificateRenewalNotification,omitempty"`
 }
 
 // DiscoveryServiceCertificateSigner specifies the signer to use to provision the certificate
@@ -58,6 +62,17 @@ type DiscoveryServiceCertificateSigner struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	CASigned *CASignedConfig `json:"caSigned,omitempty"`
+}
+
+// CertificateRenewalConfig configures the certificate renewal process.
+type CertificateRenewalConfig struct {
+	// Enabled is a flag to enable or disable renewal of the certificate
+	Enabled bool `json:"enabled"`
+	// Notify field holds a reference to another object which will be notified
+	// of a certificate renewal through a condition. The other object's controller
+	// is in charge of performing the necessary tasks once it has been notified of
+	// the renewal.
+	Notify *corev1.ObjectReference `json:"notify,omitempty"`
 }
 
 // CertManagerConfig is used to generate certificates using the given cert-manager issuer
