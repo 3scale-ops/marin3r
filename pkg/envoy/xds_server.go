@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"time"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
@@ -26,11 +27,15 @@ import (
 	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
-	grpcMaxConcurrentStreams = 1000000
+	grpcMaxConcurrentStreams  = 1000000
+	grpcMaxConnectionIdle     = 300   // 5 min
+	grpcMaxConnectionAge      = 43200 // 12 hours
+	grpcMaxConnectionAgeGrace = 300   // 5 min
 )
 
 var logger = logf.Log.WithName("envoy_control_plane")
@@ -86,6 +91,11 @@ func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 	grpcServer := grpc.NewServer(
 		grpc.MaxConcurrentStreams(grpcMaxConcurrentStreams),
 		grpc.Creds(credentials.NewTLS(xdss.tlsConfig)),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle:     grpcMaxConnectionIdle * time.Second,
+			MaxConnectionAge:      grpcMaxConnectionAge * time.Second,
+			MaxConnectionAgeGrace: grpcMaxConnectionAgeGrace * time.Second,
+		}),
 	)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", xdss.adsPort))
 	if err != nil {
