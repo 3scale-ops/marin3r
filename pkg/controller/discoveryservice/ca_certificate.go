@@ -56,6 +56,7 @@ func (r *ReconcileDiscoveryService) genCACertObject() *operatorv1alpha1.Discover
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getCACertName(r.ds),
 			Namespace: OwnedObjectNamespace(r.ds),
+			Labels:    Labels(r.ds),
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: getCACertCommonName(r.ds),

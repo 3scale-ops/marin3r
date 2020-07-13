@@ -22,19 +22,17 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService) reconcilers.De
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      OwnedObjectName(ds),
 				Namespace: OwnedObjectNamespace(ds),
-				Labels:    map[string]string{appLabelKey: OwnedObjectAppLabel(ds)},
+				Labels:    Labels(ds),
 			},
 			Spec: appsv1.DeploymentSpec{
 				Replicas: pointer.Int32Ptr(1),
 				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						appLabelKey: OwnedObjectAppLabel(ds),
-					},
+					MatchLabels: Labels(ds),
 				},
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.Time{},
-						Labels:            map[string]string{appLabelKey: OwnedObjectAppLabel(ds)},
+						Labels:            Labels(ds),
 					},
 					Spec: corev1.PodSpec{
 						Volumes: []corev1.Volume{

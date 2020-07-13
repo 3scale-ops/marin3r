@@ -57,10 +57,11 @@ func (r *ReconcileDiscoveryService) genServiceObject() *corev1.Service {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      OwnedObjectName(r.ds),
 			Namespace: OwnedObjectNamespace(r.ds),
+			Labels:    Labels(r.ds),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:            corev1.ServiceTypeClusterIP,
-			Selector:        map[string]string{appLabelKey: OwnedObjectAppLabel(r.ds)},
+			Selector:        Labels(r.ds),
 			SessionAffinity: corev1.ServiceAffinityNone,
 			Ports: []corev1.ServicePort{
 				{

@@ -38,7 +38,9 @@ const (
 	serverCertSecretNamePrefix string = "marin3r-server-cert"
 )
 
-var log = logf.Log.WithName("controller_dicoveryservice")
+var (
+	log = logf.Log.WithName("controller_dicoveryservice")
+)
 
 // Add creates a new DiscoveryService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.

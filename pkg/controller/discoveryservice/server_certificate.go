@@ -61,6 +61,7 @@ func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.Disc
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getServerCertName(r.ds),
 			Namespace: OwnedObjectNamespace(r.ds),
+			Labels:    Labels(r.ds),
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName:          getServerCertCommonName(r.ds),

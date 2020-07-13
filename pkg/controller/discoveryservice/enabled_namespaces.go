@@ -167,6 +167,7 @@ func (r *ReconcileDiscoveryService) getClientCertObject(namespace string) *opera
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      webhook.DefaultClientCertificate,
 			Namespace: namespace,
+			Labels:    Labels(r.ds),
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: fmt.Sprintf("%s-client", OwnedObjectName(r.ds)),
