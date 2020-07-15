@@ -17,10 +17,6 @@ import (
 // reconcileServerCertificate is in charge of keeping the DiscoveryService server certificate available as a secret
 func (r *ReconcileDiscoveryService) reconcileServerCertificate(ctx context.Context) (reconcile.Result, error) {
 
-	if r.ds.Spec.Signer.CertManager == nil {
-		return reconcile.Result{}, fmt.Errorf("Unsupported signer for DiscoveryService object")
-	}
-
 	r.logger.V(1).Info("Reconciling server certificate")
 
 	cert := &operatorv1alpha1.DiscoveryServiceCertificate{}

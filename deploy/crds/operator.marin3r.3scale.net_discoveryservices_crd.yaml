@@ -53,30 +53,9 @@ spec:
               description: Image holds the image to use for the discovery service
                 Deployment
               type: string
-            signer:
-              description: Signer holds the configuration for a certificate signer.
-                This signer will be used to setup mTLS between envoy clients and the
-                discovery service server. Currently only the CertManager signer is
-                supported.
-              properties:
-                certManager:
-                  description: CertManager holds specific config for the CertManager
-                    signer.
-                  properties:
-                    namespace:
-                      description: Namespace is the name of the namespace where the
-                        cert-manager controller runs. This field is required due to
-                        the fact that a CA ClusterIssuer needs the CA Secret to be
-                        present in its own namespace. The marin3r-operator syncs the
-                        CA Secret from its original namespace to the cert-manager
-                        namespace. See https://cert-manager.io/docs/configuration/ca/#deployment.
-                      type: string
-                  type: object
-              type: object
           required:
           - discoveryServiceNamespace
           - image
-          - signer
           type: object
         status:
           description: DiscoveryServiceStatus defines the observed state of DiscoveryService

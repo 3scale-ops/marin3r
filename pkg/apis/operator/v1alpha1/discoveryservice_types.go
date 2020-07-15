@@ -25,11 +25,6 @@ type DiscoveryServiceSpec struct {
 	// that namespace.
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	EnabledNamespaces []string `json:"enabledNamespaces,omitempty"`
-	// Signer holds the configuration for a certificate signer. This signer will be used to
-	// setup mTLS between envoy clients and the discovery service server.
-	// Currently only the CertManager signer is supported.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Signer SignerConfig `json:"signer"`
 	// Image holds the image to use for the discovery service Deployment
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	Image string `json:"image"`
@@ -37,24 +32,6 @@ type DiscoveryServiceSpec struct {
 	// use since secret data is never shown in the logs.
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	Debug bool `json:"debug,omitempty"`
-}
-
-// SignerConfig holds the config for the marin3r instance certificate signer
-type SignerConfig struct {
-	// CertManager holds specific config for the CertManager signer.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	CertManager *CertManagerSignerConfig `json:"certManager,omitempty"`
-}
-
-// CertManagerSignerConfig holds the specific config for the cert-manager signer
-type CertManagerSignerConfig struct {
-	// Namespace is the name of the namespace where the cert-manager controller runs.
-	// This field is required due to the fact that a CA ClusterIssuer needs the CA Secret
-	// to be present in its own namespace. The marin3r-operator syncs the CA Secret from its
-	// original namespace to the cert-manager namespace.
-	// See https://cert-manager.io/docs/configuration/ca/#deployment.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Namespace string `json:"namespace,omitempty"`
 }
 
 // DiscoveryServiceStatus defines the observed state of DiscoveryService

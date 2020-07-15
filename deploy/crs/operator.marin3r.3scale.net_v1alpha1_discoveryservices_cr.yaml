@@ -6,9 +6,6 @@ spec:
   image: quay.io/3scale/marin3r:latest
   discoveryServiceNamespace: default
   debug: true
-  signer:
-    certManager:
-      namespace: cert-manager
   enabledNamespaces:
     - test1
     - test2
