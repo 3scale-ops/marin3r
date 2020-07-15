@@ -1,0 +1,89 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: discoveryservices.operator.marin3r.3scale.net
+spec:
+  group: operator.marin3r.3scale.net
+  names:
+    kind: DiscoveryService
+    listKind: DiscoveryServiceList
+    plural: discoveryservices
+    singular: discoveryservice
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: DiscoveryService represents an envoy discovery service server.
+        Currently only one DiscoveryService per cluster is supported.
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: DiscoveryServiceSpec defines the desired state of DiscoveryService
+          properties:
+            debug:
+              description: Debug enables debugging log level for the discovery service
+                controllers. It is safe to use since secret data is never shown in
+                the logs.
+              type: boolean
+            discoveryServiceNamespace:
+              description: DiscoveryServiceNamespcae is the name of the namespace
+                where the envoy discovery service server should be deployed.
+              type: string
+            enabledNamespaces:
+              description: EnabledNamespaces is a list of namespaces where the envoy
+                discovery service is enabled. In order to be able to use marin3r from
+                a given namespace its name needs to be included in this list because
+                the operator needs to add some required resources in that namespace.
+              items:
+                type: string
+              type: array
+            image:
+              description: Image holds the image to use for the discovery service
+                Deployment
+              type: string
+            signer:
+              description: Signer holds the configuration for a certificate signer.
+                This signer will be used to setup mTLS between envoy clients and the
+                discovery service server. Currently only the CertManager signer is
+                supported.
+              properties:
+                certManager:
+                  description: CertManager holds specific config for the CertManager
+                    signer.
+                  properties:
+                    namespace:
+                      description: Namespace is the name of the namespace where the
+                        cert-manager controller runs. This field is required due to
+                        the fact that a CA ClusterIssuer needs the CA Secret to be
+                        present in its own namespace. The marin3r-operator syncs the
+                        CA Secret from its original namespace to the cert-manager
+                        namespace. See https://cert-manager.io/docs/configuration/ca/#deployment.
+                      type: string
+                  type: object
+              type: object
+          required:
+          - discoveryServiceNamespace
+          - image
+          - signer
+          type: object
+        status:
+          description: DiscoveryServiceStatus defines the observed state of DiscoveryService
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
