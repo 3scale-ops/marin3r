@@ -120,6 +120,15 @@ func (r *ReconcileEnvoyConfig) Reconcile(request reconcile.Request) (reconcile.R
 		return reconcile.Result{}, err
 	}
 
+	// Add finalizer for this CR
+	if !contains(ec.GetFinalizers(), marin3rv1alpha1.EnvoyConfigFinalizer) {
+		reqLogger.Info("Adding Finalizer for the EnvoyConfig")
+		if err := r.addFinalizer(ctx, ec); err != nil {
+			reqLogger.Error(err, "Failed adding finalizer for envoyconfig")
+			return reconcile.Result{}, err
+		}
+	}
+
 	// Check if the EnvoyConfig instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if ec.GetDeletionTimestamp() != nil {
@@ -138,15 +147,6 @@ func (r *ReconcileEnvoyConfig) Reconcile(request reconcile.Request) (reconcile.R
 	}
 
 	// TODO: add the label with the nodeID if it is missing
-
-	// Add finalizer for this CR
-	if !contains(ec.GetFinalizers(), marin3rv1alpha1.EnvoyConfigFinalizer) {
-		reqLogger.Info("Adding Finalizer for the EnvoyConfig")
-		if err := r.addFinalizer(ctx, ec); err != nil {
-			reqLogger.Error(err, "Failed adding finalizer for envoyconfig")
-			return reconcile.Result{}, err
-		}
-	}
 
 	// desiredVersion is the version that matches the resources described in the spec
 	desiredVersion := calculateRevisionHash(ec.Spec.EnvoyResources)
