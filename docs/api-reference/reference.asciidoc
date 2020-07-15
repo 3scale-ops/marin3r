@@ -225,6 +225,23 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 
 
 
+[id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-casignedconfig"]
+==== CASignedConfig 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`caSecretRef`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#secretreference-v1-core[$$SecretReference$$]__ | A reference to a Secret containing the CA
+|===
+
+
 [id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-certmanagerconfig"]
 ==== CertManagerConfig 
 
@@ -242,20 +259,21 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-certmanagersignerconfig"]
-==== CertManagerSignerConfig 
+[id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-certificaterenewalconfig"]
+==== CertificateRenewalConfig 
 
 
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-signerconfig[$$SignerConfig$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicecertificatespec[$$DiscoveryServiceCertificateSpec$$]
 ****
 
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`namespace`* __string__ | Namespace is the name of the namespace where the cert-manager controller runs. This field is required due to the fact that a CA ClusterIssuer needs the CA Secret to be present in its own namespace. The marin3r-operator syncs the CA Secret from its original namespace to the cert-manager namespace. See https://cert-manager.io/docs/configuration/ca/#deployment.
+| *`enabled`* __boolean__ | Enabled is a flag to enable or disable renewal of the certificate
+| *`notify`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#objectreference-v1-core[$$ObjectReference$$]__ | Notify field holds a reference to another object which will be notified of a certificate renewal through a condition. The other object's controller is in charge of performing the necessary tasks once it has been notified of the renewal.
 |===
 
 
@@ -316,6 +334,7 @@ DiscoveryServiceCertificateSigner specifies the signer to use to provision the c
 | Field | Description
 | *`certManager`* __xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-certmanagerconfig[$$CertManagerConfig$$]__ | CertManager holds specific configuration for the CertManager signer
 | *`selfSigned`* __xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-selfsignedconfig[$$SelfSignedConfig$$]__ | SelfSigned holds specific configuration for the SelfSigned signer
+| *`caSigned`* __xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-casignedconfig[$$CASignedConfig$$]__ | CASigned holds specific configuration for the CASigned signer
 |===
 
 
@@ -339,9 +358,25 @@ DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCer
 | *`hosts`* __string array__ | Hosts is the list of hosts the certificate is valid for. Only use when 'IsServerCertificate' is true. If unset, the CommonName field will be used to populate the valid hosts of the certificate.
 | *`signer`* __xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]__ | Signer specifies  the signer to use to create this certificate. Supported signers are CertManager and SelfSigned.
 | *`secretRef`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#secretreference-v1-core[$$SecretReference$$]__ | SecretRef is a reference to the secret that will hold the certificate and the private key.
+| *`certificateRenewalNotification`* __xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-certificaterenewalconfig[$$CertificateRenewalConfig$$]__ | CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
 |===
 
 
+[id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicecertificatestatus"]
+==== DiscoveryServiceCertificateStatus 
+
+DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-sdk-pkg-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
+|===
 
 
 
@@ -361,12 +396,26 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 | Field | Description
 | *`discoveryServiceNamespace`* __string__ | DiscoveryServiceNamespcae is the name of the namespace where the envoy discovery service server should be deployed.
 | *`enabledNamespaces`* __string array__ | EnabledNamespaces is a list of namespaces where the envoy discovery service is enabled. In order to be able to use marin3r from a given namespace its name needs to be included in this list because the operator needs to add some required resources in that namespace.
-| *`signer`* __xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-signerconfig[$$SignerConfig$$]__ | Signer holds the configuration for a certificate signer. This signer will be used to setup mTLS between envoy clients and the discovery service server. Currently only the CertManager signer is supported.
 | *`image`* __string__ | Image holds the image to use for the discovery service Deployment
 | *`debug`* __boolean__ | Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
 |===
 
 
+[id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicestatus"]
+==== DiscoveryServiceStatus 
+
+DiscoveryServiceStatus defines the observed state of DiscoveryService
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservice[$$DiscoveryService$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-sdk-pkg-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
+|===
 
 
 [id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-selfsignedconfig"]
@@ -379,22 +428,5 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 - xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]
 ****
 
-
-
-[id="{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-signerconfig"]
-==== SignerConfig 
-
-SignerConfig holds the config for the marin3r instance certificate signer
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-discoveryservicespec[$$DiscoveryServiceSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`certManager`* __xref:{anchor_prefix}-github-com-3scale-marin3r-pkg-apis-operator-v1alpha1-certmanagersignerconfig[$$CertManagerSignerConfig$$]__ | CertManager holds specific config for the CertManager signer.
-|===
 
 
