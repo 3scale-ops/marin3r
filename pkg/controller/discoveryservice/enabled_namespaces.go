@@ -242,6 +242,19 @@ func getEnvoyBootstrapConfig(host string, port uint32) (string, error) {
 	}
 
 	cfg := &envoy_config_bootstrap_v2.Bootstrap{
+		Admin: &envoy_config_bootstrap_v2.Admin{
+			AccessLogPath: "/dev/stdout",
+			Address: &envoy_api_v2_core.Address{
+				Address: &envoy_api_v2_core.Address_SocketAddress{
+					SocketAddress: &envoy_api_v2_core.SocketAddress{
+						Address: "0.0.0.0",
+						PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
+							PortValue: 9901,
+						},
+					},
+				},
+			},
+		},
 		DynamicResources: &envoy_config_bootstrap_v2.Bootstrap_DynamicResources{
 			AdsConfig: &envoy_api_v2_core.ApiConfigSource{
 				ApiType:             envoy_api_v2_core.ApiConfigSource_GRPC,
