@@ -19,7 +19,7 @@ func (r *ReconcileDiscoveryService) reconcileClusterRole(ctx context.Context) (r
 
 	r.logger.V(1).Info("Reconciling CusterRole")
 	existent := &rbacv1.ClusterRole{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: r.getName()}, existent)
+	err := r.client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -52,7 +52,7 @@ func (r *ReconcileDiscoveryService) reconcileClusterRole(ctx context.Context) (r
 func (r *ReconcileDiscoveryService) genClusterRoleObject() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: r.getName(),
+			Name: OwnedObjectName(r.ds),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{

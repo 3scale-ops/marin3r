@@ -33,7 +33,7 @@ func (r *ReconcileDiscoveryService) reconcileMutatingWebhook(ctx context.Context
 	}
 
 	existent := &admissionregistrationv1.MutatingWebhookConfiguration{}
-	err = r.client.Get(ctx, types.NamespacedName{Name: r.getName()}, existent)
+	err = r.client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -69,7 +69,7 @@ func (r *ReconcileDiscoveryService) genMutatingWebhookConfigurationObject(caBund
 
 	return &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: r.getName(),
+			Name: OwnedObjectName(r.ds),
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
 			{
@@ -115,25 +115,30 @@ func (r *ReconcileDiscoveryService) genMutatingWebhookConfigurationObject(caBund
 				},
 				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					Service: &admissionregistrationv1.ServiceReference{
-						Name:      r.getName(),
-						Namespace: r.getNamespace(),
+						Name:      OwnedObjectName(r.ds),
+						Namespace: OwnedObjectNamespace(r.ds),
 						Path:      pointer.StringPtr(webhook.MutatePath),
+						Port:      pointer.Int32Ptr(443),
 					},
 					CABundle: caBundle,
 				},
+				MatchPolicy: func() *admissionregistrationv1.MatchPolicyType {
+					s := admissionregistrationv1.Equivalent
+					return &s
+				}(),
+				ReinvocationPolicy: func() *admissionregistrationv1.ReinvocationPolicyType {
+					s := admissionregistrationv1.NeverReinvocationPolicy
+					return &s
+				}(),
 			},
 		},
 	}
 }
 
-// func (r *ReconcileDiscoveryService) getMutatingWebhookName() string {
-// 	return fmt.Sprintf("%s-%s", MutatingWebhookPrefix, r.ds.GetName())
-// }
-
 func (r *ReconcileDiscoveryService) getCABundle(ctx context.Context) ([]byte, error) {
 
 	secret := &corev1.Secret{}
-	if err := r.client.Get(ctx, types.NamespacedName{Name: r.getCACertName(), Namespace: r.getNamespace()}, secret); err != nil {
+	if err := r.client.Get(ctx, types.NamespacedName{Name: getCACertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, secret); err != nil {
 		return nil, err
 	}
 

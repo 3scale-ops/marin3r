@@ -2,24 +2,18 @@ package discoveryservice
 
 import (
 	"fmt"
+
+	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 )
 
-func (r *ReconcileDiscoveryService) getName() string {
-	return fmt.Sprintf("%s-%s", "marin3r", r.ds.GetName())
+func OwnedObjectName(ds *operatorv1alpha1.DiscoveryService) string {
+	return fmt.Sprintf("%s-%s", "marin3r", ds.GetName())
 }
 
-func (r *ReconcileDiscoveryService) getNamespace() string {
-	return r.ds.Spec.DiscoveryServiceNamespace
+func OwnedObjectNamespace(ds *operatorv1alpha1.DiscoveryService) string {
+	return ds.Spec.DiscoveryServiceNamespace
 }
 
-func (r *ReconcileDiscoveryService) getAppLabel() string {
-	return fmt.Sprintf("%s-%s", "marin3r", r.ds.GetName())
-}
-
-func (r *ReconcileDiscoveryService) getDiscoveryServiceHost() string {
-	return fmt.Sprintf("%s.%s.%s", r.getName(), r.getNamespace(), "svc")
-}
-
-func (r *ReconcileDiscoveryService) getDiscoveryServicePort() uint32 {
-	return uint32(18000)
+func OwnedObjectAppLabel(ds *operatorv1alpha1.DiscoveryService) string {
+	return fmt.Sprintf("%s-%s", "marin3r", ds.GetName())
 }

@@ -18,7 +18,7 @@ func (r *ReconcileDiscoveryService) reconcileService(ctx context.Context) (recon
 
 	r.logger.V(1).Info("Reconciling Service")
 	existent := &corev1.Service{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: r.getName(), Namespace: r.getNamespace()}, existent)
+	err := r.client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -55,12 +55,12 @@ func (r *ReconcileDiscoveryService) genServiceObject() *corev1.Service {
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.getName(),
-			Namespace: r.getNamespace(),
+			Name:      OwnedObjectName(r.ds),
+			Namespace: OwnedObjectNamespace(r.ds),
 		},
 		Spec: corev1.ServiceSpec{
 			Type:            corev1.ServiceTypeClusterIP,
-			Selector:        map[string]string{appLabelKey: r.getAppLabel()},
+			Selector:        map[string]string{appLabelKey: OwnedObjectAppLabel(r.ds)},
 			SessionAffinity: corev1.ServiceAffinityNone,
 			Ports: []corev1.ServicePort{
 				{

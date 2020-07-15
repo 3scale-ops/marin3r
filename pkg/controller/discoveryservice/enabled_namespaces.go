@@ -181,7 +181,7 @@ func (r *ReconcileDiscoveryService) getClientCertObject(namespace string) *opera
 			Namespace: namespace,
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-			CommonName: r.getName(),
+			CommonName: OwnedObjectName(r.ds),
 			ValidFor:   clientValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				CertManager: &operatorv1alpha1.CertManagerConfig{
@@ -198,7 +198,7 @@ func (r *ReconcileDiscoveryService) getClientCertObject(namespace string) *opera
 
 func (r *ReconcileDiscoveryService) getBootstrapConfigMapObject(namespace string) (*corev1.ConfigMap, error) {
 
-	config, err := getEnvoyBootstrapConfig(r.getDiscoveryServiceHost(), r.getDiscoveryServicePort())
+	config, err := getEnvoyBootstrapConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
 	if err != nil {
 		return nil, err
 	}
@@ -336,10 +336,13 @@ func getEnvoyBootstrapConfig(host string, port uint32) (string, error) {
 		return "", err
 	}
 
-	// yaml, err := yaml.JSONToYAML(json.Bytes())
-	// if err != nil {
-	// 	return "", err
-	// }
-
 	return string(json.Bytes()), nil
+}
+
+func getDiscoveryServiceHost(ds *operatorv1alpha1.DiscoveryService) string {
+	return fmt.Sprintf("%s.%s.%s", OwnedObjectName(ds), OwnedObjectNamespace(ds), "svc")
+}
+
+func getDiscoveryServicePort() uint32 {
+	return uint32(18000)
 }

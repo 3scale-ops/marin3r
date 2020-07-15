@@ -24,7 +24,7 @@ func (r *ReconcileDiscoveryService) reconcileServerCertificate(ctx context.Conte
 	r.logger.V(1).Info("Reconciling server certificate")
 
 	cert := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	err := r.client.Get(ctx, types.NamespacedName{Name: r.getServerCertName(), Namespace: r.getNamespace()}, cert)
+	err := r.client.Get(ctx, types.NamespacedName{Name: getServerCertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, cert)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -48,23 +48,22 @@ func (r *ReconcileDiscoveryService) reconcileServerCertificate(ctx context.Conte
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileDiscoveryService) getServerCertName() string {
-	return fmt.Sprintf("%s-%s", serverCertSecretNamePrefix, r.ds.GetName())
+func getServerCertName(ds *operatorv1alpha1.DiscoveryService) string {
+	return fmt.Sprintf("%s-%s", serverCertSecretNamePrefix, ds.GetName())
 }
 
-// TODO: CN is wrong
-func (r *ReconcileDiscoveryService) getServerCertCommonName() string {
-	return fmt.Sprintf("%s-%s", caCommonName, r.ds.GetName())
+func getServerCertCommonName(ds *operatorv1alpha1.DiscoveryService) string {
+	return fmt.Sprintf("%s-%s", caCommonName, ds.GetName())
 }
 
 func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.DiscoveryServiceCertificate {
 	return &operatorv1alpha1.DiscoveryServiceCertificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.getServerCertName(),
-			Namespace: r.getNamespace(),
+			Name:      getServerCertName(r.ds),
+			Namespace: OwnedObjectNamespace(r.ds),
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-			CommonName:          r.getServerCertCommonName(),
+			CommonName:          getServerCertCommonName(r.ds),
 			IsServerCertificate: true,
 			ValidFor:            serverValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
@@ -72,10 +71,10 @@ func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.Disc
 					ClusterIssuer: r.getClusterIssuerName(),
 				},
 			},
-			Hosts: []string{r.getDiscoveryServiceHost()},
+			Hosts: []string{getDiscoveryServiceHost(r.ds)},
 			SecretRef: corev1.SecretReference{
-				Name:      r.getServerCertName(),
-				Namespace: r.getNamespace(),
+				Name:      getServerCertName(r.ds),
+				Namespace: OwnedObjectNamespace(r.ds),
 			},
 		},
 	}
