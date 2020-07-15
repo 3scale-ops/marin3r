@@ -64,20 +64,12 @@ func (r *DeploymentReconciler) Reconcile(o types.NamespacedName, generatorFn Dep
 		return reconcile.Result{}, err
 	}
 
-	var updated bool = false
 	desired := generatorFn()
 
-	tmpUpdated, err := r.reconcileSpec(deployment, desired)
+	updated, err := r.reconcileDeployment(deployment, desired)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	updated = updated || tmpUpdated
-
-	tmpUpdated, err = r.reconcileLabels(deployment, desired)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	updated = updated || tmpUpdated
 
 	if updated {
 		if err := r.client.Update(r.ctx, deployment); err != nil {
@@ -89,7 +81,7 @@ func (r *DeploymentReconciler) Reconcile(o types.NamespacedName, generatorFn Dep
 	return reconcile.Result{}, nil
 }
 
-func (r *DeploymentReconciler) reconcileSpec(existentObj, desiredObj common.KubernetesObject) (bool, error) {
+func (r *DeploymentReconciler) reconcileDeployment(existentObj, desiredObj common.KubernetesObject) (bool, error) {
 	existent, ok := existentObj.(*appsv1.Deployment)
 	if !ok {
 		return false, fmt.Errorf("%T is not a *appsv1.Deployment", existentObj)
@@ -101,30 +93,18 @@ func (r *DeploymentReconciler) reconcileSpec(existentObj, desiredObj common.Kube
 
 	updated := false
 
-	if !equality.Semantic.DeepEqual(existent.Spec, desired.Spec) {
-		r.logger.V(1).Info("Deployment spec needs reconcile")
-		existent.Spec = desired.Spec
-		updated = true
-	}
-
-	return updated, nil
-}
-
-func (r *DeploymentReconciler) reconcileLabels(existentObj, desiredObj common.KubernetesObject) (bool, error) {
-	existent, ok := existentObj.(*appsv1.Deployment)
-	if !ok {
-		return false, fmt.Errorf("%T is not a *appsv1.Deployment", existentObj)
-	}
-	desired, ok := desiredObj.(*appsv1.Deployment)
-	if !ok {
-		return false, fmt.Errorf("%T is not a *appsv1.Deployment", desiredObj)
-	}
-
-	updated := false
-
+	// Reconcile the labels
 	if !equality.Semantic.DeepEqual(existent.GetLabels(), desired.GetLabels()) {
 		r.logger.V(1).Info("Deployment labels need reconcile")
 		existent.ObjectMeta.Labels = desired.GetLabels()
+		updated = true
+
+	}
+
+	// reconcile the spec
+	if !equality.Semantic.DeepEqual(existent.Spec, desired.Spec) {
+		r.logger.V(1).Info("Deployment spec needs reconcile")
+		existent.Spec = desired.Spec
 		updated = true
 	}
 
