@@ -8,8 +8,7 @@ spec:
   commonName: kuard.test1.svc
   validFor: 3600
   signer:
-    certManager:
-      clusterIssuer: marin3r-instance
+    selfSigned: {}
   secretRef:
     name: kuard
     namespace: test1

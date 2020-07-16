@@ -42,6 +42,7 @@ func (r *ReconcileDiscoveryService) genServiceAccountObject() *corev1.ServiceAcc
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      OwnedObjectName(r.ds),
 			Namespace: OwnedObjectNamespace(r.ds),
+			Labels:    Labels(r.ds),
 		},
 	}
 }

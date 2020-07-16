@@ -2,6 +2,7 @@ package discoveryservicecertificate
 
 import (
 	"context"
+	"crypto/x509"
 	"time"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
@@ -15,11 +16,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate) error {
+func (r *ReconcileDiscoveryServiceCertificate) reconcileCASignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate) error {
 
-	// Fetch the certmanagerv1alpha2.Certificate instance
+	// Get the issuer certificate
+	issuerCert, issuerKey, err := r.getCACertificate(ctx, dsc.Spec)
+	if err != nil {
+		return err
+	}
+
 	secret := &corev1.Secret{}
-	err := r.client.Get(context.TODO(),
+	err = r.client.Get(ctx,
 		types.NamespacedName{
 			Name:      dsc.Spec.SecretRef.Name,
 			Namespace: dsc.Spec.SecretRef.Namespace,
@@ -28,8 +34,7 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Generate secret with a self signed certificate
-			secret, err := genSelfSignedCertificateObject(dsc.Spec)
+			secret, err := genCASignedCertificateObject(dsc.Spec, issuerCert, issuerKey)
 			if err != nil {
 				return err
 			}
@@ -39,7 +44,7 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 			if err := r.client.Create(ctx, secret); err != nil {
 				return err
 			}
-			r.logger.Info("Created self-signed certificate")
+			r.logger.Info("Created ca-signed certificate")
 			return nil
 		}
 		return err
@@ -64,7 +69,7 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 
 	// If certificate is invalid or has been marked for renewal, reissue it
 	if err != nil || dsc.Status.Conditions.IsTrueFor(operatorv1alpha1.CertificateNeedsRenewalCondition) {
-		new, err := genSelfSignedCertificateObject(dsc.Spec)
+		new, err := genCASignedCertificateObject(dsc.Spec, issuerCert, issuerKey)
 		if err != nil {
 			return err
 		}
@@ -73,7 +78,7 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 		if err := r.client.Patch(ctx, secret, patch); err != nil {
 			return err
 		}
-		r.logger.Info("Re-issued self-signed certificate")
+		r.logger.Info("Re-issued ca-signed certificate")
 
 		// Notify other controllers if notifications are configured
 		// for this
@@ -108,7 +113,6 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 				r.logger.Info("Notification for this Kind is not implemented")
 			}
 		}
-
 	}
 
 	if dsc.Status.Conditions.IsTrueFor(operatorv1alpha1.CertificateNeedsRenewalCondition) {
@@ -123,11 +127,40 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 	return nil
 }
 
-func genSelfSignedCertificateObject(cfg operatorv1alpha1.DiscoveryServiceCertificateSpec) (*corev1.Secret, error) {
+func (r *ReconcileDiscoveryServiceCertificate) getCACertificate(ctx context.Context, cfg operatorv1alpha1.DiscoveryServiceCertificateSpec) (*x509.Certificate, interface{}, error) {
+
+	s := &corev1.Secret{}
+	err := r.client.Get(
+		ctx,
+		types.NamespacedName{
+			Name:      cfg.Signer.CASigned.SecretRef.Name,
+			Namespace: cfg.Signer.CASigned.SecretRef.Namespace,
+		},
+		s,
+	)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cert, err := pki.LoadX509Certificate(s.Data["tls.crt"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	key, err := pki.DecodePrivateKeyBytes(s.Data["tls.key"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cert, key, nil
+}
+
+func genCASignedCertificateObject(cfg operatorv1alpha1.DiscoveryServiceCertificateSpec, issuerCert *x509.Certificate, issuerKey interface{}) (*corev1.Secret, error) {
 
 	crt, key, err := pki.GenerateCertificate(
-		nil,
-		nil,
+		issuerCert,
+		issuerKey,
 		cfg.CommonName,
 		time.Duration(cfg.ValidFor)*time.Second,
 		cfg.IsServerCertificate,

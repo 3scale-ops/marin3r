@@ -52,7 +52,8 @@ func (r *ReconcileDiscoveryService) reconcileClusterRole(ctx context.Context) (r
 func (r *ReconcileDiscoveryService) genClusterRoleObject() *rbacv1.ClusterRole {
 	return &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: OwnedObjectName(r.ds),
+			Name:   OwnedObjectName(r.ds),
+			Labels: Labels(r.ds),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{

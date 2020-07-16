@@ -9,11 +9,11 @@ Lighweight, CRD based envoy control plane for kubernetes:
 
 * Runs in a pod
 * Feeds envoy configurations from CRDs
-* Easy integration with cert-manager certificates
 * Any secret of type `kubernetes.io/tls` can be used as a certificate source
 * Installation managed by an operator
 * Self-healing capabilities
 * Implements the sidecar pattern: injects envoy sidecar containers based on pod annotations
+* Easy integration with cert-manager certificates
 
 ## **Motivation**
 
@@ -34,16 +34,9 @@ The focus of marin3r is on robustness, flexibility, automation and availability.
 
 ### **Installation**
 
-marin3r is a kubernetes operator and as such can be installed by deploying the operator into the cluster and creating custom resources (we plan to release marin3r through operatorhub.io in the future). The only requirement is that [cert-manager](https://cert-manager.io/) must be available in the cluster because marin3r relies on cert-manager to generate the required certificates that the envoy discovery service needs.
+marin3r is a kubernetes operator and as such can be installed by deploying the operator into the cluster and creating custom resources (we plan to release marin3r through operatorhub.io in the future).
 
-To install cert-manager issue the following commands:
-
-```bash
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.crds.yaml
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.yaml
-```
-
-Once cert-manager is deployed you can proceed and deploy marin3r. From the root directory of the repo issue the following commands:
+To install marin3r clone this repo and issue the following commands from the root directory:
 
 ```bash
 kubectl create namespace marin3r
@@ -71,9 +64,6 @@ spec:
   image: quay.io/3scale/marin3r:latest
   discoveryServiceNamespace: marin3r
   debug: true
-  signer:
-    certManager:
-      namespace: cert-manager
   enabledNamespaces:
     - default
 EOF
@@ -153,7 +143,7 @@ We need now to provide the envoy-sidecar with the appropriate config to publish 
 
 Use openSSL to create a self-signed certificate that we will be using for this example.
 
-NOTE: you could also generate a certificate with cert-manager. Check [cert-manager documentation](https://cert-manager.io/docs/).
+NOTE: you could also generate a certificate with cert-manager if you have it available in your cluster. This would be a typical case for a production environment. Check [cert-manager documentation](https://cert-manager.io/docs/).
 
 ```bash
 openssl req -x509 -newkey rsa:4096 -keyout /tmp/key.pem -out /tmp/cert.pem -days 365 -nodes -subj '/CN=localhost'

@@ -55,6 +55,8 @@ const (
 	DefaultEnvoyConfigFileName = "config.json"
 	DefaultEnvoyTLSBasePath    = "/etc/envoy/tls/client"
 
+	TlsCertificateSdsSecretFileName = "tls_certificate_sds_secret.yaml"
+
 	marin3rAnnotationsDomain = "marin3r.3scale.net"
 )
 

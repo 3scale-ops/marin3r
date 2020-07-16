@@ -52,7 +52,8 @@ func (r *ReconcileDiscoveryService) genClusterRoleBindingObject() *rbacv1.Cluste
 
 	return &rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: OwnedObjectName(r.ds),
+			Name:   OwnedObjectName(r.ds),
+			Labels: Labels(r.ds),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,

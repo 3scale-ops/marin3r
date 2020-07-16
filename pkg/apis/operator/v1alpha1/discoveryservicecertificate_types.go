@@ -1,12 +1,17 @@
 package v1alpha1
 
 import (
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
+	// DiscoveryServiceCertificateKind is a string that holds the Kind of DiscoveryServiceCertificate
 	DiscoveryServiceCertificateKind string = "DiscoveryServiceCertificate"
+	// CertificateNeedsRenewalCondition is a condition that indicates that a
+	// DiscoveryServiceCertificate is invalid and needs replacement
+	CertificateNeedsRenewalCondition status.ConditionType = "CertificateNeedsRenewal"
 )
 
 // DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate
@@ -37,6 +42,10 @@ type DiscoveryServiceCertificateSpec struct {
 	// and the private key.
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	SecretRef corev1.SecretReference `json:"secretRef"`
+	// CertificateRenewalConfig configures the certificate renewal process. If unset default
+	// behavior is to renew the certificate but not notify of renewals.
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	CertificateRenewalConfig *CertificateRenewalConfig `json:"certificateRenewalNotification,omitempty"`
 }
 
 // DiscoveryServiceCertificateSigner specifies the signer to use to provision the certificate
@@ -49,6 +58,21 @@ type DiscoveryServiceCertificateSigner struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	SelfSigned *SelfSignedConfig `json:"selfSigned,omitempty"`
+	// CASigned holds specific configuration for the CASigned signer
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	CASigned *CASignedConfig `json:"caSigned,omitempty"`
+}
+
+// CertificateRenewalConfig configures the certificate renewal process.
+type CertificateRenewalConfig struct {
+	// Enabled is a flag to enable or disable renewal of the certificate
+	Enabled bool `json:"enabled"`
+	// Notify field holds a reference to another object which will be notified
+	// of a certificate renewal through a condition. The other object's controller
+	// is in charge of performing the necessary tasks once it has been notified of
+	// the renewal.
+	Notify *corev1.ObjectReference `json:"notify,omitempty"`
 }
 
 // CertManagerConfig is used to generate certificates using the given cert-manager issuer
@@ -61,8 +85,18 @@ type CertManagerConfig struct {
 // SelfSignedConfig is an empty struct to refer to the selfsiged certificates provisioner
 type SelfSignedConfig struct{}
 
+// CASignedConfig is used ti generate certificates signed by a CA contained in a Secret
+type CASignedConfig struct {
+	// A reference to a Secret containing the CA
+	SecretRef corev1.SecretReference `json:"caSecretRef"`
+}
+
 // DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
-type DiscoveryServiceCertificateStatus struct{}
+type DiscoveryServiceCertificateStatus struct {
+	// Conditions represent the latest available observations of an object's state
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	Conditions status.Conditions `json:"conditions"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

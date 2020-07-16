@@ -6,9 +6,6 @@ spec:
   image: localhost:5000/marin3r:test
   discoveryServiceNamespace: default
   debug: true
-  signer:
-    certManager:
-      namespace: cert-manager
   enabledNamespaces:
     - test1
 

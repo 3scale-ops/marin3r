@@ -3,6 +3,7 @@ package controller
 import (
 	"github.com/3scale/marin3r/pkg/controller/discoveryservice"
 	"github.com/3scale/marin3r/pkg/controller/discoveryservicecertificate"
+	"github.com/3scale/marin3r/pkg/controller/discoveryservicecertificatewatcher"
 	"github.com/3scale/marin3r/pkg/controller/envoyconfig"
 	"github.com/3scale/marin3r/pkg/controller/envoyconfigrevision"
 	"github.com/3scale/marin3r/pkg/controller/secret"
@@ -24,6 +25,7 @@ func AddToManager(m manager.Manager, c *xds_cache.SnapshotCache) error {
 func AddToOperatorManager(m manager.Manager) error {
 	discoveryservice.Add(m)
 	discoveryservicecertificate.Add(m)
+	discoveryservicecertificatewatcher.Add(m)
 
 	return nil
 }

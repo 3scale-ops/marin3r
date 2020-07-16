@@ -69,7 +69,8 @@ func (r *ReconcileDiscoveryService) genMutatingWebhookConfigurationObject(caBund
 
 	return &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: OwnedObjectName(r.ds),
+			Name:   OwnedObjectName(r.ds),
+			Labels: Labels(r.ds),
 		},
 		Webhooks: []admissionregistrationv1.MutatingWebhook{
 			{

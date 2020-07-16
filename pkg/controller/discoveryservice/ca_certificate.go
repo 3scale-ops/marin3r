@@ -56,17 +56,21 @@ func (r *ReconcileDiscoveryService) genCACertObject() *operatorv1alpha1.Discover
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      getCACertName(r.ds),
 			Namespace: OwnedObjectNamespace(r.ds),
+			Labels:    Labels(r.ds),
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: getCACertCommonName(r.ds),
 			IsCA:       true,
-			ValidFor:   caValidFor,
+			ValidFor:   caCertValidFor,
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				SelfSigned: &operatorv1alpha1.SelfSignedConfig{},
 			},
 			SecretRef: corev1.SecretReference{
 				Name:      getCACertName(r.ds),
 				Namespace: OwnedObjectNamespace(r.ds),
+			},
+			CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{
+				Enabled: false,
 			},
 		},
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/3scale/marin3r/pkg/apis/external"
 	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	"github.com/go-logr/logr"
@@ -13,10 +12,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -24,25 +23,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	// cert-manager
-	certmanagerv1alpha2 "github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha2"
 )
 
 const (
 	// as there is currently no renewal mechanism for the CA
 	// set a validity sufficiently high. This might be configurable
 	// in the future when renewal is managed by the operator
-	caValidFor                 int64         = 94610000 // 3 years
-	serverValidFor             int64         = 31536000 // 1 year
-	clientValidFor             int64         = 7776000  // 90 days
-	caCommonName               string        = "marin3r"
-	caCertSecretNamePrefix     string        = "marin3r-ca-cert"
-	serverCertSecretNamePrefix string        = "marin3r-server-cert"
-	pollingPeriod              time.Duration = 10
+	caCertValidFor             int64  = 3600 * 24 * 365 * 3 // 3 years
+	serverCertValidFor         int64  = 3600 * 24 * 90      // 90 days
+	clientCertValidFor         int64  = 3600 * 48           // 48 hours
+	caCommonName               string = "marin3r-ca"
+	caCertSecretNamePrefix     string = "marin3r-ca-cert"
+	serverCommonName           string = "marin3r-server"
+	serverCertSecretNamePrefix string = "marin3r-server-cert"
 )
 
-var log = logf.Log.WithName("controller_dicoveryservice")
+var (
+	log = logf.Log.WithName("controller_dicoveryservice")
+)
 
 // Add creates a new DiscoveryService Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -52,12 +50,9 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	dc, _ := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	return &ReconcileDiscoveryService{
-		client:             mgr.GetClient(),
-		scheme:             mgr.GetScheme(),
-		discoveryClient:    dc,
-		clusterIssuerWatch: false,
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
 	}
 }
 
@@ -138,37 +133,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Set up a goroutine to autodetect if required 3rd party apis are available
-	go func() {
-
-		discoverFn := func() {
-			rec := r.(*ReconcileDiscoveryService)
-			resourceExists, _ := external.HasCertManagerClusterIssuer(rec.discoveryClient)
-
-			if resourceExists && !rec.clusterIssuerWatch {
-				err := c.Watch(&source.Kind{Type: &certmanagerv1alpha2.ClusterIssuer{}}, &handler.EnqueueRequestForOwner{
-					IsController: true,
-					OwnerType:    &operatorv1alpha1.DiscoveryService{},
-				})
-				if err != nil {
-					log.Error(err, "Failed setting a watch on certmanagerv1alpha2.ClusterIssuer type")
-				} else {
-					// Mark the watch was correctly set
-					log.Info("Discovered certmanagerv1alpha2 api, watching type 'ClusterIssuer'")
-					// WARNING: this is not thread safe
-					rec.clusterIssuerWatch = true
-				}
-			}
-		}
-
-		ticker := time.NewTicker(pollingPeriod * time.Second)
-
-		discoverFn()
-		for range ticker.C {
-			discoverFn()
-		}
-	}()
-
 	return nil
 }
 
@@ -179,12 +143,10 @@ var _ reconcile.Reconciler = &ReconcileDiscoveryService{}
 // This is not currently thread safe, so use just one worker for
 // the controller
 type ReconcileDiscoveryService struct {
-	client             client.Client
-	scheme             *runtime.Scheme
-	ds                 *operatorv1alpha1.DiscoveryService
-	logger             logr.Logger
-	discoveryClient    discovery.DiscoveryInterface
-	clusterIssuerWatch bool
+	client client.Client
+	scheme *runtime.Scheme
+	ds     *operatorv1alpha1.DiscoveryService
+	logger logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a DiscoveryService object and makes changes based on the state read
@@ -220,11 +182,6 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 	r.ds = &dsList.Items[0]
 
 	result, err = r.reconcileCA(ctx)
-	if result.Requeue || err != nil {
-		return result, err
-	}
-
-	result, err = r.reconcileSigner(ctx)
 	if result.Requeue || err != nil {
 		return result, err
 	}
@@ -276,6 +233,33 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 	result, err = r.reconcileMutatingWebhook(ctx)
 	if result.Requeue || err != nil {
 		return result, err
+	}
+
+	// Manage server restart when condition is active
+	if r.ds.Status.Conditions.IsTrueFor(operatorv1alpha1.ServerRestartRequiredCondition) {
+
+		// TODO: add an admin port to the DiscoveryService server so an http call can be done
+		// to indicate that the server must shutdown or reload. It is a much safer approach.
+		podList := &corev1.PodList{}
+		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+			MatchLabels: map[string]string{appLabelKey: OwnedObjectAppLabel(r.ds)},
+		})
+		if err := r.client.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
+			return reconcile.Result{}, err
+		}
+		for _, pod := range podList.Items {
+			err = r.client.Delete(ctx, &pod, client.GracePeriodSeconds(5))
+		}
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Clear condition
+		patch := client.MergeFrom(r.ds.DeepCopy())
+		r.ds.Status.Conditions.RemoveCondition(operatorv1alpha1.ServerRestartRequiredCondition)
+		if err := r.client.Status().Patch(ctx, r.ds, patch); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	return reconcile.Result{}, nil
