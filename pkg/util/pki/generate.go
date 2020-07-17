@@ -2,9 +2,8 @@ package pki
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -16,9 +15,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/jetstack/cert-manager/pkg/util/errors"
 )
 
+// LoadX509Certificate loads a x509.Certificate object from the given bytes
 func LoadX509Certificate(cert []byte) (*x509.Certificate, error) {
 
 	cpb, _ := pem.Decode(cert)
@@ -43,7 +42,7 @@ func DecodePrivateKeyBytes(keyBytes []byte) (crypto.Signer, error) {
 	case "PRIVATE KEY":
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, errors.NewInvalidData("error parsing pkcs#8 private key: %s", err.Error())
+			return nil, fmt.Errorf("error parsing pkcs#8 private key: %s", err.Error())
 		}
 
 		signer, ok := key.(crypto.Signer)
@@ -51,12 +50,16 @@ func DecodePrivateKeyBytes(keyBytes []byte) (crypto.Signer, error) {
 			return nil, fmt.Errorf("error parsing pkcs#8 private key: invalid key type")
 		}
 		return signer, nil
-	case "EC PRIVATE KEY":
-		key, err := x509.ParseECPrivateKey(block.Bytes)
+	case "RSA PRIVATE KEY":
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing ecdsa private key: %s", err.Error())
+			return nil, fmt.Errorf("error parsing rsa private key: %s", err.Error())
 		}
 
+		err = key.Validate()
+		if err != nil {
+			return nil, fmt.Errorf("rsa private key failed validation: %s", err.Error())
+		}
 		return key, nil
 
 	default:
@@ -64,6 +67,7 @@ func DecodePrivateKeyBytes(keyBytes []byte) (crypto.Signer, error) {
 	}
 }
 
+// LoadCA reads a CA certificate and loads it into a CertPool object
 func LoadCA(caPath string, logger logr.Logger) *x509.CertPool {
 	certPool := x509.NewCertPool()
 	if bs, err := ioutil.ReadFile(caPath); err != nil {
@@ -79,14 +83,17 @@ func LoadCA(caPath string, logger logr.Logger) *x509.CertPool {
 	return certPool
 }
 
-func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+// GeneratePrivateKey generates a new RSA private key
+func GeneratePrivateKey() (*rsa.PrivateKey, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
 	return priv, nil
 }
 
+// GenerateCertificate issues a new certificate with the passed options and signed by the parent certificate if one is given. A self-signed
+// is issued otherwise.
 func GenerateCertificate(issuerCert *x509.Certificate, signerKey interface{}, commonName string, validFor time.Duration, isServer, isCA bool, host ...string) ([]byte, []byte, error) {
 
 	priv, err := GeneratePrivateKey()
