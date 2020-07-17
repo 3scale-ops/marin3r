@@ -2,9 +2,8 @@ package pki
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -51,12 +50,16 @@ func DecodePrivateKeyBytes(keyBytes []byte) (crypto.Signer, error) {
 			return nil, fmt.Errorf("error parsing pkcs#8 private key: invalid key type")
 		}
 		return signer, nil
-	case "EC PRIVATE KEY":
-		key, err := x509.ParseECPrivateKey(block.Bytes)
+	case "RSA PRIVATE KEY":
+		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing ecdsa private key: %s", err.Error())
+			return nil, errors.NewInvalidData("error parsing rsa private key: %s", err.Error())
 		}
 
+		err = key.Validate()
+		if err != nil {
+			return nil, errors.NewInvalidData("rsa private key failed validation: %s", err.Error())
+		}
 		return key, nil
 
 	default:
@@ -79,8 +82,8 @@ func LoadCA(caPath string, logger logr.Logger) *x509.CertPool {
 	return certPool
 }
 
-func GeneratePrivateKey() (*ecdsa.PrivateKey, error) {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+func GeneratePrivateKey() (*rsa.PrivateKey, error) {
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
