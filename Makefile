@@ -5,7 +5,7 @@ CURRENT_GIT_REF := $(shell git describe --always --dirty)
 RELEASE := $(CURRENT_GIT_REF)
 KIND_VERSION := v0.9.0
 KIND := bin/kind
-export KUBECONFIG = tmp/kubeconfig
+export KUBECONFIG = ${PWD}/tmp/kubeconfig
 .PHONY: help clean kind-create kind-delete docker-build envoy start build
 
 help:
@@ -47,6 +47,11 @@ TEST_RESULTS = ./coverage.txt
 
 test-unit: ## runs unit tests
 	go test ./... -race -coverprofile=$(TEST_RESULTS) -covermode=atomic
+
+test-e2e: ## run e2e tests
+test-e2e: kind-create kind-docker-build
+	operator-sdk --verbose test local ./test/e2e --watch-namespace="" --operator-namespace="default" --up-local --local-operator-flags "--operator"
+	$(MAKE) kind-delete
 
 test: ## runs all tests
 test: test-unit
