@@ -1,12 +1,17 @@
 package discoveryservice
 
 import (
+	"fmt"
+	"hash/fnv"
+
 	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/rand"
+	hashutil "k8s.io/kubernetes/pkg/util/hash"
 	"k8s.io/utils/pointer"
 )
 
@@ -14,7 +19,7 @@ const (
 	appLabelKey string = "app"
 )
 
-func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService) reconcilers.DeploymentGeneratorFn {
+func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1.Secret) reconcilers.DeploymentGeneratorFn {
 
 	return func() *appsv1.Deployment {
 
@@ -144,6 +149,15 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService) reconcilers.De
 			dep.Spec.Template.Spec.Containers[0].Args = append(dep.Spec.Template.Spec.Containers[0].Args, "--zap-devel")
 		}
 
+		// Set a label with the server certificate hash
+		dep.Spec.Template.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey] = certificateHash(secret.Data)
+
 		return dep
 	}
+}
+
+func certificateHash(data map[string][]byte) string {
+	resourcesHasher := fnv.New32a()
+	hashutil.DeepHashObject(resourcesHasher, data)
+	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }

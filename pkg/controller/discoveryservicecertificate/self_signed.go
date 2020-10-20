@@ -6,7 +6,6 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/pkg/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/util/pki"
-	"github.com/operator-framework/operator-sdk/pkg/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -74,40 +73,6 @@ func (r *ReconcileDiscoveryServiceCertificate) reconcileSelfSignedCertificate(ct
 			return err
 		}
 		r.logger.Info("Re-issued self-signed certificate")
-
-		// Notify other controllers if notifications are configured
-		// for this
-		// TODO: look for a better way to do this. If we fail somewhere
-		// before notifing the other controller, this won't be retried
-		// and the condition will never be set
-		if dsc.Spec.CertificateRenewalConfig != nil && dsc.Spec.CertificateRenewalConfig.Notify != nil {
-			switch dsc.Spec.CertificateRenewalConfig.Notify.Kind {
-			case operatorv1alpha1.DiscoveryServiceKind:
-				ds := &operatorv1alpha1.DiscoveryService{}
-				if err := r.client.Get(ctx, types.NamespacedName{
-					Name:      dsc.Spec.CertificateRenewalConfig.Notify.Name,
-					Namespace: dsc.Spec.CertificateRenewalConfig.Notify.Namespace},
-					ds); err != nil {
-					return err
-				}
-
-				if !ds.Status.Conditions.IsTrueFor(operatorv1alpha1.ServerRestartRequiredCondition) {
-					patch := client.MergeFrom(ds.DeepCopy())
-					ds.Status.Conditions.SetCondition(status.Condition{
-						Type:    operatorv1alpha1.ServerRestartRequiredCondition,
-						Reason:  "ServerCertificateReissued",
-						Status:  corev1.ConditionTrue,
-						Message: "Server certificate has been reissued",
-					})
-					if err := r.client.Status().Patch(ctx, ds, patch); err != nil {
-						return err
-					}
-					r.logger.V(1).Info("Notified the DiscoveryService controller")
-				}
-			default:
-				r.logger.Info("Notification for this Kind is not implemented")
-			}
-		}
 
 	}
 
