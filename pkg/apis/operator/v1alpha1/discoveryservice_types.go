@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	DiscoveryServiceKind           string               = "DiscoveryService"
-	DiscoveryServiceEnabledKey     string               = "marin3r.3scale.net/status"
-	DiscoveryServiceEnabledValue   string               = "enabled"
-	DiscoveryServiceLabelKey       string               = "marin3r.3scale.net/discovery-service"
-	ServerRestartRequiredCondition status.ConditionType = "ServerRestartRequired"
+	DiscoveryServiceKind                    string = "DiscoveryService"
+	DiscoveryServiceEnabledKey              string = "marin3r.3scale.net/status"
+	DiscoveryServiceEnabledValue            string = "enabled"
+	DiscoveryServiceLabelKey                string = "marin3r.3scale.net/discovery-service"
+	DiscoveryServiceCertificateHashLabelKey string = "marin3r.3scale.net/server-certificate-hash"
 )
 
 // DiscoveryServiceSpec defines the desired state of DiscoveryService

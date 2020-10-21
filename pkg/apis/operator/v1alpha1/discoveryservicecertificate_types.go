@@ -68,11 +68,6 @@ type DiscoveryServiceCertificateSigner struct {
 type CertificateRenewalConfig struct {
 	// Enabled is a flag to enable or disable renewal of the certificate
 	Enabled bool `json:"enabled"`
-	// Notify field holds a reference to another object which will be notified
-	// of a certificate renewal through a condition. The other object's controller
-	// is in charge of performing the necessary tasks once it has been notified of
-	// the renewal.
-	Notify *corev1.ObjectReference `json:"notify,omitempty"`
 }
 
 // CertManagerConfig is used to generate certificates using the given cert-manager issuer

@@ -77,11 +77,6 @@ func (r *ReconcileDiscoveryService) getServerCertObject() *operatorv1alpha1.Disc
 			},
 			CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{
 				Enabled: true,
-				Notify: &corev1.ObjectReference{
-					Kind:      operatorv1alpha1.DiscoveryServiceKind,
-					Name:      r.ds.GetName(),
-					Namespace: r.ds.GetNamespace(),
-				},
 			},
 		},
 	}

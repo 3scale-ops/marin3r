@@ -12,15 +12,16 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -133,6 +134,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// Watch for secrets to detect certificate changes
+	filter := predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			if e.Object.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				return true
+			}
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			if e.ObjectNew.(*corev1.Secret).Type == "kubernetes.io/tls" {
+				return true
+			}
+			return false
+		},
+	}
+	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, filter)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -206,10 +227,19 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 		return result, err
 	}
 
+	// Fetch the server certificate to calculate the hash and
+	// populate the deployment's label.
+	// This will trigger rollouts on server certificate changes.
+	secret := &corev1.Secret{}
+	err = r.client.Get(ctx, types.NamespacedName{Name: getServerCertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, secret)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	dr := reconcilers.NewDeploymentReconciler(ctx, r.logger, r.client, r.scheme, r.ds)
 	result, err = dr.Reconcile(
 		types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)},
-		deploymentGeneratorFn(r.ds),
+		deploymentGeneratorFn(r.ds, secret),
 	)
 	if result.Requeue || err != nil {
 		return result, err
@@ -233,33 +263,6 @@ func (r *ReconcileDiscoveryService) Reconcile(request reconcile.Request) (reconc
 	result, err = r.reconcileMutatingWebhook(ctx)
 	if result.Requeue || err != nil {
 		return result, err
-	}
-
-	// Manage server restart when condition is active
-	if r.ds.Status.Conditions.IsTrueFor(operatorv1alpha1.ServerRestartRequiredCondition) {
-
-		// TODO: add an admin port to the DiscoveryService server so an http call can be done
-		// to indicate that the server must shutdown or reload. It is a much safer approach.
-		podList := &corev1.PodList{}
-		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{appLabelKey: OwnedObjectAppLabel(r.ds)},
-		})
-		if err := r.client.List(ctx, podList, &client.ListOptions{LabelSelector: selector}); err != nil {
-			return reconcile.Result{}, err
-		}
-		for _, pod := range podList.Items {
-			err = r.client.Delete(ctx, &pod, client.GracePeriodSeconds(5))
-		}
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Clear condition
-		patch := client.MergeFrom(r.ds.DeepCopy())
-		r.ds.Status.Conditions.RemoveCondition(operatorv1alpha1.ServerRestartRequiredCondition)
-		if err := r.client.Status().Patch(ctx, r.ds, patch); err != nil {
-			return reconcile.Result{}, err
-		}
 	}
 
 	return reconcile.Result{}, nil

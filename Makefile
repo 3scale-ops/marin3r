@@ -3,9 +3,9 @@ EASYRSA_VERSION := v3.0.6
 ENVOY_VERSION := v1.14.1
 CURRENT_GIT_REF := $(shell git describe --always --dirty)
 RELEASE := $(CURRENT_GIT_REF)
-KIND_VERSION := v0.7.0
+KIND_VERSION := v0.9.0
 KIND := bin/kind
-export KUBECONFIG = tmp/kubeconfig
+export KUBECONFIG = ${PWD}/tmp/kubeconfig
 .PHONY: help clean kind-create kind-delete docker-build envoy start build
 
 help:
@@ -46,7 +46,12 @@ docker-push: ## pushes the image built from $(RELEASE) to quay.io
 TEST_RESULTS = ./coverage.txt
 
 test-unit: ## runs unit tests
-	go test ./... -race -coverprofile=$(TEST_RESULTS) -covermode=atomic
+	go test ./pkg/... -race -coverprofile=$(TEST_RESULTS) -covermode=atomic
+
+test-e2e: ## run e2e tests
+test-e2e: kind-create kind-docker-build
+	operator-sdk --verbose test local ./test/e2e --watch-namespace="" --operator-namespace="default" --up-local --local-operator-flags "--operator"
+	$(MAKE) kind-delete
 
 test: ## runs all tests
 test: test-unit
