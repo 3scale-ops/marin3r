@@ -46,7 +46,7 @@ docker-push: ## pushes the image built from $(RELEASE) to quay.io
 TEST_RESULTS = ./coverage.txt
 
 test-unit: ## runs unit tests
-	go test ./... -race -coverprofile=$(TEST_RESULTS) -covermode=atomic
+	go test ./pkg/... -race -coverprofile=$(TEST_RESULTS) -covermode=atomic
 
 test-e2e: ## run e2e tests
 test-e2e: kind-create kind-docker-build
