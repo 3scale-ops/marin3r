@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -15,7 +16,7 @@ func waitForSecret(t *testing.T, kubeclient kubernetes.Interface, namespace, nam
 
 	// t.Logf("Waiting for availability of Secret: %s in Namespace: %s \n", name, namespace)
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		_, err = kubeclient.CoreV1().Secrets(namespace).Get(name, metav1.GetOptions{})
+		_, err = kubeclient.CoreV1().Secrets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				t.Logf("Waiting for availability of Secret: %s in Namespace: %s \n", name, namespace)
@@ -37,7 +38,7 @@ func waitForReplicaSetDrain(t *testing.T, kubeclient kubernetes.Interface, names
 	retryInterval, timeout time.Duration) error {
 
 	err := wait.Poll(retryInterval, timeout, func() (done bool, err error) {
-		replicaset, err := kubeclient.AppsV1().ReplicaSets(namespace).Get(name, metav1.GetOptions{})
+		replicaset, err := kubeclient.AppsV1().ReplicaSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				t.Logf("Waiting for drain of ReplicaSet: %s in Namespace: %s \n", name, namespace)
