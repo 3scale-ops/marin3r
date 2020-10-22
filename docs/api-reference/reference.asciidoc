@@ -273,7 +273,6 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 |===
 | Field | Description
 | *`enabled`* __boolean__ | Enabled is a flag to enable or disable renewal of the certificate
-| *`notify`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#objectreference-v1-core[$$ObjectReference$$]__ | Notify field holds a reference to another object which will be notified of a certificate renewal through a condition. The other object's controller is in charge of performing the necessary tasks once it has been notified of the renewal.
 |===
 
 
