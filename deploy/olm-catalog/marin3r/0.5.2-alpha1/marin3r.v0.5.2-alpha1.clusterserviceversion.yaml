@@ -109,22 +109,17 @@ metadata:
               "test1",
               "test2"
             ],
-            "image": "quay.io/3scale/marin3r:latest",
-            "signer": {
-              "certManager": {
-                "namespace": "cert-manager"
-              }
-            }
+            "image": "quay.io/3scale/marin3r:latest"
           }
         }
       ]
     capabilities: Basic Install
     certified: "false"
-    containerImage: quay.io/3scale/marin3r:v0.4.1
+    containerImage: quay.io/3scale/marin3r:v0.5.2
     description: Operator to deploy and manage an Envoy Discovery Service.
     repository: https://github.com/3scale/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.4.1-alpha1
+  name: marin3r.v0.5.2-alpha1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -146,6 +141,11 @@ spec:
         name: ""
         version: v1
       specDescriptors:
+      - description: CertificateRenewalConfig configures the certificate renewal process.
+          If unset default behavior is to renew the certificate but not notify of
+          renewals.
+        displayName: Certificate Renewal Config
+        path: certificateRenewalNotification
       - description: CommonName is the CommonName of the certificate
         displayName: Common Name
         path: commonName
@@ -169,6 +169,9 @@ spec:
           Supported signers are CertManager and SelfSigned.
         displayName: Signer
         path: signer
+      - description: CASigned holds specific configuration for the CASigned signer
+        displayName: CASigned
+        path: signer.caSigned
       - description: CertManager holds specific configuration for the CertManager
           signer
         displayName: Cert Manager
@@ -183,6 +186,13 @@ spec:
       - description: ValidFor specifies the validity of the certificate in seconds
         displayName: Valid For
         path: validFor
+      statusDescriptors:
+      - description: Conditions represent the latest available observations of an
+          object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1alpha1
     - description: DiscoveryService represents an envoy discovery service server.
         Currently only one DiscoveryService per cluster is supported.
@@ -220,21 +230,13 @@ spec:
       - description: Image holds the image to use for the discovery service Deployment
         displayName: Image
         path: image
-      - description: Signer holds the configuration for a certificate signer. This
-          signer will be used to setup mTLS between envoy clients and the discovery
-          service server. Currently only the CertManager signer is supported.
-        displayName: Signer
-        path: signer
-      - description: CertManager holds specific config for the CertManager signer.
-        displayName: Cert Manager
-        path: signer.certManager
-      - description: Namespace is the name of the namespace where the cert-manager
-          controller runs. This field is required due to the fact that a CA ClusterIssuer
-          needs the CA Secret to be present in its own namespace. The marin3r-operator
-          syncs the CA Secret from its original namespace to the cert-manager namespace.
-          See https://cert-manager.io/docs/configuration/ca/#deployment.
-        displayName: Namespace
-        path: signer.certManager.namespace
+      statusDescriptors:
+      - description: Conditions represent the latest available observations of an
+          object's state
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
       version: v1alpha1
     - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig
         resources. EnvoyConfigRevisions are automatically created and deleted  by
@@ -371,7 +373,7 @@ spec:
         displayName: Serialization
         path: serialization
       statusDescriptors:
-      - description: CacheState summarizes all the observations about the NodeCacheConfig
+      - description: CacheState summarizes all the observations about the EnvoyConfig
           to give the user a concrete idea on the general status of the discovery
           servie cache. It is intended only for human consumption. Other controllers
           should relly on conditions to determine the status of the discovery server
@@ -4492,7 +4494,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: marin3r-operator
-                image: quay.io/3scale/marin3r:latest
+                image: quay.io/3scale/marin3r:v0.5.2
                 imagePullPolicy: Always
                 name: marin3r-operator
                 resources: {}
@@ -4515,5 +4517,5 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  replaces: marin3r.v0.4.0-alpha1
-  version: 0.4.1-alpha1
+  replaces: marin3r.v0.5.1-alpha1
+  version: 0.5.2-alpha1

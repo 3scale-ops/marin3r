@@ -4494,7 +4494,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: marin3r-operator
-                image: quay.io/3scale/marin3r:latest
+                image: quay.io/3scale/marin3r:v0.5.0
                 imagePullPolicy: Always
                 name: marin3r-operator
                 resources: {}
@@ -4517,5 +4517,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  replaces: marin3r.v0.4.2-alpha1
   version: 0.5.0-alpha1
