@@ -148,6 +148,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			}
 			return false
 		},
+		DeleteFunc: func(e event.DeleteEvent) bool { return false },
 	}
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, filter)
 	if err != nil {
