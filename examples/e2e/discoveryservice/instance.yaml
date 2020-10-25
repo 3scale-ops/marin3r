@@ -3,7 +3,7 @@ kind: DiscoveryService
 metadata:
   name: instance
 spec:
-  image: localhost:5000/marin3r:test
+  image: quay.io/3scale/marin3r:latest
   discoveryServiceNamespace: default
   debug: true
   enabledNamespaces:

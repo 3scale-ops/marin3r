@@ -1,0 +1,24 @@
+# permissions for end users to edit envoyconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: envoyconfig-editor-role
+rules:
+- apiGroups:
+  - envoy.marin3r.3scale.net
+  resources:
+  - envoyconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - envoy.marin3r.3scale.net
+  resources:
+  - envoyconfigs/status
+  verbs:
+  - get

@@ -1,191 +1,125 @@
-NAME := marin3r
-EASYRSA_VERSION := v3.0.6
-ENVOY_VERSION := v1.14.1
-CURRENT_GIT_REF := $(shell git describe --always --dirty)
-RELEASE := $(CURRENT_GIT_REF)
-KIND_VERSION := v0.9.0
-KIND := bin/kind
-export KUBECONFIG = ${PWD}/tmp/kubeconfig
-.PHONY: help clean kind-create kind-delete docker-build envoy start build
+# Current Operator version
+VERSION ?= 0.6.0
+# Default bundle image tag
+BUNDLE_IMG ?= controller-bundle:$(VERSION)
+# Options for 'bundle-build'
+ifneq ($(origin CHANNELS), undefined)
+BUNDLE_CHANNELS := --channels=$(CHANNELS)
+endif
+ifneq ($(origin DEFAULT_CHANNEL), undefined)
+BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
+endif
+BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
-help:
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+# Image URL to use all building/pushing image targets
+IMG ?= quay.io/3scale/marin3r:latest
+# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+CRD_OPTIONS ?= "crd:trivialVersions=true"
 
-tmp:
-	mkdir -p $@
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
 
-certs:
-	hack/gen-certs.sh $(EASYRSA_VERSION)
+all: manager
 
-clean: ## remove temporary resources from the repo
-	rm -rf certs build tmp bin
+# Run tests
+ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
+test: generate fmt vet manifests
+	mkdir -p $(ENVTEST_ASSETS_DIR)
+	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
-#######################
-#### Build targets ####
-#######################
-build: ## builds $(RELEASE) or HEAD of the current branch when $(RELEASE) is unset
-build: build/bin/$(NAME)_amd64_$(RELEASE)
+# Build manager binary
+manager: generate fmt vet
+	go build -o bin/manager main.go
 
-build/bin/$(NAME)_amd64_$(RELEASE):
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/bin/$(NAME)_amd64_$(RELEASE) cmd/manager/main.go
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet manifests
+	go run ./main.go --debug
 
-clean-dirty-builds:
-	rm -rf build/bin/*-dirty
+# Install CRDs into a cluster
+install: manifests kustomize
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
-	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
+# Uninstall CRDs from a cluster
+uninstall: manifests kustomize
+	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
-docker-push: ## pushes the image built from $(RELEASE) to quay.io
-	docker push ${IMAGE_NAME}:$(RELEASE)
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
-######################
-#### Test targets ####
-######################
+# Generate manifests e.g. CRD, RBAC etc.
+manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
-TEST_RESULTS = ./coverage.txt
+# Run go fmt against code
+fmt:
+	go fmt ./...
 
-test-unit: ## runs unit tests
-	go test ./pkg/... -race -coverprofile=$(TEST_RESULTS) -covermode=atomic
+# Run go vet against code
+vet:
+	go vet ./...
 
-test-e2e: ## run e2e tests
-test-e2e: kind-create kind-docker-build
-	operator-sdk --verbose test local ./test/e2e --watch-namespace="" --operator-namespace="default" --up-local --local-operator-flags "--operator"
-	$(MAKE) kind-delete
+# Generate code
+generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-test: ## runs all tests
-test: test-unit
+# Build the docker image
+docker-build: test
+	docker build . -t ${IMG}
 
-#################################
-#### Targets to test locally ####
-#################################
+# Push the docker image
+docker-push:
+	docker push ${IMG}
 
-envoy: ## executes an envoy process in a container that will try to connect to a local marin3r control plane
-envoy: certs
-	docker run -ti --rm \
-		--network=host \
-		--add-host marin3r.default.svc:127.0.0.1 \
-		-v $$(pwd)/certs:/etc/envoy/tls \
-		-v $$(pwd)/deploy/local:/config \
-		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
+# find or download controller-gen
+# download controller-gen if necessary
+controller-gen:
+ifeq (, $(shell which controller-gen))
+	@{ \
+	set -e ;\
+	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$CONTROLLER_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	}
+CONTROLLER_GEN=$(GOBIN)/controller-gen
+else
+CONTROLLER_GEN=$(shell which controller-gen)
+endif
 
-grpc-proxy: ## executes an envoy process in a container that will try to connect to a local marin3r control plane
-grpc-proxy: certs
-	docker run -ti --rm \
-		--network=host \
-		--add-host marin3r.default.svc:127.0.0.1 \
-		-v $$(pwd)/certs:/etc/envoy/tls \
-		-v $$(pwd)/deploy/local:/config \
-		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config/discovery-service-proxy.yaml $(ARGS)
+kustomize:
+ifeq (, $(shell which kustomize))
+	@{ \
+	set -e ;\
+	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
+	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
+	}
+KUSTOMIZE=$(GOBIN)/kustomize
+else
+KUSTOMIZE=$(shell which kustomize)
+endif
 
-start: ## locally starts marin3r
-start: export KUBECONFIG=tmp/kubeconfig
-start: certs
-	WATCH_NAMESPACE="" go run cmd/manager/main.go \
-		--certificate certs/marin3r.default.svc.crt \
-		--private-key certs/marin3r.default.svc.key \
-		--ca certs/ca.crt \
-		--zap-devel
+# Generate bundle manifests and metadata, then validate generated files.
+.PHONY: bundle
+bundle: manifests
+	operator-sdk generate kustomize manifests -q
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	operator-sdk bundle validate ./bundle
 
-start-operator: ## locally starts marin3r-operator
-start-operator: export KUBECONFIG=tmp/kubeconfig
-start-operator: certs
-	WATCH_NAMESPACE="" go run cmd/manager/main.go \
-		--zap-devel \
-		--operator
+# Build the bundle image.
+.PHONY: bundle-build
+bundle-build:
+	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
-###################################
-#### Targets to test with Kind ####
-###################################
-
-$(KIND):
-	mkdir -p $$(dirname $@)
-	curl -sLo $(KIND) https://github.com/kubernetes-sigs/kind/releases/download/$(KIND_VERSION)/kind-$$(uname)-amd64
-	chmod +x $(KIND)
-
-kind-apply-crds: ## Applies all CRDs tp the kind cluster
-kind-apply-crds:
-	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
-
-kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
-kind-create: export KIND_BIN=$(KIND)
-kind-create: tmp $(KIND)
-	hack/kind-with-registry.sh
-
-kind-docker-build: ## builds the docker image  $(RELEASE) or HEAD of the current branch when unset and pushes it to the kind local registry in "localhost:5000"
-kind-docker-build: export IMAGE_NAME = localhost:5000/${NAME}
-kind-docker-build: clean-dirty-builds build
-	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
-	docker tag ${IMAGE_NAME}:$(RELEASE) ${IMAGE_NAME}:test
-	docker push ${IMAGE_NAME}:$(RELEASE)
-	docker push ${IMAGE_NAME}:test
-
-kind-install-certmanager:
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.crds.yaml
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.yaml
-
-kind-start-marin3r: ## deploys marin3r inside the kind k8s cluster
-kind-start-marin3r: certs kind-docker-build kind-apply-crds
-	kubectl label namespace/default marin3r.3scale.net/status="enabled" || true
-	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r.default.svc.crt --key=certs/marin3r.default.svc.key || true
-	kubectl create secret tls marin3r-ca-cert --cert=certs/ca.crt --key=certs/ca.key || true
-	kubectl create secret tls envoy-sidecar-client-cert --cert=certs/envoy-client.crt --key=certs/envoy-client.key || true
-	kubectl apply -f deploy/kind/marin3r.yaml
-	while [[ $$(kubectl get pods -l app=marin3r -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do sleep 5; done
-	kubectl logs -f -l app=marin3r
-
-kind-start-envoy: ## runs an envoy pod inside the k8s kind cluster that connects to the marin3r control plane
-kind-start-envoy: certs
-	kubectl create secret tls envoy1-cert --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key || true
-	kubectl annotate secret envoy1-cert cert-manager.io/common-name=envoy-server1 || true
-	kubectl apply -f deploy/kind/envoy1-pod.yaml
-	while [[ $$(kubectl get pods envoy1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do sleep 5; done
-	kubectl logs -f envoy1
-
-
-kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
-kind-refresh-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
-kind-refresh-marin3r: kind-docker-build kind-apply-crds
-	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
-	kubectl delete pod -l app=marin3r --force --grace-period=0
-
-kind-delete: ## deletes the kind cluster and the registry
-kind-delete: $(KIND)
-	$(KIND) delete cluster
-	docker rm -f kind-registry
-
-test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: make test-envoy-config CONFIG=example/config.yaml. To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
-test-envoy-config:
-	docker run -ti --rm \
-		--network=host \
-		-v $$(pwd)/$(CONFIG):/config.yaml \
-		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config.yaml $(ARGS)
-
-AUTH_TOKEN = $(shell curl -sH "Content-Type: application/json" -XPOST https://quay.io/cnr/api/v1/users/login -d '{"user": {"username": "${QUAY_USERNAME}", "password": "${QUAY_PASSWORD}"}}' | jq -r '.token')
-
-olm-install:
-	operator-sdk olm install --timeout=5m
-
-olm-generate-package-manifests: ## OPERATOR OLM CSV - Generate CSV Manifests
-	operator-sdk generate csv --csv-version=$(RELEASE) --update-crds --make-manifests=false --csv-channel=alpha --from-version=$(FROM_RELEASE)
-
-olm-test-package-manifests:
-	operator-sdk run packagemanifests --operator-version=$(RELEASE) --timeout=5m --install-mode='AllNamespaces=""'
-
-olm-verify-package-manifests:
-		operator-courier --verbose verify --ui_validate_io deploy/olm-catalog/marin3r
-
-olm-push-package-manifests: ## OPERATOR OLM CSV - Push CSV manifests to remote application registry
-olm-push-package-manifests: olm-verify-package-manifests
-	operator-courier --verbose push deploy/olm-catalog/marin3r/ 3scaleops marin3r $(RELEASE) "$(AUTH_TOKEN)"
-
-refdocs: ## Generates api reference documentation from code. Requires https://github.com/elastic/crd-ref-docs binary to be present in the PATH
-	crd-ref-docs \
-		--source-path=pkg/apis \
-		--config=docs/api-reference/config.yaml \
-		--templates-dir=docs/api-reference/templates/asciidoctor \
-		--renderer=asciidoctor \
-		--output-path=docs/api-reference/reference.asciidoc
+include *.mk

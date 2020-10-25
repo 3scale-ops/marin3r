@@ -1,0 +1,24 @@
+# permissions for end users to edit discoveryservices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: discoveryservice-editor-role
+rules:
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - discoveryservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - discoveryservices/status
+  verbs:
+  - get

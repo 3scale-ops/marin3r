@@ -1,0 +1,7 @@
+## Append samples you want in your CSV to this file as resources ##
+resources:
+- operator_v1alpha1_discoveryservice.yaml
+- operator_v1alpha1_discoveryservicecertificate.yaml
+- envoy_v1alpha1_envoyconfig.yaml
+- envoy_v1alpha1_envoyconfigrevision.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
