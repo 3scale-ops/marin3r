@@ -58,18 +58,8 @@ func (r *DiscoveryServiceReconciler) genClusterRoleObject() *rbacv1.ClusterRole 
 		Rules: []rbacv1.PolicyRule{
 			{
 				APIGroups: []string{corev1.SchemeGroupVersion.Group},
-				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list"},
-			},
-			{
-				APIGroups: []string{corev1.SchemeGroupVersion.Group},
 				Resources: []string{"secrets"},
 				Verbs:     []string{"get", "list", "watch"},
-			},
-			{
-				APIGroups: []string{corev1.SchemeGroupVersion.Group},
-				Resources: []string{"configmaps"},
-				Verbs:     []string{"get", "list", "watch", "create"},
 			},
 			{
 				APIGroups: []string{envoyv1alpha1.GroupVersion.Group},

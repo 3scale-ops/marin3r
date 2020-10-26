@@ -1,0 +1,12 @@
+apiVersion: kudo.dev/v1alpha1
+kind: TestSuite
+testDirs:
+- ./test/e2e/
+timeout: 120
+startKIND: true
+kindNodeCache: true
+artifactsDir: tmp/test
+manifestDirs:
+- tmp/deploy/
+kindContainers:
+  - quay.io/3scale/marin3r:test

@@ -1,0 +1,8 @@
+---
+apiVersion: kudo.dev/v1alpha1
+kind: TestStep
+delete:
+- apiVersion: v1
+  kind: Secret
+  name: marin3r-server-cert-instance
+  namespace: default

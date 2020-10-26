@@ -12,7 +12,8 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= quay.io/3scale/marin3r:latest
+IMG_NAME ?= quay.io/3scale/marin3r
+IMG ?= $(IMG_NAME):latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
@@ -69,14 +70,6 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# Build the docker image
-docker-build: test
-	docker build . -t ${IMG}
-
-# Push the docker image
-docker-push:
-	docker push ${IMG}
-
 # find or download controller-gen
 # download controller-gen if necessary
 controller-gen:
@@ -122,4 +115,25 @@ bundle: manifests
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
+# e2e tests with kuttl
+KUTTL_VERSION := 0.7.0
+KUTTL := bin/kuttl
+$(KUTTL):
+	mkdir -p $$(dirname $@)
+	curl -sLo $(KUTTL) https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$$(uname)_x86_64
+	chmod +x $(KUTTL)
+
+TEST_OPERATOR_MANIFEST ?= tmp/deploy
+$(TEST_OPERATOR_MANIFEST): .FORCE
+	mkdir -p $(TEST_OPERATOR_MANIFEST)
+	$(KUSTOMIZE) build config/test > $(TEST_OPERATOR_MANIFEST)/operator.yaml
+
+TETS_ARTIFACTS_DIR ?= tmp/test
+$(TETS_ARTIFACTS_DIR):
+	mkdir -p $(TETS_ARTIFACTS_DIR)
+
+e2e: manifests docker-build $(TEST_OPERATOR_MANIFEST)
+	$(KUTTL) test
 include *.mk
+
+.FORCE:

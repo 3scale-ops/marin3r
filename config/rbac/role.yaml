@@ -84,43 +84,24 @@ rules:
 - apiGroups:
   - envoy.marin3r.3scale.net
   resources:
-  - envoyconfigrevisions
+  - '*'
   verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - envoy.marin3r.3scale.net
-  resources:
-  - envoyconfigrevisions/status
-  verbs:
-  - get
-  - patch
-  - update
+  - '*'
 - apiGroups:
   - envoy.marin3r.3scale.net
   resources:
   - envoyconfigs
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
-  - update
   - watch
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - operator.marin3r.3scale.net
   resources:
-  - envoyconfigs/status
+  - '*'
   verbs:
-  - get
-  - patch
-  - update
+  - '*'
 - apiGroups:
   - operator.marin3r.3scale.net
   resources:
@@ -141,35 +122,6 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - operator.marin3r.3scale.net
-  resources:
-  - discoveryservices
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - operator.marin3r.3scale.net
-  resources:
-  - discoveryservices/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - operator.marin3r.3scale.net
-  resources:
-  - discoveryservicevertificates
-  verbs:
-  - create
-  - get
-  - list
-  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

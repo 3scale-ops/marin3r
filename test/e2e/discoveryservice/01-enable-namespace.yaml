@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test1
+
+---
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: DiscoveryService
+metadata:
+  name: instance
+spec:
+  enabledNamespaces:
+    - default
+    - test1

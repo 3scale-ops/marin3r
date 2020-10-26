@@ -1,0 +1,9 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marin3r-instance
+  namespace: default
+status:
+  readyReplicas: 1
+  observedGeneration: 2

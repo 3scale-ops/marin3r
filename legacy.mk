@@ -32,12 +32,10 @@ build/bin/$(NAME)_amd64_$(RELEASE):
 clean-dirty-builds:
 	rm -rf build/bin/*-dirty
 
-# docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-# docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
-# 	cd build && docker build . -t ${IMAGE_NAME}:$(RELEASE) --build-arg RELEASE=$(RELEASE)
-
-# docker-push: ## pushes the image built from $(RELEASE) to quay.io
-# 	docker push ${IMAGE_NAME}:$(RELEASE)
+docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
+docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
+	docker build . -t ${IMG_NAME}:$(RELEASE)
+	docker tag ${IMG_NAME}:$(RELEASE) ${IMG_NAME}:test
 
 ######################
 #### Test targets ####
@@ -111,14 +109,7 @@ kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000
 kind-create: export KIND_BIN=$(KIND)
 kind-create: tmp $(KIND)
 	hack/kind-with-registry.sh
-
-kind-docker-build: ## builds the docker image  $(RELEASE) or HEAD of the current branch when unset and pushes it to the kind local registry in "localhost:5000"
-kind-docker-build: export IMAGE_NAME = localhost:5000/${NAME}
-kind-docker-build:
-	docker build . -t ${IMAGE_NAME}:$(RELEASE)
-	docker tag ${IMAGE_NAME}:$(RELEASE) ${IMAGE_NAME}:latest
-	docker push ${IMAGE_NAME}:$(RELEASE)
-	docker push ${IMAGE_NAME}:latest
+	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-install-certmanager:
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.crds.yaml
@@ -144,7 +135,7 @@ kind-start-envoy: certs
 
 
 kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
-kind-refresh-marin3r: export IMAGE_NAME = localhost:5000/${NAME}
+kind-refresh-marin3r: export IMG_NAME = localhost:5000/${NAME}
 kind-refresh-marin3r: kind-docker-build kind-apply-crds
 	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
 	kubectl delete pod -l app=marin3r --force --grace-period=0

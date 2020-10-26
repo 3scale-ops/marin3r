@@ -111,7 +111,7 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 								},
 								TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-								ImagePullPolicy:          corev1.PullAlways,
+								ImagePullPolicy:          corev1.PullIfNotPresent,
 							},
 						},
 						RestartPolicy:                 corev1.RestartPolicyAlways,

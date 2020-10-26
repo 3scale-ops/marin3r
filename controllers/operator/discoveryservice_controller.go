@@ -59,9 +59,9 @@ type DiscoveryServiceReconciler struct {
 	Log    logr.Logger
 }
 
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservices,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicevertificates,verbs=get;list;watch;create
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=*,verbs=*
+// +kubebuilder:rbac:groups=envoy.marin3r.3scale.net,resources=*,verbs=*
+
 // +kubebuilder:rbac:groups="core",resources=services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",resources=configmaps,verbs=get;list;watch;create;update;patch

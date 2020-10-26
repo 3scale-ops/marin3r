@@ -60,9 +60,6 @@ type EnvoyConfigRevisionReconciler struct {
 	ADSCache *xds_cache.SnapshotCache
 }
 
-// +kubebuilder:rbac:groups=envoy.marin3r.3scale.net,resources=envoyconfigrevisions,verbs=get;list;watch;update
-// +kubebuilder:rbac:groups=envoy.marin3r.3scale.net,resources=envoyconfigrevisions/status,verbs=get;update
-
 func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	_ = r.Log.WithValues("envoyconfigrevision", req.NamespacedName)

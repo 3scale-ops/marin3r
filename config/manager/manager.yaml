@@ -23,6 +23,7 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
+      serviceAccountName: controller-manager
       containers:
       - command:
         - /manager
@@ -38,3 +39,10 @@ spec:
             cpu: 100m
             memory: 20Mi
       terminationGracePeriodSeconds: 10
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: controller-manager
+  namespace: system
