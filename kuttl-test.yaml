@@ -1,11 +1,13 @@
-apiVersion: kudo.dev/v1alpha1
+apiVersion: kuttl.dev/v1beta1
 kind: TestSuite
-testDirs:
-- ./test/e2e/
-timeout: 120
+crdDir: config/crd/bases
+testDirs: [test/e2e/]
+timeout: 60
 startKIND: true
 kindNodeCache: true
+parallel: 1
 artifactsDir: tmp/test
+kindConfig: test/kind.yaml
 manifestDirs:
 - tmp/deploy/
 kindContainers:

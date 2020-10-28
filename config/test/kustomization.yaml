@@ -5,7 +5,6 @@ namespace: marin3r-system
 resources:
 - ../rbac
 - ../manager
-- ../crd
 images:
 - name: quay.io/3scale/marin3r
   newName: quay.io/3scale/marin3r

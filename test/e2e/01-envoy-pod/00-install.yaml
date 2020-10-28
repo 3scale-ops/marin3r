@@ -1,0 +1,4 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: echo "{\"apiVersion\":\"operator.marin3r.3scale.net/v1alpha1\",\"kind\":\"DiscoveryService\",\"metadata\":{\"name\":\"instance\"},\"spec\":{\"image\":\"quay.io/3scale/marin3r:test\",\"discoveryServiceNamespace\":\"$NAMESPACE\",\"enabledNamespaces\":[\"$NAMESPACE\"]}}" | kubectl apply -f -

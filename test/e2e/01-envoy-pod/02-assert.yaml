@@ -1,0 +1,15 @@
+---
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
+kind: EnvoyConfig
+metadata:
+  name: proxy-config
+spec:
+  nodeID: envoy1
+status:
+  cacheState: InSync
+
+---
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
+kind: EnvoyConfigRevision
+spec:
+  nodeID: envoy1
