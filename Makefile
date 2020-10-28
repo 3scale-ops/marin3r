@@ -170,7 +170,7 @@ olm-install:
 	operator-sdk olm install --timeout=5m
 
 olm-generate-package-manifests: ## OPERATOR OLM CSV - Generate CSV Manifests
-	operator-sdk generate csv --csv-version=$(RELEASE) --update-crds --make-manifests=false --csv-channel=alpha
+	operator-sdk generate csv --csv-version=$(RELEASE) --update-crds --make-manifests=false --csv-channel=alpha --from-version=$(FROM_RELEASE)
 
 olm-test-package-manifests:
 	operator-sdk run packagemanifests --operator-version=$(RELEASE) --timeout=5m --install-mode='AllNamespaces=""'

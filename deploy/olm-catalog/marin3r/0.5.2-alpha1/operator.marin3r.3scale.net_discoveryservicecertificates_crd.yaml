@@ -36,6 +36,18 @@ spec:
           description: DiscoveryServiceCertificateSpec defines the desired state of
             DiscoveryServiceCertificate
           properties:
+            certificateRenewalNotification:
+              description: CertificateRenewalConfig configures the certificate renewal
+                process. If unset default behavior is to renew the certificate but
+                not notify of renewals.
+              properties:
+                enabled:
+                  description: Enabled is a flag to enable or disable renewal of the
+                    certificate
+                  type: boolean
+              required:
+              - enabled
+              type: object
             commonName:
               description: CommonName is the CommonName of the certificate
               type: string
@@ -71,6 +83,25 @@ spec:
               description: Signer specifies  the signer to use to create this certificate.
                 Supported signers are CertManager and SelfSigned.
               properties:
+                caSigned:
+                  description: CASigned holds specific configuration for the CASigned
+                    signer
+                  properties:
+                    caSecretRef:
+                      description: A reference to a Secret containing the CA
+                      properties:
+                        name:
+                          description: Name is unique within a namespace to reference
+                            a secret resource.
+                          type: string
+                        namespace:
+                          description: Namespace defines the space within which the
+                            secret name must be unique.
+                          type: string
+                      type: object
+                  required:
+                  - caSecretRef
+                  type: object
                 certManager:
                   description: CertManager holds specific configuration for the CertManager
                     signer
@@ -100,6 +131,50 @@ spec:
         status:
           description: DiscoveryServiceCertificateStatus defines the observed state
             of DiscoveryServiceCertificate
+          properties:
+            conditions:
+              description: Conditions represent the latest available observations
+                of an object's state
+              items:
+                description: "Condition represents an observation of an object's state.
+                  Conditions are an extension mechanism intended to be used when the
+                  details of an observation are not a priori known or would not apply
+                  to all instances of a given Kind. \n Conditions should be added
+                  to explicitly convey properties that users and components care about
+                  rather than requiring those properties to be inferred from other
+                  observations. Once defined, the meaning of a Condition can not be
+                  changed arbitrarily - it becomes part of the API, and has the same
+                  backwards- and forwards-compatibility concerns of any other part
+                  of the API."
+                properties:
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    description: ConditionReason is intended to be a one-word, CamelCase
+                      representation of the category of cause of the current status.
+                      It is intended to be used in concise output, such as one-line
+                      kubectl get output, and in summarizing occurrences of causes.
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    description: "ConditionType is the type of the condition and is
+                      typically a CamelCased word or short phrase. \n Condition types
+                      should indicate state in the \"abnormal-true\" polarity. For
+                      example, if the condition indicates when a policy is invalid,
+                      the \"is valid\" case is probably the norm, so the condition
+                      should be called \"Invalid\"."
+                    type: string
+                required:
+                - status
+                - type
+                type: object
+              type: array
+          required:
+          - conditions
           type: object
       type: object
   version: v1alpha1
