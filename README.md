@@ -39,17 +39,15 @@ marin3r is a kubernetes operator and as such can be installed by deploying the o
 To install marin3r clone this repo and issue the following commands from the root directory:
 
 ```bash
-kubectl create namespace marin3r
-kubectl apply -f deploy/crds/
-kubectl apply -f deploy/
+kubectl apply -k config/default
 ```
 
-After a while you should see the `marin3r-operator` pod running.
+After a while you should see the `marin3r-controller-manager` pod running.
 
 ```bash
-$ kubectl -n marin3r get pods
-NAME                               READY   STATUS    RESTARTS   AGE
-marin3r-operator-96757f5d8-vvk82   1/1     Running   0          31s
+▶ kubectl get pods -n marin3r-system
+NAME                                         READY   STATUS    RESTARTS   AGE
+marin3r-controller-manager-999bb787c-qwpsn   2/2     Running   0          28s
 ```
 
 You can now deploy a DiscoveryService custom resource, which will cause an envoy discovery service to be spun up:
@@ -61,21 +59,20 @@ kind: DiscoveryService
 metadata:
   name: instance
 spec:
-  image: quay.io/3scale/marin3r:latest
-  discoveryServiceNamespace: marin3r
+  image: quay.io/3scale/marin3r:v0.6.0
+  discoveryServiceNamespace: default
   debug: true
   enabledNamespaces:
     - default
 EOF
 ```
 
-Some more seconds and you should see the envoy discovery service pod running alongside the marin3r-operator pod:
+Some more seconds and you should see the envoy discovery service pod running:
 
 ```bash
-▶ k -n marin3r get pods
+▶ kubectl get pods
 NAME                                READY   STATUS    RESTARTS   AGE
-marin3r-instance-86f4dbbf8c-kkh5l   1/1     Running   0          11s
-marin3r-operator-96757f5d8-jskp2    1/1     Running   0          2m
+marin3r-instance-676b5cd7db-xk9rt   1/1     Running   0          4s
 ```
 
 ### **TLS offloading with an envoy sidecar**
@@ -161,7 +158,7 @@ Apply the following EnvoyConfig custom resource to the cluster. The EnvoyConfig 
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
-apiVersion: marin3r.3scale.net/v1alpha1
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
   name: kuard
@@ -260,7 +257,7 @@ $ curl http://127.0.0.1:8001/api/v1/namespaces/default/services/https:kuard:443/
 > Host: 127.0.0.1:8001
 > User-Agent: curl/7.66.0
 > Accept: */*
-> 
+>
 * Mark bundle as not supporting multiuse
 < HTTP/1.1 200 OK
 < Content-Length: 1931
@@ -268,7 +265,7 @@ $ curl http://127.0.0.1:8001/api/v1/namespaces/default/services/https:kuard:443/
 < Date: Wed, 08 Jul 2020 18:42:46 GMT
 < Server: envoy
 < X-Envoy-Upstream-Service-Time: 1
-< 
+<
 <!doctype html>
 
 <html lang="en">
@@ -289,7 +286,6 @@ var pageContext = {"urlBase":"","hostname":"kuard-6f8fc46b67-vsgn7","addrs":["10
 ```
 
 Note the `Server: envoy` header we received, stating that the envoy sidecar is proxying our request to the kuard container.
-You can also 
 
 ### Self-healing
 
@@ -301,7 +297,7 @@ First, modify the EnvoyConfig object to change the port that the https listener 
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
-apiVersion: marin3r.3scale.net/v1alpha1
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
   name: kuard
