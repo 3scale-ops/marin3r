@@ -198,31 +198,11 @@ kind-create: tmp $(KIND)
 	$(KIND) create cluster --config test/kind.yaml
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
-kind-install-certmanager:
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.crds.yaml
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v0.14.3/cert-manager.yaml
+kind-deploy: manifests kustomize
+	$(KUSTOMIZE) build config/test | kubectl apply -f -
 
-kind-start-marin3r: ## deploys marin3r inside the kind k8s cluster
-kind-start-marin3r: certs kind-docker-build kind-apply-crds
-	kubectl label namespace/default marin3r.3scale.net/status="enabled" || true
-	kubectl create secret tls marin3r-server-cert --cert=certs/marin3r.default.svc.crt --key=certs/marin3r.default.svc.key || true
-	kubectl create secret tls marin3r-ca-cert --cert=certs/ca.crt --key=certs/ca.key || true
-	kubectl create secret tls envoy-sidecar-client-cert --cert=certs/envoy-client.crt --key=certs/envoy-client.key || true
-	kubectl apply -f deploy/kind/marin3r.yaml
-	while [[ $$(kubectl get pods -l app=marin3r -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do sleep 5; done
-	kubectl logs -f -l app=marin3r
-
-kind-start-envoy: ## runs an envoy pod inside the k8s kind cluster that connects to the marin3r control plane
-kind-start-envoy: certs
-	kubectl create secret tls envoy1-cert --cert=certs/envoy-server1.crt --key=certs/envoy-server1.key || true
-	kubectl annotate secret envoy1-cert cert-manager.io/common-name=envoy-server1 || true
-	kubectl apply -f deploy/kind/envoy1-pod.yaml
-	while [[ $$(kubectl get pods envoy1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do sleep 5; done
-	kubectl logs -f envoy1
-
-
-kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
-kind-refresh-marin3r: docker-build
+kind-refresh-discoveryservice: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
+kind-refresh-discoveryservice: docker-build
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 	kubectl delete pods -A -l app.kubernetes.io/name=marin3r --force --grace-period=0
 
@@ -236,7 +216,15 @@ kind-delete: $(KIND)
 
 ENVOY_VERSION ?= v1.14.1
 
-run-envoy: ## executes an envoy process in a container that will try to connect to a local marin3r control plane
+run-ds: ## locally starts marin3r's discovery service
+run-ds: certs
+	WATCH_NAMESPACE="" go run main.go \
+		--discovery-service \
+		--server-certificate-path certs/server \
+		--ca-certificate-path certs/ca \
+		--debug
+
+run-envoy: ## executes an envoy process in a container that will try to connect to the local marin3r's discovery service
 run-envoy: certs
 	docker run -ti --rm \
 		--network=host \
@@ -245,6 +233,16 @@ run-envoy: certs
 		-v $$(pwd)/examples/local:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
+
+
+
+test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: "make test-envoy-config CONFIG=example/config.yaml". To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
+test-envoy-config:
+	docker run -ti --rm \
+		--network=host \
+		-v $$(pwd)/$(CONFIG):/config.yaml \
+		envoyproxy/envoy:$(ENVOY_VERSION) \
+		envoy -c /config.yaml $(ARGS)
 
 grpc-proxy: ## executes an envoy process in a container that will try to connect to a local marin3r control plane
 grpc-proxy: certs
@@ -255,24 +253,6 @@ grpc-proxy: certs
 		-v $$(pwd)/examples/local:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config/discovery-service-proxy.yaml $(ARGS)
-
-run-ds: ## locally starts marin3r's discovery service
-run-ds: export KUBECONFIG=tmp/kubeconfig
-run-ds: certs
-	WATCH_NAMESPACE="" go run cmd/manager/main.go \
-		--discovery-service \
-		--certificate certs/marin3r.default.svc.crt \
-		--private-key certs/marin3r.default.svc.key \
-		--ca certs/ca.crt \
-		--zap-devel
-
-test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: "make test-envoy-config CONFIG=example/config.yaml". To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
-test-envoy-config:
-	docker run -ti --rm \
-		--network=host \
-		-v $$(pwd)/$(CONFIG):/config.yaml \
-		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config.yaml $(ARGS)
 
 ############################
 #### refdocs generation ####
