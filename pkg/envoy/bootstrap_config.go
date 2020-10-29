@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/3scale/marin3r/pkg/webhook"
+	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -32,7 +32,7 @@ func GenerateBootstrapConfig(host string, port uint32) (string, error) {
 				{
 					SdsConfig: &envoy_api_v2_core.ConfigSource{
 						ConfigSourceSpecifier: &envoy_api_v2_core.ConfigSource_Path{
-							Path: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyConfigBasePath, webhook.TlsCertificateSdsSecretFileName),
+							Path: fmt.Sprintf("%s/%s", podv1mutator.DefaultEnvoyConfigBasePath, podv1mutator.TlsCertificateSdsSecretFileName),
 						},
 					},
 				},
@@ -150,12 +150,12 @@ func GenerateTlsCertificateSdsConfig(host string, port uint32) (string, error) {
 			TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
 				CertificateChain: &envoy_api_v2_core.DataSource{
 					Specifier: &envoy_api_v2_core.DataSource_Filename{
-						Filename: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyTLSBasePath, "tls.crt"),
+						Filename: fmt.Sprintf("%s/%s", podv1mutator.DefaultEnvoyTLSBasePath, "tls.crt"),
 					},
 				},
 				PrivateKey: &envoy_api_v2_core.DataSource{
 					Specifier: &envoy_api_v2_core.DataSource_Filename{
-						Filename: fmt.Sprintf("%s/%s", webhook.DefaultEnvoyTLSBasePath, "tls.key"),
+						Filename: fmt.Sprintf("%s/%s", podv1mutator.DefaultEnvoyTLSBasePath, "tls.key"),
 					}},
 			},
 		},

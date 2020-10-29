@@ -194,7 +194,6 @@ $(KIND):
 	chmod +x $(KIND)
 
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
-kind-create: export KIND_BIN=$(KIND)
 kind-create: tmp $(KIND)
 	$(KIND) create cluster --config test/kind.yaml
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
@@ -223,10 +222,9 @@ kind-start-envoy: certs
 
 
 kind-refresh-marin3r: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
-kind-refresh-marin3r: export IMG_NAME = localhost:5000/${NAME}
-kind-refresh-marin3r: kind-docker-build kind-apply-crds
-	find deploy/crds -name "*_crd.yaml" -exec kubectl apply -f {} \;
-	kubectl delete pod -l app=marin3r --force --grace-period=0
+kind-refresh-marin3r: docker-build
+	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
+	kubectl delete pods -A -l app.kubernetes.io/name=marin3r --force --grace-period=0
 
 kind-delete: ## deletes the kind cluster and the registry
 kind-delete: $(KIND)

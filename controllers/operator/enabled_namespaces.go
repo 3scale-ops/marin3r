@@ -6,7 +6,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
-	"github.com/3scale/marin3r/pkg/webhook"
+	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -112,7 +112,7 @@ func hasEnabledLabel(object metav1.Object) bool {
 func (r *DiscoveryServiceReconciler) reconcileClientCertificate(ctx context.Context, namespace string) error {
 	r.Log.V(1).Info("Reconciling client certificate", "Namespace", namespace)
 	existent := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: webhook.DefaultClientCertificate, Namespace: namespace}, existent)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: podv1mutator.DefaultClientCertificate, Namespace: namespace}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -137,7 +137,7 @@ func (r *DiscoveryServiceReconciler) reconcileClientCertificate(ctx context.Cont
 func (r *DiscoveryServiceReconciler) reconcileBootstrapConfigMap(ctx context.Context, namespace string) error {
 	r.Log.V(1).Info("Reconciling bootstrap ConfigMap", "Namespace", namespace)
 	existent := &corev1.ConfigMap{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: webhook.DefaultBootstrapConfigMap, Namespace: namespace}, existent)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: podv1mutator.DefaultBootstrapConfigMap, Namespace: namespace}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -165,7 +165,7 @@ func (r *DiscoveryServiceReconciler) reconcileBootstrapConfigMap(ctx context.Con
 func (r *DiscoveryServiceReconciler) getClientCertObject(namespace string) *operatorv1alpha1.DiscoveryServiceCertificate {
 	return &operatorv1alpha1.DiscoveryServiceCertificate{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      webhook.DefaultClientCertificate,
+			Name:      podv1mutator.DefaultClientCertificate,
 			Namespace: namespace,
 			Labels:    Labels(r.ds),
 		},
@@ -180,7 +180,7 @@ func (r *DiscoveryServiceReconciler) getClientCertObject(namespace string) *oper
 					}},
 			},
 			SecretRef: corev1.SecretReference{
-				Name:      webhook.DefaultClientCertificate,
+				Name:      podv1mutator.DefaultClientCertificate,
 				Namespace: namespace,
 			},
 		},
@@ -201,12 +201,12 @@ func (r *DiscoveryServiceReconciler) getBootstrapConfigMapObject(namespace strin
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      webhook.DefaultBootstrapConfigMap,
+			Name:      podv1mutator.DefaultBootstrapConfigMap,
 			Namespace: namespace,
 		},
 		Data: map[string]string{
-			webhook.DefaultEnvoyConfigFileName:      config,
-			webhook.TlsCertificateSdsSecretFileName: tlsConfig,
+			podv1mutator.DefaultEnvoyConfigFileName:      config,
+			podv1mutator.TlsCertificateSdsSecretFileName: tlsConfig,
 		},
 	}
 

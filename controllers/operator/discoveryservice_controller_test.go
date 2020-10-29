@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -122,7 +122,7 @@ func TestReconcileDiscoveryService_Reconcile(t *testing.T) {
 			t.Errorf("The Deployment object for the discovery service is missing: %v", OwnedObjectName(ds))
 		}
 
-		mwc := &admissionregistrationv1.MutatingWebhookConfiguration{}
+		mwc := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
 		if r.Client.Get(context.TODO(), types.NamespacedName{Name: OwnedObjectName(ds)}, mwc) != nil {
 			t.Errorf("The MutatingWebhookConfiguration object is missing: %v", OwnedObjectName(ds))
 		}

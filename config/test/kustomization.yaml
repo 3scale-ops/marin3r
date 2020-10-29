@@ -3,6 +3,7 @@ kind: Kustomization
 namePrefix: marin3r-
 namespace: marin3r-system
 resources:
+- ../crd
 - ../rbac
 - ../manager
 images:

@@ -42,8 +42,9 @@ import (
 	envoycontroller "github.com/3scale/marin3r/controllers/envoy"
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
 	"github.com/3scale/marin3r/pkg/envoy"
-	"github.com/3scale/marin3r/pkg/webhook"
+	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -53,16 +54,17 @@ const (
 	metricsPort           int    = 8383
 	webhookPort           int    = 8443
 	envoyControlPlanePort uint   = 18000
+	certificateFile       string = "tls.crt"
+	certificateKeyFile    string = "tls.key"
 )
 
 var (
-	tlsCertificatePath   string
-	tlsKeyPath           string
-	tlsCAPath            string
-	isDiscoveryService   bool
-	debug                bool
-	metricsAddr          string
-	enableLeaderElection bool
+	tlsServerCertificatePath string
+	tlsCACertificatePath     string
+	isDiscoveryService       bool
+	debug                    bool
+	metricsAddr              string
+	enableLeaderElection     bool
 )
 
 var (
@@ -80,9 +82,10 @@ func init() {
 
 func main() {
 	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", metricsPort), "The address the metric endpoint binds to.")
-	flag.StringVar(&tlsCertificatePath, "certificate", "/etc/marin3r/tls/server.crt", "Server certificate")
-	flag.StringVar(&tlsKeyPath, "private-key", "/etc/marin3r/tls/server.key", "The private key of the server certificate")
-	flag.StringVar(&tlsCAPath, "ca", "/etc/marin3r/tls/ca.crt", "The CA of the server certificate")
+	flag.StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
+		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
+	flag.StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
+		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
 	flag.BoolVar(&isDiscoveryService, "discovery-service", false, "Run the discovery-service instead of the operator")
 	flag.BoolVar(&debug, "debug", false, "Enable debug logs")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
@@ -139,9 +142,6 @@ func main() {
 
 		// Start controllers
 		runADSServerControllers(ctx, mgr, cfg, &wait, stopCh, xdss.GetSnapshotCache())
-
-		// Start webhook server
-		runWebhookServer(ctx, cfg, &wait, stopCh)
 
 		// Wait for shutdown
 		wait.Wait()
@@ -202,9 +202,14 @@ func runADSServer(ctx context.Context, cfg *rest.Config, wait *sync.WaitGroup, s
 				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			},
-			Certificates: []tls.Certificate{getCertificate(tlsCertificatePath, tlsKeyPath, setupLog)},
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			ClientCAs:    getCA(tlsCAPath, setupLog),
+			Certificates: []tls.Certificate{
+				getCertificate(
+					fmt.Sprintf("%s/%s", tlsServerCertificatePath, certificateFile),
+					fmt.Sprintf("%s/%s", tlsServerCertificatePath, certificateKeyFile),
+					setupLog),
+			},
+			ClientAuth: tls.RequireAndVerifyClientCert,
+			ClientCAs:  getCA(fmt.Sprintf("%s/%s", tlsCACertificatePath, certificateFile), setupLog),
 		},
 		&envoy.Callbacks{
 			OnError: envoycontroller.OnError(cfg),
@@ -245,6 +250,12 @@ func runADSServerControllers(ctx context.Context, mgr manager.Manager, cfg *rest
 		os.Exit(1)
 	}
 
+	// Setup webhooks
+	hookServer := mgr.GetWebhookServer()
+	hookServer.CertDir = tlsServerCertificatePath
+	ctrl.Log.Info("registering webhooks to the webhook server")
+	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
+
 	// Start the controllers
 	wait.Add(1)
 	go func() {
@@ -255,34 +266,6 @@ func runADSServerControllers(ctx context.Context, mgr manager.Manager, cfg *rest
 		}
 	}()
 
-}
-
-func runWebhookServer(ctx context.Context, cfg *rest.Config, wait *sync.WaitGroup, stopCh <-chan struct{}) {
-	webhook := webhook.NewWebhookServer(
-		context.TODO(),
-		int32(webhookPort),
-		&tls.Config{
-			MinVersion:               tls.VersionTLS12,
-			CurvePreferences:         []tls.CurveID{tls.CurveP521, tls.CurveP384, tls.CurveP256},
-			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-			},
-			Certificates: []tls.Certificate{getCertificate(tlsCertificatePath, tlsKeyPath, setupLog)},
-		},
-	)
-
-	wait.Add(1)
-	go func() {
-		defer wait.Done()
-		if err := webhook.Start(stopCh); err != nil {
-			setupLog.Error(err, "Webhook server returned an unrecoverable error, shutting down")
-			os.Exit(1)
-		}
-	}()
 }
 
 func getCertificate(certPath, keyPath string, logger logr.Logger) tls.Certificate {

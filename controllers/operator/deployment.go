@@ -66,9 +66,8 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 								Image: ds.Spec.Image,
 								Args: []string{
 									"--discovery-service",
-									"--certificate=/etc/marin3r/tls/server/tls.crt",
-									"--private-key=/etc/marin3r/tls/server/tls.key",
-									"--ca=/etc/marin3r/tls/ca/tls.crt",
+									"--server-certificate-path=/etc/marin3r/tls/server",
+									"--ca-certificate-path=/etc/marin3r/tls/ca",
 								},
 								Ports: []corev1.ContainerPort{
 									{

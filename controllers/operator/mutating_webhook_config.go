@@ -4,8 +4,7 @@ import (
 	"context"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	"github.com/3scale/marin3r/pkg/webhook"
-	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -32,7 +31,7 @@ func (r *DiscoveryServiceReconciler) reconcileMutatingWebhook(ctx context.Contex
 		return reconcile.Result{}, err
 	}
 
-	existent := &admissionregistrationv1.MutatingWebhookConfiguration{}
+	existent := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
 	err = r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
 
 	if err != nil {
@@ -65,14 +64,14 @@ func (r *DiscoveryServiceReconciler) reconcileMutatingWebhook(ctx context.Contex
 	return reconcile.Result{}, nil
 }
 
-func (r *DiscoveryServiceReconciler) genMutatingWebhookConfigurationObject(caBundle []byte) *admissionregistrationv1.MutatingWebhookConfiguration {
+func (r *DiscoveryServiceReconciler) genMutatingWebhookConfigurationObject(caBundle []byte) *admissionregistrationv1beta1.MutatingWebhookConfiguration {
 
-	return &admissionregistrationv1.MutatingWebhookConfiguration{
+	return &admissionregistrationv1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   OwnedObjectName(r.ds),
 			Labels: Labels(r.ds),
 		},
-		Webhooks: []admissionregistrationv1.MutatingWebhook{
+		Webhooks: []admissionregistrationv1beta1.MutatingWebhook{
 			{
 				Name: "sidecar-injector.marin3r.3scale.net",
 				NamespaceSelector: &metav1.LabelSelector{
@@ -85,50 +84,49 @@ func (r *DiscoveryServiceReconciler) genMutatingWebhookConfigurationObject(caBun
 						operatorv1alpha1.DiscoveryServiceEnabledKey: operatorv1alpha1.DiscoveryServiceEnabledValue,
 					},
 				},
-				SideEffects: func() *admissionregistrationv1.SideEffectClass {
-					s := admissionregistrationv1.SideEffectClassNone
+				SideEffects: func() *admissionregistrationv1beta1.SideEffectClass {
+					s := admissionregistrationv1beta1.SideEffectClassNone
 					return &s
 				}(),
 				AdmissionReviewVersions: []string{
-					admissionregistrationv1.SchemeGroupVersion.Version,
 					admissionregistrationv1beta1.SchemeGroupVersion.Version,
 				},
 				TimeoutSeconds: pointer.Int32Ptr(MutatingWebhookTimeout),
-				FailurePolicy: func() *admissionregistrationv1.FailurePolicyType {
-					s := admissionregistrationv1.Fail
+				FailurePolicy: func() *admissionregistrationv1beta1.FailurePolicyType {
+					s := admissionregistrationv1beta1.Fail
 					return &s
 				}(),
-				Rules: []admissionregistrationv1.RuleWithOperations{
+				Rules: []admissionregistrationv1beta1.RuleWithOperations{
 					{
-						Operations: []admissionregistrationv1.OperationType{
-							admissionregistrationv1.Create,
+						Operations: []admissionregistrationv1beta1.OperationType{
+							admissionregistrationv1beta1.Create,
 						},
-						Rule: admissionregistrationv1.Rule{
+						Rule: admissionregistrationv1beta1.Rule{
 							APIGroups:   []string{corev1.SchemeGroupVersion.Group},
 							APIVersions: []string{corev1.SchemeGroupVersion.Version},
 							Resources:   []string{"pods"},
-							Scope: func() *admissionregistrationv1.ScopeType {
-								s := admissionregistrationv1.NamespacedScope
+							Scope: func() *admissionregistrationv1beta1.ScopeType {
+								s := admissionregistrationv1beta1.NamespacedScope
 								return &s
 							}(),
 						},
 					},
 				},
-				ClientConfig: admissionregistrationv1.WebhookClientConfig{
-					Service: &admissionregistrationv1.ServiceReference{
+				ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
+					Service: &admissionregistrationv1beta1.ServiceReference{
 						Name:      OwnedObjectName(r.ds),
 						Namespace: OwnedObjectNamespace(r.ds),
-						Path:      pointer.StringPtr(webhook.MutatePath),
+						Path:      pointer.StringPtr(podv1mutator.MutatePath),
 						Port:      pointer.Int32Ptr(443),
 					},
 					CABundle: caBundle,
 				},
-				MatchPolicy: func() *admissionregistrationv1.MatchPolicyType {
-					s := admissionregistrationv1.Equivalent
+				MatchPolicy: func() *admissionregistrationv1beta1.MatchPolicyType {
+					s := admissionregistrationv1beta1.Equivalent
 					return &s
 				}(),
-				ReinvocationPolicy: func() *admissionregistrationv1.ReinvocationPolicyType {
-					s := admissionregistrationv1.NeverReinvocationPolicy
+				ReinvocationPolicy: func() *admissionregistrationv1beta1.ReinvocationPolicyType {
+					s := admissionregistrationv1beta1.NeverReinvocationPolicy
 					return &s
 				}(),
 			},
