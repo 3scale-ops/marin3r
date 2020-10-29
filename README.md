@@ -1,3 +1,4 @@
+<!-- omit in toc -->
 # **marin3r**
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/3scale/marin3r)](https://goreportcard.com/report/github.com/3scale/marin3r)
@@ -14,6 +15,21 @@ Lighweight, CRD based envoy control plane for kubernetes:
 * Self-healing capabilities
 * Implements the sidecar pattern: injects envoy sidecar containers based on pod annotations
 * Easy integration with cert-manager certificates
+
+<!-- omit in toc -->
+## Table of Contents
+
+- [**Motivation**](#motivation)
+- [**Getting started**](#getting-started)
+  - [**Installation**](#installation)
+  - [**TLS offloading with an envoy sidecar**](#tls-offloading-with-an-envoy-sidecar)
+  - [**Self-healing**](#self-healing)
+- [**Configuration**](#configuration)
+  - [**API reference**](#api-reference)
+  - [**EnvoyConfig custom resource**](#envoyconfig-custom-resource)
+  - [**Secrets**](#secrets)
+  - [**Sidecar injection configuration**](#sidecar-injection-configuration)
+- [**Development**](#development)
 
 ## **Motivation**
 
@@ -136,6 +152,7 @@ kuard-6bd9456d55-xbs7m     2/2     Running   0          32s
 
 We need now to provide the envoy-sidecar with the appropriate config to publish the kuard application through https.
 
+<!-- omit in toc -->
 #### **Create a certificate**
 
 Use openSSL to create a self-signed certificate that we will be using for this example.
@@ -152,6 +169,7 @@ Generate a kubernetes Secret from the certificate.
 kubectl create secret tls kuard-certificate --cert=/tmp/cert.pem --key=/tmp/key.pem
 ```
 
+<!-- omit in toc -->
 #### **Add an EnvoyConfig to publish kuard through https**
 
 Apply the following EnvoyConfig custom resource to the cluster. The EnvoyConfig objects are used to apply raw envoy configs that will be loaded by any envoy proxy in the cluster that matches the `nodeID` field defined in the spec (notice the `marin3r.3scale.net/node-id` annotation we added in the kuard Deployment). Any update of an EnvoyConfig object will update the configuration of the corresponding envoy proxies without any kind of restart or reload.
@@ -287,7 +305,7 @@ var pageContext = {"urlBase":"","hostname":"kuard-6f8fc46b67-vsgn7","addrs":["10
 
 Note the `Server: envoy` header we received, stating that the envoy sidecar is proxying our request to the kuard container.
 
-### Self-healing
+### **Self-healing**
 
 marin3r has self-healing capabilities and will detect when an envoy proxy rejects the configuration that the discovery service is sending to it (most tipically due to an invalid configuration or change). When one of such situations occur, marin3r will revert the proxy config back to the previous working one to avoid config drifts, like for example having an updated listener pointing to a non existent cluster (because the proxy has rejected the cluster config for some reason).
 
@@ -375,11 +393,13 @@ kuard   kuard    6c8c87788         99d577784           Rollback
 
 Next time a correct config is applied, the `Rollback` status would go back to `InSync`.
 
-## Configuration
+## **Configuration**
+
+### **API reference**
 
 The full marin3r API reference can be found [here](docs/api-reference/reference.asciidoc)
 
-### EnvoyConfig custom resource
+### **EnvoyConfig custom resource**
 
 marin3r basic functionality is to feed the envoy configs defined in EnvoyConfig custom resources to an envoy discovery service. The discovery service then sends the resources contained in those configs to the envoy proxies that identify themselves with the same `nodeID` defined in the EnvoyConfig object.
 
@@ -444,7 +464,7 @@ spec:
         value: {"name":"runtime1","layer":{"static_layer_0":"value"}}
 ```
 
-### Secrets
+### **Secrets**
 
 Secrets are treated in a special way by marin3r as they contain sensitive information. Instead of directly declaring an envoy API secret resource in the EnvoyConfig CR, you have to reference a Kubernetes Secret. marin3r expects this Secret to be of type `kubernetes.io/tls` and will load it into an envoy secret resource. This way you avoid having to insert sensitive data into the EnvoyConfig objects and allows you to use your regular kubernetes Secret deployment workflow for secrets.
 
@@ -476,7 +496,7 @@ transport_socket:
             ads: {}
 ```
 
-### Sidecar injection configuration
+### **Sidecar injection configuration**
 
 The marin3r mutating admission webhook will inject envoy containers in any pod annotated with `marin3r.3scale.net/node-id` created inside of any of the marin3r enabled namespaces. There are some annotations that can be used in pods to control the behavior of the webhook:
 
@@ -494,10 +514,16 @@ The marin3r mutating admission webhook will inject envoy containers in any pod a
 | marin3r.3scale.net/client-certificate | the marin3r client certificate to use to authenticate to the marin3r control plane (marin3r uses mTLS))                     | envoy-sidecar-client-cert |
 | marin3r.3scale.net/envoy-extra-args   | extra command line arguments to pass to the envoy sidecar container                                                         | ""                        |
 
+<!-- omit in toc -->
 #### `marin3r.3scale.net/ports` syntax
 
 The `port` syntax is a comma-separated list of `name:port[:protocol]` as in `"envoy-http:1080,envoy-https:1443"`.
 
+<!-- omit in toc -->
 #### `marin3r.3scale.net/host-port-mappings` syntax
 
 The `host-port-mappings` syntax is a comma-separated list of `container-port-name:host-port-number` as in `"envoy-http:1080,envoy-https:1443"`.
+
+## **Development**
+
+You can find development documentation [here](docs/developement/README.md)
