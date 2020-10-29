@@ -280,7 +280,7 @@ test-envoy-config:
 
 refdocs: ## Generates api reference documentation from code. Requires https://github.com/elastic/crd-ref-docs binary to be present in the PATH
 	crd-ref-docs \
-		--source-path=pkg/apis \
+		--source-path=apis \
 		--config=docs/api-reference/config.yaml \
 		--templates-dir=docs/api-reference/templates/asciidoctor \
 		--renderer=asciidoctor \
