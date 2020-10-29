@@ -1,0 +1,20 @@
+# permissions for end users to view discoveryservicecertificates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: discoveryservicecertificate-viewer-role
+rules:
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - discoveryservicecertificates
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - discoveryservicecertificates/status
+  verbs:
+  - get

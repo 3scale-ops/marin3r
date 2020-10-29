@@ -1,0 +1,48 @@
+# Try to change the listener's address, which is not allowed by envoy
+---
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
+kind: EnvoyConfig
+metadata:
+  name: proxy-config
+spec:
+  nodeID: envoy1
+  serialization: yaml
+  envoyResources:
+    clusters:
+      - name: envoy1
+        value: |
+          name: envoy1
+          connect_timeout: 2s
+          type: STATIC
+          load_assignment:
+            cluster_name: envoy1
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address: { address: 127.0.0.1, port_value: 80 }
+    listeners:
+      - name: http
+        value: |
+          name: http
+          address:
+            socket_address:
+              address: 0.0.0.0
+              port_value: 9090
+          filter_chains:
+            - filters:
+              - name: envoy.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                  stat_prefix: ingress_http
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - name: envoy1
+                        domains: ["*"]
+                        routes:
+                          - match:
+                              prefix: "/"
+                            direct_response: { status: 200, body: { inline_string: ok } }
+                  http_filters:
+                    - name: envoy.router

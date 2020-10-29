@@ -108,8 +108,8 @@ var (
 												PortValue: 8080,
 											}}}}}}}}}}}
 
-	clusterJSON    string = `{"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1","endpoints":[]}}`
-	clusterB64JSON string = "eyJuYW1lIjoiY2x1c3RlcjEiLCJ0eXBlIjoiU1RSSUNUX0ROUyIsImNvbm5lY3RUaW1lb3V0IjoiMnMiLCJsb2FkQXNzaWdubWVudCI6eyJjbHVzdGVyTmFtZSI6ImNsdXN0ZXIxIiwiZW5kcG9pbnRzIjpbXX19Cg=="
+	clusterJSON    string = `{"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1"}}`
+	clusterB64JSON string = "eyJuYW1lIjoiY2x1c3RlcjEiLCJ0eXBlIjoiU1RSSUNUX0ROUyIsImNvbm5lY3RUaW1lb3V0IjoiMnMiLCJsb2FkQXNzaWdubWVudCI6eyJjbHVzdGVyTmFtZSI6ImNsdXN0ZXIxIn19Cg=="
 	clusterYAML    string = `
         name: cluster1
         connect_timeout: 2s
@@ -117,7 +117,6 @@ var (
         lb_policy: ROUND_ROBIN
         load_assignment:
           cluster_name: cluster1
-          endpoints: []
         `
 	cluster *envoyapi.Cluster = &envoyapi.Cluster{
 		Name:           "cluster1",
@@ -128,7 +127,7 @@ var (
 		LbPolicy: envoyapi.Cluster_ROUND_ROBIN,
 		LoadAssignment: &envoyapi.ClusterLoadAssignment{
 			ClusterName: "cluster1",
-			Endpoints:   []*envoyapi_endpoint.LocalityLbEndpoints{}},
+		},
 	}
 
 	secretJSON string                = `{"name":"cert1","tlsCertificate":{"certificateChain":{"inlineBytes":"eHh4eA=="},"privateKey":{"inlineBytes":"eHh4eA=="}}}`
@@ -206,8 +205,11 @@ func TestYAMLtoResources(t *testing.T) {
 				t.Errorf("YAMLtoResources() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("YAMLtoResources() = %v, want %v", got, tt.want)
+			if !proto.Equal(got.Clusters[0], tt.want.Clusters[0]) {
+				t.Errorf("YAMLtoResources() = %v, want %v", got.Clusters[0], tt.want.Clusters[0])
+			}
+			if !proto.Equal(got.Listeners[0], tt.want.Listeners[0]) {
+				t.Errorf("YAMLtoResources() = %v, want %v", got.Listeners[0], tt.want.Listeners[0])
 			}
 		})
 	}
