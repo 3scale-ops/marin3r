@@ -4,8 +4,8 @@ nodes:
 - role: control-plane
   extraPortMappings:
   - containerPort: 8080
-    hostPort: 8080
+    hostPort: 1080
     protocol: TCP
   - containerPort: 8443
-    hostPort: 8443
+    hostPort: 1443
     protocol: TCP
