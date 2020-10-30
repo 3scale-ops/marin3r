@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/cncf/udpa/go v0.0.0-20201001150855-7e6fe0510fb5
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.9.5
+	github.com/envoyproxy/go-control-plane v0.9.7
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
 	github.com/golang/protobuf v1.4.2
