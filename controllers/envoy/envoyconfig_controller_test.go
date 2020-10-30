@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,22 +30,22 @@ func init() {
 	)
 }
 
-func fakeTestCache() *xds_cache.SnapshotCache {
+func fakeTestCache() *cache_v2.SnapshotCache {
 
-	snapshotCache := xds_cache.NewSnapshotCache(true, xds_cache.IDHash{}, nil)
+	snapshotCache := cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)
 
-	snapshotCache.SetSnapshot("node1", xds_cache.Snapshot{
-		Resources: [6]xds_cache.Resources{
-			{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-				"endpoint1": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint1"},
+	snapshotCache.SetSnapshot("node1", cache_v2.Snapshot{
+		Resources: [6]cache_v2.Resources{
+			{Version: "aaaa", Items: map[string]cache_types.Resource{
+				"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
 			}},
-			{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-				"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{
+				"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
 			}},
-			{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-			{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-			{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-			{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
 		}},
 	)
 
@@ -500,7 +502,7 @@ func TestEnvoyConfigReconciler_finalizeEnvoyConfig(t *testing.T) {
 	type fields struct {
 		client   client.Client
 		scheme   *runtime.Scheme
-		adsCache *xds_cache.SnapshotCache
+		adsCache *cache_v2.SnapshotCache
 	}
 	type args struct {
 		nodeID string

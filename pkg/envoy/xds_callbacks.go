@@ -18,14 +18,14 @@ import (
 	"context"
 	"fmt"
 
-	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 )
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
 type Callbacks struct {
 	OnError       func(nodeID, previousVersion, msg string) error
-	SnapshotCache *cache.SnapshotCache
+	SnapshotCache *cache_v2.SnapshotCache
 }
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
@@ -44,7 +44,7 @@ func (cb *Callbacks) OnStreamClosed(id int64) {
 // OnStreamRequest implements go-control-plane/pkg/server/Callbacks.OnStreamRequest
 // OnStreamRequest is called once a request is received on a stream.
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
-func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
+func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_api_v2.DiscoveryRequest) error {
 	logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "Version", req.VersionInfo, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
 
 	if req.ErrorDetail != nil {
@@ -65,7 +65,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *v2.DiscoveryRequest) error {
 
 // OnStreamResponse implements go-control-plane/pkgserver/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
-func (cb *Callbacks) OnStreamResponse(id int64, req *v2.DiscoveryRequest, rsp *v2.DiscoveryResponse) {
+func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_api_v2.DiscoveryRequest, rsp *envoy_api_v2.DiscoveryResponse) {
 	resources := []string{}
 	for _, r := range rsp.Resources {
 		j, _ := ResourcesToJSON(r)
@@ -83,11 +83,11 @@ func (cb *Callbacks) OnStreamResponse(id int64, req *v2.DiscoveryRequest, rsp *v
 // OnFetchRequest implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchRequest is called for each Fetch request. Returning an error will end processing of the
 // request and respond with an error.
-func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *v2.DiscoveryRequest) error {
+func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *envoy_api_v2.DiscoveryRequest) error {
 	return nil
 }
 
 // OnFetchResponse implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchResponse is called immediately prior to sending a response.
-func (cb *Callbacks) OnFetchResponse(req *v2.DiscoveryRequest, resp *v2.DiscoveryResponse) {
+func (cb *Callbacks) OnFetchResponse(req *envoy_api_v2.DiscoveryRequest, resp *envoy_api_v2.DiscoveryResponse) {
 }

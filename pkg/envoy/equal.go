@@ -1,14 +1,14 @@
 package envoy
 
 import (
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/golang/protobuf/proto"
 )
 
 // ResourcesEqual validates that the envoy resources are
 // exactly the same in for both arrays a and b. It uses proto.Equal()
 // to assert the equality between two given envoy resources.
-func ResourcesEqual(a, b [6]xds_cache.Resources) bool {
+func ResourcesEqual(a, b [6]cache_v2.Resources) bool {
 
 	// Check resources are equal for each resource type
 	for rtype, aResources := range a {

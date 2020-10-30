@@ -7,13 +7,15 @@ import (
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoyapi_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
-	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
-	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,7 +46,7 @@ func TestEnvoyConfigRevisionReconciler_Reconcile(t *testing.T) {
 		nodeID      string
 		cr          *envoyv1alpha1.EnvoyConfigRevision
 		wantResult  reconcile.Result
-		wantSnap    *xds_cache.Snapshot
+		wantSnap    *cache_v2.Snapshot
 		wantVersion string
 		wantErr     bool
 	}{
@@ -67,14 +69,14 @@ func TestEnvoyConfigRevisionReconciler_Reconcile(t *testing.T) {
 					})},
 			},
 			wantResult: reconcile.Result{},
-			wantSnap: &xds_cache.Snapshot{Resources: [6]xds_cache.Resources{
-				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
-				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
-				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
-				{Version: "xxxx-74d569cc4", Items: map[string]xds_cache_types.Resource{}},
-				{Version: "xxxx", Items: map[string]xds_cache_types.Resource{}},
+			wantSnap: &cache_v2.Snapshot{Resources: [6]cache_v2.Resources{
+				{Version: "xxxx", Items: map[string]cache_types.Resource{
+					"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+				{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+				{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+				{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+				{Version: "xxxx-74d569cc4", Items: map[string]cache_types.Resource{}},
+				{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 			}},
 			wantVersion: "xxxx",
 			wantErr:     false,
@@ -102,18 +104,18 @@ func TestEnvoyConfigRevisionReconciler_Reconcile(t *testing.T) {
 					})},
 			},
 			wantResult: reconcile.Result{},
-			wantSnap: &xds_cache.Snapshot{
-				Resources: [6]xds_cache.Resources{
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-						"endpoint1": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint1"},
+			wantSnap: &cache_v2.Snapshot{
+				Resources: [6]cache_v2.Resources{
+					{Version: "aaaa", Items: map[string]cache_types.Resource{
+						"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
 					}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-						"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{
+						"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
 					}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
 				}},
 			wantVersion: "aaaa",
 			wantErr:     false,
@@ -135,18 +137,18 @@ func TestEnvoyConfigRevisionReconciler_Reconcile(t *testing.T) {
 					})},
 			},
 			wantResult: reconcile.Result{},
-			wantSnap: &xds_cache.Snapshot{
-				Resources: [6]xds_cache.Resources{
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-						"endpoint1": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint1"},
+			wantSnap: &cache_v2.Snapshot{
+				Resources: [6]cache_v2.Resources{
+					{Version: "aaaa", Items: map[string]cache_types.Resource{
+						"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
 					}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-						"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{
+						"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
 					}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
 				}},
 			wantVersion: "aaaa",
 			wantErr:     false,
@@ -317,7 +319,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 	type fields struct {
 		client   client.Client
 		scheme   *runtime.Scheme
-		adsCache *xds_cache.SnapshotCache
+		adsCache *cache_v2.SnapshotCache
 	}
 	type args struct {
 		ctx           context.Context
@@ -325,14 +327,14 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 		namespace     string
 		serialization string
 		resources     *envoyv1alpha1.EnvoyResources
-		snap          *xds_cache.Snapshot
+		snap          *cache_v2.Snapshot
 	}
 	tests := []struct {
 		name     string
 		fields   fields
 		args     args
 		wantErr  bool
-		wantSnap *xds_cache.Snapshot
+		wantSnap *cache_v2.Snapshot
 	}{
 		{
 			name: "Loads resources into the snapshot",
@@ -365,23 +367,23 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr: false,
-			wantSnap: &xds_cache.Snapshot{
-				Resources: [6]xds_cache.Resources{
-					{Version: "1", Items: map[string]xds_cache_types.Resource{
-						"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
+			wantSnap: &cache_v2.Snapshot{
+				Resources: [6]cache_v2.Resources{
+					{Version: "1", Items: map[string]cache_types.Resource{
+						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"},
 					}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{
-						"cluster": &envoyapi.Cluster{Name: "cluster"},
+					{Version: "1", Items: map[string]cache_types.Resource{
+						"cluster": &envoy_api_v2.Cluster{Name: "cluster"},
 					}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{
-						"route": &envoyapi_route.Route{Name: "route"},
+					{Version: "1", Items: map[string]cache_types.Resource{
+						"route": &envoy_api_v2_route.Route{Name: "route"},
 					}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{
-						"listener": &envoyapi.Listener{Name: "listener"},
+					{Version: "1", Items: map[string]cache_types.Resource{
+						"listener": &envoy_api_v2.Listener{Name: "listener"},
 					}},
-					{Version: "1-74d569cc4", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{
-						"runtime": &envoyapi_discovery.Runtime{Name: "runtime"},
+					{Version: "1-74d569cc4", Items: map[string]cache_types.Resource{}},
+					{Version: "1", Items: map[string]cache_types.Resource{
+						"runtime": &envoy_service_discovery_v2.Runtime{Name: "runtime"},
 					}},
 				},
 			},
@@ -405,7 +407,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr:  true,
-			wantSnap: &xds_cache.Snapshot{},
+			wantSnap: &cache_v2.Snapshot{},
 		},
 		{
 			name: "Error, bad cluster value",
@@ -426,7 +428,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr:  true,
-			wantSnap: &xds_cache.Snapshot{},
+			wantSnap: &cache_v2.Snapshot{},
 		},
 		{
 			name: "Error, bad route value",
@@ -447,7 +449,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr:  true,
-			wantSnap: &xds_cache.Snapshot{},
+			wantSnap: &cache_v2.Snapshot{},
 		},
 		{
 			name: "Error, bad listener value",
@@ -468,7 +470,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr:  true,
-			wantSnap: &xds_cache.Snapshot{},
+			wantSnap: &cache_v2.Snapshot{},
 		},
 		{
 			name: "Error, bad runtime value",
@@ -489,7 +491,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr:  true,
-			wantSnap: &xds_cache.Snapshot{},
+			wantSnap: &cache_v2.Snapshot{},
 		},
 		{
 			name: "Loads secret resources into the snapshot",
@@ -517,24 +519,24 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr: false,
-			wantSnap: &xds_cache.Snapshot{
-				Resources: [6]xds_cache.Resources{
-					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "1-6cf7fd9d65", Items: map[string]xds_cache_types.Resource{
-						"secret": &envoyapi_auth.Secret{
+			wantSnap: &cache_v2.Snapshot{
+				Resources: [6]cache_v2.Resources{
+					{Version: "1", Items: map[string]cache_types.Resource{}},
+					{Version: "1", Items: map[string]cache_types.Resource{}},
+					{Version: "1", Items: map[string]cache_types.Resource{}},
+					{Version: "1", Items: map[string]cache_types.Resource{}},
+					{Version: "1-6cf7fd9d65", Items: map[string]cache_types.Resource{
+						"secret": &envoy_api_v2_auth.Secret{
 							Name: "secret",
-							Type: &envoyapi_auth.Secret_TlsCertificate{
-								TlsCertificate: &envoyapi_auth.TlsCertificate{
-									PrivateKey: &envoyapi_core.DataSource{
-										Specifier: &envoyapi_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
+							Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+								TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+									PrivateKey: &envoy_api_v2_core.DataSource{
+										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
 									},
-									CertificateChain: &envoyapi_core.DataSource{
-										Specifier: &envoyapi_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+									CertificateChain: &envoy_api_v2_core.DataSource{
+										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
 									}}}}}},
-					{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "1", Items: map[string]cache_types.Resource{}},
 				},
 			},
 		},
@@ -564,7 +566,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr:  true,
-			wantSnap: &xds_cache.Snapshot{},
+			wantSnap: &cache_v2.Snapshot{},
 		},
 		{
 			name: "Fails when secret does not exist",
@@ -588,7 +590,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				snap: newNodeSnapshot("node1", "1"),
 			},
 			wantErr:  true,
-			wantSnap: &xds_cache.Snapshot{},
+			wantSnap: &cache_v2.Snapshot{},
 		},
 	}
 	for _, tt := range tests {
@@ -616,19 +618,19 @@ func Test_newNodeSnapshot(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *xds_cache.Snapshot
+		want *cache_v2.Snapshot
 	}{
 		{
 			name: "Generates new empty snapshot",
 			args: args{nodeID: "node1", version: "5"},
-			want: &xds_cache.Snapshot{
-				Resources: [6]xds_cache.Resources{
-					{Version: "5", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "5", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "5", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "5", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "5", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "5", Items: map[string]xds_cache_types.Resource{}},
+			want: &cache_v2.Snapshot{
+				Resources: [6]cache_v2.Resources{
+					{Version: "5", Items: map[string]cache_types.Resource{}},
+					{Version: "5", Items: map[string]cache_types.Resource{}},
+					{Version: "5", Items: map[string]cache_types.Resource{}},
+					{Version: "5", Items: map[string]cache_types.Resource{}},
+					{Version: "5", Items: map[string]cache_types.Resource{}},
+					{Version: "5", Items: map[string]cache_types.Resource{}},
 				},
 			},
 		},
@@ -645,53 +647,53 @@ func Test_newNodeSnapshot(t *testing.T) {
 func Test_setResource(t *testing.T) {
 	type args struct {
 		name string
-		res  xds_cache_types.Resource
-		snap *xds_cache.Snapshot
+		res  cache_types.Resource
+		snap *cache_v2.Snapshot
 	}
 	tests := []struct {
 		name string
 		args args
-		want *xds_cache.Snapshot
+		want *cache_v2.Snapshot
 	}{
 		{
 			name: "Adds envoy resource to the snapshot",
 			args: args{
 				name: "cluster3",
-				res:  &envoyapi.Cluster{Name: "cluster3"},
-				snap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "789", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
+				res:  &envoy_api_v2.Cluster{Name: "cluster3"},
+				snap: &cache_v2.Snapshot{
+					Resources: [6]cache_v2.Resources{
+						{Version: "789", Items: map[string]cache_types.Resource{
+							"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"},
 						}},
-						{Version: "789", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-							"cluster2": &envoyapi.Cluster{Name: "cluster2"},
+						{Version: "789", Items: map[string]cache_types.Resource{
+							"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
+							"cluster2": &envoy_api_v2.Cluster{Name: "cluster2"},
 						}},
-						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "789", Items: map[string]xds_cache_types.Resource{
-							"listener1": &envoyapi.Listener{Name: "listener1"},
+						{Version: "789", Items: map[string]cache_types.Resource{}},
+						{Version: "789", Items: map[string]cache_types.Resource{
+							"listener1": &envoy_api_v2.Listener{Name: "listener1"},
 						}},
-						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+						{Version: "789", Items: map[string]cache_types.Resource{}},
+						{Version: "789", Items: map[string]cache_types.Resource{}},
 					},
 				},
 			},
-			want: &xds_cache.Snapshot{
-				Resources: [6]xds_cache.Resources{
-					{Version: "789", Items: map[string]xds_cache_types.Resource{
-						"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
+			want: &cache_v2.Snapshot{
+				Resources: [6]cache_v2.Resources{
+					{Version: "789", Items: map[string]cache_types.Resource{
+						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"},
 					}},
-					{Version: "789", Items: map[string]xds_cache_types.Resource{
-						"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-						"cluster2": &envoyapi.Cluster{Name: "cluster2"},
-						"cluster3": &envoyapi.Cluster{Name: "cluster3"},
+					{Version: "789", Items: map[string]cache_types.Resource{
+						"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
+						"cluster2": &envoy_api_v2.Cluster{Name: "cluster2"},
+						"cluster3": &envoy_api_v2.Cluster{Name: "cluster3"},
 					}},
-					{Version: "789", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "789", Items: map[string]xds_cache_types.Resource{
-						"listener1": &envoyapi.Listener{Name: "listener1"},
+					{Version: "789", Items: map[string]cache_types.Resource{}},
+					{Version: "789", Items: map[string]cache_types.Resource{
+						"listener1": &envoy_api_v2.Listener{Name: "listener1"},
 					}},
-					{Version: "789", Items: map[string]xds_cache_types.Resource{}},
-					{Version: "789", Items: map[string]xds_cache_types.Resource{}},
+					{Version: "789", Items: map[string]cache_types.Resource{}},
+					{Version: "789", Items: map[string]cache_types.Resource{}},
 				},
 			},
 		},

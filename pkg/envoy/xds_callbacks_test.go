@@ -19,31 +19,31 @@ import (
 	"fmt"
 	"testing"
 
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+
 	"github.com/golang/protobuf/ptypes/any"
 	"google.golang.org/genproto/googleapis/rpc/status"
 )
 
-func fakeTestCache() *xds_cache.SnapshotCache {
+func fakeTestCache() *cache_v2.SnapshotCache {
 
-	snapshotCache := xds_cache.NewSnapshotCache(true, xds_cache.IDHash{}, nil)
+	snapshotCache := cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)
 
-	snapshotCache.SetSnapshot("node1", xds_cache.Snapshot{
-		Resources: [6]xds_cache.Resources{
-			{Version: "1", Items: map[string]xds_cache_types.Resource{
-				"endpoint1": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint1"},
+	snapshotCache.SetSnapshot("node1", cache_v2.Snapshot{
+		Resources: [6]cache_v2.Resources{
+			{Version: "1", Items: map[string]cache_types.Resource{
+				"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
 			}},
-			{Version: "1", Items: map[string]xds_cache_types.Resource{
-				"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+			{Version: "1", Items: map[string]cache_types.Resource{
+				"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
 			}},
-			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-			{Version: "1", Items: map[string]xds_cache_types.Resource{}},
+			{Version: "1", Items: map[string]cache_types.Resource{}},
+			{Version: "1", Items: map[string]cache_types.Resource{}},
+			{Version: "1", Items: map[string]cache_types.Resource{}},
+			{Version: "1", Items: map[string]cache_types.Resource{}},
 		}},
 	)
 
@@ -102,7 +102,7 @@ func TestCallbacks_OnStreamClosed(t *testing.T) {
 func TestCallbacks_OnStreamRequest(t *testing.T) {
 	type args struct {
 		id  int64
-		req *v2.DiscoveryRequest
+		req *envoy_api_v2.DiscoveryRequest
 	}
 	tests := []struct {
 		name    string
@@ -113,8 +113,8 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 		{
 			"OnStreamRequest()",
 			&Callbacks{},
-			args{1, &v2.DiscoveryRequest{
-				Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
+			args{1, &envoy_api_v2.DiscoveryRequest{
+				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
 				TypeUrl:       "some-type",
 				ErrorDetail:   nil,
@@ -127,8 +127,8 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 				OnError:       func(a, b, c string) error { return nil },
 				SnapshotCache: fakeTestCache(),
 			},
-			args{1, &v2.DiscoveryRequest{
-				Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
+			args{1, &envoy_api_v2.DiscoveryRequest{
+				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
 				TypeUrl:       "some-type",
 				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
@@ -141,8 +141,8 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 				OnError:       func(a, b, c string) error { return nil },
 				SnapshotCache: fakeTestCache(),
 			},
-			args{1, &v2.DiscoveryRequest{
-				Node:          &core.Node{Id: "node2", Cluster: "cluster1"},
+			args{1, &envoy_api_v2.DiscoveryRequest{
+				Node:          &envoy_api_v2_core.Node{Id: "node2", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
 				TypeUrl:       "some-type",
 				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
@@ -155,8 +155,8 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 				OnError:       func(a, b, c string) error { return fmt.Errorf("error") },
 				SnapshotCache: fakeTestCache(),
 			},
-			args{1, &v2.DiscoveryRequest{
-				Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
+			args{1, &envoy_api_v2.DiscoveryRequest{
+				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
 				TypeUrl:       "some-type",
 				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
@@ -176,8 +176,8 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 func TestCallbacks_OnStreamResponse(t *testing.T) {
 	type args struct {
 		id       int64
-		request  *v2.DiscoveryRequest
-		response *v2.DiscoveryResponse
+		request  *envoy_api_v2.DiscoveryRequest
+		response *envoy_api_v2.DiscoveryResponse
 	}
 	tests := []struct {
 		name string
@@ -188,13 +188,13 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 			"OnStreamResponse()",
 			&Callbacks{},
 			args{1,
-				&v2.DiscoveryRequest{
-					Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
+				&envoy_api_v2.DiscoveryRequest{
+					Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
 					ResourceNames: []string{"string1", "string2"},
 					TypeUrl:       "some-type",
 					ErrorDetail:   nil,
 				},
-				&v2.DiscoveryResponse{
+				&envoy_api_v2.DiscoveryResponse{
 					Resources: []*any.Any{
 						{TypeUrl: "some-type", Value: []byte("some-value")},
 					},
@@ -206,13 +206,13 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 			"OnStreamResponse() special treatment of secret resources",
 			&Callbacks{},
 			args{1,
-				&v2.DiscoveryRequest{
-					Node:          &core.Node{Id: "node1", Cluster: "cluster1"},
+				&envoy_api_v2.DiscoveryRequest{
+					Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
 					ResourceNames: []string{"string1", "string2"},
 					TypeUrl:       "some-type",
 					ErrorDetail:   nil,
 				},
-				&v2.DiscoveryResponse{
+				&envoy_api_v2.DiscoveryResponse{
 					Resources: []*any.Any{
 						{TypeUrl: "type.googleapis.com/envoy.api.v2.auth.Secret", Value: []byte("some-value")},
 					},
@@ -231,7 +231,7 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 func TestCallbacks_OnFetchRequest(t *testing.T) {
 	type args struct {
 		ctx context.Context
-		req *v2.DiscoveryRequest
+		req *envoy_api_v2.DiscoveryRequest
 	}
 	tests := []struct {
 		name    string
@@ -244,7 +244,7 @@ func TestCallbacks_OnFetchRequest(t *testing.T) {
 			&Callbacks{},
 			args{
 				context.Background(),
-				&v2.DiscoveryRequest{},
+				&envoy_api_v2.DiscoveryRequest{},
 			},
 			false,
 		},
@@ -260,8 +260,8 @@ func TestCallbacks_OnFetchRequest(t *testing.T) {
 
 func TestCallbacks_OnFetchResponse(t *testing.T) {
 	type args struct {
-		req  *v2.DiscoveryRequest
-		resp *v2.DiscoveryResponse
+		req  *envoy_api_v2.DiscoveryRequest
+		resp *envoy_api_v2.DiscoveryResponse
 	}
 	tests := []struct {
 		name string
@@ -271,7 +271,7 @@ func TestCallbacks_OnFetchResponse(t *testing.T) {
 		{
 			"OnFetchResponse()",
 			&Callbacks{},
-			args{&v2.DiscoveryRequest{}, &v2.DiscoveryResponse{}},
+			args{&envoy_api_v2.DiscoveryRequest{}, &envoy_api_v2.DiscoveryResponse{}},
 		},
 	}
 	for _, tt := range tests {

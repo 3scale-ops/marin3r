@@ -21,19 +21,20 @@ import (
 	"sync"
 	"testing"
 
-	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	server_v2 "github.com/envoyproxy/go-control-plane/pkg/server/v2"
+
 	"go.uber.org/zap"
 )
 
 var (
-	snapshotCache = cache.NewSnapshotCache(true, hasher{}, nil)
+	snapshotCache = cache_v2.NewSnapshotCache(true, hasher{}, nil)
 )
 
 func Test_hasher_ID(t *testing.T) {
 	type args struct {
-		node *core.Node
+		node *envoy_api_v2_core.Node
 	}
 	tests := []struct {
 		name string
@@ -44,7 +45,7 @@ func Test_hasher_ID(t *testing.T) {
 		{
 			"Returns the node id",
 			hasher{},
-			args{&core.Node{Id: "node1"}},
+			args{&envoy_api_v2_core.Node{Id: "node1"}},
 			"node1",
 		},
 		{
@@ -103,7 +104,7 @@ func TestXdsServer_Start(t *testing.T) {
 				context.Background(),
 				10000,
 				&tls.Config{},
-				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
+				server_v2.NewServer(context.Background(), snapshotCache, &Callbacks{}),
 				snapshotCache,
 				&Callbacks{},
 			},
@@ -130,7 +131,7 @@ func TestXdsServer_GetSnapshotCache(t *testing.T) {
 	tests := []struct {
 		name string
 		xdss *XdsServer
-		want *cache.SnapshotCache
+		want *cache_v2.SnapshotCache
 	}{
 		{
 			"Gets the server's SnapshotCache",
@@ -138,7 +139,7 @@ func TestXdsServer_GetSnapshotCache(t *testing.T) {
 				context.Background(),
 				10000,
 				&tls.Config{},
-				xds.NewServer(context.Background(), snapshotCache, &Callbacks{}),
+				server_v2.NewServer(context.Background(), snapshotCache, &Callbacks{}),
 				snapshotCache,
 				&Callbacks{},
 			},

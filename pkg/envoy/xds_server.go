@@ -21,10 +21,11 @@ import (
 	"net"
 	"time"
 
-	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	discoverygrpc "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
-	"github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	xds "github.com/envoyproxy/go-control-plane/pkg/server/v2"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	server_v2 "github.com/envoyproxy/go-control-plane/pkg/server/v2"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -46,8 +47,8 @@ type XdsServer struct {
 	ctx           context.Context
 	adsPort       uint
 	tlsConfig     *tls.Config
-	server        xds.Server
-	snapshotCache cache.SnapshotCache
+	server        server_v2.Server
+	snapshotCache cache_v2.SnapshotCache
 	callbacks     *Callbacks
 }
 
@@ -55,7 +56,7 @@ type XdsServer struct {
 type hasher struct {
 }
 
-func (h hasher) ID(node *core.Node) string {
+func (h hasher) ID(node *envoy_api_v2_core.Node) string {
 	if node == nil {
 		return "unknown"
 	}
@@ -66,11 +67,11 @@ func (h hasher) ID(node *core.Node) string {
 func NewXdsServer(ctx context.Context, adsPort uint, tlsConfig *tls.Config,
 	callbacks *Callbacks) *XdsServer {
 
-	snapshotCache := cache.NewSnapshotCache(true, hasher{}, nil)
+	snapshotCache := cache_v2.NewSnapshotCache(true, hasher{}, nil)
 	// Pass snapshotCache to the callback object so it can
 	// inspect the cache when necessary
 	callbacks.SnapshotCache = &snapshotCache
-	srv := xds.NewServer(ctx, snapshotCache, callbacks)
+	srv := server_v2.NewServer(ctx, snapshotCache, callbacks)
 
 	return &XdsServer{
 		ctx:           ctx,
@@ -107,7 +108,7 @@ func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 	errCh := make(chan error)
 
 	// goroutine to run server
-	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
+	envoy_service_discovery_v2.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.server)
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
 			errCh <- err
@@ -136,6 +137,6 @@ func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 }
 
 // GetSnapshotCache returns the xds_cache.SnapshotCache
-func (xdss *XdsServer) GetSnapshotCache() *cache.SnapshotCache {
+func (xdss *XdsServer) GetSnapshotCache() *cache_v2.SnapshotCache {
 	return &xdss.snapshotCache
 }

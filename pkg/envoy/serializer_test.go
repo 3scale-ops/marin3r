@@ -5,12 +5,14 @@ import (
 	"testing"
 	"time"
 
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoyapi_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	envoyapi_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
-	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
-	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	envoy_api_v2_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
+	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 
@@ -67,8 +69,6 @@ import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/previous_priorities"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/trace/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/transport_socket/raw_buffer/v2"
-	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	"github.com/golang/protobuf/proto"
 )
 
 var (
@@ -81,30 +81,30 @@ var (
             address: 0.0.0.0
             port_value: 8443
         `
-	listener *envoyapi.Listener = &envoyapi.Listener{
+	listener *envoy_api_v2.Listener = &envoy_api_v2.Listener{
 		Name: "listener1",
-		Address: &envoyapi_core.Address{
-			Address: &envoyapi_core.Address_SocketAddress{
-				SocketAddress: &envoyapi_core.SocketAddress{
+		Address: &envoy_api_v2_core.Address{
+			Address: &envoy_api_v2_core.Address_SocketAddress{
+				SocketAddress: &envoy_api_v2_core.SocketAddress{
 					Address: "0.0.0.0",
-					PortSpecifier: &envoyapi_core.SocketAddress_PortValue{
+					PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
 						PortValue: 8443,
 					}}}}}
 
-	endpointJSON string                          = `{"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}`
-	endpoint     *envoyapi.ClusterLoadAssignment = &envoyapi.ClusterLoadAssignment{
+	endpointJSON string                              = `{"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}`
+	endpoint     *envoy_api_v2.ClusterLoadAssignment = &envoy_api_v2.ClusterLoadAssignment{
 		ClusterName: "cluster1",
-		Endpoints: []*envoyapi_endpoint.LocalityLbEndpoints{
+		Endpoints: []*envoy_api_v2_endpoint.LocalityLbEndpoints{
 			{
-				LbEndpoints: []*envoyapi_endpoint.LbEndpoint{
+				LbEndpoints: []*envoy_api_v2_endpoint.LbEndpoint{
 					{
-						HostIdentifier: &envoyapi_endpoint.LbEndpoint_Endpoint{
-							Endpoint: &envoyapi_endpoint.Endpoint{
-								Address: &envoyapi_core.Address{
-									Address: &envoyapi_core.Address_SocketAddress{
-										SocketAddress: &envoyapi_core.SocketAddress{
+						HostIdentifier: &envoy_api_v2_endpoint.LbEndpoint_Endpoint{
+							Endpoint: &envoy_api_v2_endpoint.Endpoint{
+								Address: &envoy_api_v2_core.Address{
+									Address: &envoy_api_v2_core.Address_SocketAddress{
+										SocketAddress: &envoy_api_v2_core.SocketAddress{
 											Address: "127.0.0.1",
-											PortSpecifier: &envoyapi_core.SocketAddress_PortValue{
+											PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
 												PortValue: 8080,
 											}}}}}}}}}}}
 
@@ -118,41 +118,41 @@ var (
         load_assignment:
           cluster_name: cluster1
         `
-	cluster *envoyapi.Cluster = &envoyapi.Cluster{
+	cluster *envoy_api_v2.Cluster = &envoy_api_v2.Cluster{
 		Name:           "cluster1",
 		ConnectTimeout: ptypes.DurationProto(2 * time.Second),
-		ClusterDiscoveryType: &envoyapi.Cluster_Type{
-			Type: envoyapi.Cluster_STRICT_DNS,
+		ClusterDiscoveryType: &envoy_api_v2.Cluster_Type{
+			Type: envoy_api_v2.Cluster_STRICT_DNS,
 		},
-		LbPolicy: envoyapi.Cluster_ROUND_ROBIN,
-		LoadAssignment: &envoyapi.ClusterLoadAssignment{
+		LbPolicy: envoy_api_v2.Cluster_ROUND_ROBIN,
+		LoadAssignment: &envoy_api_v2.ClusterLoadAssignment{
 			ClusterName: "cluster1",
 		},
 	}
 
-	secretJSON string                = `{"name":"cert1","tlsCertificate":{"certificateChain":{"inlineBytes":"eHh4eA=="},"privateKey":{"inlineBytes":"eHh4eA=="}}}`
-	secret     *envoyapi_auth.Secret = &envoyapi_auth.Secret{
+	secretJSON string                    = `{"name":"cert1","tlsCertificate":{"certificateChain":{"inlineBytes":"eHh4eA=="},"privateKey":{"inlineBytes":"eHh4eA=="}}}`
+	secret     *envoy_api_v2_auth.Secret = &envoy_api_v2_auth.Secret{
 		Name: "cert1",
-		Type: &envoyapi_auth.Secret_TlsCertificate{
-			TlsCertificate: &envoyapi_auth.TlsCertificate{
-				PrivateKey: &envoyapi_core.DataSource{
-					Specifier: &envoyapi_core.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
+		Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+			TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+				PrivateKey: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
 				},
-				CertificateChain: &envoyapi_core.DataSource{
-					Specifier: &envoyapi_core.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
+				CertificateChain: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
 				}}}}
 
-	routeJSON string                = `{"name":"route1","match":{"prefix":"/"},"directResponse":{"status":200}}`
-	route     *envoyapi_route.Route = &envoyapi_route.Route{
+	routeJSON string                    = `{"name":"route1","match":{"prefix":"/"},"directResponse":{"status":200}}`
+	route     *envoy_api_v2_route.Route = &envoy_api_v2_route.Route{
 		Name: "route1",
-		Match: &envoyapi_route.RouteMatch{
-			PathSpecifier: &envoyapi_route.RouteMatch_Prefix{Prefix: "/"}},
-		Action: &envoyapi_route.Route_DirectResponse{
-			DirectResponse: &envoyapi_route.DirectResponseAction{Status: 200}},
+		Match: &envoy_api_v2_route.RouteMatch{
+			PathSpecifier: &envoy_api_v2_route.RouteMatch_Prefix{Prefix: "/"}},
+		Action: &envoy_api_v2_route.Route_DirectResponse{
+			DirectResponse: &envoy_api_v2_route.DirectResponseAction{Status: 200}},
 	}
 
-	runtimeJSON string                      = `{"name":"runtime1","layer":{"static_layer_0":"value"}}`
-	runtime     *envoyapi_discovery.Runtime = &envoyapi_discovery.Runtime{
+	runtimeJSON string                              = `{"name":"runtime1","layer":{"static_layer_0":"value"}}`
+	runtime     *envoy_service_discovery_v2.Runtime = &envoy_service_discovery_v2.Runtime{
 		Name: "runtime1",
 		// See https://www.envoyproxy.io/docs/envoy/latest/configuration/operations/runtime
 		Layer: &_struct.Struct{
@@ -192,8 +192,8 @@ func TestYAMLtoResources(t *testing.T) {
                 `,
 			)},
 			want: &Resources{
-				Clusters:  []*envoyapi.Cluster{cluster},
-				Listeners: []*envoyapi.Listener{listener},
+				Clusters:  []*envoy_api_v2.Cluster{cluster},
+				Listeners: []*envoy_api_v2.Listener{listener},
 			},
 		},
 	}
@@ -243,7 +243,7 @@ func TestResourcesToJSON(t *testing.T) {
 
 func TestJSON_Marshal(t *testing.T) {
 	type args struct {
-		res xds_cache_types.Resource
+		res cache_types.Resource
 	}
 	tests := []struct {
 		name    string
@@ -312,61 +312,61 @@ func TestJSON_Marshal(t *testing.T) {
 func TestJSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res xds_cache_types.Resource
+		res cache_types.Resource
 	}
 	tests := []struct {
 		name    string
 		s       JSON
 		args    args
-		want    xds_cache_types.Resource
+		want    cache_types.Resource
 		wantErr bool
 	}{
 		{
 			name:    "Deserialize endpoint from json",
 			s:       JSON{},
-			args:    args{str: endpointJSON, res: &envoyapi.ClusterLoadAssignment{}},
+			args:    args{str: endpointJSON, res: &envoy_api_v2.ClusterLoadAssignment{}},
 			want:    endpoint,
 			wantErr: false,
 		},
 		{
 			name:    "Deserialize listener from json",
 			s:       JSON{},
-			args:    args{str: listenerJSON, res: &envoyapi.Listener{}},
+			args:    args{str: listenerJSON, res: &envoy_api_v2.Listener{}},
 			want:    listener,
 			wantErr: false,
 		},
 		{
 			name:    "Deserialize cluster from json",
 			s:       JSON{},
-			args:    args{str: clusterJSON, res: &envoyapi.Cluster{}},
+			args:    args{str: clusterJSON, res: &envoy_api_v2.Cluster{}},
 			want:    cluster,
 			wantErr: false,
 		},
 		{
 			name:    "Deserialize secret from json",
 			s:       JSON{},
-			args:    args{str: secretJSON, res: &envoyapi_auth.Secret{}},
+			args:    args{str: secretJSON, res: &envoy_api_v2_auth.Secret{}},
 			want:    secret,
 			wantErr: false,
 		},
 		{
 			name:    "Deserialize route from json",
 			s:       JSON{},
-			args:    args{str: routeJSON, res: &envoyapi_route.Route{}},
+			args:    args{str: routeJSON, res: &envoy_api_v2_route.Route{}},
 			want:    route,
 			wantErr: false,
 		},
 		{
 			name:    "Deserialize runtime from json",
 			s:       JSON{},
-			args:    args{str: runtimeJSON, res: &envoyapi_discovery.Runtime{}},
+			args:    args{str: runtimeJSON, res: &envoy_service_discovery_v2.Runtime{}},
 			want:    runtime,
 			wantErr: false,
 		},
 		{
 			name:    "Error deserializing resource",
 			s:       JSON{},
-			args:    args{str: `{"this_is": "wrong"}`, res: &envoyapi_route.Route{}},
+			args:    args{str: `{"this_is": "wrong"}`, res: &envoy_api_v2_route.Route{}},
 			want:    nil,
 			wantErr: true,
 		},
@@ -394,26 +394,26 @@ func TestJSON_Unmarshal(t *testing.T) {
 func TestB64JSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res xds_cache_types.Resource
+		res cache_types.Resource
 	}
 	tests := []struct {
 		name    string
 		s       B64JSON
 		args    args
-		want    xds_cache_types.Resource
+		want    cache_types.Resource
 		wantErr bool
 	}{
 		{
 			name:    "Deserialize listener from yaml",
 			s:       B64JSON{},
-			args:    args{str: listenerB64JSON, res: &envoyapi.Listener{}},
+			args:    args{str: listenerB64JSON, res: &envoy_api_v2.Listener{}},
 			want:    listener,
 			wantErr: false,
 		},
 		{
 			name:    "Deserialize cluster from yaml",
 			s:       B64JSON{},
-			args:    args{str: clusterB64JSON, res: &envoyapi.Cluster{}},
+			args:    args{str: clusterB64JSON, res: &envoy_api_v2.Cluster{}},
 			want:    cluster,
 			wantErr: false,
 		}}
@@ -432,26 +432,26 @@ func TestB64JSON_Unmarshal(t *testing.T) {
 func TestYAML_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res xds_cache_types.Resource
+		res cache_types.Resource
 	}
 	tests := []struct {
 		name    string
 		s       YAML
 		args    args
-		want    xds_cache_types.Resource
+		want    cache_types.Resource
 		wantErr bool
 	}{
 		{
 			name:    "Deserialize listener from yaml",
 			s:       YAML{},
-			args:    args{str: listenerYAML, res: &envoyapi.Listener{}},
+			args:    args{str: listenerYAML, res: &envoy_api_v2.Listener{}},
 			want:    listener,
 			wantErr: false,
 		},
 		{
 			name:    "Deserialize cluster from yaml",
 			s:       YAML{},
-			args:    args{str: clusterYAML, res: &envoyapi.Cluster{}},
+			args:    args{str: clusterYAML, res: &envoy_api_v2.Cluster{}},
 			want:    cluster,
 			wantErr: false,
 		},

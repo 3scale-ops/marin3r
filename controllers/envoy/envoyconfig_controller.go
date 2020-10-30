@@ -21,7 +21,9 @@ import (
 	"fmt"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +40,7 @@ type EnvoyConfigReconciler struct {
 	Client   client.Client
 	Log      logr.Logger
 	Scheme   *runtime.Scheme
-	ADSCache *xds_cache.SnapshotCache
+	ADSCache *cache_v2.SnapshotCache
 }
 
 func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
