@@ -177,7 +177,7 @@ TETS_ARTIFACTS_DIR ?= tmp/test
 $(TETS_ARTIFACTS_DIR):
 	mkdir -p $(TETS_ARTIFACTS_DIR)
 
-e2e: tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
+e2e: $(KUTTL) tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
 	$(KUTTL) test
 
 #########################3333333333#########
