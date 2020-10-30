@@ -22,6 +22,7 @@ package v1alpha1
 
 import (
 	"github.com/operator-framework/operator-lib/status"
+	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -255,6 +256,11 @@ func (in *DiscoveryServiceSpec) DeepCopyInto(out *DiscoveryServiceSpec) {
 		in, out := &in.EnabledNamespaces, &out.EnabledNamespaces
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.Resources != nil {
+		in, out := &in.Resources, &out.Resources
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
 	}
 }
 

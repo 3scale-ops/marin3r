@@ -95,7 +95,7 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 										},
 									}},
 								},
-								Resources: corev1.ResourceRequirements{},
+								Resources: ds.Resources(),
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      "server-cert",
