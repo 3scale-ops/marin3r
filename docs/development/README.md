@@ -42,7 +42,7 @@ Use `make kind-delete` to destroy the current Kind cluster.
 
 ## Running the operator out-of-cluster
 
-With the [local Kind cluster](#start-a-kind-kubernetes-cluster) running, install the CRDs in the cluster.
+With the [local Kind cluster](#starting-a-kind-kubernetes-cluster) running, install the CRDs in the cluster.
 
 ```bash
 make install
@@ -62,7 +62,7 @@ kubectl apply -f examples/e2e/discoveryservice/instance.yaml
 
 ## Running the operator in-cluster
 
-With the [local Kind cluster](#start-a-kind-kubernetes-cluster) running, use kustomize to deploy everything into the cluster:
+With the [local Kind cluster](#starting-a-kind-kubernetes-cluster) running, use kustomize to deploy everything into the cluster:
 
 ```bash
 make kind-deploy
@@ -74,7 +74,7 @@ The operator will be deployed in the `marin3r-system` namespace and will run wit
 
 In the case that you are developing functionality specific to the discovery service you can locally run the discovery service server and and envoy container running inside your local docker that connects to it.
 
-Start by running the discovery service server. The discovery service server run the EnvoyConfig and EnvoyConfigRevision controllers itself, so you need to have the [local Kind cluster](#start-a-kind-kubernetes-cluster) up and running beforehand.
+Start by running the discovery service server. The discovery service server run the EnvoyConfig and EnvoyConfigRevision controllers itself, so you need to have the [local Kind cluster](#starting-a-kind-kubernetes-cluster) up and running beforehand.
 
 ```bash
 make run-ds
