@@ -7,6 +7,5 @@ spec:
   discoveryServiceNamespace: default
   debug: true
   enabledNamespaces:
-    - test1
-    - test2
+    - default
 

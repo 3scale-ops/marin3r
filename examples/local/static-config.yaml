@@ -1,0 +1,11 @@
+# Base config for an ADS management server on 18000, admin port on 9901
+admin:
+  access_log_path: /dev/null
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 9901
+node:
+  cluster: envoy1
+  id: envoy1
+static_resources: {}

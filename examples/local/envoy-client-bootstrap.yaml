@@ -34,7 +34,7 @@ static_resources:
                   address:
                     socket_address:
                       address: marin3r.default.svc
-                      port_value: 18001
+                      port_value: 18000
       transport_socket:
         name: envoy.transport_sockets.tls
         typed_config:

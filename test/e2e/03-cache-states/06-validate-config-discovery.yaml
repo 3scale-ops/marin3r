@@ -5,4 +5,4 @@ commands:
   # of the host is reachable from the host that's running the tests
   # If the curl returns a 200 it means that the envoy sidecar has correctly picked the config
   # from the discovery service and correctly forwarding the requests to the nginx container
-  - script: curl --fail -s localhost:8080/test && kubectl -n $NAMESPACE create configmap pod-config-discovery-ok-2
+  - script: curl --fail -s localhost:1080/test && kubectl -n $NAMESPACE create configmap pod-config-discovery-ok-2
