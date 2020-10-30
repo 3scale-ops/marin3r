@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
+	"github.com/3scale/marin3r/pkg/envoy"
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoyapi_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
@@ -176,7 +177,7 @@ func TestEnvoyConfigRevisionReconciler_Reconcile(t *testing.T) {
 			if !reflect.DeepEqual(gotResult, tt.wantResult) {
 				t.Errorf("EnvoyConfigRevisionReconciler.Reconcile() = %v, want %v", gotResult, tt.wantResult)
 			}
-			if !tt.wantErr && !reflect.DeepEqual(&gotSnap, tt.wantSnap) {
+			if !tt.wantErr && !envoy.ResourcesEqual((&gotSnap).Resources, tt.wantSnap.Resources) {
 				t.Errorf("Snapshot = %v, want %v", &gotSnap, tt.wantSnap)
 			}
 			// NOTE: we are keep the same version for all resource types
@@ -600,7 +601,7 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 			}
 			if err := r.loadResources(tt.args.ctx, tt.args.name, tt.args.namespace, tt.args.serialization, tt.args.resources, field.NewPath("spec", "resources"), tt.args.snap); (err != nil) != tt.wantErr {
 				t.Errorf("EnvoyConfigRevisionReconciler.loadResources() error = %v, wantErr %v", err, tt.wantErr)
-			} else if !tt.wantErr && !reflect.DeepEqual(tt.args.snap, tt.wantSnap) {
+			} else if !tt.wantErr && !envoy.ResourcesEqual(tt.args.snap.Resources, tt.wantSnap.Resources) {
 				t.Errorf("EnvoyConfigRevisionReconciler.loadResources() got = %v, want %v", tt.args.snap, tt.wantSnap)
 			}
 		})
@@ -700,201 +701,6 @@ func Test_setResource(t *testing.T) {
 			setResource(tt.args.name, tt.args.res, tt.args.snap)
 			if !reflect.DeepEqual(tt.args.snap, tt.want) {
 				t.Errorf("setResource() = %v, want %v", tt.args.snap, tt.want)
-			}
-		})
-	}
-}
-
-func Test_snapshotIsEqual(t *testing.T) {
-	type args struct {
-		newSnap *xds_cache.Snapshot
-		oldSnap *xds_cache.Snapshot
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "Returns true if snapshot resources are equal",
-			args: args{
-				newSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-				oldSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "Returns true if snapshot resources are equal, even with different versions",
-			args: args{
-				newSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-				oldSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "Returns false, different number of resources",
-			args: args{
-				newSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-							"cluster2": &envoyapi.Cluster{Name: "cluster2"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-				oldSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "Returns false, different resource name",
-			args: args{
-				newSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-							"cluster2": &envoyapi.Cluster{Name: "cluster2"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-				oldSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"cluster1":  &envoyapi.Cluster{Name: "cluster1"},
-							"different": &envoyapi.Cluster{Name: "cluster2"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-			},
-			want: false,
-		},
-		{
-			name: "Returns false, different proto message",
-			args: args{
-				newSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-							"cluster2": &envoyapi.Cluster{Name: "cluster2"},
-						}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "aaaa", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-				oldSnap: &xds_cache.Snapshot{
-					Resources: [6]xds_cache.Resources{
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{
-							"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-							"cluster2": &envoyapi.Cluster{Name: "different"},
-						}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-						{Version: "1", Items: map[string]xds_cache_types.Resource{}},
-					},
-				},
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := snapshotIsEqual(tt.args.newSnap, tt.args.oldSnap); got != tt.want {
-				t.Errorf("snapshotIsEqual() = %v, want %v", got, tt.want)
 			}
 		})
 	}

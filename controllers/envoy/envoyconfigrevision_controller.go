@@ -30,7 +30,6 @@ import (
 	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	"github.com/golang/protobuf/proto"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	"github.com/go-logr/logr"
@@ -104,7 +103,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 
 		// Push the snapshot to the xds server cache
 		oldSnap, _ := (*r.ADSCache).GetSnapshot(nodeID)
-		if !snapshotIsEqual(snap, &oldSnap) {
+		if !envoy.ResourcesEqual(snap.Resources, (&oldSnap).Resources) {
 			// TODO: check snapshot consistency using "snap.Consistent()". Consider also validating
 			// consistency between clusters and listeners, as this is not done by snap.Consistent()
 			// because listeners and clusters are not requested by name by the envoy gateways
@@ -340,35 +339,6 @@ func setResource(name string, res xds_cache_types.Resource, snap *xds_cache.Snap
 		snap.Resources[xds_cache_types.Runtime].Items[name] = o
 
 	}
-}
-
-func snapshotIsEqual(newSnap, oldSnap *xds_cache.Snapshot) bool {
-
-	// Check resources are equal for each resource type
-	for rtype, newResources := range newSnap.Resources {
-		oldResources := oldSnap.Resources[rtype]
-
-		// If lenght is not equal, resources are not equal
-		if len(oldResources.Items) != len(newResources.Items) {
-			return false
-		}
-
-		for name, oldValue := range oldResources.Items {
-
-			newValue, ok := newResources.Items[name]
-
-			// If some key does not exist, resources are not equal
-			if !ok {
-				return false
-			}
-
-			// If value has changed, resources are not equal
-			if !proto.Equal(oldValue, newValue) {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 func calculateSecretsHash(resources map[string]xds_cache_types.Resource) string {
