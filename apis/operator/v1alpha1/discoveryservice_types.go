@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/operator-framework/operator-lib/status"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -48,6 +49,12 @@ type DiscoveryServiceSpec struct {
 	// use since secret data is never shown in the logs.
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	Debug bool `json:"debug,omitempty"`
+	// Resources holds the Resource Requirements to use for the discovery service
+	// Deployment. When not set it defaults to no resource requests nor limits.
+	// CPU and Memory resources are supported.
+	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // DiscoveryServiceStatus defines the observed state of DiscoveryService
@@ -74,6 +81,17 @@ type DiscoveryService struct {
 
 	Spec   DiscoveryServiceSpec   `json:"spec,omitempty"`
 	Status DiscoveryServiceStatus `json:"status,omitempty"`
+}
+
+func (d *DiscoveryService) Resources() corev1.ResourceRequirements {
+	if d.Spec.Resources == nil {
+		return d.defaultDeploymentResources()
+	}
+	return *d.Spec.Resources
+}
+
+func (d *DiscoveryService) defaultDeploymentResources() corev1.ResourceRequirements {
+	return corev1.ResourceRequirements{}
 }
 
 // +kubebuilder:object:root=true

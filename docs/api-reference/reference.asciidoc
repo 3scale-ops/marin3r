@@ -463,6 +463,7 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 | *`enabledNamespaces`* __string array__ | EnabledNamespaces is a list of namespaces where the envoy discovery service is enabled. In order to be able to use marin3r from a given namespace its name needs to be included in this list because the operator needs to add some required resources in that namespace.
 | *`image`* __string__ | Image holds the image to use for the discovery service Deployment
 | *`debug`* __boolean__ | Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
+| *`resources`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#resourcerequirements-v1-core[$$ResourceRequirements$$]__ | Resources holds the Resource Requirements to use for the discovery service Deployment. When not set it defaults to no resource requests nor limits. CPU and Memory resources are supported.
 |===
 
 

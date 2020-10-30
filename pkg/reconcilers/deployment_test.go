@@ -9,7 +9,9 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -225,7 +227,23 @@ func TestDeploymentReconciler_reconcileDeployment(t *testing.T) {
 								CreationTimestamp: metav1.Time{},
 								Labels:            map[string]string{"key1": "value1"},
 							},
-							Spec: corev1.PodSpec{},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									corev1.Container{
+										Name: "container1",
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("1000m"),
+												v1.ResourceMemory: resource.MustParse("200Mi"),
+											},
+											Limits: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("2000m"),
+												v1.ResourceMemory: resource.MustParse("400Mi"),
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
@@ -247,12 +265,89 @@ func TestDeploymentReconciler_reconcileDeployment(t *testing.T) {
 								CreationTimestamp: metav1.Time{},
 								Labels:            map[string]string{"key1": "value1"},
 							},
-							Spec: corev1.PodSpec{},
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									corev1.Container{
+										Name: "container2",
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("2000m"),
+												v1.ResourceMemory: resource.MustParse("600Mi"),
+											},
+											Limits: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("4000m"),
+												v1.ResourceMemory: resource.MustParse("800Mi"),
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			want:    true,
+			wantErr: false,
+		},
+		{
+			name: "No reconciliation performed when Resources are semantically equal",
+			args: args{
+				existentObj: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aaaa",
+						Namespace: "aaaa",
+					},
+					Spec: appsv1.DeploymentSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									corev1.Container{
+										Name: "container1",
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("1000m"),
+												v1.ResourceMemory: resource.MustParse("2048Mi"),
+											},
+											Limits: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("2000m"),
+												v1.ResourceMemory: resource.MustParse("4096Mi"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				desiredObj: &appsv1.Deployment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "aaaa",
+						Namespace: "aaaa",
+					},
+					Spec: appsv1.DeploymentSpec{
+						Template: corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									corev1.Container{
+										Name: "container1",
+										Resources: corev1.ResourceRequirements{
+											Requests: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("1"),
+												v1.ResourceMemory: resource.MustParse("2Gi"),
+											},
+											Limits: corev1.ResourceList{
+												v1.ResourceCPU:    resource.MustParse("2"),
+												v1.ResourceMemory: resource.MustParse("4Gi"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want:    false,
 			wantErr: false,
 		},
 		{
