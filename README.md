@@ -517,6 +517,10 @@ The marin3r mutating admission webhook will inject envoy containers in any pod a
 | marin3r.3scale.net/tls-volume         | the pod volume where the marin3r client certificate will be mounted.                                                        | envoy-sidecar-tls         |
 | marin3r.3scale.net/client-certificate | the marin3r client certificate to use to authenticate to the marin3r control plane (marin3r uses mTLS))                     | envoy-sidecar-client-cert |
 | marin3r.3scale.net/envoy-extra-args   | extra command line arguments to pass to the envoy sidecar container                                                         | ""                        |
+| marin3r.3scale.net/resources.limits.cpu   | envoy sidecar container resource cpu limits. See [syntax format](https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#quantity-resource-core) to specify the resource quantity | N/A |
+| marin3r.3scale.net/resources.limits.memory | envoy sidecar container resource memory limits. See [syntax format](https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#quantity-resource-core) to specify the resource quantity | N/A |
+| marin3r.3scale.net/resources.requests.cpu | envoy sidecar container resource cpu requests. See [syntax format](https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#quantity-resource-core) to specify the resource quantity | N/A |
+| marin3r.3scale.net/resources.requests.memory | envoy sidecar container resource memory requests. See [syntax format](https://v1-17.docs.kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#quantity-resource-core) to specify the resource quantity | N/A |
 
 <!-- omit in toc -->
 #### `marin3r.3scale.net/ports` syntax

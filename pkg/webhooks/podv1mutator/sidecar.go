@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 type parameter struct {
@@ -42,6 +43,16 @@ const (
 	paramTLSVolume         = "tls-volume"
 	paramClientCertificate = "client-certificate"
 	paramEnvoyExtraArgs    = "envoy-extra-args"
+
+	// Annotations to allow definition of container resource requests
+	// and limits for CPU and Memory. For this annitations, a non-existing
+	// annotation key means no request/limit is enforced. An existing
+	// annotation key defined with the empty string will make the operator
+	// return an error
+	paramResourceRequestsCPU    = "resources.requests.cpu"
+	paramResourceRequestsMemory = "resources.requests.memory"
+	paramResourceLimitsCPU      = "resources.limits.cpu"
+	paramResourceLimitsMemory   = "resources.limits.memory"
 
 	// default values
 	DefaultContainerName       = "envoy-sidecar"
@@ -71,6 +82,12 @@ type envoySidecarConfig struct {
 	configVolume     string
 	clientCertSecret string
 	extraArgs        string
+	resources        corev1.ResourceRequirements
+}
+
+func lookupMarin3rAnnotation(key string, annotations map[string]string) (string, bool) {
+	value, ok := annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, key)]
+	return value, ok
 }
 
 func getStringParam(key string, annotations map[string]string) string {
@@ -125,7 +142,62 @@ func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]st
 	esc.clientCertSecret = getStringParam(paramClientCertificate, annotations)
 	esc.extraArgs = getStringParam(paramEnvoyExtraArgs, annotations)
 
+	resources, err := getContainerResourceRequirements(annotations)
+	if err != nil {
+		return err
+	}
+	esc.resources = resources
+
 	return nil
+}
+
+func getContainerResourceRequirements(annotations map[string]string) (corev1.ResourceRequirements, error) {
+	var res corev1.ResourceRequirements
+	strCPURequests, okCPURequests := lookupMarin3rAnnotation(paramResourceRequestsCPU, annotations)
+	strMemoryRequests, okMemoryRequests := lookupMarin3rAnnotation(paramResourceRequestsMemory, annotations)
+	strCPULimits, okCPULimits := lookupMarin3rAnnotation(paramResourceLimitsCPU, annotations)
+	strMemoryLimits, okMemoryLimits := lookupMarin3rAnnotation(paramResourceLimitsMemory, annotations)
+
+	if okCPURequests || okMemoryRequests {
+		res.Requests = corev1.ResourceList{}
+	}
+	if okCPULimits || okMemoryLimits {
+		res.Limits = corev1.ResourceList{}
+	}
+
+	if okCPURequests {
+		cpuRequests, err := resource.ParseQuantity(strCPURequests)
+		if err != nil {
+			return corev1.ResourceRequirements{}, err
+		}
+		res.Requests[corev1.ResourceCPU] = cpuRequests
+	}
+
+	if okMemoryRequests {
+		memoryRequests, err := resource.ParseQuantity(strMemoryRequests)
+		if err != nil {
+			return corev1.ResourceRequirements{}, err
+		}
+		res.Requests[corev1.ResourceMemory] = memoryRequests
+	}
+
+	if okCPULimits {
+		cpuLimits, err := resource.ParseQuantity(strCPULimits)
+		if err != nil {
+			return corev1.ResourceRequirements{}, err
+		}
+		res.Limits[corev1.ResourceCPU] = cpuLimits
+	}
+
+	if okMemoryLimits {
+		memoryLimits, err := resource.ParseQuantity(strMemoryLimits)
+		if err != nil {
+			return corev1.ResourceRequirements{}, err
+		}
+		res.Limits[corev1.ResourceMemory] = memoryLimits
+	}
+
+	return res, nil
 }
 
 // port spec format is "name:port[:protocol],name:port[:protcol]"
@@ -238,7 +310,8 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 			"--service-cluster",
 			esc.clusterID,
 		},
-		Ports: esc.ports,
+		Resources: esc.resources,
+		Ports:     esc.ports,
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      esc.tlsVolume,
