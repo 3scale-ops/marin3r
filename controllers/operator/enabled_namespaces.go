@@ -194,7 +194,7 @@ func (r *DiscoveryServiceReconciler) getBootstrapConfigMapObject(namespace strin
 		return nil, err
 	}
 
-	tlsConfig, err := envoy_config_v2.GenerateTlsCertificateSdsConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
+	tlsConfig, err := envoy_config_v2.GenerateTLSCertificateSdsConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
 	if err != nil {
 		return nil, err
 	}

@@ -143,7 +143,9 @@ func GenerateBootstrapConfig(host string, port uint32) (string, error) {
 	return string(json.Bytes()), nil
 }
 
-func GenerateTlsCertificateSdsConfig(host string, port uint32) (string, error) {
+// GenerateTLSCertificateSdsConfig generates the envoy static config required for
+// filesystem discovery of certificates.
+func GenerateTLSCertificateSdsConfig(host string, port uint32) (string, error) {
 
 	tlsCertificate := &envoy_api_v2_auth.Secret{
 		Type: &envoy_api_v2_auth.Secret_TlsCertificate{

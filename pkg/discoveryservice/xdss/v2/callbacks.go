@@ -24,7 +24,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
+// Callbacks is a type that implements "go-control-plane/pkg/server/".Callbacks
 type Callbacks struct {
 	OnError       func(nodeID, previousVersion, msg string) error
 	SnapshotCache *cache_v2.SnapshotCache

@@ -46,13 +46,18 @@ const (
 	grpcKeepaliveEnforcementPolicyPermitWithoutStream = false
 )
 
+// EnvoyAPIVersion is an enum with the supported envoy
+// API versions
 type EnvoyAPIVersion string
 
 const (
+	// EnvoyAPIV2 is the envoy v2 API version.
 	EnvoyAPIV2 EnvoyAPIVersion = "v2"
+	// EnvoyAPIV3 is the envoy v2 API version.
 	EnvoyAPIV3 EnvoyAPIVersion = "v3"
 )
 
+// XdsServer in an interface that any xDS server should implement
 type XdsServer interface {
 	Start(<-chan struct{}) error
 	GetCache(EnvoyAPIVersion) xdss.Cache
@@ -189,9 +194,8 @@ func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
 func (xdss *DualXdsServer) GetCache(version EnvoyAPIVersion) xdss.Cache {
 	if version == EnvoyAPIV2 {
 		return xdss_v2.NewCache(xdss.snapshotCacheV2)
-	} else {
-		return xdss_v3.NewCache(xdss.snapshotCacheV3)
 	}
+	return xdss_v3.NewCache(xdss.snapshotCacheV3)
 }
 
 type clogger struct {
