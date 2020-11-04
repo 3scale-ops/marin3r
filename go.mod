@@ -10,8 +10,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/golang/protobuf v1.4.2
 	github.com/operator-framework/operator-lib v0.1.0
-	go.uber.org/zap v1.14.1
-	golang.org/x/net v0.0.0-20200520004742-59133d7f0dd7
+	go.uber.org/zap v1.14.1 // indirect
 	google.golang.org/genproto v0.0.0-20200701001935-0939c5918c31
 	google.golang.org/grpc v1.30.0
 	k8s.io/api v0.18.6
