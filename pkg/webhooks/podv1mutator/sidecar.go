@@ -103,7 +103,7 @@ func getStringParam(key string, annotations map[string]string) string {
 	}
 
 	// return the value specified in the corresponding annotation, if any
-	if value, ok := annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, key)]; ok {
+	if value, ok := lookupMarin3rAnnotation(key, annotations); ok {
 		return value
 	}
 
@@ -121,7 +121,8 @@ func getStringParam(key string, annotations map[string]string) string {
 func getNodeID(annotations map[string]string) string {
 	// the node-id annotation is always present, otherwise
 	// mutation won't even be triggered
-	return annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID)]
+	res, _ := lookupMarin3rAnnotation(paramNodeID, annotations)
+	return res
 }
 
 func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
@@ -204,8 +205,7 @@ func getContainerResourceRequirements(annotations map[string]string) (corev1.Res
 func getContainerPorts(annotations map[string]string) ([]corev1.ContainerPort, error) {
 	plist := []corev1.ContainerPort{}
 
-	if ports, ok := annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramPorts)]; ok {
-
+	if ports, ok := lookupMarin3rAnnotation(paramPorts, annotations); ok {
 		for _, containerPort := range strings.Split(ports, ",") {
 
 			p, err := parsePortSpec(containerPort)
@@ -264,7 +264,7 @@ func parsePortSpec(spec string) (*corev1.ContainerPort, error) {
 
 func hostPortMapping(portName string, annotations map[string]string) (int32, error) {
 
-	if specs, ok := annotations[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramHostPortMapings)]; ok {
+	if specs, ok := lookupMarin3rAnnotation(paramHostPortMapings, annotations); ok {
 		for _, spec := range strings.Split(specs, ",") {
 			params := strings.Split(spec, ":")
 			if len(params) != 2 {
