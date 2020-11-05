@@ -1,6 +1,6 @@
 # Operator
 
-The operator part of marin3r is a group of controllers that manage the deployment and lifecycle of all the other components. It is composed by three diferent controllers:
+The operator part of marin3r is a group of controllers that manage the deployment and lifecycle of all the other components. It is composed by three different controllers:
 
 * DiscoveryService controller
 * DiscoveryServiceCertificate controller
