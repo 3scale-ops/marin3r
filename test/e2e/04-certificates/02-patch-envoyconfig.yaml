@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # Add the reference to the secret in the envoy config
+  - script: kubectl -n $NAMESPACE patch envoyconfig --type merge proxy-config --patch "{\"spec\":{\"envoyResources\":{\"secrets\":[{\"name\":\"envoy1.defaul.svc\",\"ref\":{\"name\":\"envoy1-cert\", \"namespace\":\"$NAMESPACE\"}}]}}}"
+
