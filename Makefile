@@ -258,7 +258,14 @@ grpc-proxy: certs
 #### refdocs generation ####
 ############################
 
-refdocs: ## Generates api reference documentation from code. Requires https://github.com/elastic/crd-ref-docs binary to be present in the PATH
+CRD_REFDOCS_VERSION := v0.0.5
+CRD_REFDOCS := bin/crd-ref-docs
+$(CRD_REFDOCS):
+		mkdir -p $$(dirname $@)
+		curl -sLo $(CRD_REFDOCS) https://github.com/elastic/crd-ref-docs/releases/download/$(CRD_REFDOCS_VERSION)/crd-ref-docs
+		chmod +x $(CRD_REFDOCS)
+
+refdocs: $(CRD_REFDOCS) ## Generates api reference documentation from code
 	crd-ref-docs \
 		--source-path=apis \
 		--config=docs/api-reference/config.yaml \
