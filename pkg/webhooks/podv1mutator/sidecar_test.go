@@ -1,10 +1,13 @@
 package podv1mutator
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
@@ -22,17 +25,21 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 			"Populate '*envoySidecarConfig' from annotations",
 			&envoySidecarConfig{},
 			args{map[string]string{
-				"marin3r.3scale.net/node-id":            "node-id",
-				"marin3r.3scale.net/ports":              "xxxx:1111",
-				"marin3r.3scale.net/host-port-mappings": "xxxx:3000",
-				"marin3r.3scale.net/container-name":     "container",
-				"marin3r.3scale.net/envoy-image":        "image",
-				"marin3r.3scale.net/ads-configmap":      "cm",
-				"marin3r.3scale.net/cluster-id":         "cluster-id",
-				"marin3r.3scale.net/config-volume":      "config-volume",
-				"marin3r.3scale.net/tls-volume":         "tls-volume",
-				"marin3r.3scale.net/client-certificate": "client-cert",
-				"marin3r.3scale.net/envoy-extra-args":   "--log-level debug",
+				"marin3r.3scale.net/node-id":                                                "node-id",
+				"marin3r.3scale.net/ports":                                                  "xxxx:1111",
+				"marin3r.3scale.net/host-port-mappings":                                     "xxxx:3000",
+				"marin3r.3scale.net/container-name":                                         "container",
+				"marin3r.3scale.net/envoy-image":                                            "image",
+				"marin3r.3scale.net/ads-configmap":                                          "cm",
+				"marin3r.3scale.net/cluster-id":                                             "cluster-id",
+				"marin3r.3scale.net/config-volume":                                          "config-volume",
+				"marin3r.3scale.net/tls-volume":                                             "tls-volume",
+				"marin3r.3scale.net/client-certificate":                                     "client-cert",
+				"marin3r.3scale.net/envoy-extra-args":                                       "--log-level debug",
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsCPU):    "500m",
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsMemory): "700Mi",
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsCPU):      "1000m",
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsMemory):   "900Mi",
 			}},
 			&envoySidecarConfig{
 				name:  "container",
@@ -47,6 +54,16 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				configVolume:     "config-volume",
 				clientCertSecret: "client-cert",
 				extraArgs:        "--log-level debug",
+				resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("700Mi"),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("900Mi"),
+					},
+				},
 			},
 			false,
 		}, {
@@ -463,6 +480,86 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 				},
 			},
 		},
+		{
+			"Returns resolved container with resource requirements",
+			&envoySidecarConfig{
+				name:  "sidecar",
+				image: "sidecar:latest",
+				ports: []corev1.ContainerPort{
+					{
+						Name:          "udp",
+						ContainerPort: 6000,
+						Protocol:      corev1.Protocol("UDP"),
+					},
+					{
+						Name:          "https",
+						ContainerPort: 8443,
+					},
+				},
+				adsConfigMap:     "ads-configmap",
+				nodeID:           "test-id",
+				clusterID:        "cluster-id",
+				tlsVolume:        "tls-volume",
+				configVolume:     "config-volume",
+				clientCertSecret: "secret",
+				resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("700Mi"),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("900Mi"),
+					},
+				},
+			},
+			corev1.Container{
+				Name:    "sidecar",
+				Image:   "sidecar:latest",
+				Command: []string{"envoy"},
+				Args: []string{
+					"-c",
+					"/etc/envoy/bootstrap/config.json",
+					"--service-node",
+					"test-id",
+					"--service-cluster",
+					"cluster-id",
+				},
+				Resources: corev1.ResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("500m"),
+						corev1.ResourceMemory: resource.MustParse("700Mi"),
+					},
+					Limits: corev1.ResourceList{
+						corev1.ResourceCPU:    resource.MustParse("1000m"),
+						corev1.ResourceMemory: resource.MustParse("900Mi"),
+					},
+				},
+				Ports: []corev1.ContainerPort{
+					{
+						Name:          "udp",
+						ContainerPort: 6000,
+						Protocol:      corev1.Protocol("UDP"),
+					},
+					{
+						Name:          "https",
+						ContainerPort: 8443,
+					},
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      "tls-volume",
+						ReadOnly:  true,
+						MountPath: "/etc/envoy/tls/client",
+					},
+					{
+						Name:      "config-volume",
+						ReadOnly:  true,
+						MountPath: "/etc/envoy/bootstrap",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -577,4 +674,182 @@ func Test_envoySidecarConfig_volumes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_lookupMarin3rAnnotation(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+		key         string
+	}
+
+	tests := []struct {
+		name   string
+		args   args
+		want   string
+		wantOk bool
+	}{
+		{
+			"Marin3r annotation exists",
+			args{
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "existingkey"): "examplevalue",
+				},
+				key: "existingkey",
+			},
+			"examplevalue",
+			true,
+		},
+		{
+			"Marin3r annotation exists and is empty",
+			args{
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "existingkey"): "",
+				},
+				key: "existingkey",
+			},
+			"",
+			true,
+		},
+		{
+			"Marin3r annotation does not exist",
+			args{
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "existingkey"): "myval",
+				},
+				key: "unexistingkey",
+			},
+			"",
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := lookupMarin3rAnnotation(tt.args.key, tt.args.annotations)
+			if ok != tt.wantOk {
+				t.Errorf("lookupMarin3rAnnotation() ok = %v, wantOk %v", got, tt.wantOk)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("lookupMarin3rAnnotation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getContainerResourceRequirements(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    corev1.ResourceRequirements
+		wantErr bool
+	}{
+		{
+			"No resource requirement annotations",
+			args{map[string]string{}},
+			corev1.ResourceRequirements{},
+			false,
+		},
+		{
+			"invalid resource requirement annotation value",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsMemory): "invalidMemoryValue",
+			}},
+			corev1.ResourceRequirements{},
+			true,
+		},
+		{
+			"resource requirement annotation set but invalid empty value",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsCPU): "",
+			}},
+			corev1.ResourceRequirements{},
+			true,
+		},
+		{
+			"resource cpu request set",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsCPU): "100m",
+			}},
+			corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU: resource.MustParse("100m"),
+				},
+			},
+			false,
+		},
+		{
+			"resource cpu limit set",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsCPU): "200m",
+			}},
+			corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU: resource.MustParse("200m"),
+				},
+			},
+			false,
+		},
+		{
+			"resource memory request set",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsMemory): "100Mi",
+			}},
+			corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+			},
+			false,
+		},
+		{
+			"resource memory limit set",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsMemory): "200Mi",
+			}},
+			corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("200Mi"),
+				},
+			},
+			false,
+		},
+		{
+			"resource requests and limits set",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsCPU):    "500m",
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsMemory): "700Mi",
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsCPU):      "1000m",
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsMemory):   "900Mi",
+			}},
+			corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+					corev1.ResourceMemory: resource.MustParse("700Mi"),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("900Mi"),
+				},
+			},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getContainerResourceRequirements(tt.args.annotations)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getContainerResourceRequirements() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !equality.Semantic.DeepEqual(got, tt.want) {
+				t.Errorf("getContainerResourceRequirements() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+
 }
