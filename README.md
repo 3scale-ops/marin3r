@@ -534,13 +534,9 @@ For an in-depth look at how marin3r works, check the [design docs](/docs/design)
 
 ### [Discovery service](/docs/design/discovery-service.md)
 
-### Sidecar injection
+### [Sidecar injection](/docs/design/sidecar-injection.md)
 
-TODO
-
-### Operator
-
-TODO
+### [Operator](/docs/design/operator.md)
 
 ## **Development**
 
