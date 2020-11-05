@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	"github.com/3scale/marin3r/pkg/envoy"
+	envoy_config_v2 "github.com/3scale/marin3r/pkg/envoy/config/v2"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 
 	corev1 "k8s.io/api/core/v1"
@@ -189,12 +189,12 @@ func (r *DiscoveryServiceReconciler) getClientCertObject(namespace string) *oper
 
 func (r *DiscoveryServiceReconciler) getBootstrapConfigMapObject(namespace string) (*corev1.ConfigMap, error) {
 
-	config, err := envoy.GenerateBootstrapConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
+	config, err := envoy_config_v2.GenerateBootstrapConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
 	if err != nil {
 		return nil, err
 	}
 
-	tlsConfig, err := envoy.GenerateTlsCertificateSdsConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
+	tlsConfig, err := envoy_config_v2.GenerateTLSCertificateSdsConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
 	if err != nil {
 		return nil, err
 	}

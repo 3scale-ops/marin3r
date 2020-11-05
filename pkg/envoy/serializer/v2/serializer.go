@@ -5,18 +5,18 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
-	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 
-	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 
-	_ "github.com/cncf/udpa/go/udpa/annotations"
-	_ "github.com/envoyproxy/go-control-plane/envoy/annotations"
+	// _ "github.com/cncf/udpa/go/udpa/annotations"
+	// _ "github.com/envoyproxy/go-control-plane/envoy/annotations"
 
 	// the list of config imports have been generated executing the following command
 	// in the go-control-plane repo:
@@ -79,8 +79,8 @@ import (
 // Resources is a struct that holds the different envoy resources types
 // so it can be deserialized directly from the yaml representation
 type Resources struct {
-	Clusters  []*envoyapi.Cluster  `protobuf:"bytes,2,rep,name=clusters,json=clusters" json:"clusters"`
-	Listeners []*envoyapi.Listener `protobuf:"bytes,4,rep,name=listeners,json=listeners" json:"listeners"`
+	Clusters  []*envoy_api_v2.Cluster  `protobuf:"bytes,2,rep,name=clusters,json=clusters" json:"clusters"`
+	Listeners []*envoy_api_v2.Listener `protobuf:"bytes,4,rep,name=listeners,json=listeners" json:"listeners"`
 }
 
 // Reset is noop function for resFromFile to implement protobuf interface
@@ -121,16 +121,16 @@ func ResourcesToJSON(pb proto.Message) ([]byte, error) {
 }
 
 type ResourceMarshaller interface {
-	Marshal(xds_cache_types.Resource) (string, error)
+	Marshal(cache_types.Resource) (string, error)
 }
 
 type ResourceUnmarshaller interface {
-	Unmarshal(string, xds_cache_types.Resource) error
+	Unmarshal(string, cache_types.Resource) error
 }
 
 type JSON struct{}
 
-func (s JSON) Marshal(res xds_cache_types.Resource) (string, error) {
+func (s JSON) Marshal(res cache_types.Resource) (string, error) {
 	m := jsonpb.Marshaler{}
 
 	json := bytes.NewBuffer([]byte{})
@@ -141,27 +141,27 @@ func (s JSON) Marshal(res xds_cache_types.Resource) (string, error) {
 	return string(json.Bytes()), nil
 }
 
-func (s JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
+func (s JSON) Unmarshal(str string, res cache_types.Resource) error {
 
 	var err error
 	switch o := res.(type) {
 
-	case *envoyapi.ClusterLoadAssignment:
+	case *envoy_api_v2.ClusterLoadAssignment:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *envoyapi.Cluster:
+	case *envoy_api_v2.Cluster:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *envoyapi_route.Route:
+	case *envoy_api_v2_route.Route:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *envoyapi.Listener:
+	case *envoy_api_v2.Listener:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *envoyapi_discovery.Runtime:
+	case *envoy_service_discovery_v2.Runtime:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *envoyapi_auth.Secret:
+	case *envoy_api_v2_auth.Secret:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
 	default:
@@ -176,7 +176,7 @@ func (s JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
 
 type B64JSON struct{}
 
-func (s B64JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
+func (s B64JSON) Unmarshal(str string, res cache_types.Resource) error {
 	b, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
 		return fmt.Errorf("Error decoding base64 string: '%s'", err)
@@ -193,7 +193,7 @@ func (s B64JSON) Unmarshal(str string, res xds_cache_types.Resource) error {
 
 type YAML struct{}
 
-func (s YAML) Unmarshal(str string, res xds_cache_types.Resource) error {
+func (s YAML) Unmarshal(str string, res cache_types.Resource) error {
 	b, err := yaml.YAMLToJSON([]byte(str))
 	if err != nil {
 		return fmt.Errorf("Error converting yaml to json: '%s'", err)

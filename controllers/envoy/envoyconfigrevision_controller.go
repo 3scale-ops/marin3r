@@ -21,17 +21,18 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	common "github.com/3scale/marin3r/pkg/common"
-	"github.com/3scale/marin3r/pkg/envoy"
-
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoyapi_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoyapi_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
-	envoyapi_discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
-	xds_cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	xds_cache "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
+	common "github.com/3scale/marin3r/pkg/common"
+	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
+	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
+	envoy_resources_v2 "github.com/3scale/marin3r/pkg/envoy/resources/v2"
+	envoy_serializer_v2 "github.com/3scale/marin3r/pkg/envoy/serializer/v2"
+
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
+	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -56,7 +57,7 @@ type EnvoyConfigRevisionReconciler struct {
 	Client   client.Client
 	Log      logr.Logger
 	Scheme   *runtime.Scheme
-	ADSCache *xds_cache.SnapshotCache
+	XdsCache xdss.Cache
 }
 
 func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -84,7 +85,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 
 		nodeID := ecr.Spec.NodeID
 		version := ecr.Spec.Version
-		snap := newNodeSnapshot(nodeID, version)
+		snap := r.XdsCache.NewSnapshot(version)
 
 		// Deserialize envoy resources from the spec and create a new snapshot with them
 		if err := r.loadResources(ctx, req.Name, req.Namespace,
@@ -101,20 +102,21 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			return ctrl.Result{}, nil
 		}
 
-		// Push the snapshot to the xds server cache
-		oldSnap, _ := (*r.ADSCache).GetSnapshot(nodeID)
-		if !envoy.ResourcesEqual(snap.Resources, (&oldSnap).Resources) {
-			// TODO: check snapshot consistency using "snap.Consistent()". Consider also validating
-			// consistency between clusters and listeners, as this is not done by snap.Consistent()
-			// because listeners and clusters are not requested by name by the envoy gateways
-
-			// Publish the in-memory cache to the envoy control-plane
+		oldSnap, err := r.XdsCache.GetSnapshot(nodeID)
+		// Publish the generated snapshot when the version is different from the published one. We look specifically
+		// for the version of the "Secret" resources because secrets can change even when the spec hasn't changed.
+		// Publish the snapshot when an error retrieving the published one occurs as it means that no snpshot has already
+		// been written to the cache for that specific nodeID.
+		if snap.GetVersion(envoy_resources.Secret) != oldSnap.GetVersion(envoy_resources.Secret) || err != nil {
 			r.Log.Info("Publishing new snapshot for nodeID", "Version", version, "NodeID", nodeID)
-			if err := (*r.ADSCache).SetSnapshot(nodeID, *snap); err != nil {
+			r.Log.V(1).Info("Writting to xDS cache", "CurrentVersion", oldSnap.GetVersion(envoy_resources.Secret),
+				"NewVersion", snap.GetVersion(envoy_resources.Secret))
+			if err := r.XdsCache.SetSnapshot(nodeID, snap); err != nil {
 				return ctrl.Result{}, err
 			}
+
 		} else {
-			r.Log.Info("Generated snapshot is equal to published one, avoiding push to xds server cache", "NodeID", nodeID)
+			r.Log.V(1).Info("Generated snapshot is equal to published one, avoiding push to xds server cache", "NodeID", nodeID)
 		}
 	}
 
@@ -127,58 +129,58 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 }
 
 func (r *EnvoyConfigRevisionReconciler) loadResources(ctx context.Context, name, namespace, serialization string,
-	resources *envoyv1alpha1.EnvoyResources, resPath *field.Path, snap *xds_cache.Snapshot) error {
+	resources *envoyv1alpha1.EnvoyResources, resPath *field.Path, snap xdss.Snapshot) error {
 
-	var ds envoy.ResourceUnmarshaller
+	var ds envoy_serializer_v2.ResourceUnmarshaller
 	switch serialization {
 	case "b64json":
-		ds = envoy.B64JSON{}
+		ds = envoy_serializer_v2.B64JSON{}
 
 	case "yaml":
-		ds = envoy.YAML{}
+		ds = envoy_serializer_v2.YAML{}
 	default:
 		// "json" is the default
-		ds = envoy.JSON{}
+		ds = envoy_serializer_v2.JSON{}
 	}
 
 	for idx, endpoint := range resources.Endpoints {
-		res := &envoyapi.ClusterLoadAssignment{}
+		res := &envoy_api_v2.ClusterLoadAssignment{}
 		if err := ds.Unmarshal(endpoint.Value, res); err != nil {
 			return resourceLoaderError(name, namespace, "Endpoints", endpoint.Value, resPath, idx)
 		}
-		setResource(endpoint.Name, res, snap)
+		snap.SetResource(endpoint.Name, res)
 	}
 
 	for idx, cluster := range resources.Clusters {
-		res := &envoyapi.Cluster{}
+		res := &envoy_api_v2.Cluster{}
 		if err := ds.Unmarshal(cluster.Value, res); err != nil {
 			return resourceLoaderError(name, namespace, "Clusters", cluster.Value, resPath, idx)
 		}
-		setResource(cluster.Name, res, snap)
+		snap.SetResource(cluster.Name, res)
 	}
 
 	for idx, route := range resources.Routes {
-		res := &envoyapi_route.Route{}
+		res := &envoy_api_v2_route.Route{}
 		if err := ds.Unmarshal(route.Value, res); err != nil {
 			return resourceLoaderError(name, namespace, "Routes", route.Value, resPath, idx)
 		}
-		setResource(route.Name, res, snap)
+		snap.SetResource(route.Name, res)
 	}
 
 	for idx, listener := range resources.Listeners {
-		res := &envoyapi.Listener{}
+		res := &envoy_api_v2.Listener{}
 		if err := ds.Unmarshal(listener.Value, res); err != nil {
 			return resourceLoaderError(name, namespace, "Listeners", listener.Value, resPath, idx)
 		}
-		setResource(listener.Name, res, snap)
+		snap.SetResource(listener.Name, res)
 	}
 
 	for idx, runtime := range resources.Runtimes {
-		res := &envoyapi_discovery.Runtime{}
+		res := &envoy_service_discovery_v2.Runtime{}
 		if err := ds.Unmarshal(runtime.Value, res); err != nil {
 			return resourceLoaderError(name, namespace, "Runtimes", runtime.Value, resPath, idx)
 		}
-		setResource(runtime.Name, res, snap)
+		snap.SetResource(runtime.Name, res)
 	}
 
 	for idx, secret := range resources.Secrets {
@@ -196,8 +198,8 @@ func (r *EnvoyConfigRevisionReconciler) loadResources(ctx context.Context, name,
 
 		// Validate secret holds a certificate
 		if s.Type == "kubernetes.io/tls" {
-			res := envoy.NewSecret(secret.Name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
-			setResource(secret.Name, res, snap)
+			res := envoy_resources_v2.NewSecret(secret.Name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
+			snap.SetResource(secret.Name, res)
 		} else {
 			return errors.NewInvalid(
 				schema.GroupKind{Group: "caches", Kind: "EnvoyConfig"},
@@ -218,8 +220,11 @@ func (r *EnvoyConfigRevisionReconciler) loadResources(ctx context.Context, name,
 	// gateways as the version (the Spec.Resources hash) would be the same. To avoid this problem, we
 	// append the hash of the values of the secrets to the version of the secret resources that will
 	// only trigger secret updates in the envoy gateways when necessary
-	secretsHash := calculateSecretsHash(snap.Resources[xds_cache_types.Secret].Items)
-	snap.Resources[xds_cache_types.Secret].Version = fmt.Sprintf("%s-%s", snap.Resources[xds_cache_types.Secret].Version, secretsHash)
+	secretsHash := calculateSecretsHash(snap.GetResources(envoy_resources.Secret))
+	snap.SetVersion(
+		envoy_resources.Secret,
+		fmt.Sprintf("%s-%s", snap.GetVersion(envoy_resources.Secret), secretsHash),
+	)
 
 	return nil
 }
@@ -303,45 +308,7 @@ func (r *EnvoyConfigRevisionReconciler) updateStatus(ctx context.Context, ecr *e
 	return nil
 }
 
-func newNodeSnapshot(nodeID string, version string) *xds_cache.Snapshot {
-
-	snap := xds_cache.Snapshot{Resources: [6]xds_cache.Resources{}}
-	snap.Resources[xds_cache_types.Listener] = xds_cache.NewResources(version, []xds_cache_types.Resource{})
-	snap.Resources[xds_cache_types.Endpoint] = xds_cache.NewResources(version, []xds_cache_types.Resource{})
-	snap.Resources[xds_cache_types.Cluster] = xds_cache.NewResources(version, []xds_cache_types.Resource{})
-	snap.Resources[xds_cache_types.Route] = xds_cache.NewResources(version, []xds_cache_types.Resource{})
-	snap.Resources[xds_cache_types.Secret] = xds_cache.NewResources(version, []xds_cache_types.Resource{})
-	snap.Resources[xds_cache_types.Runtime] = xds_cache.NewResources(version, []xds_cache_types.Resource{})
-
-	return &snap
-}
-
-func setResource(name string, res xds_cache_types.Resource, snap *xds_cache.Snapshot) {
-
-	switch o := res.(type) {
-
-	case *envoyapi.ClusterLoadAssignment:
-		snap.Resources[xds_cache_types.Endpoint].Items[name] = o
-
-	case *envoyapi.Cluster:
-		snap.Resources[xds_cache_types.Cluster].Items[name] = o
-
-	case *envoyapi_route.Route:
-		snap.Resources[xds_cache_types.Route].Items[name] = o
-
-	case *envoyapi.Listener:
-		snap.Resources[xds_cache_types.Listener].Items[name] = o
-
-	case *envoyapi_auth.Secret:
-		snap.Resources[xds_cache_types.Secret].Items[name] = o
-
-	case *envoyapi_discovery.Runtime:
-		snap.Resources[xds_cache_types.Runtime].Items[name] = o
-
-	}
-}
-
-func calculateSecretsHash(resources map[string]xds_cache_types.Resource) string {
+func calculateSecretsHash(resources map[string]envoy.Resource) string {
 	resourcesHasher := fnv.New32a()
 	common.DeepHashObject(resourcesHasher, resources)
 	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
+
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -33,7 +34,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 			}}
 
 		cl := fake.NewFakeClient(ec)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, ADSCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
 		if gotErr != nil {
@@ -87,7 +88,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 			}}
 
 		cl := fake.NewFakeClient(ec, ecr)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, ADSCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
 		if gotErr != nil {
@@ -140,7 +141,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ec, ecr)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, ADSCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.consolidateRevisionList(context.TODO(), ec, "xxxx")
 		if gotErr != nil {
@@ -216,7 +217,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ec, ecr1, ecr2, ecr3)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, ADSCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.consolidateRevisionList(context.TODO(), ec, "1")
 		if gotErr != nil {
@@ -296,7 +297,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ecr1, ecr2)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, ADSCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.markRevisionPublished(context.TODO(), "node1", "2", "reason", "msg")
 		if gotErr != nil {
@@ -353,7 +354,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ecr1, ecr2)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, ADSCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.markRevisionPublished(context.TODO(), "node1", "1", "reason", "msg")
 		if gotErr != nil {

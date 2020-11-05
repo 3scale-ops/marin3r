@@ -15,22 +15,22 @@
 package envoy
 
 import (
-	auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 )
 
 // NewSecret generates a new envoy api secret struct from the given params
-func NewSecret(name, privateKey, certificateChain string) *auth.Secret {
+func NewSecret(name, privateKey, certificateChain string) *envoy_api_v2_auth.Secret {
 
-	return &auth.Secret{
+	return &envoy_api_v2_auth.Secret{
 		Name: name,
-		Type: &auth.Secret_TlsCertificate{
-			TlsCertificate: &auth.TlsCertificate{
-				PrivateKey: &core.DataSource{
-					Specifier: &core.DataSource_InlineBytes{InlineBytes: []byte(privateKey)},
+		Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+			TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+				PrivateKey: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte(privateKey)},
 				},
-				CertificateChain: &core.DataSource{
-					Specifier: &core.DataSource_InlineBytes{InlineBytes: []byte(certificateChain)},
+				CertificateChain: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte(certificateChain)},
 				},
 			},
 		},
