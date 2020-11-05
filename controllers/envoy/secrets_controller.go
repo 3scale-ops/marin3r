@@ -28,6 +28,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -103,8 +105,37 @@ func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return reconcile.Result{}, nil
 }
 
+func filterTLSTypeCertificatesPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			switch o := e.Object.(type) {
+			case *corev1.Secret:
+				if o.Type == "kubernetes.io/tls" {
+					return true
+				}
+				return false
+
+			default:
+				return true
+			}
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			switch o := e.ObjectNew.(type) {
+			case *corev1.Secret:
+				if o.Type == "kubernetes.io/tls" {
+					return true
+				}
+				return false
+			default:
+				return true
+			}
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool { return false },
+	}
+}
+
 func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Secret{}).
+	return ctrl.NewControllerManagedBy(mgr).For(&corev1.Secret{}).
+		WithEventFilter(filterTLSTypeCertificatesPredicate()).
 		Complete(r)
 }
