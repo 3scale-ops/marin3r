@@ -24,6 +24,7 @@ import (
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	server_v2 "github.com/envoyproxy/go-control-plane/pkg/server/v2"
@@ -46,21 +47,10 @@ const (
 	grpcKeepaliveEnforcementPolicyPermitWithoutStream = false
 )
 
-// EnvoyAPIVersion is an enum with the supported envoy
-// API versions
-type EnvoyAPIVersion string
-
-const (
-	// EnvoyAPIV2 is the envoy v2 API version.
-	EnvoyAPIV2 EnvoyAPIVersion = "v2"
-	// EnvoyAPIV3 is the envoy v2 API version.
-	EnvoyAPIV3 EnvoyAPIVersion = "v3"
-)
-
 // XdsServer in an interface that any xDS server should implement
 type XdsServer interface {
 	Start(<-chan struct{}) error
-	GetCache(EnvoyAPIVersion) xdss.Cache
+	GetCache(envoy.APIVersion) xdss.Cache
 }
 
 type onErrorFn func(nodeID, previousVersion, msg string) error
@@ -191,8 +181,8 @@ func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
 }
 
 // GetCache returns the Cache
-func (xdss *DualXdsServer) GetCache(version EnvoyAPIVersion) xdss.Cache {
-	if version == EnvoyAPIV2 {
+func (xdss *DualXdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
+	if version == envoy.APIv2 {
 		return xdss_v2.NewCache(xdss.snapshotCacheV2)
 	}
 	return xdss_v3.NewCache(xdss.snapshotCacheV3)

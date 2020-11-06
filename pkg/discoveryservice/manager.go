@@ -11,8 +11,8 @@ import (
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	envoycontroller "github.com/3scale/marin3r/controllers/envoy"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	util_runtime "k8s.io/apimachinery/pkg/util/runtime"
@@ -110,7 +110,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("envoyconfig"),
 		Scheme:   mgr.GetScheme(),
-		XdsCache: xdss.GetCache(EnvoyAPIV2),
+		XdsCache: xdss.GetCache(envoy.APIv2),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "envoyconfig")
 		os.Exit(1)
@@ -120,7 +120,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 		Client:   mgr.GetClient(),
 		Log:      ctrl.Log.WithName("controllers").WithName("envoyconfigrevision"),
 		Scheme:   mgr.GetScheme(),
-		XdsCache: xdss.GetCache(EnvoyAPIV2),
+		XdsCache: xdss.GetCache(envoy.APIv2),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "envoyconfigrevision")
 		os.Exit(1)

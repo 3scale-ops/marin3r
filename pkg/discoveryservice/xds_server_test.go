@@ -24,6 +24,7 @@ import (
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	server_v2 "github.com/envoyproxy/go-control-plane/pkg/server/v2"
@@ -111,7 +112,7 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 		name    string
 		xdss    *DualXdsServer
 		want    xdss.Cache
-		version EnvoyAPIVersion
+		version envoy.APIVersion
 	}{
 		{
 			"Gets the server's Cache",
@@ -127,7 +128,7 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
 			},
 			xdss_v2.NewCache(snapshotCacheV2),
-			EnvoyAPIV2,
+			envoy.APIv2,
 		},
 		{
 			"Gets the server's Cache",
@@ -143,7 +144,7 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
 			},
 			xdss_v3.NewCache(snapshotCacheV3),
-			EnvoyAPIV3,
+			envoy.APIv3,
 		},
 	}
 	for _, tt := range tests {
