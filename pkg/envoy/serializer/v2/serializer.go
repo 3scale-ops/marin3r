@@ -15,17 +15,20 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 
-	// _ "github.com/cncf/udpa/go/udpa/annotations"
-	// _ "github.com/envoyproxy/go-control-plane/envoy/annotations"
-
-	// the list of config imports have been generated executing the following command
-	// in the go-control-plane repo:
+	// This is the list of imports so all proto types are registered.
+	// Generated with the following command in go-control-plane@v0.9.7
 	//
-	// for pkg in $(dirname $(grep -R -l "package envoy_config") | egrep -v "v2alpha|v3|v1"); \
-	//   do echo "_ \"github.com/envoyproxy/go-control-plane/${pkg}\""; done
+	// for proto in $(find envoy -name '*.pb.go' | grep v2 | grep -v v2alpha); do echo "_ \"github.com/envoyproxy/go-control-plane/$(dirname $proto)\""; done | sort | uniq
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/cluster"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/ratelimit"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v2"
-	_ "github.com/envoyproxy/go-control-plane/envoy/config/cluster/redis"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/filter/accesslog/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/filter/fault/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/filter/http/buffer/v2"
@@ -71,9 +74,19 @@ import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/omit_canary_hosts/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/omit_host_metadata/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/previous_hosts/v2"
-	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/previous_priorities"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/trace/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/transport_socket/raw_buffer/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/load_stats/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/metrics/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/status/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/trace/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v2"
 )
 
 // Resources is a struct that holds the different envoy resources types
