@@ -3,7 +3,7 @@ module github.com/3scale/marin3r
 go 1.13
 
 require (
-	github.com/cncf/udpa/go v0.0.0-20201001150855-7e6fe0510fb5
+	github.com/cncf/udpa/go v0.0.0-20201001150855-7e6fe0510fb5 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.9.7
 	github.com/ghodss/yaml v1.0.0
