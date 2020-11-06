@@ -1,7 +1,6 @@
 package envoy
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
@@ -179,32 +178,6 @@ var (
 				"static_layer_0": {Kind: &_struct.Value_StringValue{StringValue: "value"}},
 			}}}
 )
-
-func TestResourcesToJSON(t *testing.T) {
-	type args struct {
-		pb proto.Message
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []byte
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := ResourcesToJSON(tt.args.pb)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ResourcesToJSON() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ResourcesToJSON() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
 func TestJSON_Marshal(t *testing.T) {
 	type args struct {

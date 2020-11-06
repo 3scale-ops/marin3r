@@ -18,7 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	envoy_serializer_v2 "github.com/3scale/marin3r/pkg/envoy/serializer/v2"
+	"github.com/3scale/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/go-logr/logr"
@@ -74,7 +75,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.D
 func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_service_discovery_v3.DiscoveryRequest, rsp *envoy_service_discovery_v3.DiscoveryResponse) {
 	resources := []string{}
 	for _, r := range rsp.Resources {
-		j, _ := envoy_serializer_v2.ResourcesToJSON(r)
+		j, _ := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoy.APIv3).Marshal(r)
 		resources = append(resources, string(j))
 	}
 	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v3.auth.Secret" {

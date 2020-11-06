@@ -13,7 +13,6 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
 
 	// This is the list of imports so all proto types are registered.
 	// Generated with the following command in go-control-plane@v0.9.7
@@ -88,27 +87,6 @@ import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v2"
 )
-
-// ResourcesToJSON serializes a protobuf message into
-// a json string
-func ResourcesToJSON(pb proto.Message) ([]byte, error) {
-	m := jsonpb.Marshaler{}
-
-	json := bytes.NewBuffer([]byte{})
-	err := m.Marshal(json, pb)
-	if err != nil {
-		return []byte{}, err
-	}
-	return json.Bytes(), nil
-}
-
-type ResourceMarshaller interface {
-	Marshal(envoy.Resource) (string, error)
-}
-
-type ResourceUnmarshaller interface {
-	Unmarshal(string, envoy.Resource) error
-}
 
 type JSON struct{}
 
