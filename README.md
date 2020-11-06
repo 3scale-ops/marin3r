@@ -29,6 +29,8 @@ Lighweight, CRD based envoy control plane for kubernetes:
   - [**EnvoyConfig custom resource**](#envoyconfig-custom-resource)
   - [**Secrets**](#secrets)
   - [**Sidecar injection configuration**](#sidecar-injection-configuration)
+- [**Use cases**](#use-cases)
+  - [**Ratelimit**](#ratelimit)
 - [**Design docs**](#design-docs)
   - [**Discovery service**](#discovery-service)
   - [**Sidecar injection**](#sidecar-injection)
@@ -531,6 +533,10 @@ The `port` syntax is a comma-separated list of `name:port[:protocol]` as in `"en
 #### `marin3r.3scale.net/host-port-mappings` syntax
 
 The `host-port-mappings` syntax is a comma-separated list of `container-port-name:host-port-number` as in `"envoy-http:1080,envoy-https:1443"`.
+
+## **Use cases**
+
+### [**Ratelimit**](/docs/use-cases/ratelimit/README.md)
 
 ## **Design docs**
 
