@@ -4,12 +4,12 @@ import (
 	"github.com/3scale/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 	envoy_resources_v3 "github.com/3scale/marin3r/pkg/envoy/resources/v3"
-	envoy_config_bootstrap_v3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
 
@@ -55,7 +55,7 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 	case *envoy_extensions_transport_sockets_tls_v3.Secret:
 		s.v3.Resources[v3CacheResources(envoy_resources.Secret)].Items[name] = o
 
-	case *envoy_config_bootstrap_v3.Runtime:
+	case *envoy_service_runtime_v3.Runtime:
 		s.v3.Resources[v3CacheResources(envoy_resources.Runtime)].Items[name] = o
 	}
 }
