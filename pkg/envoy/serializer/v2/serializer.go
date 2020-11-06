@@ -89,37 +89,6 @@ import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v2"
 )
 
-// Resources is a struct that holds the different envoy resources types
-// so it can be deserialized directly from the yaml representation
-type Resources struct {
-	Clusters  []*envoy_api_v2.Cluster  `protobuf:"bytes,2,rep,name=clusters,json=clusters" json:"clusters"`
-	Listeners []*envoy_api_v2.Listener `protobuf:"bytes,4,rep,name=listeners,json=listeners" json:"listeners"`
-}
-
-// Reset is noop function for resFromFile to implement protobuf interface
-func (m *Resources) Reset() { *m = Resources{} }
-
-// String is noop function for resFromFile to implement protobuf interface
-func (m *Resources) String() string { return proto.CompactTextString(m) }
-
-// ProtoMessage is noop function for resFromFile to implement protobuf interface
-func (*Resources) ProtoMessage() {}
-
-// YAMLtoResources -> DeserializeYAML([]byte(configMap.Data["config.yaml"]))
-func YAMLtoResources(data []byte) (*Resources, error) {
-	j, err := yaml.YAMLToJSON(data)
-	if err != nil {
-		return nil, fmt.Errorf("Error converting yaml to json: '%s'", err)
-	}
-
-	res := &Resources{}
-	if err := jsonpb.Unmarshal(bytes.NewReader(j), res); err != nil {
-		return nil, fmt.Errorf("Error deserializing resources: '%s'", err)
-	}
-
-	return res, nil
-}
-
 // ResourcesToJSON serializes a protobuf message into
 // a json string
 func ResourcesToJSON(pb proto.Message) ([]byte, error) {

@@ -180,60 +180,6 @@ var (
 			}}}
 )
 
-func TestYAMLtoResources(t *testing.T) {
-	type args struct {
-		data []byte
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *Resources
-		wantErr bool
-	}{
-		{
-			name: "Loads yaml into evnoy resources",
-			args: args{data: []byte(`
-                clusters:
-                - name: cluster1
-                  connect_timeout: 2s
-                  type: STRICT_DNS
-                  lb_policy: ROUND_ROBIN
-                  load_assignment:
-                    cluster_name: cluster1
-                    endpoints: []
-
-                listeners:
-                - name: listener1
-                  address:
-                    socket_address:
-                      address: 0.0.0.0
-                      port_value: 8443
-                `,
-			)},
-			want: &Resources{
-				Clusters:  []*envoy_api_v2.Cluster{cluster},
-				Listeners: []*envoy_api_v2.Listener{listener},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := YAMLtoResources(tt.args.data)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("YAMLtoResources() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !proto.Equal(got.Clusters[0], tt.want.Clusters[0]) {
-				t.Errorf("YAMLtoResources() = %v, want %v", got.Clusters[0], tt.want.Clusters[0])
-			}
-			if !proto.Equal(got.Listeners[0], tt.want.Listeners[0]) {
-				t.Errorf("YAMLtoResources() = %v, want %v", got.Listeners[0], tt.want.Listeners[0])
-			}
-		})
-	}
-}
-
 func TestResourcesToJSON(t *testing.T) {
 	type args struct {
 		pb proto.Message
