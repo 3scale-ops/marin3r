@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuard
+  labels:
+    app: kuard
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kuard
+  template:
+    metadata:
+      labels:
+        app: kuard
+        marin3r.3scale.net/status: "enabled"
+      annotations:
+        marin3r.3scale.net/node-id: kuard
+        marin3r.3scale.net/ports: "envoy-http:38080,envoy-metrics:9901"
+    spec:
+      containers:
+        - name: kuard
+          image: gcr.io/kuar-demo/kuard-amd64:blue
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
