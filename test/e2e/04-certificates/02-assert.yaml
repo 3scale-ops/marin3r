@@ -1,0 +1,33 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: envoy1
+status:
+  phase: Running
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: envoy1-cert
+
+---
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
+kind: EnvoyConfig
+metadata:
+  name: proxy-config
+spec:
+  nodeID: envoy1
+status:
+  cacheState: InSync
+
+---
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
+kind: EnvoyConfigRevision
+spec:
+  nodeID: envoy1

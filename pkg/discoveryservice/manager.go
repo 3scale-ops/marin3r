@@ -126,6 +126,15 @@ func (dsm *Manager) Start(ctx context.Context) {
 		os.Exit(1)
 	}
 
+	if err := (&envoycontroller.SecretReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("secret"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "secret")
+		os.Exit(1)
+	}
+
 	// Setup webhooks
 	hookServer := mgr.GetWebhookServer()
 	hookServer.CertDir = dsm.ServerCertificatePath
