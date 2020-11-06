@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoy_api_v2_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	_struct "github.com/golang/protobuf/ptypes/struct"
@@ -262,7 +262,7 @@ func TestResourcesToJSON(t *testing.T) {
 
 func TestJSON_Marshal(t *testing.T) {
 	type args struct {
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
@@ -331,13 +331,13 @@ func TestJSON_Marshal(t *testing.T) {
 func TestJSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       JSON
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{
@@ -413,13 +413,13 @@ func TestJSON_Unmarshal(t *testing.T) {
 func TestB64JSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       B64JSON
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{
@@ -451,13 +451,13 @@ func TestB64JSON_Unmarshal(t *testing.T) {
 func TestYAML_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       YAML
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{

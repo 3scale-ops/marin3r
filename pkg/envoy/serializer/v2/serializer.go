@@ -5,11 +5,11 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/jsonpb"
@@ -134,16 +134,16 @@ func ResourcesToJSON(pb proto.Message) ([]byte, error) {
 }
 
 type ResourceMarshaller interface {
-	Marshal(cache_types.Resource) (string, error)
+	Marshal(envoy.Resource) (string, error)
 }
 
 type ResourceUnmarshaller interface {
-	Unmarshal(string, cache_types.Resource) error
+	Unmarshal(string, envoy.Resource) error
 }
 
 type JSON struct{}
 
-func (s JSON) Marshal(res cache_types.Resource) (string, error) {
+func (s JSON) Marshal(res envoy.Resource) (string, error) {
 	m := jsonpb.Marshaler{}
 
 	json := bytes.NewBuffer([]byte{})
@@ -154,7 +154,7 @@ func (s JSON) Marshal(res cache_types.Resource) (string, error) {
 	return string(json.Bytes()), nil
 }
 
-func (s JSON) Unmarshal(str string, res cache_types.Resource) error {
+func (s JSON) Unmarshal(str string, res envoy.Resource) error {
 
 	var err error
 	switch o := res.(type) {
@@ -189,7 +189,7 @@ func (s JSON) Unmarshal(str string, res cache_types.Resource) error {
 
 type B64JSON struct{}
 
-func (s B64JSON) Unmarshal(str string, res cache_types.Resource) error {
+func (s B64JSON) Unmarshal(str string, res envoy.Resource) error {
 	b, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
 		return fmt.Errorf("Error decoding base64 string: '%s'", err)
@@ -206,7 +206,7 @@ func (s B64JSON) Unmarshal(str string, res cache_types.Resource) error {
 
 type YAML struct{}
 
-func (s YAML) Unmarshal(str string, res cache_types.Resource) error {
+func (s YAML) Unmarshal(str string, res envoy.Resource) error {
 	b, err := yaml.YAMLToJSON([]byte(str))
 	if err != nil {
 		return fmt.Errorf("Error converting yaml to json: '%s'", err)

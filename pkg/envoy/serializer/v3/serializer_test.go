@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -13,7 +14,6 @@ import (
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	_struct "github.com/golang/protobuf/ptypes/struct"
@@ -306,7 +306,7 @@ func TestResourcesToJSON(t *testing.T) {
 
 func TestJSON_Marshal(t *testing.T) {
 	type args struct {
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
@@ -375,13 +375,13 @@ func TestJSON_Marshal(t *testing.T) {
 func TestJSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       JSON
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{
@@ -457,13 +457,13 @@ func TestJSON_Unmarshal(t *testing.T) {
 func TestB64JSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       B64JSON
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{
@@ -495,13 +495,13 @@ func TestB64JSON_Unmarshal(t *testing.T) {
 func TestYAML_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       YAML
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{
