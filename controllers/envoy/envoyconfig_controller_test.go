@@ -7,11 +7,6 @@ import (
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
-	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
-
-	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -33,28 +28,6 @@ func init() {
 	)
 }
 
-func fakeTestCache() xdss.Cache {
-
-	cache := xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil))
-
-	cache.SetSnapshot("node1", xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-		Resources: [6]cache_v2.Resources{
-			{Version: "aaaa", Items: map[string]cache_types.Resource{
-				"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
-			}},
-			{Version: "aaaa", Items: map[string]cache_types.Resource{
-				"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
-			}},
-			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-			{Version: "aaaa-557db659d4", Items: map[string]cache_types.Resource{}},
-			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-		}}),
-	)
-
-	return cache
-}
-
 func TestEnvoyConfigReconciler_Reconcile(t *testing.T) {
 
 	t.Run("Creates a new EnvoyConfigRevision and publishes it", func(t *testing.T) {
@@ -68,7 +41,7 @@ func TestEnvoyConfigReconciler_Reconcile(t *testing.T) {
 		r := &EnvoyConfigReconciler{
 			Client:   fake.NewFakeClient(ec),
 			Scheme:   s,
-			XdsCache: fakeTestCache(),
+			XdsCache: fakeCacheV2(),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		req := reconcile.Request{
@@ -142,7 +115,7 @@ func TestEnvoyConfigReconciler_Reconcile(t *testing.T) {
 		r := &EnvoyConfigReconciler{
 			Client:   fake.NewFakeClient(ec, ecr),
 			Scheme:   s,
-			XdsCache: fakeTestCache(),
+			XdsCache: fakeCacheV2(),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		req := reconcile.Request{
@@ -239,7 +212,7 @@ func TestEnvoyConfigReconciler_Reconcile(t *testing.T) {
 		r := &EnvoyConfigReconciler{
 			Client:   fake.NewFakeClient(ec, ecrList),
 			Scheme:   s,
-			XdsCache: fakeTestCache(),
+			XdsCache: fakeCacheV2(),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		req := reconcile.Request{
@@ -336,7 +309,7 @@ func TestEnvoyConfigReconciler_Reconcile(t *testing.T) {
 		r := &EnvoyConfigReconciler{
 			Client:   fake.NewFakeClient(ec, ecrList),
 			Scheme:   s,
-			XdsCache: fakeTestCache(),
+			XdsCache: fakeCacheV2(),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		req := reconcile.Request{
@@ -424,7 +397,7 @@ func TestEnvoyConfigReconciler_Reconcile(t *testing.T) {
 		r := &EnvoyConfigReconciler{
 			Client:   fake.NewFakeClient(ec, ecrList),
 			Scheme:   s,
-			XdsCache: fakeTestCache(),
+			XdsCache: fakeCacheV2(),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		req := reconcile.Request{
@@ -472,7 +445,7 @@ func TestEnvoyConfigReconciler_Reconcile_Finalizer(t *testing.T) {
 		&envoyv1alpha1.EnvoyConfigRevision{},
 	)
 	cl := fake.NewFakeClient(cr)
-	r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+	r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
 	req := reconcile.Request{
 		NamespacedName: types.NamespacedName{
 			Name:      "ec",
@@ -519,7 +492,7 @@ func TestEnvoyConfigReconciler_finalizeEnvoyConfig(t *testing.T) {
 			name: "Deletes the snapshot from the ads server cache",
 			fields: fields{client: fake.NewFakeClient(),
 				scheme:   scheme.Scheme,
-				xdsCache: fakeTestCache(),
+				xdsCache: fakeCacheV2(),
 			},
 			args: args{"node1"},
 		},
@@ -562,7 +535,7 @@ func TestEnvoyConfigReconciler_addFinalizer(t *testing.T) {
 			s := scheme.Scheme
 			s.AddKnownTypes(envoyv1alpha1.GroupVersion, tt.cr)
 			cl := fake.NewFakeClient(tt.cr)
-			r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+			r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
 
 			if err := r.addFinalizer(context.TODO(), tt.cr); (err != nil) != tt.wantErr {
 				t.Errorf("EnvoyConfigReconciler.addFinalizer() error = %v, wantErr %v", err, tt.wantErr)
@@ -769,7 +742,7 @@ func TestEnvoyConfigReconciler_getVersionToPublish(t *testing.T) {
 			r := &EnvoyConfigReconciler{
 				Client:   fake.NewFakeClient(tt.ec, tt.ecrList),
 				Scheme:   s,
-				XdsCache: fakeTestCache(),
+				XdsCache: fakeCacheV2(),
 				Log:      ctrl.Log.WithName("test"),
 			}
 			got, err := r.getVersionToPublish(context.TODO(), tt.ec)

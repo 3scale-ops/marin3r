@@ -17,7 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/3scale/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	"github.com/operator-framework/operator-lib/status"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,11 +48,17 @@ type EnvoyConfigRevisionSpec struct {
 	// Version is a hash of the EnvoyResources field
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
 	Version string `json:"version"`
+	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+	// +kubebuilder:validation:Enum=v2;v3
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +optional
+	EnvoyAPI *string `json:"envoyAPI,omitempty"`
 	// Serialization specicifies the serialization format used to describe the resources. "json" and "yaml"
 	// are supported. "json" is used if unset.
 	// +kubebuilder:validation:Enum=json;b64json;yaml
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Serialization string `json:"serialization,omitempty"`
+	// +optional
+	Serialization *string `json:"serialization,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	EnvoyResources *EnvoyResources `json:"envoyResources"`
@@ -94,6 +103,22 @@ type EnvoyConfigRevision struct {
 
 	Spec   EnvoyConfigRevisionSpec   `json:"spec,omitempty"`
 	Status EnvoyConfigRevisionStatus `json:"status,omitempty"`
+}
+
+// GetEnvoyAPIVersion returns envoy's API version for the EnvoyConfigRevision
+func (ecr *EnvoyConfigRevision) GetEnvoyAPIVersion() envoy.APIVersion {
+	if ecr.Spec.EnvoyAPI == nil {
+		return envoy.APIv2
+	}
+	return envoy.APIVersion(*ecr.Spec.EnvoyAPI)
+}
+
+// GetSerialization returns the encoding of the envoy resources.
+func (ecr *EnvoyConfigRevision) GetSerialization() envoy_serializer.Serialization {
+	if ecr.Spec.Serialization == nil {
+		return envoy_serializer.JSON
+	}
+	return envoy_serializer.Serialization(*ecr.Spec.Serialization)
 }
 
 // +kubebuilder:object:root=true

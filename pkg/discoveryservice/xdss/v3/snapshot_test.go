@@ -92,7 +92,7 @@ func TestSnapshot_GetResources(t *testing.T) {
 		v3 *cache_v3.Snapshot
 	}
 	type args struct {
-		rType envoy_resources.Type
+		rType envoy.Type
 	}
 	tests := []struct {
 		name   string
@@ -112,7 +112,7 @@ func TestSnapshot_GetResources(t *testing.T) {
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 				}}},
-			args: args{rType: envoy_resources.Endpoint},
+			args: args{rType: envoy.Endpoint},
 			want: map[string]envoy.Resource{
 				"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
 			},
@@ -135,7 +135,7 @@ func TestSnapshot_GetVersion(t *testing.T) {
 		v3 *cache_v3.Snapshot
 	}
 	type args struct {
-		rType envoy_resources.Type
+		rType envoy.Type
 	}
 	tests := []struct {
 		name   string
@@ -154,7 +154,7 @@ func TestSnapshot_GetVersion(t *testing.T) {
 					{Version: "5", Items: map[string]cache_types.Resource{}},
 					{Version: "6", Items: map[string]cache_types.Resource{}},
 				}}},
-			args: args{envoy_resources.Endpoint},
+			args: args{envoy.Endpoint},
 			want: "1",
 		},
 		{
@@ -168,7 +168,7 @@ func TestSnapshot_GetVersion(t *testing.T) {
 					{Version: "5", Items: map[string]cache_types.Resource{}},
 					{Version: "6", Items: map[string]cache_types.Resource{}},
 				}}},
-			args: args{envoy_resources.Secret},
+			args: args{envoy.Secret},
 			want: "5",
 		},
 	}
@@ -189,7 +189,7 @@ func TestSnapshot_SetVersion(t *testing.T) {
 		v3 *cache_v3.Snapshot
 	}
 	type args struct {
-		rType   envoy_resources.Type
+		rType   envoy.Type
 		version string
 	}
 	tests := []struct {
@@ -209,7 +209,7 @@ func TestSnapshot_SetVersion(t *testing.T) {
 					{Version: "5", Items: map[string]cache_types.Resource{}},
 					{Version: "6", Items: map[string]cache_types.Resource{}},
 				}}},
-			args: args{rType: envoy_resources.Secret, version: "xxxx"},
+			args: args{rType: envoy.Secret, version: "xxxx"},
 			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
 				Resources: [6]cache_v3.Resources{
 					{Version: "1", Items: map[string]cache_types.Resource{}},
@@ -236,7 +236,7 @@ func TestSnapshot_SetVersion(t *testing.T) {
 
 func Test_v3CacheResources(t *testing.T) {
 	type args struct {
-		rType envoy_resources.Type
+		rType envoy.Type
 	}
 	tests := []struct {
 		name string
@@ -245,7 +245,7 @@ func Test_v3CacheResources(t *testing.T) {
 	}{
 		{
 			name: "Returns the internal resource type for the v3 snapshot",
-			args: args{rType: envoy_resources.Secret},
+			args: args{rType: envoy.Secret},
 			want: 4,
 		},
 	}

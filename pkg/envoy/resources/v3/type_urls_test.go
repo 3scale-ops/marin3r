@@ -4,17 +4,17 @@ import (
 	"reflect"
 	"testing"
 
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 )
 
 func TestMappings(t *testing.T) {
 	tests := []struct {
 		name string
-		want map[envoy_resources.Type]string
+		want map[envoy.Type]string
 	}{
 		{
 			name: "Returns the typeURL to resource types mapping",
-			want: map[envoy_resources.Type]string{
+			want: map[envoy.Type]string{
 				"Listener": "type.googleapis.com/envoy.config.listener.v3.Listener",
 				"Route":    "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
 				"Cluster":  "type.googleapis.com/envoy.config.cluster.v3.Cluster",

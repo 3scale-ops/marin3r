@@ -2,7 +2,6 @@ package discoveryservice
 
 import (
 	envoy "github.com/3scale/marin3r/pkg/envoy"
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 	envoy_resources_v2 "github.com/3scale/marin3r/pkg/envoy/resources/v2"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
@@ -39,28 +38,28 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 	switch o := res.(type) {
 
 	case *envoy_api_v2.ClusterLoadAssignment:
-		s.v2.Resources[v2CacheResources(envoy_resources.Endpoint)].Items[name] = o
+		s.v2.Resources[v2CacheResources(envoy.Endpoint)].Items[name] = o
 
 	case *envoy_api_v2.Cluster:
-		s.v2.Resources[v2CacheResources(envoy_resources.Cluster)].Items[name] = o
+		s.v2.Resources[v2CacheResources(envoy.Cluster)].Items[name] = o
 
 	case *envoy_api_v2_route.Route:
-		s.v2.Resources[v2CacheResources(envoy_resources.Route)].Items[name] = o
+		s.v2.Resources[v2CacheResources(envoy.Route)].Items[name] = o
 
 	case *envoy_api_v2.Listener:
-		s.v2.Resources[v2CacheResources(envoy_resources.Listener)].Items[name] = o
+		s.v2.Resources[v2CacheResources(envoy.Listener)].Items[name] = o
 
 	case *envoy_api_v2_auth.Secret:
-		s.v2.Resources[v2CacheResources(envoy_resources.Secret)].Items[name] = o
+		s.v2.Resources[v2CacheResources(envoy.Secret)].Items[name] = o
 
 	case *envoy_service_discovery_v2.Runtime:
-		s.v2.Resources[v2CacheResources(envoy_resources.Runtime)].Items[name] = o
+		s.v2.Resources[v2CacheResources(envoy.Runtime)].Items[name] = o
 
 	}
 }
 
 // GetResources selects snapshot resources by type.
-func (s Snapshot) GetResources(rType envoy_resources.Type) map[string]envoy.Resource {
+func (s Snapshot) GetResources(rType envoy.Type) map[string]envoy.Resource {
 
 	typeURLs := envoy_resources_v2.Mappings()
 	resources := map[string]envoy.Resource{}
@@ -71,24 +70,24 @@ func (s Snapshot) GetResources(rType envoy_resources.Type) map[string]envoy.Reso
 }
 
 // GetVersion returns the version for a resource type.
-func (s Snapshot) GetVersion(rType envoy_resources.Type) string {
+func (s Snapshot) GetVersion(rType envoy.Type) string {
 	typeURLs := envoy_resources_v2.Mappings()
 	return s.v2.GetVersion(typeURLs[rType])
 }
 
 // SetVersion sets the version for a resource type.
-func (s Snapshot) SetVersion(rType envoy_resources.Type, version string) {
+func (s Snapshot) SetVersion(rType envoy.Type, version string) {
 	s.v2.Resources[v2CacheResources(rType)].Version = version
 }
 
-func v2CacheResources(rType envoy_resources.Type) int {
-	types := map[envoy_resources.Type]int{
-		envoy_resources.Endpoint: 0,
-		envoy_resources.Cluster:  1,
-		envoy_resources.Route:    2,
-		envoy_resources.Listener: 3,
-		envoy_resources.Secret:   4,
-		envoy_resources.Runtime:  5,
+func v2CacheResources(rType envoy.Type) int {
+	types := map[envoy.Type]int{
+		envoy.Endpoint: 0,
+		envoy.Cluster:  1,
+		envoy.Route:    2,
+		envoy.Listener: 3,
+		envoy.Secret:   4,
+		envoy.Runtime:  5,
 	}
 
 	return types[rType]

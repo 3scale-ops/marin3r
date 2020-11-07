@@ -67,7 +67,13 @@ type EnvoyConfigSpec struct {
 	// are supported. "json" is used if unset.
 	// +kubebuilder:validation:Enum=json;b64json;yaml
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Serialization string `json:"serialization,omitempty"`
+	// +optional
+	Serialization *string `json:"serialization,omitempty"`
+	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+	// +kubebuilder:validation:Enum=v2;v3
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +optional
+	EnvoyAPI *string `json:"envoyAPI,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	EnvoyResources *EnvoyResources `json:"envoyResources"`

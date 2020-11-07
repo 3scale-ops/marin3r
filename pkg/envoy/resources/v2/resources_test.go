@@ -15,14 +15,14 @@
 package envoy
 
 import (
-	"reflect"
 	"testing"
 
-	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	"github.com/golang/protobuf/proto"
 )
 
-func TestNewSecret(t *testing.T) {
+func TestSecretGenerator_New(t *testing.T) {
 	type args struct {
 		name             string
 		privateKey       string
@@ -30,25 +30,27 @@ func TestNewSecret(t *testing.T) {
 	}
 	tests := []struct {
 		name string
+		g    Generator
 		args args
-		want *envoy_extensions_transport_sockets_tls_v3.Secret
+		want *envoy_api_v2_auth.Secret
 	}{
 		{
-			"Returns a valid Secret response struct",
-			args{
+			name: "Return v2 secret",
+			g:    Generator{},
+			args: args{
 				name:             "cert1",
 				privateKey:       "xxxx",
 				certificateChain: "yyyy",
 			},
-			&envoy_extensions_transport_sockets_tls_v3.Secret{
+			want: &envoy_api_v2_auth.Secret{
 				Name: "cert1",
-				Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-					TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-						PrivateKey: &envoy_config_core_v3.DataSource{
-							Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
+				Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+					TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+						PrivateKey: &envoy_api_v2_core.DataSource{
+							Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
 						},
-						CertificateChain: &envoy_config_core_v3.DataSource{
-							Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("yyyy")},
+						CertificateChain: &envoy_api_v2_core.DataSource{
+							Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("yyyy")},
 						},
 					},
 				},
@@ -57,8 +59,9 @@ func TestNewSecret(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSecret(tt.args.name, tt.args.privateKey, tt.args.certificateChain); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewSecret() = %v, want %v", got, tt.want)
+			s := Generator{}
+			if got := s.NewSecret(tt.args.name, tt.args.privateKey, tt.args.certificateChain); !proto.Equal(got, tt.want) {
+				t.Errorf("SecretGenerator.New() = %v, want %v", got, tt.want)
 			}
 		})
 	}
