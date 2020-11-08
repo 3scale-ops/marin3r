@@ -127,6 +127,17 @@ func (dsm *Manager) Start(ctx context.Context) {
 		os.Exit(1)
 	}
 
+	if err := (&envoycontroller.EnvoyConfigRevisionReconciler{
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("controllers").WithName("envoyconfigrevision"),
+		Scheme:     mgr.GetScheme(),
+		XdsCache:   xdss.GetCache(envoy.APIv3),
+		APIVersion: envoy.APIv3,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv3)))
+		os.Exit(1)
+	}
+
 	if err := (&envoycontroller.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("secret"),
