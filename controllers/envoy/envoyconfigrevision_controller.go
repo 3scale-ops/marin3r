@@ -34,6 +34,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 // EnvoyConfigRevisionReconciler reconciles a EnvoyConfigRevision object
@@ -67,7 +69,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	// If this ecr has the RevisionPublishedCondition set to "True" pusblish the resources
 	// to the xds server cache
 	if ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition) {
-		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), ecr.GetEnvoyAPIVersion())
+		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), r.APIVersion)
 
 		cacheReconciler := reconcilers_envoy.NewCacheReconciler(
 			ctx, r.Log, r.Client, r.XdsCache,
@@ -137,8 +139,39 @@ func (r *EnvoyConfigRevisionReconciler) updateStatus(ctx context.Context, ecr *e
 	return nil
 }
 
+func filterByAPIVersion(obj runtime.Object, version envoy.APIVersion) bool {
+	switch o := obj.(type) {
+	case *envoyv1alpha1.EnvoyConfigRevision:
+		if o.GetEnvoyAPIVersion() == version {
+			return true
+		}
+		return false
+
+	default:
+		return false
+	}
+}
+
+func filterByAPIVersionPredicate(version envoy.APIVersion,
+	filter func(runtime.Object, envoy.APIVersion) bool) predicate.Predicate {
+
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return filter(e.Object, version)
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return filter(e.ObjectNew, version)
+
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return filter(e.Object, version)
+		},
+	}
+}
+
 func (r *EnvoyConfigRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&envoyv1alpha1.EnvoyConfigRevision{}).
+		WithEventFilter(filterByAPIVersionPredicate(r.APIVersion, filterByAPIVersion)).
 		Complete(r)
 }
