@@ -9,6 +9,9 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.1.0
 	github.com/golang/protobuf v1.4.2
+	github.com/google/uuid v1.1.1
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/gomega v1.10.1
 	github.com/operator-framework/operator-lib v0.1.0
 	go.uber.org/zap v1.14.1 // indirect
 	google.golang.org/genproto v0.0.0-20200701001935-0939c5918c31

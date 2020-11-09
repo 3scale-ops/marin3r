@@ -6,6 +6,11 @@ import (
 	"testing"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
+	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
+	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -16,6 +21,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func fakeCacheV2() xdss.Cache {
+	cache := xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil))
+	cache.SetSnapshot("node1", xdss_v2.NewSnapshot(&cache_v2.Snapshot{
+		Resources: [6]cache_v2.Resources{
+			{Version: "aaaa", Items: map[string]cache_types.Resource{
+				"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
+			}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{
+				"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
+			}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa-557db659d4", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+		}}),
+	)
+	return cache
+}
 
 func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 

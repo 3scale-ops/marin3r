@@ -20,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+var s *runtime.Scheme = scheme.Scheme
+
 func init() {
 	s.AddKnownTypes(envoyv1alpha1.GroupVersion,
 		&envoyv1alpha1.EnvoyConfigRevision{},

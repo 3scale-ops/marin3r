@@ -57,7 +57,7 @@ func (r *CacheReconciler) Reconcile(req types.NamespacedName, resources *envoyv1
 	// been written to the cache for that specific nodeID.
 	if snap.GetVersion(envoy.Secret) != oldSnap.GetVersion(envoy.Secret) || err != nil {
 
-		r.logger.Info("Writting new snapshot to xDS cache", "Version", version, "NodeID", nodeID)
+		r.logger.Info("Writting new snapshot to xDS cache", "Version", version, "NodeID", nodeID, "Secrets Hash", snap.GetVersion(envoy.Secret))
 
 		if err := r.xdsCache.SetSnapshot(nodeID, snap); err != nil {
 			return ctrl.Result{}, err

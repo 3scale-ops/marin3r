@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"testing"
 	"time"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
@@ -26,7 +25,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -403,75 +401,3 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 	})
 
 })
-
-func Test_filterByAPIVersion(t *testing.T) {
-	type args struct {
-		obj     runtime.Object
-		version envoy.APIVersion
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "V2 EnvoyConfigRevision with V2 controller returns true",
-			args: args{
-				obj: &envoyv1alpha1.EnvoyConfigRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
-					},
-				},
-				version: envoy.APIv2,
-			},
-			want: true,
-		},
-		{
-			name: "V3 EnvoyConfigRevision with V3 controller returns true",
-			args: args{
-				obj: &envoyv1alpha1.EnvoyConfigRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
-					},
-				},
-				version: envoy.APIv3,
-			},
-			want: true,
-		},
-		{
-			name: "V2 EnvoyConfigRevision with V3 controller returns false",
-			args: args{
-				obj: &envoyv1alpha1.EnvoyConfigRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
-					},
-				},
-				version: envoy.APIv3,
-			},
-			want: false,
-		},
-		{
-			name: "V3 EnvoyConfigRevision with V2 controller returns false",
-			args: args{
-				obj: &envoyv1alpha1.EnvoyConfigRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
-					},
-				},
-				version: envoy.APIv3,
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := filterByAPIVersion(tt.args.obj, tt.args.version); got != tt.want {
-				t.Errorf("filterByAPIVersion() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
