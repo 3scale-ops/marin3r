@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
