@@ -10,7 +10,10 @@ metadata:
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.nodeID
-    name: NodeID
+    name: Node ID
+    type: string
+  - JSONPath: .spec.envoyAPI
+    name: Envoy API
     type: string
   - JSONPath: .status.desiredVersion
     name: Desired Version

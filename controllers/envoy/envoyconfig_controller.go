@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -78,19 +79,24 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 			// Remove memcachedFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
 			controllerutil.RemoveFinalizer(ec, envoyv1alpha1.EnvoyConfigFinalizer)
-			err := r.Client.Update(ctx, ec)
-			if err != nil {
+			if err := r.Client.Update(ctx, ec); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: ensure all the EnvoyConfigRevisions in the revision list have the appropriate labels
-	// This is important as we use labels to get the lists of revision resources.
+	if err := r.reconcileSpecDefaults(ctx, ec); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// This must be done before any other revision related code due to the addition of support for
 	// envoy API v3 which comes with the addition of a new label to identify revisions belonging
-	// to each api version.
+	// to each api version. The first time this version of the controller runs, it will set the
+	// required labels. This will also help with future labels that get added.
+	if err := r.reconcileRevisionLabels(ctx, ec); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// desiredVersion is the version that matches the resources described in the spec
 	desiredVersion := calculateRevisionHash(ec.Spec.EnvoyResources)
@@ -244,6 +250,61 @@ func (r *EnvoyConfigReconciler) addFinalizer(ctx context.Context, ec *envoyv1alp
 	err := r.Client.Update(ctx, ec)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// reconcileRevisionLabels ensures  all the EnvoyConfigRevisions owned by this EnvoyConfig have
+// the appropriate labels. This is important as labels are extensively used to get the lists of
+// EnvoyConfigRevision resources.
+func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
+	// Get all revisions for this EnvoyConfig
+	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			nodeIDTag: ec.Spec.NodeID,
+		},
+	})
+	if err != nil {
+		return newCacheError(UnknownError, "reconcileRevisionLabels", err.Error())
+	}
+	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return newCacheError(UnknownError, "reconcileRevisionLabels", err.Error())
+	}
+
+	for _, ecr := range ecrList.Items {
+		_, okVersionTag := ecr.GetLabels()[versionTag]
+		_, okEnvoyAPITag := ecr.GetLabels()[envoyAPITag]
+		if !okVersionTag || !okEnvoyAPITag {
+			patch := client.MergeFrom(ecr.DeepCopy())
+			ecr.SetLabels(map[string]string{
+				versionTag:  ecr.Spec.Version,
+				envoyAPITag: string(ec.GetEnvoyAPIVersion()),
+			})
+			if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
+				return newCacheError(UnknownError, "reconcileRevisionLabels", err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+func (r *EnvoyConfigReconciler) reconcileSpecDefaults(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
+	changed := false
+	patch := client.MergeFrom(ec.DeepCopy())
+
+	if ec.Spec.EnvoyAPI == nil {
+		ec.Spec.EnvoyAPI = pointer.StringPtr(string(ec.GetEnvoyAPIVersion()))
+		changed = true
+		r.Log.V(1).Info("Reconciling EnvoyConfig spec defaults")
+	}
+
+	if changed {
+		if err := r.Client.Patch(ctx, ec, patch); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }

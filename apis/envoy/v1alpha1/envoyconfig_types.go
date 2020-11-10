@@ -175,7 +175,8 @@ type ConfigRevisionRef struct {
 // nodeID.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=envoyconfigs,scope=Namespaced,shortName=ec
-// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=Node ID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.envoyAPI",name=Envoy API,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.desiredVersion",name=Desired Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=Published Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.cacheState",name=Cache State,type=string

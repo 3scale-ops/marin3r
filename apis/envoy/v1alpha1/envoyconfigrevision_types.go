@@ -90,7 +90,8 @@ type EnvoyConfigRevisionStatus struct {
 // controller and are not intended to be directly used. Use EnvoyConfig objects instead.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=envoyconfigrevisions,scope=Namespaced,shortName=ecr
-// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=Node ID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.envoyAPI",name=Envoy API,type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.version",name=Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.published",name=Published,type=boolean
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Created At",type=string,format=date-time
