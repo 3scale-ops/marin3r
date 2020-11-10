@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
@@ -59,7 +60,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 			}}
 
 		cl := fake.NewFakeClient(ec)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
 		if gotErr != nil {
@@ -92,8 +93,9 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 				Name:      "ecr",
 				Namespace: "default",
 				Labels: map[string]string{
-					nodeIDTag:  "node1",
-					versionTag: "xxxx",
+					nodeIDTag:   "node1",
+					versionTag:  "xxxx",
+					envoyAPITag: "v2",
 				},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
@@ -113,7 +115,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 			}}
 
 		cl := fake.NewFakeClient(ec, ecr)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
 		if gotErr != nil {
@@ -138,87 +140,61 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 }
 
 func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
-	t.Run("Consolidates the revision list in the ec status", func(t *testing.T) {
-		ecr := &envoyv1alpha1.EnvoyConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ecr",
-				Namespace: "default",
-				Labels: map[string]string{
-					nodeIDTag:  "node1",
-					versionTag: "xxxx",
-				},
-			},
-			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-				Version:        "xxxx",
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-		}
-		ec := &envoyv1alpha1.EnvoyConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ec",
-				Namespace: "default",
-			},
-			Spec: envoyv1alpha1.EnvoyConfigSpec{
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-		}
-
-		cl := fake.NewFakeClient(ec, ecr)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
-
-		gotErr := r.reconcileRevisionList(context.TODO(), ec)
-		if gotErr != nil {
-			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() error = %v", gotErr)
-			return
-		}
-
-		gotNCC := &envoyv1alpha1.EnvoyConfig{}
-		wantConfigRevisions := []envoyv1alpha1.ConfigRevisionRef{
-			{Version: "xxxx", Ref: corev1.ObjectReference{Name: "ecr", Namespace: "default"}},
-		}
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, gotNCC)
-
-		if !apiequality.Semantic.DeepEqual(gotNCC.Status.ConfigRevisions, wantConfigRevisions) {
-			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() got '%v', want '%v'", gotNCC.Status.ConfigRevisions, wantConfigRevisions)
-			return
-		}
-	})
-
-	t.Run("Moves the published revision to the last position of the list", func(t *testing.T) {
+	t.Run("Generates an ordered list with all the config revisions, with the desired onw on the highes index", func(t *testing.T) {
 		ecr1 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "1",
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
+			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
+				LastPublishedAt: metav1.NewTime(time.Now().Add(-4 * time.Second)),
+			},
 		}
 		ecr2 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr2",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "2",
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
+			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
+				LastPublishedAt: metav1.NewTime(time.Now().Add(-2 * time.Second)),
+			},
 		}
 		ecr3 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr3",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "3"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "3", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "3",
+				NodeID:         "node1",
+				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+			},
+			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
+				LastPublishedAt: metav1.NewTime(time.Now().Add(-1 * time.Second)),
+			},
+		}
+		ecr4 := &envoyv1alpha1.EnvoyConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "ecr4",
+				Namespace:         "default",
+				Labels:            map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
+				CreationTimestamp: metav1.NewTime(time.Now().Add(-3 * time.Second)),
+			},
+			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+				Version:        "4",
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
@@ -232,19 +208,12 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
-			Status: envoyv1alpha1.EnvoyConfigStatus{
-				ConfigRevisions: []envoyv1alpha1.ConfigRevisionRef{
-					{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "default"}},
-					{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
-					{Version: "3", Ref: corev1.ObjectReference{Name: "ecr3", Namespace: "default"}},
-				},
-			},
 		}
 
-		cl := fake.NewFakeClient(ec, ecr1, ecr2, ecr3)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
+		cl := fake.NewFakeClient(ec, ecr1, ecr2, ecr3, ecr4)
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.reconcileRevisionList(context.TODO(), ec)
+		gotErr := r.reconcileRevisionList(context.TODO(), ec, "2")
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() error = %v", gotErr)
 			return
@@ -252,9 +221,10 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 
 		gotNCC := &envoyv1alpha1.EnvoyConfig{}
 		wantConfigRevisions := []envoyv1alpha1.ConfigRevisionRef{
-			{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
-			{Version: "3", Ref: corev1.ObjectReference{Name: "ecr3", Namespace: "default"}},
 			{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "default"}},
+			{Version: "4", Ref: corev1.ObjectReference{Name: "ecr4", Namespace: "default"}},
+			{Version: "3", Ref: corev1.ObjectReference{Name: "ecr3", Namespace: "default"}},
+			{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
 		}
 		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, gotNCC)
 
@@ -293,7 +263,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "1",
@@ -309,7 +279,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr2",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "2",
@@ -322,7 +292,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ecr1, ecr2)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.markRevisionPublished(context.TODO(), "node1", "2", "reason", "msg", envoy.APIv2)
 		if gotErr != nil {
@@ -350,7 +320,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "1",
@@ -366,7 +336,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr2",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "2",
@@ -379,7 +349,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ecr1, ecr2)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.markRevisionPublished(context.TODO(), "node1", "1", "reason", "msg", envoy.APIv2)
 		if gotErr != nil {

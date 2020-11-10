@@ -18,7 +18,6 @@ import (
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/operator-framework/operator-lib/status"
@@ -28,16 +27,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 var _ = Describe("EnvoyConfigRevision controller", func() {
 	var namespace string
+	var nodeID string
 
 	BeforeEach(func() {
 		// Create a namespace for each block
-		namespace = "test-namespace-" + uuid.New().String()
+		namespace = "test-ns-" + nameGenerator.Generate()
+		// Create a nodeID for each block
+		nodeID = nameGenerator.Generate()
 		// Add any setup steps that needs to be executed before each test
 		testNamespace := &v1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
@@ -90,7 +95,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-					NodeID:  "node",
+					NodeID:  nodeID,
 					Version: "xxxx",
 					EnvoyResources: &envoyv1alpha1.EnvoyResources{
 						Endpoints: []envoyv1alpha1.EnvoyResource{
@@ -180,7 +185,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-					NodeID:   "node",
+					NodeID:   nodeID,
 					Version:  "xxxx",
 					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
 					EnvoyResources: &envoyv1alpha1.EnvoyResources{
@@ -287,7 +292,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-					NodeID:   "node",
+					NodeID:   nodeID,
 					Version:  "xxxx",
 					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
 					EnvoyResources: &envoyv1alpha1.EnvoyResources{
@@ -402,6 +407,8 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		})
 	})
 
+	// TODO: test for finalizer
+
 })
 
 func Test_filterByAPIVersion(t *testing.T) {
@@ -471,6 +478,89 @@ func Test_filterByAPIVersion(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := filterByAPIVersion(tt.args.obj, tt.args.version); got != tt.want {
 				t.Errorf("filterByAPIVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestEnvoyConfigRevisionReconciler_finalizeEnvoyConfig(t *testing.T) {
+	type fields struct {
+		client   client.Client
+		scheme   *runtime.Scheme
+		xdsCache xdss.Cache
+	}
+	type args struct {
+		nodeID string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "Deletes the snapshot from the ads server cache",
+			fields: fields{client: fake.NewFakeClient(),
+				scheme:   scheme.Scheme,
+				xdsCache: fakeCacheV2(),
+			},
+			args: args{"node1"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &EnvoyConfigRevisionReconciler{
+				Client:   tt.fields.client,
+				Scheme:   tt.fields.scheme,
+				XdsCache: tt.fields.xdsCache,
+				Log:      ctrl.Log.WithName("test"),
+			}
+			r.finalizeEnvoyConfigRevision(tt.args.nodeID)
+			if _, err := r.XdsCache.GetSnapshot(tt.args.nodeID); err == nil {
+				t.Errorf("TestEnvoyConfigRevisionReconciler_finalizeEnvoyConfig() -> snapshot still in the cache")
+			}
+		})
+	}
+}
+
+func TestEnvoyConfigRevisionReconciler_addFinalizer(t *testing.T) {
+	tests := []struct {
+		name    string
+		cr      *envoyv1alpha1.EnvoyConfigRevision
+		wantErr bool
+	}{
+		{
+			name: "Adds finalizer to EnvoyConfigRevision",
+			cr: &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:         "node1",
+					Version:        "xxxx",
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+				}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := scheme.Scheme
+			s.AddKnownTypes(envoyv1alpha1.GroupVersion, tt.cr)
+			cl := fake.NewFakeClient(tt.cr)
+			r := &EnvoyConfigRevisionReconciler{
+				Client:   cl,
+				Scheme:   s,
+				XdsCache: xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
+				Log:      ctrl.Log.WithName("test"),
+			}
+
+			if err := r.addFinalizer(context.TODO(), tt.cr); (err != nil) != tt.wantErr {
+				t.Errorf("EnvoyConfigRevisionReconciler.addFinalizer() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				ecr := &envoyv1alpha1.EnvoyConfigRevision{}
+				r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+				if len(ecr.ObjectMeta.Finalizers) != 1 {
+					t.Error("EnvoyConfigRevisionReconciler.addFinalizer() wrong number of finalizers present in object")
+				}
 			}
 		})
 	}

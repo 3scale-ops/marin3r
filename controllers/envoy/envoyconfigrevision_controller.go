@@ -68,7 +68,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	}
 
 	// Add finalizer for this CR
-	if !contains(ecr.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
+	if !contains(ecr.GetFinalizers(), envoyv1alpha1.EnvoyConfigRevisionFinalizer) {
 		r.Log.V(1).Info("Adding Finalizer for the EnvoyConfigRevision")
 		if err := r.addFinalizer(ctx, ecr); err != nil {
 			r.Log.Error(err, "Failed adding finalizer for EnvoyConfigRevision")
@@ -79,7 +79,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	// Check if the EnvoyConfigRevision instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if ecr.GetDeletionTimestamp() != nil {
-		if contains(ecr.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
+		if contains(ecr.GetFinalizers(), envoyv1alpha1.EnvoyConfigRevisionFinalizer) {
 			// Only the published version deletes the nodeID from the cache
 			if ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition) {
 				r.finalizeEnvoyConfigRevision(ecr.Spec.NodeID)
@@ -87,7 +87,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			}
 			// Remove EnvoyConfigFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
-			controllerutil.RemoveFinalizer(ecr, envoyv1alpha1.EnvoyConfigFinalizer)
+			controllerutil.RemoveFinalizer(ecr, envoyv1alpha1.EnvoyConfigRevisionFinalizer)
 			if err := r.Client.Update(ctx, ecr); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -169,7 +169,7 @@ func (r *EnvoyConfigRevisionReconciler) updateStatus(ctx context.Context, ecr *e
 }
 
 func (r *EnvoyConfigRevisionReconciler) addFinalizer(ctx context.Context, ecr *envoyv1alpha1.EnvoyConfigRevision) error {
-	controllerutil.AddFinalizer(ecr, envoyv1alpha1.EnvoyConfigFinalizer)
+	controllerutil.AddFinalizer(ecr, envoyv1alpha1.EnvoyConfigRevisionFinalizer)
 
 	// Update CR
 	if err := r.Client.Update(ctx, ecr); err != nil {

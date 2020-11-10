@@ -3,21 +3,30 @@ package controllers
 import (
 	"context"
 	"testing"
+	"time"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-
-	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
-
+	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
+	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
+	testutil "github.com/3scale/marin3r/pkg/util/test"
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 var s *runtime.Scheme = scheme.Scheme
@@ -30,528 +39,267 @@ func init() {
 	)
 }
 
-func TestEnvoyConfigReconciler_Reconcile(t *testing.T) {
+var _ = Describe("EnvoyConfigRevision controller", func() {
+	var namespace string
+	var nodeID string
 
-	t.Run("Creates a new EnvoyConfigRevision and publishes it", func(t *testing.T) {
-		ec := &envoyv1alpha1.EnvoyConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "default"},
-			Spec: envoyv1alpha1.EnvoyConfigSpec{
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-		}
-		r := &EnvoyConfigReconciler{
-			Client:   fake.NewFakeClient(ec),
-			Scheme:   s,
-			XdsCache: fakeCacheV2(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		req := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "ec",
-				Namespace: "default",
-			},
+	BeforeEach(func() {
+		// Create a namespace for each block
+		namespace = "test-ns-" + nameGenerator.Generate()
+		// Create a nodeID for each block
+		nodeID = nameGenerator.Generate()
+		// Add any setup steps that needs to be executed before each test
+		testNamespace := &v1.Namespace{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
 
-		_, gotErr := r.Reconcile(req)
-		if gotErr != nil {
-			t.Errorf("EnvoyConfigReconcilerRevision.Reconcile() error = %v", gotErr)
-			return
-		}
+		err := k8sClient.Create(context.Background(), testNamespace)
+		Expect(err).ToNot(HaveOccurred())
 
-		ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
-		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{nodeIDTag: ec.Spec.NodeID},
-		})
-		r.Client.List(context.TODO(), ecrList, &client.ListOptions{LabelSelector: selector})
-		if len(ecrList.Items) != 1 {
-			t.Errorf("Got wrong number of envoyconfigrevisions: %v", len(ecrList.Items))
-			return
-		}
-		ecr := ecrList.Items[0]
-		if !ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition) {
-			t.Errorf("Revision created but not marked as published")
-			return
-		}
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
-		if ec.ObjectMeta.Finalizers[0] != envoyv1alpha1.EnvoyConfigFinalizer {
-			t.Errorf("EnvoyConfig missing finalizer")
-			return
-		}
-		if len(ec.Status.ConfigRevisions) != 1 {
-			t.Errorf("ConfigRevisions list was not updated")
-			return
-		}
-		version := calculateRevisionHash(ec.Spec.EnvoyResources)
-		if ec.Status.PublishedVersion != version ||
-			ec.Status.DesiredVersion != version ||
-			ec.Status.CacheState != envoyv1alpha1.InSyncState ||
-			!ec.Status.Conditions.IsFalseFor(envoyv1alpha1.CacheOutOfSyncCondition) {
-			t.Errorf("Status was not correctly updated")
-			return
-		}
-	})
-
-	t.Run("Publishes an already existent revision if versions (the resources hash) match", func(t *testing.T) {
-		version := calculateRevisionHash(&envoyv1alpha1.EnvoyResources{})
-		ec := &envoyv1alpha1.EnvoyConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "default"},
-			Spec: envoyv1alpha1.EnvoyConfigSpec{
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-		}
-		ecr := &envoyv1alpha1.EnvoyConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ecr",
-				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
-			},
-			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-				NodeID:         "node1",
-				Version:        version,
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-		}
-
-		r := &EnvoyConfigReconciler{
-			Client:   fake.NewFakeClient(ec, ecr),
-			Scheme:   s,
-			XdsCache: fakeCacheV2(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		req := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "ec",
-				Namespace: "default",
-			},
-		}
-
-		_, gotErr := r.Reconcile(req)
-		if gotErr != nil {
-			t.Errorf("EnvoyConfigReconcilerRevision.Reconcile() error = %v", gotErr)
-			return
-		}
-
-		ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
-		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{nodeIDTag: ec.Spec.NodeID},
-		})
-		r.Client.List(context.TODO(), ecrList, &client.ListOptions{LabelSelector: selector})
-		if len(ecrList.Items) != 1 {
-			t.Errorf("Got wrong number of envoyconfigrevisions: %v", len(ecrList.Items))
-			return
-		}
-		ecr = &ecrList.Items[0]
-		if !ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition) {
-			t.Errorf("Revision not marked as published")
-			return
-		}
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
-		if len(ec.Status.ConfigRevisions) != 1 {
-			t.Errorf("ConfigRevisions list was not updated")
-			return
-		}
-		if ec.Status.PublishedVersion != version ||
-			ec.Status.DesiredVersion != version ||
-			ec.Status.CacheState != envoyv1alpha1.InSyncState ||
-			!ec.Status.Conditions.IsFalseFor(envoyv1alpha1.CacheOutOfSyncCondition) {
-			t.Errorf("Status was not correctly updated")
-			return
-		}
-	})
-
-	t.Run("From top to bottom, publishes the first non tainted revision of the ConfigRevisions list", func(t *testing.T) {
-		version := calculateRevisionHash(&envoyv1alpha1.EnvoyResources{})
-		ec := &envoyv1alpha1.EnvoyConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "default"},
-			Spec: envoyv1alpha1.EnvoyConfigSpec{
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-			Status: envoyv1alpha1.EnvoyConfigStatus{
-				ConfigRevisions: []envoyv1alpha1.ConfigRevisionRef{
-					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "default"}},
-					{Version: version, Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
-				},
-			},
-		}
-		ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{
-			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-			Items: []envoyv1alpha1.EnvoyConfigRevision{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ecr1",
-						Namespace: "default",
-						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
-					},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						NodeID:         "node1",
-						Version:        "aaaa",
-						EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-					}},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ecr2",
-						Namespace: "default",
-						Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
-					},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						NodeID:         "node1",
-						Version:        version,
-						EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-					},
-					Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-						Conditions: status.NewConditions(
-							status.Condition{
-								Type:   envoyv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
-							},
-						),
-					}}},
-		}
-
-		r := &EnvoyConfigReconciler{
-			Client:   fake.NewFakeClient(ec, ecrList),
-			Scheme:   s,
-			XdsCache: fakeCacheV2(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		req := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "ec",
-				Namespace: "default",
-			},
-		}
-
-		_, gotErr := r.Reconcile(req)
-		if gotErr != nil {
-			t.Errorf("EnvoyConfigReconcilerRevision.Reconcile() error = %v", gotErr)
-			return
-		}
-
-		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{nodeIDTag: ec.Spec.NodeID},
-		})
-		r.Client.List(context.TODO(), ecrList, &client.ListOptions{LabelSelector: selector})
-
-		if !ecrList.Items[0].Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition) {
-			t.Errorf("Revision not marked as published")
-			return
-		}
-
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
-		if ec.Status.PublishedVersion != "aaaa" ||
-			ec.Status.DesiredVersion != version ||
-			ec.Status.CacheState != envoyv1alpha1.RollbackState ||
-			!ec.Status.Conditions.IsTrueFor(envoyv1alpha1.CacheOutOfSyncCondition) {
-			t.Errorf("Status was not correctly updated")
-			return
-		}
-	})
-
-	t.Run("Set RollbackFailed state if all versions are tainted", func(t *testing.T) {
-		version := calculateRevisionHash(&envoyv1alpha1.EnvoyResources{})
-		ec := &envoyv1alpha1.EnvoyConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "default"},
-			Spec: envoyv1alpha1.EnvoyConfigSpec{
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-			Status: envoyv1alpha1.EnvoyConfigStatus{
-				ConfigRevisions: []envoyv1alpha1.ConfigRevisionRef{
-					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "default"}},
-					{Version: version, Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
-				},
-			},
-		}
-		ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{
-			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-			Items: []envoyv1alpha1.EnvoyConfigRevision{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ecr1",
-						Namespace: "default",
-						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
-					},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						NodeID:         "node1",
-						Version:        "aaaa",
-						EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-					},
-					Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-						Conditions: status.NewConditions(
-							status.Condition{
-								Type:   envoyv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
-							},
-						),
-					}},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ecr2",
-						Namespace: "default",
-						Labels:    map[string]string{nodeIDTag: "node1", versionTag: version},
-					},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						NodeID:         "node1",
-						Version:        version,
-						EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-					},
-					Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-						Conditions: status.NewConditions(
-							status.Condition{
-								Type:   envoyv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
-							},
-						),
-					}}},
-		}
-
-		r := &EnvoyConfigReconciler{
-			Client:   fake.NewFakeClient(ec, ecrList),
-			Scheme:   s,
-			XdsCache: fakeCacheV2(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		req := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "ec",
-				Namespace: "default",
-			},
-		}
-
-		_, gotErr := r.Reconcile(req)
-		if gotErr != nil {
-			t.Errorf("EnvoyConfigReconcilerRevision.Reconcile() error = %v", gotErr)
-			return
-		}
-
-		selector, _ := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{nodeIDTag: ec.Spec.NodeID},
-		})
-		r.Client.List(context.TODO(), ecrList, &client.ListOptions{LabelSelector: selector})
-
-		for _, ecr := range ecrList.Items {
-			if ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition) {
-				t.Errorf("A revison is marked as published and it shouldn't")
-				return
+		n := &v1.Namespace{}
+		Eventually(func() bool {
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
+			if err != nil {
+				return false
 			}
-		}
+			return true
+		}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
-		if ec.Status.CacheState != envoyv1alpha1.RollbackFailedState ||
-			!ec.Status.Conditions.IsTrueFor(envoyv1alpha1.CacheOutOfSyncCondition) ||
-			!ec.Status.Conditions.IsTrueFor(envoyv1alpha1.RollbackFailedCondition) {
-			t.Errorf("Status was not correctly updated")
-			return
-		}
 	})
 
-	// TODO:test the clearance of the Rollback failed condition
-	t.Run("Set RollbackFailed state if all versions are tainted", func(t *testing.T) {
-		ec := &envoyv1alpha1.EnvoyConfig{
-			ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "default"},
-			Spec: envoyv1alpha1.EnvoyConfigSpec{
-				NodeID: "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{
+	AfterEach(func() {
+		// Clear the xDS caches after each test
+		ecrV2Reconciler.XdsCache = xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil))
+		ecrV3Reconciler.XdsCache = xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil))
+
+		// Delete the namespace
+		testNamespace := &v1.Namespace{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+			ObjectMeta: metav1.ObjectMeta{Name: namespace},
+		}
+		// Add any teardown steps that needs to be executed after each test
+		err := k8sClient.Delete(context.Background(), testNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
+		Expect(err).ToNot(HaveOccurred())
+
+		n := &v1.Namespace{}
+		Eventually(func() bool {
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
+			if err != nil && errors.IsNotFound(err) {
+				return false
+			}
+			return true
+		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+	})
+
+	Context("Using v2 envoy API version", func() {
+		var ec *envoyv1alpha1.EnvoyConfig
+
+		BeforeEach(func() {
+			// Create a v2 EnvoyConfigRevision for each block
+			ec = &envoyv1alpha1.EnvoyConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigSpec{
+					EnvoyAPI: pointer.StringPtr("v2"),
+					NodeID:   nodeID,
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ec)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("EnvoyConfig is created", func() {
+
+			It("Should create a matching EnvoyConfigRevision and resources should be in the xDS cache", func() {
+
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+					Expect(err).ToNot(HaveOccurred())
+					if ec.Status.PublishedVersion == "" {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				// Get the EnvoyConfigRevision that should have been created
+				ecr := &envoyv1alpha1.EnvoyConfigRevision{}
+				ecrKey := types.NamespacedName{Name: ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name, Namespace: namespace}
+				err := k8sClient.Get(context.Background(), ecrKey, ecr)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Validate the cache for the nodeID
+				wantRevision := calculateRevisionHash(ec.Spec.EnvoyResources)
+				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
+					Resources: [6]cache_v2.Resources{
+						{Version: wantRevision, Items: map[string]cache_types.Resource{
+							"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+					}})
+
+				// Wait for the revision to get written to the xDS cache
+				Eventually(func() bool {
+					gotV2Snap, err := ecrV2Reconciler.XdsCache.GetSnapshot(ec.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
+				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
+				Expect(len(ec.Status.ConfigRevisions)).To(Equal(1))
+				Expect(ec.Status.ConfigRevisions[0].Ref.Name).To(Equal(ec.Spec.NodeID + "-" + wantRevision))
+			})
+		})
+
+		When("When EnvoyConfig is updated", func() {
+			var wantRevision string
+
+			BeforeEach(func() {
+				// Wait for current EnvoyConfig resources to get published in xDS
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+					Expect(err).ToNot(HaveOccurred())
+					if ec.Status.PublishedVersion == "" {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				// Update the resources in the spec
+				ec.Spec.EnvoyResources = &envoyv1alpha1.EnvoyResources{
+					Clusters: []envoyv1alpha1.EnvoyResource{
+						{Name: "cluster", Value: "{\"name\": \"cluster\"}"},
+					}}
+				err := k8sClient.Update(context.Background(), ec)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Wait for the new revision to get published
+				wantRevision = calculateRevisionHash(ec.Spec.EnvoyResources)
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+					Expect(err).ToNot(HaveOccurred())
+					if ec.Status.PublishedVersion != wantRevision {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+
+			It("Should create a new matching EnvoyConfigRevision and new resources should be in the xDS cache", func() {
+
+				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
+				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
+				Expect(len(ec.Status.ConfigRevisions)).To(Equal(2))
+				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(ec.Spec.NodeID + "-" + wantRevision))
+
+				// Get the EnvoyConfigRevision that should have been created
+				ecr := &envoyv1alpha1.EnvoyConfigRevision{}
+				ecrKey := types.NamespacedName{Name: ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name, Namespace: namespace}
+				err := k8sClient.Get(context.Background(), ecrKey, ecr)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Validate the cache for the nodeID
+
+				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
+					Resources: [6]cache_v2.Resources{
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{
+							"cluster": &envoy_api_v2.Cluster{Name: "cluster"}}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+					}})
+
+				// Wait for the revision to get written to the xDS cache
+				Eventually(func() bool {
+					gotV2Snap, err := ecrV2Reconciler.XdsCache.GetSnapshot(ec.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+
+			It("Should publish an already existent EnvoyConfigRevision if one already matches the current EnvoyConfig resources", func() {
+
+				// Set the previous set of resources in the EnvoyConfig
+				ec.Spec.EnvoyResources = &envoyv1alpha1.EnvoyResources{
 					Endpoints: []envoyv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-					},
-				},
-			},
-			Status: envoyv1alpha1.EnvoyConfigStatus{
-				CacheState: envoyv1alpha1.RollbackFailedState,
-				ConfigRevisions: []envoyv1alpha1.ConfigRevisionRef{
-					{Version: "aaaa", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "default"}},
-				},
-				Conditions: status.NewConditions(status.Condition{
-					Type:   envoyv1alpha1.RollbackFailedCondition,
-					Status: corev1.ConditionTrue,
-				}),
-			},
-		}
-		ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{
-			TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "List"},
-			Items: []envoyv1alpha1.EnvoyConfigRevision{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ecr1",
-						Namespace: "default",
-						Labels:    map[string]string{nodeIDTag: "node1", versionTag: "aaaa"},
-					},
-					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-						NodeID:         "node1",
-						Version:        "aaaa",
-						EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-					},
-					Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-						Conditions: status.NewConditions(
-							status.Condition{
-								Type:   envoyv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
-							},
-						),
-					}},
-			},
-		}
+					}}
+				err := k8sClient.Update(context.Background(), ec)
+				Expect(err).ToNot(HaveOccurred())
 
-		r := &EnvoyConfigReconciler{
-			Client:   fake.NewFakeClient(ec, ecrList),
-			Scheme:   s,
-			XdsCache: fakeCacheV2(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		req := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "ec",
-				Namespace: "default",
-			},
-		}
+				// Wait for the existent revision to get published
+				wantRevision = calculateRevisionHash(ec.Spec.EnvoyResources)
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+					Expect(err).ToNot(HaveOccurred())
+					if ec.Status.PublishedVersion != wantRevision {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
-		_, gotErr := r.Reconcile(req)
-		if gotErr != nil {
-			t.Errorf("EnvoyConfigReconcilerRevision.Reconcile() error = %v", gotErr)
-			return
-		}
+				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
+				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
+				Expect(len(ec.Status.ConfigRevisions)).To(Equal(2))
+				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(ec.Spec.NodeID + "-" + wantRevision))
 
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
-		if ec.Status.Conditions.IsTrueFor(envoyv1alpha1.RollbackFailedCondition) ||
-			ec.Status.Conditions.IsTrueFor(envoyv1alpha1.CacheOutOfSyncCondition) ||
-			ec.Status.CacheState != envoyv1alpha1.InSyncState {
-			t.Errorf("Status was not correctly updated")
-			return
-		}
+				// Get the EnvoyConfigRevision that should have been created
+				ecr := &envoyv1alpha1.EnvoyConfigRevision{}
+				ecrKey := types.NamespacedName{Name: ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name, Namespace: namespace}
+				err = k8sClient.Get(context.Background(), ecrKey, ecr)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Validate the cache for the nodeID
+				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
+					Resources: [6]cache_v2.Resources{
+						{Version: wantRevision, Items: map[string]cache_types.Resource{
+							"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
+						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+					}})
+
+				// Wait for the revision to get written to the xDS cache
+				Eventually(func() bool {
+					gotV2Snap, err := ecrV2Reconciler.XdsCache.GetSnapshot(ec.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
+
 	})
 
-}
+	// TODO: "From top to bottom, publishes the first non tainted revision of the ConfigRevisions list"
+	// TODO: "Set RollbackFailed state if all versions are tainted"
+	// TODO: "Set RollbackFailed state if all versions are tainted"
 
-func TestEnvoyConfigReconciler_Reconcile_Finalizer(t *testing.T) {
-
-	cr := &envoyv1alpha1.EnvoyConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              "ec",
-			Namespace:         "default",
-			DeletionTimestamp: func() *metav1.Time { t := metav1.Now(); return &t }(),
-			Finalizers:        []string{envoyv1alpha1.EnvoyConfigFinalizer},
-		},
-		Spec: envoyv1alpha1.EnvoyConfigSpec{
-			NodeID:         "node1",
-			EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-		}}
-
-	s := scheme.Scheme
-	s.AddKnownTypes(envoyv1alpha1.GroupVersion,
-		cr,
-		&envoyv1alpha1.EnvoyConfigRevisionList{},
-		&envoyv1alpha1.EnvoyConfigRevision{},
-	)
-	cl := fake.NewFakeClient(cr)
-	r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
-	req := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Name:      "ec",
-			Namespace: "default",
-		},
-	}
-
-	_, gotErr := r.Reconcile(req)
-
-	if gotErr != nil {
-		t.Errorf("EnvoyConfigReconciler.Reconcile_Finalizer() error = %v", gotErr)
-		return
-	}
-	_, err := r.XdsCache.GetSnapshot(cr.Spec.NodeID)
-	if err == nil {
-		t.Errorf("EnvoyConfigReconciler.Reconcile_Finalizer() - snapshot still exists in the ads server cache")
-		return
-	}
-
-	ec := &envoyv1alpha1.EnvoyConfig{}
-	cl.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
-	if len(ec.GetObjectMeta().GetFinalizers()) != 0 {
-		t.Errorf("EnvoyConfigReconciler.Reconcile_Finalizer() - finalizer not deleted from object")
-		return
-	}
-
-}
-
-func TestEnvoyConfigReconciler_finalizeEnvoyConfig(t *testing.T) {
-	type fields struct {
-		client   client.Client
-		scheme   *runtime.Scheme
-		xdsCache xdss.Cache
-	}
-	type args struct {
-		nodeID string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name: "Deletes the snapshot from the ads server cache",
-			fields: fields{client: fake.NewFakeClient(),
-				scheme:   scheme.Scheme,
-				xdsCache: fakeCacheV2(),
-			},
-			args: args{"node1"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &EnvoyConfigReconciler{
-				Client:   tt.fields.client,
-				Scheme:   tt.fields.scheme,
-				XdsCache: tt.fields.xdsCache,
-				Log:      ctrl.Log.WithName("test"),
-			}
-			r.finalizeEnvoyConfig(tt.args.nodeID)
-			if _, err := r.XdsCache.GetSnapshot(tt.args.nodeID); err == nil {
-				t.Errorf("TestEnvoyConfigReconciler_finalizeEnvoyConfig() -> snapshot still in the cache")
-			}
-		})
-	}
-}
-
-func TestEnvoyConfigReconciler_addFinalizer(t *testing.T) {
-	tests := []struct {
-		name    string
-		cr      *envoyv1alpha1.EnvoyConfig
-		wantErr bool
-	}{
-		{
-			name: "Adds finalizer to NodecacheConfig",
-			cr: &envoyv1alpha1.EnvoyConfig{
-				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "default"},
-				Spec: envoyv1alpha1.EnvoyConfigSpec{
-					NodeID:         "node1",
-					EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-				}},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := scheme.Scheme
-			s.AddKnownTypes(envoyv1alpha1.GroupVersion, tt.cr)
-			cl := fake.NewFakeClient(tt.cr)
-			r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
-
-			if err := r.addFinalizer(context.TODO(), tt.cr); (err != nil) != tt.wantErr {
-				t.Errorf("EnvoyConfigReconciler.addFinalizer() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if !tt.wantErr {
-				ec := &envoyv1alpha1.EnvoyConfig{}
-				r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, ec)
-				if len(ec.ObjectMeta.Finalizers) != 1 {
-					t.Error("EnvoyConfigReconciler.addFinalizer() wrong number of finalizers present in object")
-				}
-			}
-		})
-	}
-}
+})
 
 func Test_contains(t *testing.T) {
 	type args struct {
@@ -742,10 +490,9 @@ func TestEnvoyConfigReconciler_getVersionToPublish(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &EnvoyConfigReconciler{
-				Client:   fake.NewFakeClient(tt.ec, tt.ecrList),
-				Scheme:   s,
-				XdsCache: fakeCacheV2(),
-				Log:      ctrl.Log.WithName("test"),
+				Client: fake.NewFakeClient(tt.ec, tt.ecrList),
+				Scheme: s,
+				Log:    ctrl.Log.WithName("test"),
 			}
 			got, err := r.getVersionToPublish(context.TODO(), tt.ec)
 			if (err != nil) != tt.wantErr {
