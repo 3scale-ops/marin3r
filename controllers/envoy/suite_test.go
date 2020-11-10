@@ -19,7 +19,9 @@ package controllers
 import (
 	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/goombaio/namegenerator"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -48,6 +50,7 @@ var k8sClient client.Client
 var testEnv *envtest.Environment
 var ecrV2Reconciler *EnvoyConfigRevisionReconciler
 var ecrV3Reconciler *EnvoyConfigRevisionReconciler
+var nameGenerator namegenerator.Generator
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -65,6 +68,9 @@ var _ = BeforeSuite(func(done Done) {
 		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd", "bases")},
 	}
 
+	seed := time.Now().UTC().UnixNano()
+	nameGenerator = namegenerator.NewNameGenerator(seed)
+
 	var err error
 	cfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
@@ -78,11 +84,17 @@ var _ = BeforeSuite(func(done Done) {
 
 	// +kubebuilder:scaffold:scheme
 
-	// ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
 	})
+	Expect(err).ToNot(HaveOccurred())
+
+	// Add the EnvoyConfig controller
+	err = (&EnvoyConfigReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v2"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	// Add the EnvoyConfigRevision v2 controller

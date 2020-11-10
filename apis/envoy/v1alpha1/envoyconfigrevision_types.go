@@ -25,6 +25,8 @@ import (
 )
 
 const (
+	/* Conditions */
+
 	// RevisionPublishedCondition is a condition that marks the EnvoyConfigRevision object
 	// as the one that should be published in the xds server cache
 	RevisionPublishedCondition status.ConditionType = "RevisionPublished"
@@ -36,6 +38,11 @@ const (
 	// RevisionTaintedCondition is a condition type that's used to report that this
 	// problems have been observed with this revision and should not be published
 	RevisionTaintedCondition status.ConditionType = "RevisionTainted"
+
+	/* Finalizers */
+
+	// EnvoyConfigRevisionFinalizer is the finalizer for EnvoyConfig objects
+	EnvoyConfigRevisionFinalizer string = "finalizer.marin3r.3scale.net"
 )
 
 // EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision

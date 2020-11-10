@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -64,6 +65,34 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		}
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
+	}
+
+	// Add finalizer for this CR
+	if !contains(ecr.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
+		r.Log.V(1).Info("Adding Finalizer for the EnvoyConfigRevision")
+		if err := r.addFinalizer(ctx, ecr); err != nil {
+			r.Log.Error(err, "Failed adding finalizer for EnvoyConfigRevision")
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Check if the EnvoyConfigRevision instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	if ecr.GetDeletionTimestamp() != nil {
+		if contains(ecr.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
+			// Only the published version deletes the nodeID from the cache
+			if ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition) {
+				r.finalizeEnvoyConfigRevision(ecr.Spec.NodeID)
+				r.Log.Info("Successfully cleared xDS server cache", "XDSS", string(ecr.GetEnvoyAPIVersion()), "NodeID", ecr.Spec.NodeID)
+			}
+			// Remove EnvoyConfigFinalizer. Once all finalizers have been
+			// removed, the object will be deleted.
+			controllerutil.RemoveFinalizer(ecr, envoyv1alpha1.EnvoyConfigFinalizer)
+			if err := r.Client.Update(ctx, ecr); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// If this ecr has the RevisionPublishedCondition set to "True" pusblish the resources
@@ -137,6 +166,20 @@ func (r *EnvoyConfigRevisionReconciler) updateStatus(ctx context.Context, ecr *e
 	}
 
 	return nil
+}
+
+func (r *EnvoyConfigRevisionReconciler) addFinalizer(ctx context.Context, ecr *envoyv1alpha1.EnvoyConfigRevision) error {
+	controllerutil.AddFinalizer(ecr, envoyv1alpha1.EnvoyConfigFinalizer)
+
+	// Update CR
+	if err := r.Client.Update(ctx, ecr); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *EnvoyConfigRevisionReconciler) finalizeEnvoyConfigRevision(nodeID string) {
+	r.XdsCache.ClearSnapshot(nodeID)
 }
 
 func filterByAPIVersion(obj runtime.Object, version envoy.APIVersion) bool {

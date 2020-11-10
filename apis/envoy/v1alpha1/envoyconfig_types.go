@@ -37,11 +37,6 @@ const (
 	// tainted
 	RollbackFailedCondition status.ConditionType = "RollbackFailed"
 
-	/* Finalizers */
-
-	// EnvoyConfigFinalizer is the finalizer for EnvoyConfig objects
-	EnvoyConfigFinalizer string = "finalizer.marin3r.3scale.net"
-
 	/* State */
 
 	//InSyncState indicates that a EnvoyConfig object has its resources spec

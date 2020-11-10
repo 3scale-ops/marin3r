@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
@@ -32,15 +31,13 @@ import (
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // EnvoyConfigReconciler reconciles a EnvoyConfig object
 type EnvoyConfigReconciler struct {
-	Client   client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	XdsCache xdss.Cache
+	Client client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 }
 
 func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -61,31 +58,9 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	// Add finalizer for this CR
-	if !contains(ec.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
-		r.Log.Info("Adding Finalizer for the EnvoyConfig")
-		if err := r.addFinalizer(ctx, ec); err != nil {
-			r.Log.Error(err, "Failed adding finalizer for envoyconfig")
-			return ctrl.Result{}, err
-		}
-	}
-
-	// Check if the EnvoyConfig instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set.
-	if ec.GetDeletionTimestamp() != nil {
-		if contains(ec.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
-			r.finalizeEnvoyConfig(ec.Spec.NodeID)
-			r.Log.V(1).Info("Successfully cleared xDS server cache")
-			// Remove memcachedFinalizer. Once all finalizers have been
-			// removed, the object will be deleted.
-			controllerutil.RemoveFinalizer(ec, envoyv1alpha1.EnvoyConfigFinalizer)
-			if err := r.Client.Update(ctx, ec); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return ctrl.Result{}, nil
-	}
-
+	// Set defaults.
+	// TODO: remove this when wwe migrate to CRD v1 api as we will
+	// be able to set defauls directly in the CRD definition.
 	if err := r.reconcileSpecDefaults(ctx, ec); err != nil {
 		return ctrl.Result{}, err
 	}
@@ -236,21 +211,6 @@ func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *envoyv1alp
 		}
 	}
 
-	return nil
-}
-
-func (r *EnvoyConfigReconciler) finalizeEnvoyConfig(nodeID string) {
-	r.XdsCache.ClearSnapshot(nodeID)
-}
-
-func (r *EnvoyConfigReconciler) addFinalizer(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
-	controllerutil.AddFinalizer(ec, envoyv1alpha1.EnvoyConfigFinalizer)
-
-	// Update CR
-	err := r.Client.Update(ctx, ec)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
