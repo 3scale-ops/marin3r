@@ -305,8 +305,3 @@ func getRevisionIndex(version string, revisions []envoyv1alpha1.ConfigRevisionRe
 	}
 	return nil
 }
-
-func moveRevisionToLast(list []envoyv1alpha1.ConfigRevisionRef, idx int) []envoyv1alpha1.ConfigRevisionRef {
-
-	return append(list[:idx], append(list[idx+1:], list[idx])...)
-}
