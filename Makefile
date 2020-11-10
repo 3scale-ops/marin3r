@@ -245,6 +245,7 @@ run-envoy: certs
 
 test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: "make test-envoy-config CONFIG=example/config.yaml". To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
 test-envoy-config:
+	@test -f $$(pwd)/$(CONFIG)
 	docker run -ti --rm \
 		--network=host \
 		-v $$(pwd)/$(CONFIG):/config.yaml \
