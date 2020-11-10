@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 
 	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,9 +20,9 @@ const (
 
 // OnError returns a function that should be called when the envoy control plane receives
 // a NACK to a discovery response from any of the gateways
-func OnError(cfg *rest.Config) func(nodeID, version, msg string) error {
+func OnError(cfg *rest.Config) func(nodeID, version, msg string, envoyAPI envoy.APIVersion) error {
 
-	return func(nodeID, version, msg string) error {
+	return func(nodeID, version, msg string, envoyAPI envoy.APIVersion) error {
 
 		// Create a client and register CRDs
 		s := runtime.NewScheme()
@@ -36,7 +37,11 @@ func OnError(cfg *rest.Config) func(nodeID, version, msg string) error {
 		// Get the envoyconfig that corresponds to the envoy node that returned the error
 		ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-			MatchLabels: map[string]string{nodeIDTag: nodeID, versionTag: version},
+			MatchLabels: map[string]string{
+				nodeIDTag:   nodeID,
+				versionTag:  version,
+				envoyAPITag: string(envoyAPI),
+			},
 		})
 		if err != nil {
 			return err

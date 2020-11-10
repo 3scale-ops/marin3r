@@ -74,7 +74,7 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	if ec.GetDeletionTimestamp() != nil {
 		if contains(ec.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
 			r.finalizeEnvoyConfig(ec.Spec.NodeID)
-			r.Log.V(1).Info("Successfully cleared ads server cache")
+			r.Log.V(1).Info("Successfully cleared xDS server cache")
 			// Remove memcachedFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
 			controllerutil.RemoveFinalizer(ec, envoyv1alpha1.EnvoyConfigFinalizer)
@@ -86,7 +86,11 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, nil
 	}
 
-	// TODO: add the label with the nodeID if it is missing
+	// TODO: ensure all the EnvoyConfigRevisions in the revision list have the appropriate labels
+	// This is important as we use labels to get the lists of revision resources.
+	// This must be done before any other revision related code due to the addition of support for
+	// envoy API v3 which comes with the addition of a new label to identify revisions belonging
+	// to each api version.
 
 	// desiredVersion is the version that matches the resources described in the spec
 	desiredVersion := calculateRevisionHash(ec.Spec.EnvoyResources)
@@ -97,7 +101,7 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// Update the ConfigRevisions list in the status
-	if err := r.consolidateRevisionList(ctx, ec, desiredVersion); err != nil {
+	if err := r.reconcileRevisionList(ctx, ec); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -116,8 +120,9 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	// Mark the "version" as teh published revision
-	if err := r.markRevisionPublished(ctx, ec.Spec.NodeID, version, "VersionPublished", fmt.Sprintf("Version '%s' has been published", version)); err != nil {
+	// Mark the "version" as the published revision
+	if err := r.markRevisionPublished(ctx, ec.Spec.NodeID, version, "VersionPublished",
+		fmt.Sprintf("Version '%s' has been published", version), ec.GetEnvoyAPIVersion()); err != nil {
 		return ctrl.Result{}, err
 	}
 

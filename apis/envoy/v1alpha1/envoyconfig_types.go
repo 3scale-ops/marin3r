@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -186,6 +187,14 @@ type EnvoyConfig struct {
 
 	Spec   EnvoyConfigSpec   `json:"spec,omitempty"`
 	Status EnvoyConfigStatus `json:"status,omitempty"`
+}
+
+// GetEnvoyAPIVersion returns envoy's API version for the EnvoyConfigRevision
+func (ecr *EnvoyConfig) GetEnvoyAPIVersion() envoy.APIVersion {
+	if ecr.Spec.EnvoyAPI == nil {
+		return envoy.APIv2
+	}
+	return envoy.APIVersion(*ecr.Spec.EnvoyAPI)
 }
 
 // +kubebuilder:object:root=true

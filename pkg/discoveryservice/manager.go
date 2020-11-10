@@ -118,7 +118,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 
 	if err := (&envoycontroller.EnvoyConfigRevisionReconciler{
 		Client:     mgr.GetClient(),
-		Log:        ctrl.Log.WithName("controllers").WithName("envoyconfigrevision"),
+		Log:        ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv2))),
 		Scheme:     mgr.GetScheme(),
 		XdsCache:   xdss.GetCache(envoy.APIv2),
 		APIVersion: envoy.APIv2,
@@ -129,7 +129,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 
 	if err := (&envoycontroller.EnvoyConfigRevisionReconciler{
 		Client:     mgr.GetClient(),
-		Log:        ctrl.Log.WithName("controllers").WithName("envoyconfigrevision"),
+		Log:        ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv3))),
 		Scheme:     mgr.GetScheme(),
 		XdsCache:   xdss.GetCache(envoy.APIv3),
 		APIVersion: envoy.APIv3,

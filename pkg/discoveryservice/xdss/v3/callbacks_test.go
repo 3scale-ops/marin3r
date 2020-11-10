@@ -16,9 +16,9 @@ package discoveryservice
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
+	"github.com/3scale/marin3r/pkg/envoy"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
@@ -126,7 +126,7 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 		{
 			"OnStreamRequest() NACK received",
 			&Callbacks{
-				OnError:       func(a, b, c string) error { return nil },
+				OnError:       func(a, b, c string, d envoy.APIVersion) error { return nil },
 				SnapshotCache: fakeTestCache(),
 				Logger:        ctrl.Log,
 			},
@@ -141,7 +141,7 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 		{
 			"OnStreamRequest() error",
 			&Callbacks{
-				OnError:       func(a, b, c string) error { return nil },
+				OnError:       func(a, b, c string, d envoy.APIVersion) error { return nil },
 				SnapshotCache: fakeTestCache(),
 				Logger:        ctrl.Log,
 			},
@@ -156,7 +156,7 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 		{
 			"OnStreamRequest() error calling OnErrorFn",
 			&Callbacks{
-				OnError:       func(a, b, c string) error { return fmt.Errorf("error") },
+				OnError:       func(a, b, c string, d envoy.APIVersion) error { return nil },
 				SnapshotCache: fakeTestCache(),
 				Logger:        ctrl.Log,
 			},

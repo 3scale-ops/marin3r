@@ -53,7 +53,7 @@ type XdsServer interface {
 	GetCache(envoy.APIVersion) xdss.Cache
 }
 
-type onErrorFn func(nodeID, previousVersion, msg string) error
+type onErrorFn func(nodeID, previousVersion, msg string, envoyAPI envoy.APIVersion) error
 
 // DualXdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server

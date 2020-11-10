@@ -30,7 +30,7 @@ var logger = log.Log.WithName("xds_server").WithName("v3")
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
 type Callbacks struct {
-	OnError       func(nodeID, previousVersion, msg string) error
+	OnError       func(nodeID, previousVersion, msg string, envoyAPI envoy.APIVersion) error
 	SnapshotCache *cache_v3.SnapshotCache
 	Logger        logr.Logger
 }
@@ -62,7 +62,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.D
 		// All resource types are always kept at the same version
 		failingVersion := snap.GetVersion("type.googleapis.com/envoy.api.v3.ClusterLoadAssignment")
 		cb.Logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "CurrentVersion", req.VersionInfo, "FailingVersion", failingVersion, "NodeID", req.Node.Id, "StreamID", id)
-		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message); err != nil {
+		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message, envoy.APIv3); err != nil {
 			cb.Logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
 			return err
 		}

@@ -8,6 +8,7 @@ import (
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -167,7 +168,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 		cl := fake.NewFakeClient(ec, ecr)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.consolidateRevisionList(context.TODO(), ec, "xxxx")
+		gotErr := r.reconcileRevisionList(context.TODO(), ec)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() error = %v", gotErr)
 			return
@@ -243,7 +244,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 		cl := fake.NewFakeClient(ec, ecr1, ecr2, ecr3)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.consolidateRevisionList(context.TODO(), ec, "1")
+		gotErr := r.reconcileRevisionList(context.TODO(), ec)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() error = %v", gotErr)
 			return
@@ -323,7 +324,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		cl := fake.NewFakeClient(ecr1, ecr2)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), "node1", "2", "reason", "msg")
+		gotErr := r.markRevisionPublished(context.TODO(), "node1", "2", "reason", "msg", envoy.APIv2)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return
@@ -380,7 +381,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		cl := fake.NewFakeClient(ecr1, ecr2)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeCacheV2(), Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), "node1", "1", "reason", "msg")
+		gotErr := r.markRevisionPublished(context.TODO(), "node1", "1", "reason", "msg", envoy.APIv2)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return

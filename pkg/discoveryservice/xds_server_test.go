@@ -36,7 +36,7 @@ import (
 var (
 	snapshotCacheV2 = cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)
 	snapshotCacheV3 = cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-	fn              = func(a, b, c string) error { return nil }
+	fn              = func(a, b, c string, d envoy.APIVersion) error { return nil }
 )
 
 func TestNewDualXdsServer(t *testing.T) {
