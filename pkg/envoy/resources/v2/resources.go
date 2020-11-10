@@ -5,7 +5,6 @@ import (
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 )
 
@@ -24,7 +23,7 @@ func (g Generator) New(rType envoy.Type) envoy.Resource {
 		return &envoy_api_v2.Cluster{}
 
 	case envoy.Route:
-		return &envoy_api_v2_route.Route{}
+		return &envoy_api_v2.RouteConfiguration{}
 
 	case envoy.Listener:
 		return &envoy_api_v2.Listener{}

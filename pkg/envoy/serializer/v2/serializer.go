@@ -8,7 +8,6 @@ import (
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 
 	"github.com/ghodss/yaml"
@@ -112,7 +111,7 @@ func (s JSON) Unmarshal(str string, res envoy.Resource) error {
 	case *envoy_api_v2.Cluster:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
-	case *envoy_api_v2_route.Route:
+	case *envoy_api_v2.RouteConfiguration:
 		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
 
 	case *envoy_api_v2.Listener:

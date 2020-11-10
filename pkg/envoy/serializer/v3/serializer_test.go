@@ -204,13 +204,19 @@ var (
 					Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
 				}}}}
 
-	routeJSON string                       = `{"name":"route1","match":{"prefix":"/"},"directResponse":{"status":200}}`
-	route     *envoy_config_route_v3.Route = &envoy_config_route_v3.Route{
+	routeJSON string                                    = `{"name":"route1","virtualHosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"directResponse":{"status":200}}]}]}`
+	route     *envoy_config_route_v3.RouteConfiguration = &envoy_config_route_v3.RouteConfiguration{
 		Name: "route1",
-		Match: &envoy_config_route_v3.RouteMatch{
-			PathSpecifier: &envoy_config_route_v3.RouteMatch_Prefix{Prefix: "/"}},
-		Action: &envoy_config_route_v3.Route_DirectResponse{
-			DirectResponse: &envoy_config_route_v3.DirectResponseAction{Status: 200}},
+		VirtualHosts: []*envoy_config_route_v3.VirtualHost{{
+			Name:    "vhost",
+			Domains: []string{"*"},
+			Routes: []*envoy_config_route_v3.Route{{
+				Match: &envoy_config_route_v3.RouteMatch{
+					PathSpecifier: &envoy_config_route_v3.RouteMatch_Prefix{Prefix: "/"}},
+				Action: &envoy_config_route_v3.Route_DirectResponse{
+					DirectResponse: &envoy_config_route_v3.DirectResponseAction{Status: 200}},
+			}},
+		}},
 	}
 
 	runtimeJSON string                            = `{"name":"runtime1","layer":{"static_layer_0":"value"}}`
@@ -334,7 +340,7 @@ func TestJSON_Unmarshal(t *testing.T) {
 		{
 			name:    "Deserialize route from json",
 			s:       JSON{},
-			args:    args{str: routeJSON, res: &envoy_config_route_v3.Route{}},
+			args:    args{str: routeJSON, res: &envoy_config_route_v3.RouteConfiguration{}},
 			want:    route,
 			wantErr: false,
 		},
@@ -348,7 +354,7 @@ func TestJSON_Unmarshal(t *testing.T) {
 		{
 			name:    "Error deserializing resource",
 			s:       JSON{},
-			args:    args{str: `{"this_is": "wrong"}`, res: &envoy_config_route_v3.Route{}},
+			args:    args{str: `{"this_is": "wrong"}`, res: &envoy_config_route_v3.RouteConfiguration{}},
 			want:    nil,
 			wantErr: true,
 		},

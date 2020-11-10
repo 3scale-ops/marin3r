@@ -26,7 +26,7 @@ func (g Generator) New(rType envoy.Type) envoy.Resource {
 		return &envoy_config_cluster_v3.Cluster{}
 
 	case envoy.Route:
-		return &envoy_config_route_v3.Route{}
+		return &envoy_config_route_v3.RouteConfiguration{}
 
 	case envoy.Listener:
 		return &envoy_config_listener_v3.Listener{}

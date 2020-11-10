@@ -160,13 +160,19 @@ var (
 					Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
 				}}}}
 
-	routeJSON string                    = `{"name":"route1","match":{"prefix":"/"},"directResponse":{"status":200}}`
-	route     *envoy_api_v2_route.Route = &envoy_api_v2_route.Route{
+	routeJSON string                           = `{"name":"route1","virtualHosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"directResponse":{"status":200}}]}]}`
+	route     *envoy_api_v2.RouteConfiguration = &envoy_api_v2.RouteConfiguration{
 		Name: "route1",
-		Match: &envoy_api_v2_route.RouteMatch{
-			PathSpecifier: &envoy_api_v2_route.RouteMatch_Prefix{Prefix: "/"}},
-		Action: &envoy_api_v2_route.Route_DirectResponse{
-			DirectResponse: &envoy_api_v2_route.DirectResponseAction{Status: 200}},
+		VirtualHosts: []*envoy_api_v2_route.VirtualHost{{
+			Name:    "vhost",
+			Domains: []string{"*"},
+			Routes: []*envoy_api_v2_route.Route{{
+				Match: &envoy_api_v2_route.RouteMatch{
+					PathSpecifier: &envoy_api_v2_route.RouteMatch_Prefix{Prefix: "/"}},
+				Action: &envoy_api_v2_route.Route_DirectResponse{
+					DirectResponse: &envoy_api_v2_route.DirectResponseAction{Status: 200}},
+			}},
+		}},
 	}
 
 	runtimeJSON string                              = `{"name":"runtime1","layer":{"static_layer_0":"value"}}`
@@ -290,7 +296,7 @@ func TestJSON_Unmarshal(t *testing.T) {
 		{
 			name:    "Deserialize route from json",
 			s:       JSON{},
-			args:    args{str: routeJSON, res: &envoy_api_v2_route.Route{}},
+			args:    args{str: routeJSON, res: &envoy_api_v2.RouteConfiguration{}},
 			want:    route,
 			wantErr: false,
 		},
@@ -304,7 +310,7 @@ func TestJSON_Unmarshal(t *testing.T) {
 		{
 			name:    "Error deserializing resource",
 			s:       JSON{},
-			args:    args{str: `{"this_is": "wrong"}`, res: &envoy_api_v2_route.Route{}},
+			args:    args{str: `{"this_is": "wrong"}`, res: &envoy_api_v2.RouteConfiguration{}},
 			want:    nil,
 			wantErr: true,
 		},

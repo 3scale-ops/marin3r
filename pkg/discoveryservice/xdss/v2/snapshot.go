@@ -5,7 +5,6 @@ import (
 	envoy_resources_v2 "github.com/3scale/marin3r/pkg/envoy/resources/v2"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 )
@@ -43,7 +42,7 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 	case *envoy_api_v2.Cluster:
 		s.v2.Resources[v2CacheResources(envoy.Cluster)].Items[name] = o
 
-	case *envoy_api_v2_route.Route:
+	case *envoy_api_v2.RouteConfiguration:
 		s.v2.Resources[v2CacheResources(envoy.Route)].Items[name] = o
 
 	case *envoy_api_v2.Listener:

@@ -45,7 +45,7 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 	case *envoy_config_cluster_v3.Cluster:
 		s.v3.Resources[v3CacheResources(envoy.Cluster)].Items[name] = o
 
-	case *envoy_config_route_v3.Route:
+	case *envoy_config_route_v3.RouteConfiguration:
 		s.v3.Resources[v3CacheResources(envoy.Route)].Items[name] = o
 
 	case *envoy_config_listener_v3.Listener:

@@ -18,7 +18,6 @@ import (
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -354,7 +353,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 						"cluster": &envoy_api_v2.Cluster{Name: "cluster"},
 					}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{
-						"route": &envoy_api_v2_route.Route{Name: "route"},
+						"route": &envoy_api_v2.RouteConfiguration{Name: "route"},
 					}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{
 						"listener": &envoy_api_v2.Listener{Name: "listener"},
@@ -406,7 +405,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 						"cluster": &envoy_config_cluster_v3.Cluster{Name: "cluster"},
 					}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{
-						"route": &envoy_config_route_v3.Route{Name: "route"},
+						"route": &envoy_config_route_v3.RouteConfiguration{Name: "route"},
 					}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{
 						"listener": &envoy_config_listener_v3.Listener{Name: "listener"},
