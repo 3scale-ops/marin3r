@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"hash/fnv"
+	"reflect"
 	"sort"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
@@ -88,7 +89,7 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 	return nil
 }
 
-func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
+func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig, desiredVersion string) error {
 
 	// Get all revisions owned by this EnvoyConfig that match the envoy API version
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
@@ -108,10 +109,15 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 		}
 	}
 
-	// Sort the revisions:
-	// if publication timestamp is defined, by publication timestamp
-	// if publication timestamp is not defined, by creation timestamp
+	// Sort the revisions
 	sort.SliceStable(ecrList.Items, func(i, j int) bool {
+		// if revision matches desiredVersion, it always goes higher
+		if ecrList.Items[j].Spec.Version == desiredVersion {
+			return true
+		}
+
+		// if publication date is defined, higher publication date goes higher
+		// if publication date is not defined, higher creation date goes higher
 		var iTime, jTime metav1.Time
 		if ecrList.Items[i].Status.LastPublishedAt.IsZero() {
 			iTime = ecrList.Items[i].GetCreationTimestamp()
@@ -124,7 +130,6 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 		} else {
 			jTime = ecrList.Items[j].Status.LastPublishedAt
 		}
-
 		return iTime.Before(&jTime)
 	})
 
@@ -143,16 +148,24 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 		}
 	}
 
-	// Update the revision list in the EC status
-	patch := client.MergeFrom(ec.DeepCopy())
-	ec.Status.ConfigRevisions = revisionList
+	// The EnvoyConfigRevision matching desiredVersion should be in the generated
+	// revision list. If not, return an error.
+	if idx := getRevisionIndex(desiredVersion, revisionList); idx == nil {
+		return newCacheError(UnknownError, "consolidateRevisionList", fmt.Sprintf("EnvoyConfigRevision for desired version '%s' not found", desiredVersion))
+	}
 
-	// Remove older revisions if max have been reached
-	ec.Status.ConfigRevisions = trimRevisions(ec.Status.ConfigRevisions, maxRevisions)
+	// Update the revision list in the EC status if required
+	if !reflect.DeepEqual(ec.Status.ConfigRevisions, revisionList) {
+		patch := client.MergeFrom(ec.DeepCopy())
+		ec.Status.ConfigRevisions = revisionList
 
-	err = r.Client.Status().Patch(ctx, ec, patch)
-	if err != nil {
-		return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
+		// Remove older revisions if max have been reached
+		ec.Status.ConfigRevisions = trimRevisions(ec.Status.ConfigRevisions, maxRevisions)
+
+		err = r.Client.Status().Patch(ctx, ec, patch)
+		if err != nil {
+			return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
+		}
 	}
 
 	return nil

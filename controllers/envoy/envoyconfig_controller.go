@@ -82,7 +82,7 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// Update the ConfigRevisions list in the status
-	if err := r.reconcileRevisionList(ctx, ec); err != nil {
+	if err := r.reconcileRevisionList(ctx, ec, desiredVersion); err != nil {
 		return ctrl.Result{}, err
 	}
 
