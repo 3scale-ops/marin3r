@@ -64,10 +64,6 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 	})
 
 	AfterEach(func() {
-		// Clear the xDS caches after each test
-		ecrV2Reconciler.XdsCache = xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil))
-		ecrV3Reconciler.XdsCache = xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil))
-
 		// Delete the namespace
 		testNamespace := &v1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
@@ -407,7 +403,156 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		})
 	})
 
-	// TODO: test for finalizer
+	Context("EnvoyConfigRevision finalizer", func() {
+		var ecr *envoyv1alpha1.EnvoyConfigRevision
+
+		BeforeEach(func() {
+			// Create a EnvoyConfigRevision for each block (API version is irrelevant here)
+			ecr = &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:  nodeID,
+					Version: "xxxx",
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ecr)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("Resource is created", func() {
+
+			It("Should have a finalizer", func() {
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					if len(ecr.GetFinalizers()) == 1 {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
+
+		When("Resource is deleted", func() {
+
+			BeforeEach(func() {
+				// Set the published condition to force execution of the finalizer code
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   envoyv1alpha1.RevisionPublishedCondition,
+					Status: corev1.ConditionTrue,
+				})
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Wait for the ECR to get published before deleting it
+				Eventually(func() bool {
+					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return true
+				}, 300*time.Second, 5*time.Second).Should(BeTrue())
+
+				Expect(k8sClient.Delete(context.Background(), ecr)).Should(Succeed())
+			})
+
+			Specify("Snapshot for the nodeID should have been cleared", func() {
+				Eventually(func() bool {
+					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					if err != nil {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
+	})
+
+	Context("EnvoyConfigRevision taints", func() {
+		var ecr *envoyv1alpha1.EnvoyConfigRevision
+
+		BeforeEach(func() {
+			// Create a EnvoyConfigRevision for each block (API version is irrelevant here)
+			ecr = &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:  nodeID,
+					Version: "xxxx",
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ecr)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("RevisionTainted condition is true", func() {
+
+			BeforeEach(func() {
+				// Set the published condition to force execution of the finalizer code
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   envoyv1alpha1.RevisionTaintedCondition,
+					Status: corev1.ConditionTrue,
+				})
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+			})
+
+			Specify("status.tainted should be true", func() {
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					if ecr.Status.Tainted {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+
+			Specify("status.tainted should be false when condition is cleared", func() {
+
+				// Set the published condition to force execution of the finalizer code
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   envoyv1alpha1.RevisionTaintedCondition,
+					Status: corev1.ConditionFalse,
+				})
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					if !ecr.Status.Tainted {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
+
+	})
 
 })
 
