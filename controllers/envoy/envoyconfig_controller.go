@@ -183,7 +183,7 @@ func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *envoyv1alp
 			Message: "Desired resources spec cannot be applied",
 		})
 		changed = true
-	} else if desired == published && !ec.Status.Conditions.IsFalseFor(envoyv1alpha1.CacheOutOfSyncCondition) {
+	} else if desired == published && ec.Status.Conditions.IsTrueFor(envoyv1alpha1.CacheOutOfSyncCondition) {
 		ec.Status.Conditions.SetCondition(status.Condition{
 			Type:    envoyv1alpha1.CacheOutOfSyncCondition,
 			Status:  corev1.ConditionFalse,
