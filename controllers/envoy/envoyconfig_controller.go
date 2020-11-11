@@ -89,7 +89,7 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// determine the version that should be published
 	version, err := r.getVersionToPublish(ctx, ec)
 	if err != nil {
-		if err.(cacheError).ErrorType == AllRevisionsTaintedError {
+		if err.(ControllerError).ErrorType == AllRevisionsTaintedError {
 			if err := r.setRollbackFailed(ctx, ec); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -127,11 +127,11 @@ func (r *EnvoyConfigReconciler) getVersionToPublish(ctx context.Context, ec *env
 		MatchLabels: map[string]string{nodeIDTag: ec.Spec.NodeID},
 	})
 	if err != nil {
-		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
+		return "", NewControllerError(UnknownError, "getVersionToPublish", err.Error())
 	}
 	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
-		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
+		return "", NewControllerError(UnknownError, "getVersionToPublish", err.Error())
 	}
 
 	// Starting from the highest index in the ConfigRevision list and going
@@ -146,7 +146,7 @@ func (r *EnvoyConfigReconciler) getVersionToPublish(ctx context.Context, ec *env
 
 	// If we get here it means that there is not untainted revision. Return a specific
 	// error to the controller loop so it gets handled appropriately
-	return "", newCacheError(AllRevisionsTaintedError, "getVersionToPublish", "All available revisions are tainted")
+	return "", NewControllerError(AllRevisionsTaintedError, "getVersionToPublish", "All available revisions are tainted")
 }
 
 func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig, desired, published string) error {
@@ -226,11 +226,11 @@ func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec 
 		},
 	})
 	if err != nil {
-		return newCacheError(UnknownError, "reconcileRevisionLabels", err.Error())
+		return NewControllerError(UnknownError, "reconcileRevisionLabels", err.Error())
 	}
 	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
-		return newCacheError(UnknownError, "reconcileRevisionLabels", err.Error())
+		return NewControllerError(UnknownError, "reconcileRevisionLabels", err.Error())
 	}
 
 	for _, ecr := range ecrList.Items {
@@ -243,7 +243,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec 
 				envoyAPITag: string(ec.GetEnvoyAPIVersion()),
 			})
 			if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
-				return newCacheError(UnknownError, "reconcileRevisionLabels", err.Error())
+				return NewControllerError(UnknownError, "reconcileRevisionLabels", err.Error())
 			}
 		}
 	}

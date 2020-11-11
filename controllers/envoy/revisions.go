@@ -33,12 +33,12 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
 	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
-		return newCacheError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
+		return NewControllerError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
 	}
 
 	// Got wrong number of revisions
 	if len(ecrList.Items) > 1 {
-		return newCacheError(UnknownError, "ensureEnvoyConfigRevision", fmt.Sprintf("more than one revision exists for config version '%s', cannot reconcile", version))
+		return NewControllerError(UnknownError, "ensureEnvoyConfigRevision", fmt.Sprintf("more than one revision exists for config version '%s', cannot reconcile", version))
 	}
 
 	// Revision does not yet exists, create one
@@ -64,10 +64,10 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 		}
 		// Set the ec as the owner and controller of the revision
 		if err := controllerutil.SetControllerReference(ec, ecr, r.Scheme); err != nil {
-			return newCacheError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
+			return NewControllerError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
 		}
 		if err := r.Client.Create(ctx, ecr); err != nil {
-			return newCacheError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
+			return NewControllerError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
 		}
 	}
 
@@ -80,7 +80,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
 	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
-		return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
+		return NewControllerError(UnknownError, "consolidateRevisionList", err.Error())
 	}
 
 	// Sort the revisions
@@ -125,7 +125,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 	// The EnvoyConfigRevision matching desiredVersion should be in the generated
 	// revision list. If not, return an error.
 	if idx := getRevisionIndex(desiredVersion, revisionList); idx == nil {
-		return newCacheError(UnknownError, "consolidateRevisionList", fmt.Sprintf("EnvoyConfigRevision for desired version '%s' not found", desiredVersion))
+		return NewControllerError(UnknownError, "consolidateRevisionList", fmt.Sprintf("EnvoyConfigRevision for desired version '%s' not found", desiredVersion))
 	}
 
 	// Update the revision list in the EC status if required
@@ -137,7 +137,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 		ec.Status.ConfigRevisions = trimRevisions(ec.Status.ConfigRevisions, maxRevisions)
 
 		if err := r.Client.Status().Patch(ctx, ec, patch); err != nil {
-			return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
+			return NewControllerError(UnknownError, "consolidateRevisionList", err.Error())
 		}
 	}
 
@@ -149,7 +149,7 @@ func (r *EnvoyConfigReconciler) deleteUnreferencedRevisions(ctx context.Context,
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
 	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
-		return newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
+		return NewControllerError(UnknownError, "deleteUnreferencedRevisions", err.Error())
 	}
 
 	// For each of the revisions, check if they are still referred from the ec
@@ -176,7 +176,7 @@ func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *e
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
 	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
-		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+		return NewControllerError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
 	// Set 'RevisionPublished' to false for all revisions
@@ -191,7 +191,7 @@ func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *e
 			})
 
 			if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
-				return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+				return NewControllerError(UnknownError, "markRevisionPublished", err.Error())
 			}
 		}
 	}
@@ -204,11 +204,11 @@ func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *e
 	// Set the the revision that holds the given version with 'RevisionPublished' = True
 	ecrList = &envoyv1alpha1.EnvoyConfigRevisionList{}
 	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
-		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+		return NewControllerError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
 	if len(ecrList.Items) != 1 {
-		return newCacheError(UnknownError, "markRevisionPublished", fmt.Sprintf("found unexpected number of envoyconfigrevisions matching version '%s'", version))
+		return NewControllerError(UnknownError, "markRevisionPublished", fmt.Sprintf("found unexpected number of envoyconfigrevisions matching version '%s'", version))
 	}
 
 	ecr := ecrList.Items[0]
@@ -221,7 +221,7 @@ func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *e
 	})
 
 	if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
-		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
+		return NewControllerError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
 	return nil
