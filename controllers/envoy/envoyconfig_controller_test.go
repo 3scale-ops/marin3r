@@ -7,12 +7,10 @@ import (
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
-	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
 	testutil "github.com/3scale/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/operator-framework/operator-lib/status"
@@ -69,9 +67,6 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 	})
 
 	AfterEach(func() {
-		// Clear the xDS caches after each test
-		ecrV2Reconciler.XdsCache = xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil))
-		ecrV3Reconciler.XdsCache = xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil))
 
 		// Delete the namespace
 		testNamespace := &v1.Namespace{
