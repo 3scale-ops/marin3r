@@ -79,7 +79,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			return nil,
 				resourceLoaderError(
 					req, endpoint.Value, field.NewPath("spec", "resources").Child("endpoint").Index(idx).Child("value"),
-					"Invalid envoy resource value",
+					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
 		snap.SetResource(endpoint.Name, res)
@@ -91,7 +91,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			return nil,
 				resourceLoaderError(
 					req, cluster.Value, field.NewPath("spec", "resources").Child("clusters").Index(idx).Child("value"),
-					"Invalid envoy resource value",
+					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
 		snap.SetResource(cluster.Name, res)
@@ -103,7 +103,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			return nil,
 				resourceLoaderError(
 					req, route.Value, field.NewPath("spec", "resources").Child("routes").Index(idx).Child("value"),
-					"Invalid envoy resource value",
+					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
 		snap.SetResource(route.Name, res)
@@ -115,7 +115,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			return nil,
 				resourceLoaderError(
 					req, listener.Value, field.NewPath("spec", "resources").Child("listener").Index(idx).Child("value"),
-					"Invalid envoy resource value",
+					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
 		snap.SetResource(listener.Name, res)
@@ -127,7 +127,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			return nil,
 				resourceLoaderError(
 					req, runtime.Value, field.NewPath("spec", "resources").Child("runtime").Index(idx).Child("value"),
-					"Invalid envoy resource value",
+					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
 		snap.SetResource(runtime.Name, res)
@@ -141,9 +141,13 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 		}
 		if err := r.client.Get(r.ctx, key, s); err != nil {
 			if errors.IsNotFound(err) {
-				return nil, err
+				return nil, resourceLoaderError(
+					req, secret.Ref, field.NewPath("spec", "resources").Child("secrets").Index(idx).Child("ref"),
+					"Secret not found",
+				)
 			}
-			return nil, err
+			return nil, resourceLoaderError(
+				req, secret.Ref, field.NewPath("spec", "resources").Child("secrets").Index(idx).Child("ref"), err.Error())
 		}
 
 		// Validate secret holds a certificate
