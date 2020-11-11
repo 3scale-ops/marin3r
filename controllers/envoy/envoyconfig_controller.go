@@ -102,8 +102,8 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// Mark the "version" as the published revision
-	if err := r.markRevisionPublished(ctx, ec.Spec.NodeID, version, "VersionPublished",
-		fmt.Sprintf("Version '%s' has been published", version), ec.GetEnvoyAPIVersion()); err != nil {
+	if err := r.markRevisionPublished(ctx, ec, version, "VersionPublished",
+		fmt.Sprintf("Version '%s' has been published", version)); err != nil {
 		return ctrl.Result{}, err
 	}
 

@@ -9,7 +9,6 @@ import (
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
-	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
@@ -259,6 +258,16 @@ func TestEnvoyConfigReconciler_deleteUnreferencedRevisions(t *testing.T) {
 
 func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 	t.Run("Keeps current revision published", func(t *testing.T) {
+		ec := &envoyv1alpha1.EnvoyConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ec",
+				Namespace: "default",
+			},
+			Spec: envoyv1alpha1.EnvoyConfigSpec{
+				NodeID:         "node1",
+				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+			},
+		}
 		ecr1 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
@@ -294,7 +303,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		cl := fake.NewFakeClient(ecr1, ecr2)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), "node1", "2", "reason", "msg", envoy.APIv2)
+		gotErr := r.markRevisionPublished(context.TODO(), ec, "2", "reason", "msg")
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return
@@ -316,6 +325,16 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 	})
 
 	t.Run("Changes the published revision", func(t *testing.T) {
+		ec := &envoyv1alpha1.EnvoyConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ec",
+				Namespace: "default",
+			},
+			Spec: envoyv1alpha1.EnvoyConfigSpec{
+				NodeID:         "node1",
+				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+			},
+		}
 		ecr1 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
@@ -351,7 +370,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		cl := fake.NewFakeClient(ecr1, ecr2)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), "node1", "1", "reason", "msg", envoy.APIv2)
+		gotErr := r.markRevisionPublished(context.TODO(), ec, "1", "reason", "msg")
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return

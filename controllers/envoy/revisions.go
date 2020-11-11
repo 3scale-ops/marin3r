@@ -9,7 +9,6 @@ import (
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	common "github.com/3scale/marin3r/pkg/common"
-	envoy "github.com/3scale/marin3r/pkg/envoy"
 
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -32,22 +31,9 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 
 	// Get the list of revisions for the current version
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			nodeIDTag:   ec.Spec.NodeID,
-			versionTag:  version,
-			envoyAPITag: string(ec.GetEnvoyAPIVersion()),
-		},
-	})
-
-	if err != nil {
+	envoyAPI := string(ec.GetEnvoyAPIVersion())
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
 		return newCacheError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
-	}
-	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
-		if err != nil {
-			return newCacheError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
-		}
 	}
 
 	// Got wrong number of revisions
@@ -80,8 +66,7 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 		if err := controllerutil.SetControllerReference(ec, ecr, r.Scheme); err != nil {
 			return newCacheError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
 		}
-		err = r.Client.Create(ctx, ecr)
-		if err != nil {
+		if err := r.Client.Create(ctx, ecr); err != nil {
 			return newCacheError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
 		}
 	}
@@ -93,20 +78,9 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 
 	// Get all revisions owned by this EnvoyConfig that match the envoy API version
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			nodeIDTag:   ec.Spec.NodeID,
-			envoyAPITag: string(ec.GetEnvoyAPIVersion()),
-		},
-	})
-	if err != nil {
+	envoyAPI := string(ec.GetEnvoyAPIVersion())
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
 		return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
-	}
-	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
-		if err != nil {
-			return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
-		}
 	}
 
 	// Sort the revisions
@@ -162,8 +136,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 		// Remove older revisions if max have been reached
 		ec.Status.ConfigRevisions = trimRevisions(ec.Status.ConfigRevisions, maxRevisions)
 
-		err = r.Client.Status().Patch(ctx, ec, patch)
-		if err != nil {
+		if err := r.Client.Status().Patch(ctx, ec, patch); err != nil {
 			return newCacheError(UnknownError, "consolidateRevisionList", err.Error())
 		}
 	}
@@ -174,16 +147,8 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 func (r *EnvoyConfigReconciler) deleteUnreferencedRevisions(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
 	// Get all revisions that belong to this ec
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			nodeIDTag:   ec.Spec.NodeID,
-			envoyAPITag: string(ec.GetEnvoyAPIVersion()),
-		}})
-	if err != nil {
-		return newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
-	}
-	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
+	envoyAPI := string(ec.GetEnvoyAPIVersion())
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
 		return newCacheError(UnknownError, "deleteUnreferencedRevisions", err.Error())
 	}
 
@@ -205,21 +170,12 @@ func (r *EnvoyConfigReconciler) deleteUnreferencedRevisions(ctx context.Context,
 //  - It will set the 'RevisionPublished' condition to true in the revision that matches the given version
 // This ensures that at a given point in time 0 or 1 revisions can have the 'PublishedRevision' to true, being
 // 1 the case most of the time
-func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, nodeID, version, reason, msg string, envoyAPI envoy.APIVersion) error {
+func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig, version, reason, msg string) error {
 
 	// Get all revisions for this EnvoyConfig
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
-	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			nodeIDTag:   nodeID,
-			envoyAPITag: string(envoyAPI),
-		},
-	})
-	if err != nil {
-		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
-	}
-	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
+	envoyAPI := string(ec.GetEnvoyAPIVersion())
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
 		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
@@ -247,20 +203,7 @@ func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, nodeI
 
 	// Set the the revision that holds the given version with 'RevisionPublished' = True
 	ecrList = &envoyv1alpha1.EnvoyConfigRevisionList{}
-	selector, err = metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			nodeIDTag:   nodeID,
-			versionTag:  version,
-			envoyAPITag: string(envoyAPI),
-		},
-	})
-
-	if err != nil {
-		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
-	}
-
-	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
-	if err != nil {
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
 		return newCacheError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
@@ -304,4 +247,21 @@ func getRevisionIndex(version string, revisions []envoyv1alpha1.ConfigRevisionRe
 		}
 	}
 	return nil
+}
+
+func getRevisionListOptions(namespace string, nodeID, version, envoyAPI *string) []client.ListOption {
+	labelSelector := client.MatchingLabels{}
+	if nodeID != nil {
+		labelSelector[nodeIDTag] = *nodeID
+	}
+	if version != nil {
+		labelSelector[versionTag] = *version
+	}
+	if envoyAPI != nil {
+		labelSelector[envoyAPITag] = *envoyAPI
+	}
+	return []client.ListOption{
+		labelSelector,
+		client.InNamespace(namespace),
+	}
 }
