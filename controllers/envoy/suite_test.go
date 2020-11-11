@@ -86,6 +86,9 @@ var _ = BeforeSuite(func(done Done) {
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
+		// Disable the metrics port to allow running the
+		// test suite in parallel
+		MetricsBindAddress: "0",
 	})
 	Expect(err).ToNot(HaveOccurred())
 
