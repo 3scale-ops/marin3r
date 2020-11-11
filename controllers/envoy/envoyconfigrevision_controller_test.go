@@ -556,6 +556,33 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 })
 
+func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
+
+	t.Run("Taints the ecr object", func(t *testing.T) {
+		ecr := &envoyv1alpha1.EnvoyConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+				NodeID:         "node1",
+				Version:        "bbbb",
+				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+			},
+		}
+		r := &EnvoyConfigRevisionReconciler{
+			Client:   fake.NewFakeClient(ecr),
+			Scheme:   s,
+			XdsCache: xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
+			Log:      ctrl.Log.WithName("test"),
+		}
+		if err := r.taintSelf(context.TODO(), ecr, "test", "test"); err != nil {
+			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() error = %v", err)
+		}
+		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+		if !ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionTaintedCondition) {
+			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() ecr is not tainted")
+		}
+	})
+}
+
 func Test_filterByAPIVersion(t *testing.T) {
 	type args struct {
 		obj     runtime.Object

@@ -108,8 +108,19 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 
 		result, err := cacheReconciler.Reconcile(req.NamespacedName, ecr.Spec.EnvoyResources, ecr.Spec.NodeID, ecr.Spec.Version)
 
+		// If a type errors.StatusError is returned it means that the config in spec.envoyResources is wrong
+		// and cannot be written into the xDS cache. This is true for any error loading all types of resources
+		// except for Secrets. Secrets are dynamically loaded from the API and transient failures are possible, so
+		// setting a permanent taint could occur for a transient failure, which is not desirable.
 		if result.Requeue || err != nil {
-			return result, err
+			switch err.(type) {
+			case *errors.StatusError:
+				if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error()); err != nil {
+					return ctrl.Result{}, err
+				}
+			default:
+				return result, err
+			}
 		}
 	}
 
@@ -180,6 +191,24 @@ func (r *EnvoyConfigRevisionReconciler) addFinalizer(ctx context.Context, ecr *e
 
 func (r *EnvoyConfigRevisionReconciler) finalizeEnvoyConfigRevision(nodeID string) {
 	r.XdsCache.ClearSnapshot(nodeID)
+}
+
+func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *envoyv1alpha1.EnvoyConfigRevision, reason, msg string) error {
+	if !ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionTaintedCondition) {
+		patch := client.MergeFrom(ecr.DeepCopy())
+		ecr.Status.Conditions.SetCondition(status.Condition{
+			Type:    envoyv1alpha1.RevisionTaintedCondition,
+			Status:  corev1.ConditionTrue,
+			Reason:  status.ConditionReason(reason),
+			Message: msg,
+		})
+		ecr.Status.Tainted = true
+
+		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func filterByAPIVersion(obj runtime.Object, version envoy.APIVersion) bool {

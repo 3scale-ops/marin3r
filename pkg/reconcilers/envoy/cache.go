@@ -140,14 +140,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			Namespace: secret.Ref.Namespace,
 		}
 		if err := r.client.Get(r.ctx, key, s); err != nil {
-			if errors.IsNotFound(err) {
-				return nil, resourceLoaderError(
-					req, secret.Ref, field.NewPath("spec", "resources").Child("secrets").Index(idx).Child("ref"),
-					"Secret not found",
-				)
-			}
-			return nil, resourceLoaderError(
-				req, secret.Ref, field.NewPath("spec", "resources").Child("secrets").Index(idx).Child("ref"), err.Error())
+			return nil, err
 		}
 
 		// Validate secret holds a certificate
