@@ -46,7 +46,7 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 		// Create the revision for this config version
 		ecr := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-%s", ec.Spec.NodeID, version),
+				Name:      fmt.Sprintf("%s-%s-%s", ec.Spec.NodeID, envoyAPI, version),
 				Namespace: ec.ObjectMeta.Namespace,
 				Labels: map[string]string{
 					nodeIDTag:   ec.Spec.NodeID,
