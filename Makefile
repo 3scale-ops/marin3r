@@ -30,17 +30,18 @@ endif
 all: manager
 
 # Run tests
-ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
+ENVTEST_ASSETS_DIR ?= $(shell pwd)/testbin
 test: generate fmt vet manifests
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -race -coverpkg=./... -coverprofile cover-tmp.out
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); \
+		go test ./... -race -coverpkg=./... -coverprofile=cover.out.tmp
 	$(MAKE) coverage
 
 coverage:
-	 cat cover-tmp.out | grep -v "_generated.deepcopy.go"  > cover.out
-	 go tool cover -func=cover.out
-	 @rm -f cover-tmp.out
+	 cat cover.out.tmp | grep -v "_generated.deepcopy.go"  > cover.out
+	 go tool cover -func=cover.out | awk '/total/{print $$3}'
+	 @rm -f cover.out.tmp
 
 # Build manager binary
 manager: generate fmt vet
