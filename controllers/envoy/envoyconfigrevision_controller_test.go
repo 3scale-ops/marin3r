@@ -83,11 +83,11 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		}, 30*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
-	Context("Using v2 envoy API version", func() {
+	Context("using v2 envoy API version", func() {
 		var ecr *envoyv1alpha1.EnvoyConfigRevision
 
 		BeforeEach(func() {
-			// Create a v2 EnvoyConfigRevision for each block
+			By("creating a v2 EnvoyConfigRevision")
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
@@ -111,7 +111,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 		When("RevisionPublished condition is false in EnvoyConfigRevision", func() {
 
-			It("Should not make changes to the xDS cache", func() {
+			It("should not make changes to the xDS cache", func() {
 
 				_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 				Expect(err).To(HaveOccurred())
@@ -120,9 +120,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 		When("RevisionPublished condition is true in EnvoyConfigRevision", func() {
 
-			It("Should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
+			It("should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
 
-				// Set ECR RevisionPublished condition to true
+				By("setting ECR RevisionPublished condition to true")
 				ecr = &envoyv1alpha1.EnvoyConfigRevision{}
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
@@ -142,7 +142,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
-				// A snapshot for the spec.nodeID should exist in the xDS v2 cache
+				By("checking that a snapshot for spec.nodeId exists in the v2 xDS cache")
 				var gotV2Snap xdss.Snapshot
 				Eventually(func() bool {
 					gotV2Snap, err = ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
@@ -164,7 +164,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					}})
 				Expect(testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)).To(BeTrue())
 
-				// v3 xDS cache should not have an snapshot for spec.nodeID
+				By("checking that a snapshot for spec.nodeId does not exist in the v3 xDS cache")
 				_, err = ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 				Expect(err).To(HaveOccurred())
 
@@ -173,11 +173,11 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		})
 	})
 
-	Context("Using v3 envoy API version", func() {
+	Context("using v3 envoy API version", func() {
 		var ecr *envoyv1alpha1.EnvoyConfigRevision
 
 		BeforeEach(func() {
-			// Create a v3 EnvoyConfigRevision for each block
+			By("creating a v3 EnvoyConfigRevision")
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
@@ -202,7 +202,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 		When("RevisionPublished condition is false in EnvoyConfigRevision", func() {
 
-			It("Should not make changes to the xDS cache", func() {
+			It("should not make changes to the xDS cache", func() {
 
 				_, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 				Expect(err).To(HaveOccurred())
@@ -211,9 +211,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 		When("RevisionPublished condition is true in EnvoyConfigRevision", func() {
 
-			It("Should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
+			It("should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
 
-				// Set ECR RevisionPublished condition to true
+				By("setting ECR RevisionPublished condition to true")
 				ecr = &envoyv1alpha1.EnvoyConfigRevision{}
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
@@ -233,7 +233,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
-				// A snapshot for the spec.nodeID should exist in the xDS v2 cache
+				By("checking that a snapshot for spec.nodeId exists in the v2 xDS cache")
 				var gotV3Snap xdss.Snapshot
 				Eventually(func() bool {
 					gotV3Snap, err = ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
@@ -255,7 +255,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					}})
 				Expect(testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)).To(BeTrue())
 
-				// v2 xDS cache should not have an snapshot for spec.nodeID
+				By("checking that a snapshot for spec.nodeId does not exist in the v2 xDS cache")
 				_, err = ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 				Expect(err).To(HaveOccurred())
 
@@ -264,11 +264,11 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		})
 	})
 
-	Context("Load certificates from secrets", func() {
+	Context("load certificates from secrets", func() {
 		var ecr *envoyv1alpha1.EnvoyConfigRevision
 
 		BeforeEach(func() {
-			// Create a secret
+			By("creating a secret of 'kubernetes.io/tls' type")
 			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: namespace},
 				Type:       corev1.SecretTypeTLS,
@@ -284,7 +284,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				return true
 			}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
-			// Create a v3 EnvoyConfigRevision and publish it for each block
+			By("creating a EnvoyConfigRevision with a reference to the created Secret")
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
@@ -309,7 +309,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				return true
 			}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
-			// Set the ecr as published
+			By("settign the EnvoyConfigRevision as published")
 			patch := client.MergeFrom(ecr.DeepCopy())
 			ecr.Status.Conditions.SetCondition(status.Condition{
 				Type:   envoyv1alpha1.RevisionPublishedCondition,
@@ -339,7 +339,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 				}})
 
-			// Wait for the revision to get written to the xDS cache
+			By("waiting for the envoy resources to be published in the xDS cache")
 			Eventually(func() bool {
 				gotV3Snap, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 				if err != nil {
@@ -351,8 +351,8 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 		When("Secret changes", func() {
 
-			It("Should update the xDS cache with new snapshot for the nodeID", func() {
-				// Update the certificate
+			It("should update the xDS cache with new snapshot for the nodeID", func() {
+				By("updating the certificate contained in the Secret resource")
 				secret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: namespace},
 					Type:       corev1.SecretTypeTLS,
@@ -389,7 +389,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					}})
 
-				// Wait for the revision to get written to the xDS cache
+				By("checking the new certificate it's in the xDS cache")
 				Eventually(func() bool {
 					gotV3Snap, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 					if err != nil {
@@ -407,7 +407,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		var ecr *envoyv1alpha1.EnvoyConfigRevision
 
 		BeforeEach(func() {
-			// Create a EnvoyConfigRevision for each block (API version is irrelevant here)
+			By("creating an EnvoyConfigRevision")
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
@@ -429,9 +429,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			}, 30*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
-		When("Resource is created", func() {
+		When("resource is created", func() {
 
-			It("Should have a finalizer", func() {
+			It("should have a finalizer", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
 					Expect(err).ToNot(HaveOccurred())
@@ -443,10 +443,10 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			})
 		})
 
-		When("Resource is deleted", func() {
+		When("resource is deleted", func() {
 
 			BeforeEach(func() {
-				// Set the published condition to force execution of the finalizer code
+				By("setting the published condition in the EnvoyConfigRevision to force execution of the finalizer code")
 				patch := client.MergeFrom(ecr.DeepCopy())
 				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   envoyv1alpha1.RevisionPublishedCondition,
@@ -455,7 +455,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
 
-				// Wait for the ECR to get published before deleting it
+				By("waiting for the EnvoyConfigRevision to get published")
 				Eventually(func() bool {
 					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 					if err != nil {
@@ -467,7 +467,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Expect(k8sClient.Delete(context.Background(), ecr)).Should(Succeed())
 			})
 
-			Specify("Snapshot for the nodeID should have been cleared", func() {
+			Specify("Snapshot for the nodeID should have been cleared in the xDS cache", func() {
 				Eventually(func() bool {
 					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 					if err != nil {
@@ -483,7 +483,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		var ecr *envoyv1alpha1.EnvoyConfigRevision
 
 		BeforeEach(func() {
-			// Create a EnvoyConfigRevision for each block (API version is irrelevant here)
+			By("creating an EnvoyConfigRevision")
 			ecr = &envoyv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
@@ -508,7 +508,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		When("RevisionTainted condition is true", func() {
 
 			BeforeEach(func() {
-				// Set the published condition to force execution of the finalizer code
+				By("setting the RevisionTained condition in the EnvoyConfigRevision")
 				patch := client.MergeFrom(ecr.DeepCopy())
 				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   envoyv1alpha1.RevisionTaintedCondition,
@@ -532,7 +532,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 			Specify("status.tainted should be false when condition is cleared", func() {
 
-				// Set the published condition to force execution of the finalizer code
+				By("unsetting the RevisionTained condition in the EnvoyConfigRevision")
 				patch := client.MergeFrom(ecr.DeepCopy())
 				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   envoyv1alpha1.RevisionTaintedCondition,
@@ -541,6 +541,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
 
+				By("checking the status.Tainded field in the EnvoyConfigCache")
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
 					Expect(err).ToNot(HaveOccurred())
