@@ -16,6 +16,9 @@ resources:
 - group: envoy
   kind: EnvoyConfigRevision
   version: v1alpha1
+- group: envoy
+  kind: EnvoyBootstrap
+  version: v1alpha1
 version: 3-alpha
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

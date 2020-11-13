@@ -30,7 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
+	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	envoycontroller "github.com/3scale/marin3r/controllers/envoy"
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
 	// +kubebuilder:scaffold:imports
@@ -63,6 +65,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(envoyv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -129,6 +132,14 @@ func main() {
 			os.Exit(1)
 		}
 
+		if err = (&envoycontroller.EnvoyBootstrapReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("EnvoyBootstrap"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "EnvoyBootstrap")
+			os.Exit(1)
+		}
 		// +kubebuilder:scaffold:builder
 
 		setupLog.Info("Starting the Operator.")

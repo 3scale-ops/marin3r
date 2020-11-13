@@ -32,13 +32,14 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	ctrl "sigs.k8s.io/controller-runtime"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -75,6 +76,9 @@ var _ = BeforeSuite(func(done Done) {
 	cfg, err = testEnv.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
+
+	err = envoyv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 
 	err = envoyv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())

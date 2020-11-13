@@ -1,0 +1,7 @@
+apiVersion: envoy.marin3r.3scale.net/v1alpha1
+kind: EnvoyBootstrap
+metadata:
+  name: envoybootstrap-sample
+spec:
+  # Add fields here
+  foo: bar

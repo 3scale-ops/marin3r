@@ -1,0 +1,24 @@
+# permissions for end users to edit envoybootstraps.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: envoybootstrap-editor-role
+rules:
+- apiGroups:
+  - envoy.marin3r.3scale.net
+  resources:
+  - envoybootstraps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - envoy.marin3r.3scale.net
+  resources:
+  - envoybootstraps/status
+  verbs:
+  - get
