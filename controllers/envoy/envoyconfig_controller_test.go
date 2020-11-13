@@ -10,6 +10,7 @@ import (
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
+	"github.com/3scale/marin3r/pkg/envoy"
 	testutil "github.com/3scale/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -96,7 +97,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 		var ec *envoyv1alpha1.EnvoyConfig
 
 		BeforeEach(func() {
-			// Create a v2 EnvoyConfig for each block
+			By("creating a v2 EnvoyConfig")
 			ec = &envoyv1alpha1.EnvoyConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: namespace},
 				Spec: envoyv1alpha1.EnvoyConfigSpec{
@@ -694,6 +695,56 @@ var _ = Describe("EnvoyConfig controller", func() {
 			})
 		})
 
+	})
+
+	Context("calling OnError() triggers a rollback", func() {
+		var ec *envoyv1alpha1.EnvoyConfig
+
+		BeforeEach(func() {
+			By("creating an EnvoyConfig")
+			ec = &envoyv1alpha1.EnvoyConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigSpec{
+					NodeID: nodeID,
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ec)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("waiting for the EnvoyConfig to be 'InSync'")
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+				if err != nil {
+					return false
+				}
+				if ec.Status.CacheState != envoyv1alpha1.InSyncState {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("OnError is called", func() {
+
+			BeforeEach(func() {
+				OnErrorFn := OnError(cfg)
+				version := calculateRevisionHash(ec.Spec.EnvoyResources)
+				err := OnErrorFn(nodeID, version, "msg", envoy.APIv2)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			Specify("EnvoyConfig should have RollbackFailed condition", func() {
+
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+					Expect(err).ToNot(HaveOccurred())
+					return ec.Status.Conditions.IsTrueFor(envoyv1alpha1.RollbackFailedCondition)
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
 	})
 })
 
