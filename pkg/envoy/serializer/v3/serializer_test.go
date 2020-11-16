@@ -134,8 +134,8 @@ import (
 )
 
 var (
-	listenerJSON    string = `{"name":"listener1","address":{"socketAddress":{"address":"0.0.0.0","portValue":8443}}}`
-	listenerB64JSON string = "eyJuYW1lIjoibGlzdGVuZXIxIiwiYWRkcmVzcyI6eyJzb2NrZXRBZGRyZXNzIjp7ImFkZHJlc3MiOiIwLjAuMC4wIiwicG9ydFZhbHVlIjo4NDQzfX19Cg=="
+	listenerJSON    string = `{"name":"listener1","address":{"socket_address":{"address":"0.0.0.0","port_value":8443}}}`
+	listenerB64JSON string = "eyJuYW1lIjoibGlzdGVuZXIxIiwiYWRkcmVzcyI6eyJzb2NrZXRfYWRkcmVzcyI6eyJhZGRyZXNzIjoiMC4wLjAuMCIsInBvcnRfdmFsdWUiOjg0NDN9fX0K"
 	listenerYAML    string = `
         name: listener1
         address:
@@ -153,7 +153,7 @@ var (
 						PortValue: 8443,
 					}}}}}
 
-	endpointJSON string                                          = `{"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}`
+	endpointJSON string                                          = `{"cluster_name":"cluster1","endpoints":[{"lb_endpoints":[{"endpoint":{"address":{"socket_address":{"address":"127.0.0.1","port_value":8080}}}}]}]}`
 	endpoint     *envoy_config_endpoint_v3.ClusterLoadAssignment = &envoy_config_endpoint_v3.ClusterLoadAssignment{
 		ClusterName: "cluster1",
 		Endpoints: []*envoy_config_endpoint_v3.LocalityLbEndpoints{
@@ -170,8 +170,8 @@ var (
 												PortValue: 8080,
 											}}}}}}}}}}}
 
-	clusterJSON    string = `{"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1"}}`
-	clusterB64JSON string = "eyJuYW1lIjoiY2x1c3RlcjEiLCJ0eXBlIjoiU1RSSUNUX0ROUyIsImNvbm5lY3RUaW1lb3V0IjoiMnMiLCJsb2FkQXNzaWdubWVudCI6eyJjbHVzdGVyTmFtZSI6ImNsdXN0ZXIxIn19Cg=="
+	clusterJSON    string = `{"name":"cluster1","type":"STRICT_DNS","connect_timeout":"2s","load_assignment":{"cluster_name":"cluster1"}}`
+	clusterB64JSON string = "eyJuYW1lIjoiY2x1c3RlcjEiLCJ0eXBlIjoiU1RSSUNUX0ROUyIsImNvbm5lY3RfdGltZW91dCI6IjJzIiwibG9hZF9hc3NpZ25tZW50Ijp7ImNsdXN0ZXJfbmFtZSI6ImNsdXN0ZXIxIn19Cg=="
 	clusterYAML    string = `
         name: cluster1
         connect_timeout: 2s
@@ -192,7 +192,7 @@ var (
 		},
 	}
 
-	secretJSON string                                            = `{"name":"cert1","tlsCertificate":{"certificateChain":{"inlineBytes":"eHh4eA=="},"privateKey":{"inlineBytes":"eHh4eA=="}}}`
+	secretJSON string                                            = `{"name":"cert1","tls_certificate":{"certificate_chain":{"inline_bytes":"eHh4eA=="},"private_key":{"inline_bytes":"eHh4eA=="}}}`
 	secret     *envoy_extensions_transport_sockets_tls_v3.Secret = &envoy_extensions_transport_sockets_tls_v3.Secret{
 		Name: "cert1",
 		Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
@@ -204,7 +204,7 @@ var (
 					Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
 				}}}}
 
-	routeJSON string                                    = `{"name":"route1","virtualHosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"directResponse":{"status":200}}]}]}`
+	routeJSON string                                    = `{"name":"route1","virtual_hosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"direct_response":{"status":200}}]}]}`
 	route     *envoy_config_route_v3.RouteConfiguration = &envoy_config_route_v3.RouteConfiguration{
 		Name: "route1",
 		VirtualHosts: []*envoy_config_route_v3.VirtualHost{{

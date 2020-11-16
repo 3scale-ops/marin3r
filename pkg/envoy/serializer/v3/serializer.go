@@ -135,7 +135,7 @@ import (
 type JSON struct{}
 
 func (s JSON) Marshal(res envoy.Resource) (string, error) {
-	m := jsonpb.Marshaler{}
+	m := jsonpb.Marshaler{OrigName: true}
 
 	json := bytes.NewBuffer([]byte{})
 	err := m.Marshal(json, res)
