@@ -11,6 +11,7 @@ import (
 type Generator interface {
 	New(rType envoy.Type) envoy.Resource
 	NewSecret(string, string, string) envoy.Resource
+	NewSecretFromPath(string, string, string) envoy.Resource
 }
 
 // NewGenerator returns a generator struct for the given API version

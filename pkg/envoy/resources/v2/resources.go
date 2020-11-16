@@ -57,3 +57,24 @@ func (g Generator) NewSecret(name, privateKey, certificateChain string) envoy.Re
 		},
 	}
 }
+
+// NewSecretFromPath returns an envoy secret that uses path sds to get the certificate from
+// a path and reload it whenever the certificate files change
+func (g Generator) NewSecretFromPath(name, privateKeyPath, certificateChainPath string) envoy.Resource {
+
+	return &envoy_api_v2_auth.Secret{
+		Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+			TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+				CertificateChain: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_Filename{
+						Filename: certificateChainPath,
+					},
+				},
+				PrivateKey: &envoy_api_v2_core.DataSource{
+					Specifier: &envoy_api_v2_core.DataSource_Filename{
+						Filename: privateKeyPath,
+					}},
+			},
+		},
+	}
+}
