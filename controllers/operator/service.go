@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -18,7 +19,7 @@ func (r *DiscoveryServiceReconciler) reconcileService(ctx context.Context) (reco
 
 	r.Log.V(1).Info("Reconciling Service")
 	existent := &corev1.Service{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, existent)
+	err := r.Client.Get(ctx, types.NamespacedName{Name: r.ds.GetServiceConfig().Name, Namespace: OwnedObjectNamespace(r.ds)}, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -55,18 +56,29 @@ func (r *DiscoveryServiceReconciler) genServiceObject() *corev1.Service {
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      OwnedObjectName(r.ds),
+			Name:      r.ds.GetServiceConfig().Name,
 			Namespace: OwnedObjectNamespace(r.ds),
 			Labels:    Labels(r.ds),
 		},
 		Spec: corev1.ServiceSpec{
-			Type:            corev1.ServiceTypeClusterIP,
+			Type: func() corev1.ServiceType {
+				if r.ds.GetServiceConfig().Type == operatorv1alpha1.LoadBalancerType {
+					return corev1.ServiceTypeLoadBalancer
+				}
+				return corev1.ServiceTypeClusterIP
+			}(),
+			ClusterIP: func() string {
+				if r.ds.GetServiceConfig().Type == operatorv1alpha1.HeadlessType {
+					return "None"
+				}
+				return ""
+			}(),
 			Selector:        Labels(r.ds),
 			SessionAffinity: corev1.ServiceAffinityNone,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "discovery",
-					Port:       18000,
+					Port:       int32(r.ds.GetXdsServerPort()),
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromString("discovery"),
 				},
@@ -78,15 +90,9 @@ func (r *DiscoveryServiceReconciler) genServiceObject() *corev1.Service {
 				},
 				{
 					Name:       "metrics",
-					Port:       8383,
+					Port:       int32(r.ds.GetMetricsPort()),
 					Protocol:   corev1.ProtocolTCP,
 					TargetPort: intstr.FromString("metrics"),
-				},
-				{
-					Name:       "cr-metrics",
-					Port:       8686,
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromString("cr-metrics"),
 				},
 			},
 		},

@@ -90,6 +90,26 @@ rules:
 - apiGroups:
   - envoy.marin3r.3scale.net
   resources:
+  - envoybootstraps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - envoy.marin3r.3scale.net
+  resources:
+  - envoybootstraps/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - envoy.marin3r.3scale.net
+  resources:
   - envoyconfigs
   verbs:
   - get

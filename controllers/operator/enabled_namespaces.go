@@ -3,11 +3,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
+	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	envoy_config_v2 "github.com/3scale/marin3r/pkg/envoy/config/v2"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,12 +51,12 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Conte
 		return err
 	}
 
-	owner, err := isOwner(r.ds, ns)
+	owner, err := isSidecarEnabled(r.ds, ns)
 	if err != nil {
 		return err
 	}
 
-	if !owner || !hasEnabledLabel(ns) {
+	if !owner {
 
 		patch := client.MergeFrom(ns.DeepCopy())
 
@@ -75,18 +75,30 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Conte
 		r.Log.Info("Patched Namespace", "Namespace", namespace)
 	}
 
-	if err := r.reconcileClientCertificate(ctx, namespace); err != nil {
-		return err
-	}
+	eb := &envoyv1alpha1.EnvoyBootstrap{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: r.ds.GetName(), Namespace: namespace}, eb); err != nil {
 
-	if err := r.reconcileBootstrapConfigMap(ctx, namespace); err != nil {
+		if errors.IsNotFound(err) {
+			eb, err := genEnvoyBootstrapObject(namespace, r.ds)
+			if err != nil {
+				return err
+			}
+			if err := controllerutil.SetControllerReference(r.ds, eb, r.Scheme); err != nil {
+				return err
+			}
+			if err := r.Client.Create(ctx, eb); err != nil {
+				return err
+			}
+			r.Log.Info("Created EnvoyBootstrap", "Name", r.ds.GetName(), "Namespace", namespace)
+			return nil
+		}
 		return err
 	}
 
 	return nil
 }
 
-func isOwner(owner metav1.Object, object metav1.Object) (bool, error) {
+func isSidecarEnabled(owner metav1.Object, object metav1.Object) (bool, error) {
 
 	value, ok := object.GetLabels()[operatorv1alpha1.DiscoveryServiceLabelKey]
 	if ok {
@@ -99,124 +111,33 @@ func isOwner(owner metav1.Object, object metav1.Object) (bool, error) {
 	return false, nil
 }
 
-func hasEnabledLabel(object metav1.Object) bool {
+func genEnvoyBootstrapObject(namespace string, ds *operatorv1alpha1.DiscoveryService) (*envoyv1alpha1.EnvoyBootstrap, error) {
 
-	value, ok := object.GetLabels()[operatorv1alpha1.DiscoveryServiceEnabledKey]
-	if ok && value == operatorv1alpha1.DiscoveryServiceEnabledValue {
-		return true
-	}
-
-	return false
-}
-
-func (r *DiscoveryServiceReconciler) reconcileClientCertificate(ctx context.Context, namespace string) error {
-	r.Log.V(1).Info("Reconciling client certificate", "Namespace", namespace)
-	existent := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: podv1mutator.DefaultClientCertificate, Namespace: namespace}, existent)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			existent = r.getClientCertObject(namespace)
-			if err := controllerutil.SetControllerReference(r.ds, existent, r.Scheme); err != nil {
-				return err
-			}
-			if err := r.Client.Create(ctx, existent); err != nil {
-				return err
-			}
-			r.Log.Info("Created client certificate", "Namespace", namespace)
-			return nil
-		}
-		return err
-	}
-
-	// Certificates are not currently reconciled
-
-	return nil
-}
-
-func (r *DiscoveryServiceReconciler) reconcileBootstrapConfigMap(ctx context.Context, namespace string) error {
-	r.Log.V(1).Info("Reconciling bootstrap ConfigMap", "Namespace", namespace)
-	existent := &corev1.ConfigMap{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: podv1mutator.DefaultBootstrapConfigMap, Namespace: namespace}, existent)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			existent, err := r.getBootstrapConfigMapObject(namespace)
-			if err != nil {
-				return err
-			}
-			if err := controllerutil.SetControllerReference(r.ds, existent, r.Scheme); err != nil {
-				return err
-			}
-			if err := r.Client.Create(ctx, existent); err != nil {
-				return err
-			}
-			r.Log.Info("Created bootstrap ConfigMap", "Namespace", namespace)
-			return nil
-		}
-		return err
-	}
-
-	// Bootstrap ConfigMap are not currently reconciled
-
-	return nil
-}
-
-func (r *DiscoveryServiceReconciler) getClientCertObject(namespace string) *operatorv1alpha1.DiscoveryServiceCertificate {
-	return &operatorv1alpha1.DiscoveryServiceCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      podv1mutator.DefaultClientCertificate,
-			Namespace: namespace,
-			Labels:    Labels(r.ds),
-		},
-		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-			CommonName: fmt.Sprintf("%s-client", OwnedObjectName(r.ds)),
-			ValidFor:   clientCertValidFor,
-			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
-				CASigned: &operatorv1alpha1.CASignedConfig{
-					SecretRef: corev1.SecretReference{
-						Name:      getCACertName(r.ds),
-						Namespace: OwnedObjectNamespace(r.ds),
-					}},
-			},
-			SecretRef: corev1.SecretReference{
-				Name:      podv1mutator.DefaultClientCertificate,
-				Namespace: namespace,
-			},
-		},
-	}
-}
-
-func (r *DiscoveryServiceReconciler) getBootstrapConfigMapObject(namespace string) (*corev1.ConfigMap, error) {
-
-	config, err := envoy_config_v2.GenerateBootstrapConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
+	duration, err := time.ParseDuration("48h")
 	if err != nil {
 		return nil, err
 	}
 
-	tlsConfig, err := envoy_config_v2.GenerateTLSCertificateSdsConfig(getDiscoveryServiceHost(r.ds), getDiscoveryServicePort())
-	if err != nil {
-		return nil, err
-	}
-
-	cm := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      podv1mutator.DefaultBootstrapConfigMap,
-			Namespace: namespace,
+	return &envoyv1alpha1.EnvoyBootstrap{
+		ObjectMeta: metav1.ObjectMeta{Name: ds.GetName(), Namespace: namespace},
+		Spec: envoyv1alpha1.EnvoyBootstrapSpec{
+			DiscoveryService: ds.GetName(),
+			ClientCertificate: &envoyv1alpha1.ClientCertificate{
+				Directory:  podv1mutator.DefaultEnvoyTLSBasePath,
+				SecretName: podv1mutator.DefaultClientCertificate,
+				Duration: metav1.Duration{
+					Duration: duration,
+				},
+			},
+			EnvoyStaticConfig: &envoyv1alpha1.EnvoyStaticConfig{
+				ConfigMapNameV2:       podv1mutator.DefaultBootstrapConfigMap,
+				ConfigMapNameV3:       fmt.Sprintf("%s-v3", podv1mutator.DefaultBootstrapConfigMap),
+				ConfigFile:            fmt.Sprintf("%s/%s", podv1mutator.DefaultEnvoyConfigBasePath, podv1mutator.DefaultEnvoyConfigFileName),
+				ResourcesDir:          podv1mutator.DefaultEnvoyConfigBasePath,
+				RtdsLayerResourceName: "runtime",
+				AdminBindAddress:      "0.0.0.0:9901",
+				AdminAccessLogPath:    "/dev/null",
+			},
 		},
-		Data: map[string]string{
-			podv1mutator.DefaultEnvoyConfigFileName:      config,
-			podv1mutator.TlsCertificateSdsSecretFileName: tlsConfig,
-		},
-	}
-
-	return cm, nil
-}
-
-func getDiscoveryServiceHost(ds *operatorv1alpha1.DiscoveryService) string {
-	return fmt.Sprintf("%s.%s.%s", OwnedObjectName(ds), OwnedObjectNamespace(ds), "svc")
-}
-
-func getDiscoveryServicePort() uint32 {
-	return uint32(18000)
+	}, nil
 }

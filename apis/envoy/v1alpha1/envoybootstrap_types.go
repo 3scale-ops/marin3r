@@ -36,23 +36,32 @@ type EnvoyBootstrapSpec struct {
 // EnvoyStaticConfig allows specifying envoy static config
 // options
 type EnvoyStaticConfig struct {
-	// The ConfigMap where the envoy client static config will be stored
-	ConfigMapName string `json:"configMap"`
-	// The xDS transport protocol version to use when talking to the discovery service
-	// +kubebuilder:validation:Enum=v2;v3
-	XdsProtocolVersion string `json:"xdsProtocolVersion"`
+	// The ConfigMap where the envoy client v2 static config will be stored
+	ConfigMapNameV2 string `json:"configMapV2"`
+	// The ConfigMap where the envoy client v3 static config will be stored
+	ConfigMapNameV3 string `json:"configMapV3"`
 	// ConfigFile is the path of envoy's bootstrap config file
-	ConfigFile *string `json:"configFile,omitempty"`
+	ConfigFile string `json:"configFile"`
 	// ResourcesDir is the path where resource files are loaded from. It is used to
 	// load discovery messages directly from the filesystem, for example in order to be able
 	// to bootstrap certificates and support rotation when they are modified.
-	ResourcesDir *string `json:"resourceDir,omitempty"`
+	ResourcesDir string `json:"resourceDir"`
+	// RtdsLayerResourceName is the resource name that the envoy client will request when askikng
+	// the discovery service for Runtime resources.
+	RtdsLayerResourceName string `json:"rtdsLayerResourceName"`
+	// AdminBindAddress is where envoy's admin server binds to.
+	AdminBindAddress string `json:"adminBindAddress"`
+	// AdminAccessLogPath configures where the envoy's admin server logs are written to
+	AdminAccessLogPath string `json:"adminAccessLogPath"`
 }
 
 // ClientCertificate allows specifying options for the
 // client certificate used to authenticate with the discovery
 // service
 type ClientCertificate struct {
+	// Directory defines the directory in the envoy container where
+	// the certificate will be mounted
+	Directory string `json:"directory"`
 	// The Secret where the certificate will be stored
 	SecretName string `json:"secretName"`
 	// The requested ‘duration’ (i.e. lifetime) of the Certificate

@@ -62,7 +62,7 @@ func (r *DiscoveryServiceReconciler) getServerCertObject() *operatorv1alpha1.Dis
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName:          getServerCertCommonName(r.ds),
 			IsServerCertificate: true,
-			ValidFor:            serverCertValidFor,
+			ValidFor:            int64(r.ds.GetServerCertificateOptions().Duration.Seconds()),
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				CASigned: &operatorv1alpha1.CASignedConfig{
 					SecretRef: corev1.SecretReference{
@@ -70,7 +70,7 @@ func (r *DiscoveryServiceReconciler) getServerCertObject() *operatorv1alpha1.Dis
 						Namespace: OwnedObjectNamespace(r.ds),
 					}},
 			},
-			Hosts: []string{getDiscoveryServiceHost(r.ds)},
+			Hosts: []string{fmt.Sprintf("%s.%s.%s", r.ds.GetServiceConfig().Name, r.ds.GetNamespace(), "svc")},
 			SecretRef: corev1.SecretReference{
 				Name:      getServerCertName(r.ds),
 				Namespace: OwnedObjectNamespace(r.ds),

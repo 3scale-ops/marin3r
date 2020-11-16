@@ -2,7 +2,6 @@ package envoy
 
 const (
 	TlsCertificateSdsSecretFileName string = "tls_certificate_sds_secret.json"
-	SdsResourcesSubPath             string = "sds"
 	XdsClusterName                  string = "xds_cluster"
 )
 
