@@ -122,13 +122,13 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 
 		})
 
-		It("should create the ConfigMaps and the DiscoveryServiceCertificate for the envoy client", func() {
+		FIt("should create the ConfigMaps and the DiscoveryServiceCertificate for the envoy client", func() {
 
 			By("Checking that the DiscoveryServiceCertificate has been created")
 			{
 				dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
 				Eventually(func() bool {
-					if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "test", Namespace: namespace}, dsc); err != nil {
+					if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "my-cert", Namespace: namespace}, dsc); err != nil {
 						return false
 					}
 					return true

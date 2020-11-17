@@ -34,8 +34,23 @@ func TestNewClientCertificateReconciler(t *testing.T) {
 		args args
 		want ClientCertificateReconciler
 	}{
-		// TODO: Add test cases.
-	}
+		{
+			name: "Returns a reconciler",
+			args: args{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewFakeClient(),
+				scheme: &runtime.Scheme{},
+				eb:     &envoyv1alpha1.EnvoyBootstrap{},
+			},
+			want: ClientCertificateReconciler{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewFakeClient(),
+				scheme: &runtime.Scheme{},
+				eb:     &envoyv1alpha1.EnvoyBootstrap{},
+			},
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := NewClientCertificateReconciler(tt.args.ctx, tt.args.logger, tt.args.client, tt.args.scheme, tt.args.eb); !reflect.DeepEqual(got, tt.want) {
@@ -101,9 +116,9 @@ func TestClientCertificateReconciler_Reconcile(t *testing.T) {
 			want:    ctrl.Result{},
 			wantErr: false,
 			wantDSC: &operatorv1alpha1.DiscoveryServiceCertificate{
-				ObjectMeta: v1.ObjectMeta{Name: "eb", Namespace: "default"},
+				ObjectMeta: v1.ObjectMeta{Name: "client-certificate", Namespace: "default"},
 				Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-					CommonName: "eb",
+					CommonName: "client-certificate",
 					ValidFor:   3600,
 					Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 						CASigned: &operatorv1alpha1.CASignedConfig{

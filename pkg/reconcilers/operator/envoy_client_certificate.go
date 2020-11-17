@@ -45,7 +45,9 @@ func (r *ClientCertificateReconciler) Reconcile() (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	dscName := r.eb.GetName()
+	// Use the secret name as the DiscoveryServiceCertificate resource name
+	// to keep backwards compatibility
+	dscName := r.eb.Spec.ClientCertificate.SecretName
 	dscNamespace := r.eb.GetNamespace()
 
 	// Get this client's DiscoveryServiceCertificate
