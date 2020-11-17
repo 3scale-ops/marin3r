@@ -60,6 +60,15 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
+	// DiscoveryService certificate is a namespaced resource that can only own other namespaced
+	// resources in the same namespace. It is an error to try to create the Secret in a different
+	// namespace. The controller checks this and fixes it for the user, showing a log line indicating
+	// so. In the future, usage of 'corev1.SecretReference' should be dropped.
+	if dsc.GetNamespace() != dsc.Spec.SecretRef.Namespace {
+		r.Log.Info("Namespace indication in 'spec.SecretRef.Namespace' will be ignored and should be removed")
+		dsc.Spec.SecretRef.Namespace = dsc.GetNamespace()
+	}
+
 	if dsc.Spec.Signer.CASigned != nil {
 		r.Log.Info("Reconciling ca-signed certificate")
 		if err := r.reconcileCASignedCertificate(ctx, dsc); err != nil {

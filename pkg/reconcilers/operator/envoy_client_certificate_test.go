@@ -73,7 +73,7 @@ func TestClientCertificateReconciler_Reconcile(t *testing.T) {
 		wantDSC *operatorv1alpha1.DiscoveryServiceCertificate
 	}{
 		{
-			name: "Creates a ConfigMap",
+			name: "Creates a DiscoveryServiceCertificatetenem",
 			r: &ClientCertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
@@ -128,8 +128,7 @@ func TestClientCertificateReconciler_Reconcile(t *testing.T) {
 							}},
 					},
 					SecretRef: corev1.SecretReference{
-						Name:      "client-certificate",
-						Namespace: "default",
+						Name: "client-certificate",
 					},
 				},
 			},

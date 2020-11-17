@@ -110,8 +110,7 @@ func (r *ClientCertificateReconciler) genClientCertResource(certificateKey, sign
 					}},
 			},
 			SecretRef: corev1.SecretReference{
-				Name:      r.eb.Spec.ClientCertificate.SecretName,
-				Namespace: certificateKey.Namespace,
+				Name: r.eb.Spec.ClientCertificate.SecretName,
 			},
 		},
 	}
