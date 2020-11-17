@@ -55,7 +55,7 @@ func (r *BootstrapConfigReconciler) Reconcile(envoyAPI envoy.APIVersion) (ctrl.R
 	}
 
 	cmName := r.ConfigMapName(envoyAPI)
-	cmNamespace := r.eb.Namespace
+	cmNamespace := r.eb.GetNamespace()
 
 	// Get this client's bootstrap ConfigMap
 	cm := &corev1.ConfigMap{}

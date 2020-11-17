@@ -78,7 +78,7 @@ func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			for _, secret := range ecr.Spec.EnvoyResources.Secrets {
 				if secret.Ref.Name == req.Name && secret.Ref.Namespace == req.Namespace {
 					r.Log.Info("Triggered EnvoyConfigRevision reconcile",
-						"EnvoyConfigRevision_Name", ecr.ObjectMeta.Name, "EnvoyConfigRevision_Namespace", ecr.ObjectMeta.Namespace)
+						"EnvoyConfigRevision_Name", ecr.ObjectMeta.Name, "EnvoyConfigRevision_Namespace", ecr.GetNamespace())
 					if err != nil {
 						return reconcile.Result{}, err
 					}

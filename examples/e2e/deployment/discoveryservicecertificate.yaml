@@ -3,7 +3,7 @@ apiVersion: operator.marin3r.3scale.net/v1alpha1
 kind: DiscoveryServiceCertificate
 metadata:
   name: kuard
-  namespace: test1
+  namespace: default
 spec:
   commonName: kuard.test1.svc
   validFor: 3600
@@ -11,4 +11,3 @@ spec:
     selfSigned: {}
   secretRef:
     name: kuard
-    namespace: test1
