@@ -21,25 +21,25 @@ import (
 	"testing"
 	"time"
 
+	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
+	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/goombaio/namegenerator"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	ctrl "sigs.k8s.io/controller-runtime"
-
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
-	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
-	envoy "github.com/3scale/marin3r/pkg/envoy"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -57,7 +57,7 @@ func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
-		"Controller Suite",
+		"Envoy API group Suite",
 		[]Reporter{printer.NewlineReporter{}})
 }
 
@@ -80,10 +80,7 @@ var _ = BeforeSuite(func(done Done) {
 	err = envoyv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = envoyv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = envoyv1alpha1.AddToScheme(scheme.Scheme)
+	err = operatorv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
@@ -129,6 +126,13 @@ var _ = BeforeSuite(func(done Done) {
 	err = (&SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("secret"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&EnvoyBootstrapReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
