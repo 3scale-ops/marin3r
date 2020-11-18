@@ -7,14 +7,14 @@ metadata:
 spec:
   containers:
     - name: envoy-sidecar
-      image: envoyproxy/envoy:v1.14.1
+      image: envoyproxy/envoy:v1.16.0
       command: ["envoy"]
       args:
         [
           "-c",
           "/etc/envoy/bootstrap/config.json",
           "--component-log-level",
-          "http:debug,connection:debug",
+          "config:debug",
           "--service-cluster",
           "envoy1",
           "--service-node",
@@ -30,14 +30,14 @@ spec:
           hostPort: 1443
           protocol: TCP
       volumeMounts:
-        - name: envoy-sidecar-bootstrap
+        - name: envoy-bootstrap
           mountPath: /etc/envoy/bootstrap
-        - name: envoy-sidecar-client-cert
+        - name: envoy-client-cert
           mountPath: /etc/envoy/tls/client
   volumes:
-    - name: envoy-sidecar-bootstrap
+    - name: envoy-bootstrap
       configMap:
-        name: envoy-sidecar-bootstrap
-    - name: envoy-sidecar-client-cert
+        name: envoy-bootstrap-v2
+    - name: envoy-client-cert
       secret:
-        secretName: envoy-sidecar-client-cert
+        secretName: discoveryservice-client-certificate

@@ -37,7 +37,7 @@ spec:
     routes:
       - name: echo-api.3scale.net
         value: |
-          name: ingress
+          name: echo-api.3scale.net
           virtual_hosts:
             - name: ingress
               domains: ["*"]
@@ -63,7 +63,7 @@ spec:
                           "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                           path: /dev/stdout
                     stat_prefix: ingress_http
-                    rds: { route_config_name: "ingress", config_source: { ads: {}}}
+                    rds: { route_config_name: "echo-api.3scale.net", config_source: { ads: {}, resource_api_version: "V3" }}
                     http_filters:
                       - name: envoy.filters.http.router
       - name: https
@@ -81,15 +81,14 @@ spec:
                           "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
                           path: /dev/stdout
                     stat_prefix: ingress_https
-                    rds: { route_config_name: "ingress", config_source: { ads: {}}}
+                    rds: { route_config_name: "echo-api.3scale.net", config_source: { ads: {}, resource_api_version: "V3" }}
                     http_filters:
                       - name: envoy.filters.http.router
               transport_socket:
                 name: envoy.transport_sockets.tls
                 typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+                  "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
                   common_tls_context:
                     tls_certificate_sds_secret_configs:
                       - name: envoy1.default.svc
-                        sds_config:
-                          ads: {}
+                        sds_config: { ads: {}, resource_api_version: "V3" }
