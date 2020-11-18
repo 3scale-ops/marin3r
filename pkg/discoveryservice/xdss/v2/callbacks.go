@@ -57,7 +57,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_api_v2.DiscoveryReques
 			return err
 		}
 		// All resource types are always kept at the same version
-		failingVersion := snap.GetVersion("type.googleapis.com/envoy.api.v2.ClusterLoadAssignment")
+		failingVersion := snap.GetVersion(req.TypeUrl)
 		cb.Logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "CurrentVersion", req.VersionInfo, "FailingVersion", failingVersion, "NodeID", req.Node.Id, "StreamID", id)
 		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message, envoy.APIv2); err != nil {
 			cb.Logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
