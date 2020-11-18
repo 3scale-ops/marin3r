@@ -1,18 +1,19 @@
 package envoy
 
 import (
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
+	resource_v3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
 // Mappings return a map associating "github.com/3scale/marin3r/pkg/envoy/resources".Type to
 // the v3 envoy API type URLs for each resource type
-func Mappings() map[envoy_resources.Type]string {
-	return map[envoy_resources.Type]string{
-		envoy_resources.Listener: "type.googleapis.com/envoy.config.listener.v3.Listener",
-		envoy_resources.Route:    "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
-		envoy_resources.Cluster:  "type.googleapis.com/envoy.config.cluster.v3.Cluster",
-		envoy_resources.Endpoint: "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-		envoy_resources.Secret:   "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",
-		envoy_resources.Runtime:  "type.googleapis.com/envoy.service.runtime.v3.Runtime",
+func Mappings() map[envoy.Type]string {
+	return map[envoy.Type]string{
+		envoy.Listener: resource_v3.ListenerType,
+		envoy.Route:    resource_v3.RouteType,
+		envoy.Cluster:  resource_v3.ClusterType,
+		envoy.Endpoint: resource_v3.EndpointType,
+		envoy.Secret:   resource_v3.SecretType,
+		envoy.Runtime:  resource_v3.RuntimeType,
 	}
 }

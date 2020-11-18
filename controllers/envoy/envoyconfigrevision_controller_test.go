@@ -2,256 +2,560 @@ package controllers
 
 import (
 	"context"
-	"reflect"
 	"testing"
+	"time"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
+	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
+	"github.com/3scale/marin3r/pkg/envoy"
 	testutil "github.com/3scale/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
-	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
-
+	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-var s *runtime.Scheme = scheme.Scheme
+var _ = Describe("EnvoyConfigRevision controller", func() {
+	var namespace string
+	var nodeID string
 
-func init() {
-	s.AddKnownTypes(envoyv1alpha1.GroupVersion,
-		&envoyv1alpha1.EnvoyConfigRevision{},
-		&envoyv1alpha1.EnvoyConfigRevisionList{},
-		&envoyv1alpha1.EnvoyConfig{},
-	)
-}
-
-func TestEnvoyConfigRevisionReconciler_Reconcile(t *testing.T) {
-
-	tests := []struct {
-		name        string
-		nodeID      string
-		cr          *envoyv1alpha1.EnvoyConfigRevision
-		wantResult  reconcile.Result
-		wantSnap    xdss.Snapshot
-		wantVersion string
-		wantErr     bool
-	}{
-		// {
-		// 	name:   "Creates new snapshot for nodeID",
-		// 	nodeID: "node3",
-		// 	cr: &envoyv1alpha1.EnvoyConfigRevision{
-		// 		ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
-		// 		Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-		// 			NodeID:  "node3",
-		// 			Version: "xxxx",
-		// 			EnvoyResources: &envoyv1alpha1.EnvoyResources{
-		// 				Endpoints: []envoyv1alpha1.EnvoyResource{
-		// 					{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-		// 				}}},
-		// 		Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-		// 			Conditions: status.NewConditions(status.Condition{
-		// 				Type:   envoyv1alpha1.RevisionPublishedCondition,
-		// 				Status: corev1.ConditionTrue,
-		// 			})},
-		// 	},
-		// 	wantResult: reconcile.Result{},
-		// 	wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-		// 		Resources: [6]cache_v2.Resources{
-		// 			{Version: "xxxx", Items: map[string]cache_types.Resource{
-		// 				"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-		// 			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-		// 			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-		// 			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-		// 			{Version: "xxxx-74d569cc4", Items: map[string]cache_types.Resource{}},
-		// 			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-		// 		}}),
-		// 	wantVersion: "xxxx",
-		// 	wantErr:     false,
-		// },
-		{
-			name:   "Does not update snapshot if version doesn't change",
-			nodeID: "node1",
-			cr: &envoyv1alpha1.EnvoyConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
-				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-					NodeID:         "node1",
-					Version:        "aaaa",
-					EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-				},
-				Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-					Conditions: status.NewConditions(status.Condition{
-						Type:   envoyv1alpha1.RevisionPublishedCondition,
-						Status: corev1.ConditionTrue,
-					})},
-			},
-			wantResult: reconcile.Result{},
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-				Resources: [6]cache_v2.Resources{
-					{Version: "aaaa", Items: map[string]cache_types.Resource{
-						"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
-					}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{
-						"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
-					}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-					{Version: "aaaa-557db659d4", Items: map[string]cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-				}}),
-			wantVersion: "aaaa",
-			wantErr:     false,
-		},
-		{
-			name:   "No changes to xds server cache when ecr has condition 'envoyv1alpha1.RevisionPublishedCondition' to false",
-			nodeID: "node1",
-			cr: &envoyv1alpha1.EnvoyConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
-				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-					NodeID:         "node1",
-					Version:        "bbbb",
-					EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-				},
-				Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-					Conditions: status.NewConditions(status.Condition{
-						Type:   envoyv1alpha1.RevisionPublishedCondition,
-						Status: corev1.ConditionFalse,
-					})},
-			},
-			wantResult: reconcile.Result{},
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-				Resources: [6]cache_v2.Resources{
-					{Version: "aaaa", Items: map[string]cache_types.Resource{
-						"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
-					}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{
-						"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
-					}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-					{Version: "aaaa", Items: map[string]cache_types.Resource{}},
-				}}),
-			wantVersion: "aaaa",
-			wantErr:     false,
-		},
-	}
-	for _, tt := range tests {
-
-		t.Run(tt.name, func(t *testing.T) {
-			r := &EnvoyConfigRevisionReconciler{
-				Client:   fake.NewFakeClient(tt.cr),
-				Scheme:   s,
-				XdsCache: fakeTestCache(),
-				Log:      ctrl.Log.WithName("test"),
-			}
-			req := reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      "ecr",
-					Namespace: "default",
-				},
-			}
-
-			gotResult, gotErr := r.Reconcile(req)
-			gotSnap, _ := r.XdsCache.GetSnapshot(tt.nodeID)
-			if (gotErr != nil) != tt.wantErr {
-				t.Errorf("EnvoyConfigRevisionReconciler.Reconcile() error = %v, wantErr %v", gotErr, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(gotResult, tt.wantResult) {
-				t.Errorf("EnvoyConfigRevisionReconciler.Reconcile() = %v, want %v", gotResult, tt.wantResult)
-			}
-
-			if !tt.wantErr && !testutil.SnapshotsAreEqual(gotSnap, tt.wantSnap) {
-				t.Errorf("Snapshot = %v, want %v", gotSnap, tt.wantSnap)
-			}
-			// NOTE: we are keeping the same version for all resource types
-			gotVersion := gotSnap.GetVersion(envoy_resources.Cluster)
-			if !tt.wantErr && gotVersion != tt.wantVersion {
-				t.Errorf("Snapshot version = %v, want %v", gotVersion, tt.wantVersion)
-			}
-		})
-	}
-
-	t.Run("No error if ecr not found", func(t *testing.T) {
-		r := &EnvoyConfigRevisionReconciler{
-			Client:   fake.NewFakeClient(),
-			Scheme:   s,
-			XdsCache: fakeTestCache(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		req := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "ecr",
-				Namespace: "default",
-			},
+	BeforeEach(func() {
+		// Create a namespace for each block
+		namespace = "test-ns-" + nameGenerator.Generate()
+		// Create a nodeID for each block
+		nodeID = nameGenerator.Generate()
+		// Add any setup steps that needs to be executed before each test
+		testNamespace := &v1.Namespace{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
 
-		_, gotErr := r.Reconcile(req)
-		if gotErr != nil {
-			t.Errorf("EnvoyConfigRevisionReconciler.Reconcile() error = %v", gotErr)
-			return
-		}
+		err := k8sClient.Create(context.Background(), testNamespace)
+		Expect(err).ToNot(HaveOccurred())
+
+		n := &v1.Namespace{}
+		Eventually(func() bool {
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
+			if err != nil {
+				return false
+			}
+			return true
+		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
 	})
 
-	t.Run("Taints itself if it fails to load resources", func(t *testing.T) {
-		ecr := &envoyv1alpha1.EnvoyConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
-			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-				NodeID:  "node1",
-				Version: "xxxx",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{
-					Endpoints: []envoyv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "{\"wrong_property\": \"abcd\"}"},
-					}}},
-			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-				Conditions: status.NewConditions(status.Condition{
+	AfterEach(func() {
+		// Delete the namespace
+		testNamespace := &v1.Namespace{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+			ObjectMeta: metav1.ObjectMeta{Name: namespace},
+		}
+		// Add any teardown steps that needs to be executed after each test
+		err := k8sClient.Delete(context.Background(), testNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
+		Expect(err).ToNot(HaveOccurred())
+
+		n := &v1.Namespace{}
+		Eventually(func() bool {
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
+			if err != nil && errors.IsNotFound(err) {
+				return false
+			}
+			return true
+		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+	})
+
+	Context("using v2 envoy API version", func() {
+		var ecr *envoyv1alpha1.EnvoyConfigRevision
+
+		BeforeEach(func() {
+			By("creating a v2 EnvoyConfigRevision")
+			ecr = &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:  nodeID,
+					Version: "xxxx",
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ecr)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("RevisionPublished condition is false in EnvoyConfigRevision", func() {
+
+			It("should not make changes to the xDS cache", func() {
+
+				_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		When("RevisionPublished condition is true in EnvoyConfigRevision", func() {
+
+			It("should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
+
+				By("setting ECR RevisionPublished condition to true")
+				ecr = &envoyv1alpha1.EnvoyConfigRevision{}
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					if err != nil {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   envoyv1alpha1.RevisionPublishedCondition,
 					Status: corev1.ConditionTrue,
-				})},
-		}
+				})
 
-		r := &EnvoyConfigRevisionReconciler{
-			Client:   fake.NewFakeClient(ecr),
-			Scheme:   s,
-			XdsCache: fakeTestCache(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		req := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      "ecr",
-				Namespace: "default",
-			},
-		}
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
-		_, gotErr := r.Reconcile(req)
-		if gotErr != nil {
-			t.Errorf("EnvoyConfigRevisionReconciler.Reconcile() error = %v", gotErr)
-			return
-		}
+				By("checking that a snapshot for spec.nodeId exists in the v2 xDS cache")
+				var gotV2Snap xdss.Snapshot
+				Eventually(func() bool {
+					gotV2Snap, err = ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
-		if !ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionTaintedCondition) {
-			t.Errorf("EnvoyConfigRevisionReconciler.Reconcile() ecr has not been tainted")
-		}
+				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
+					Resources: [6]cache_v2.Resources{
+						{Version: "xxxx", Items: map[string]cache_types.Resource{
+							"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					}})
+				Expect(testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)).To(BeTrue())
+
+				By("checking that a snapshot for spec.nodeId does not exist in the v3 xDS cache")
+				_, err = ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+				Expect(err).To(HaveOccurred())
+
+			})
+
+		})
 	})
-}
+
+	Context("using v3 envoy API version", func() {
+		var ecr *envoyv1alpha1.EnvoyConfigRevision
+
+		BeforeEach(func() {
+			By("creating a v3 EnvoyConfigRevision")
+			ecr = &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:   nodeID,
+					Version:  "xxxx",
+					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ecr)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("RevisionPublished condition is false in EnvoyConfigRevision", func() {
+
+			It("should not make changes to the xDS cache", func() {
+
+				_, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		When("RevisionPublished condition is true in EnvoyConfigRevision", func() {
+
+			It("should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
+
+				By("setting ECR RevisionPublished condition to true")
+				ecr = &envoyv1alpha1.EnvoyConfigRevision{}
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					if err != nil {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   envoyv1alpha1.RevisionPublishedCondition,
+					Status: corev1.ConditionTrue,
+				})
+
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition)).To(BeTrue())
+
+				By("checking that a snapshot for spec.nodeId exists in the v2 xDS cache")
+				var gotV3Snap xdss.Snapshot
+				Eventually(func() bool {
+					gotV3Snap, err = ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
+					Resources: [6]cache_v3.Resources{
+						{Version: "xxxx", Items: map[string]cache_types.Resource{
+							"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					}})
+				Expect(testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)).To(BeTrue())
+
+				By("checking that a snapshot for spec.nodeId does not exist in the v2 xDS cache")
+				_, err = ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+				Expect(err).To(HaveOccurred())
+
+			})
+
+		})
+	})
+
+	Context("load certificates from secrets", func() {
+		var ecr *envoyv1alpha1.EnvoyConfigRevision
+
+		BeforeEach(func() {
+			By("creating a secret of 'kubernetes.io/tls' type")
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: namespace},
+				Type:       corev1.SecretTypeTLS,
+				Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
+			}
+			err := k8sClient.Create(context.Background(), secret)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "secret", Namespace: namespace}, secret)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+			By("creating a EnvoyConfigRevision with a reference to the created Secret")
+			ecr = &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:   nodeID,
+					Version:  "xxxx",
+					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Secrets: []envoyv1alpha1.EnvoySecretResource{{
+							Name: "secret",
+							Ref:  corev1.SecretReference{Name: "secret", Namespace: namespace}},
+						},
+					},
+				},
+			}
+			err = k8sClient.Create(context.Background(), ecr)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+			By("settign the EnvoyConfigRevision as published")
+			patch := client.MergeFrom(ecr.DeepCopy())
+			ecr.Status.Conditions.SetCondition(status.Condition{
+				Type:   envoyv1alpha1.RevisionPublishedCondition,
+				Status: corev1.ConditionTrue,
+			})
+			err = k8sClient.Status().Patch(context.Background(), ecr, patch)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.RevisionPublishedCondition)).To(BeTrue())
+
+			wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
+				Resources: [6]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "xxxx-77c9875d7b", Items: map[string]cache_types.Resource{
+						"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+							Name: "secret",
+							Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+								TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+									PrivateKey: &envoy_config_core_v3.DataSource{
+										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+									},
+									CertificateChain: &envoy_config_core_v3.DataSource{
+										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+									}}}}}},
+					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+				}})
+
+			By("waiting for the envoy resources to be published in the xDS cache")
+			Eventually(func() bool {
+				gotV3Snap, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+				if err != nil {
+					return false
+				}
+				return testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("Secret changes", func() {
+
+			It("should update the xDS cache with new snapshot for the nodeID", func() {
+				By("updating the certificate contained in the Secret resource")
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: namespace},
+					Type:       corev1.SecretTypeTLS,
+					Data:       map[string][]byte{"tls.crt": []byte("new-cert"), "tls.key": []byte("new-key")},
+				}
+				err := k8sClient.Update(context.Background(), secret)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(func() bool {
+					err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "secret", Namespace: namespace}, secret)
+					if string(secret.Data["tls.crt"]) == "new-cert" {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
+					Resources: [6]cache_v3.Resources{
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+						{Version: "xxxx-679f7cbbfd", Items: map[string]cache_types.Resource{
+							"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+								Name: "secret",
+								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+									TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+										PrivateKey: &envoy_config_core_v3.DataSource{
+											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-key")},
+										},
+										CertificateChain: &envoy_config_core_v3.DataSource{
+											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-cert")},
+										}}}}}},
+						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					}})
+
+				By("checking the new certificate it's in the xDS cache")
+				Eventually(func() bool {
+					gotV3Snap, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+			})
+
+		})
+	})
+
+	Context("EnvoyConfigRevision finalizer", func() {
+		var ecr *envoyv1alpha1.EnvoyConfigRevision
+
+		BeforeEach(func() {
+			By("creating an EnvoyConfigRevision")
+			ecr = &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:  nodeID,
+					Version: "xxxx",
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ecr)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("resource is created", func() {
+
+			It("should have a finalizer", func() {
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					if len(ecr.GetFinalizers()) == 1 {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
+
+		When("resource is deleted", func() {
+
+			BeforeEach(func() {
+				By("setting the published condition in the EnvoyConfigRevision to force execution of the finalizer code")
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   envoyv1alpha1.RevisionPublishedCondition,
+					Status: corev1.ConditionTrue,
+				})
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("waiting for the EnvoyConfigRevision to get published")
+				Eventually(func() bool {
+					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					if err != nil {
+						return false
+					}
+					return true
+				}, 300*time.Second, 5*time.Second).Should(BeTrue())
+
+				Expect(k8sClient.Delete(context.Background(), ecr)).Should(Succeed())
+			})
+
+			Specify("Snapshot for the nodeID should have been cleared in the xDS cache", func() {
+				Eventually(func() bool {
+					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					if err != nil {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
+	})
+
+	Context("EnvoyConfigRevision taints", func() {
+		var ecr *envoyv1alpha1.EnvoyConfigRevision
+
+		BeforeEach(func() {
+			By("creating an EnvoyConfigRevision")
+			ecr = &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:  nodeID,
+					Version: "xxxx",
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{
+						Endpoints: []envoyv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						}}},
+			}
+			err := k8sClient.Create(context.Background(), ecr)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+				if err != nil {
+					return false
+				}
+				return true
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
+		When("RevisionTainted condition is true", func() {
+
+			BeforeEach(func() {
+				By("setting the RevisionTained condition in the EnvoyConfigRevision")
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   envoyv1alpha1.RevisionTaintedCondition,
+					Status: corev1.ConditionTrue,
+				})
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+			})
+
+			Specify("status.tainted should be true", func() {
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					if ecr.Status.Tainted {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+
+			Specify("status.tainted should be false when condition is cleared", func() {
+
+				By("unsetting the RevisionTained condition in the EnvoyConfigRevision")
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   envoyv1alpha1.RevisionTaintedCondition,
+					Status: corev1.ConditionFalse,
+				})
+				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("checking the status.Tainded field in the EnvoyConfigCache")
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					if !ecr.Status.Tainted {
+						return true
+					}
+					return false
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+		})
+
+	})
+
+})
 
 func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 
@@ -267,7 +571,7 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 		r := &EnvoyConfigRevisionReconciler{
 			Client:   fake.NewFakeClient(ecr),
 			Scheme:   s,
-			XdsCache: fakeTestCache(),
+			XdsCache: xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		if err := r.taintSelf(context.TODO(), ecr, "test", "test"); err != nil {
@@ -280,319 +584,99 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 	})
 }
 
-func TestEnvoyConfigRevisionReconciler_updateStatus(t *testing.T) {
-	t.Run("Updates the status of the ecr object", func(t *testing.T) {
-		ecr := &envoyv1alpha1.EnvoyConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
-			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-				NodeID:         "node1",
-				Version:        "bbbb",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
-				Conditions: status.NewConditions(
-					status.Condition{
-						Type:   envoyv1alpha1.ResourcesOutOfSyncCondition,
-						Status: corev1.ConditionTrue,
+func Test_filterByAPIVersion(t *testing.T) {
+	type args struct {
+		obj     runtime.Object
+		version envoy.APIVersion
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "V2 EnvoyConfigRevision with V2 controller returns true",
+			args: args{
+				obj: &envoyv1alpha1.EnvoyConfigRevision{
+					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
+					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
 					},
-				),
+				},
+				version: envoy.APIv2,
 			},
-		}
-		r := &EnvoyConfigRevisionReconciler{
-			Client:   fake.NewFakeClient(ecr),
-			Scheme:   s,
-			XdsCache: fakeTestCache(),
-			Log:      ctrl.Log.WithName("test"),
-		}
-		if err := r.updateStatus(context.TODO(), ecr); err != nil {
-			t.Errorf("EnvoyConfigRevisionReconciler.updateStatus() error = %v", err)
-		}
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
-		if ecr.Status.Conditions.IsTrueFor(envoyv1alpha1.ResourcesOutOfSyncCondition) {
-			t.Errorf("EnvoyConfigRevisionReconciler.updateStatus() status not updated")
-		}
-	})
+			want: true,
+		},
+		{
+			name: "V3 EnvoyConfigRevision with V3 controller returns true",
+			args: args{
+				obj: &envoyv1alpha1.EnvoyConfigRevision{
+					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
+					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+						EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
+					},
+				},
+				version: envoy.APIv3,
+			},
+			want: true,
+		},
+		{
+			name: "V2 EnvoyConfigRevision with V3 controller returns false",
+			args: args{
+				obj: &envoyv1alpha1.EnvoyConfigRevision{
+					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
+					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
+					},
+				},
+				version: envoy.APIv3,
+			},
+			want: false,
+		},
+		{
+			name: "V3 EnvoyConfigRevision with V2 controller returns false",
+			args: args{
+				obj: &envoyv1alpha1.EnvoyConfigRevision{
+					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
+					Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
+					},
+				},
+				version: envoy.APIv3,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := filterByAPIVersion(tt.args.obj, tt.args.version); got != tt.want {
+				t.Errorf("filterByAPIVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
-func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
+func TestEnvoyConfigRevisionReconciler_finalizeEnvoyConfig(t *testing.T) {
 	type fields struct {
 		client   client.Client
 		scheme   *runtime.Scheme
 		xdsCache xdss.Cache
 	}
 	type args struct {
-		ctx           context.Context
-		name          string
-		namespace     string
-		serialization string
-		resources     *envoyv1alpha1.EnvoyResources
-		snap          xdss.Snapshot
+		nodeID string
 	}
-
-	cache := fakeTestCache()
-
 	tests := []struct {
-		name     string
-		fields   fields
-		args     args
-		wantErr  bool
-		wantSnap xdss.Snapshot
+		name   string
+		fields fields
+		args   args
 	}{
 		{
-			name: "Loads resources into the snapshot",
-			fields: fields{
-				client:   fake.NewFakeClient(),
+			name: "Deletes the snapshot from the ads server cache",
+			fields: fields{client: fake.NewFakeClient(),
 				scheme:   scheme.Scheme,
-				xdsCache: cache,
+				xdsCache: fakeCacheV2(),
 			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Endpoints: []envoyv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-					},
-					Clusters: []envoyv1alpha1.EnvoyResource{
-						{Name: "cluster", Value: "{\"name\": \"cluster\"}"},
-					},
-					Routes: []envoyv1alpha1.EnvoyResource{
-						{Name: "route", Value: "{\"name\": \"route\"}"},
-					},
-					Listeners: []envoyv1alpha1.EnvoyResource{
-						{Name: "listener", Value: "{\"name\": \"listener\"}"},
-					},
-					Runtimes: []envoyv1alpha1.EnvoyResource{
-						{Name: "runtime", Value: "{\"name\": \"runtime\"}"},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr: false,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-				Resources: [6]cache_v2.Resources{
-					{Version: "1", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"},
-					}},
-					{Version: "1", Items: map[string]cache_types.Resource{
-						"cluster": &envoy_api_v2.Cluster{Name: "cluster"},
-					}},
-					{Version: "1", Items: map[string]cache_types.Resource{
-						"route": &envoy_api_v2_route.Route{Name: "route"},
-					}},
-					{Version: "1", Items: map[string]cache_types.Resource{
-						"listener": &envoy_api_v2.Listener{Name: "listener"},
-					}},
-					{Version: "1-74d569cc4", Items: map[string]cache_types.Resource{}},
-					{Version: "1", Items: map[string]cache_types.Resource{
-						"runtime": &envoy_service_discovery_v2.Runtime{Name: "runtime"},
-					}},
-				},
-			}),
-		},
-		{
-			name: "Error, bad endpoint value",
-			fields: fields{
-				client:   fake.NewFakeClient(),
-				scheme:   scheme.Scheme,
-				xdsCache: cache,
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Endpoints: []envoyv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "giberish"},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr:  true,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
-		},
-		{
-			name: "Error, bad cluster value",
-			fields: fields{
-				client:   fake.NewFakeClient(),
-				scheme:   scheme.Scheme,
-				xdsCache: cache,
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Clusters: []envoyv1alpha1.EnvoyResource{
-						{Name: "cluster", Value: "giberish"},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr:  true,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
-		},
-		{
-			name: "Error, bad route value",
-			fields: fields{
-				client:   fake.NewFakeClient(),
-				scheme:   scheme.Scheme,
-				xdsCache: cache,
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Routes: []envoyv1alpha1.EnvoyResource{
-						{Name: "route", Value: "giberish"},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr:  true,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
-		},
-		{
-			name: "Error, bad listener value",
-			fields: fields{
-				client:   fake.NewFakeClient(),
-				scheme:   scheme.Scheme,
-				xdsCache: cache,
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Listeners: []envoyv1alpha1.EnvoyResource{
-						{Name: "listener", Value: "giberish"},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr:  true,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
-		},
-		{
-			name: "Error, bad runtime value",
-			fields: fields{
-				client:   fake.NewFakeClient(),
-				scheme:   scheme.Scheme,
-				xdsCache: cache,
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Runtimes: []envoyv1alpha1.EnvoyResource{
-						{Name: "runtime", Value: "giberish"},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr:  true,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
-		},
-		{
-			name: "Loads secret resources into the snapshot",
-			fields: fields{
-				client: fake.NewFakeClient(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "default"},
-					Type:       corev1.SecretTypeTLS,
-					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
-				}),
-				scheme:   scheme.Scheme,
-				xdsCache: fakeTestCache(),
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Secrets: []envoyv1alpha1.EnvoySecretResource{
-						{Name: "secret", Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr: false,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-				Resources: [6]cache_v2.Resources{
-					{Version: "1", Items: map[string]cache_types.Resource{}},
-					{Version: "1", Items: map[string]cache_types.Resource{}},
-					{Version: "1", Items: map[string]cache_types.Resource{}},
-					{Version: "1", Items: map[string]cache_types.Resource{}},
-					{Version: "1-6cf7fd9d65", Items: map[string]cache_types.Resource{
-						"secret": &envoy_api_v2_auth.Secret{
-							Name: "secret",
-							Type: &envoy_api_v2_auth.Secret_TlsCertificate{
-								TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
-									PrivateKey: &envoy_api_v2_core.DataSource{
-										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
-									},
-									CertificateChain: &envoy_api_v2_core.DataSource{
-										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-									}}}}}},
-					{Version: "1", Items: map[string]cache_types.Resource{}},
-				},
-			}),
-		},
-		{
-			name: "Fails with wrong secret type",
-			fields: fields{
-				client: fake.NewFakeClient(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "default"},
-					Type:       corev1.SecretTypeBasicAuth,
-					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
-				}),
-				scheme:   scheme.Scheme,
-				xdsCache: fakeTestCache(),
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Secrets: []envoyv1alpha1.EnvoySecretResource{
-						{Name: "secret", Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr:  true,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
-		},
-		{
-			name: "Fails when secret does not exist",
-			fields: fields{
-				client:   fake.NewFakeClient(),
-				scheme:   scheme.Scheme,
-				xdsCache: cache,
-			},
-			args: args{
-				ctx:           context.TODO(),
-				name:          "ecr",
-				namespace:     "default",
-				serialization: "json",
-				resources: &envoyv1alpha1.EnvoyResources{
-					Secrets: []envoyv1alpha1.EnvoySecretResource{
-						{Name: "secret", Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}},
-					}},
-				snap: cache.NewSnapshot("1"),
-			},
-			wantErr:  true,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
+			args: args{"node1"},
 		},
 	}
 	for _, tt := range tests {
@@ -603,10 +687,53 @@ func TestEnvoyConfigRevisionReconciler_loadResources(t *testing.T) {
 				XdsCache: tt.fields.xdsCache,
 				Log:      ctrl.Log.WithName("test"),
 			}
-			if err := r.loadResources(tt.args.ctx, tt.args.name, tt.args.namespace, tt.args.serialization, tt.args.resources, field.NewPath("spec", "resources"), tt.args.snap); (err != nil) != tt.wantErr {
-				t.Errorf("EnvoyConfigRevisionReconciler.loadResources() error = %v, wantErr %v", err, tt.wantErr)
-			} else if !tt.wantErr && !testutil.SnapshotsAreEqual(tt.args.snap, tt.wantSnap) {
-				t.Errorf("EnvoyConfigRevisionReconciler.loadResources() got = %v, want %v", tt.args.snap, tt.wantSnap)
+			r.finalizeEnvoyConfigRevision(tt.args.nodeID)
+			if _, err := r.XdsCache.GetSnapshot(tt.args.nodeID); err == nil {
+				t.Errorf("TestEnvoyConfigRevisionReconciler_finalizeEnvoyConfig() -> snapshot still in the cache")
+			}
+		})
+	}
+}
+
+func TestEnvoyConfigRevisionReconciler_addFinalizer(t *testing.T) {
+	tests := []struct {
+		name    string
+		cr      *envoyv1alpha1.EnvoyConfigRevision
+		wantErr bool
+	}{
+		{
+			name: "Adds finalizer to EnvoyConfigRevision",
+			cr: &envoyv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
+				Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:         "node1",
+					Version:        "xxxx",
+					EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+				}},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := scheme.Scheme
+			s.AddKnownTypes(envoyv1alpha1.GroupVersion, tt.cr)
+			cl := fake.NewFakeClient(tt.cr)
+			r := &EnvoyConfigRevisionReconciler{
+				Client:   cl,
+				Scheme:   s,
+				XdsCache: xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
+				Log:      ctrl.Log.WithName("test"),
+			}
+
+			if err := r.addFinalizer(context.TODO(), tt.cr); (err != nil) != tt.wantErr {
+				t.Errorf("EnvoyConfigRevisionReconciler.addFinalizer() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr {
+				ecr := &envoyv1alpha1.EnvoyConfigRevision{}
+				r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+				if len(ecr.ObjectMeta.Finalizers) != 1 {
+					t.Error("EnvoyConfigRevisionReconciler.addFinalizer() wrong number of finalizers present in object")
+				}
 			}
 		})
 	}

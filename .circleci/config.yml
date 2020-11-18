@@ -16,32 +16,44 @@ workflows:
               ignore: /.*/
 
 jobs:
-  test: # runs not using Workflows must have a `build` job as entry point
+  test:
+    resource_class: xlarge
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
-      - image: circleci/golang:1.14-buster
+      - image: circleci/golang:1.13
 
     steps: # steps that comprise the `build` job
       - checkout
 
-      - restore_cache: # restores saved cache if no changes are detected since last run
+      # restores saved cache if no changes are detected since last run
       # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+      - restore_cache:
           keys:
-            - v1-pkg-cache
+            - pkg-cache
+
+      - restore_cache:
+          keys:
+            - testbin-cache
 
       - run:
           name: Run unit tests
           command: make test
 
-      - run: make build
-      - save_cache: # Store cache in the /go/pkg directory
-          key: v1-pkg-cache
+      # Store cache in the /go/pkg directory
+      - save_cache:
+          key: pkg-cache
           paths:
             - "/go/pkg"
 
+      # Store cache /testbin directory
+      - save_cache:
+          key: testbin-cache
+          paths:
+            - "testbin"
+
   release:
     docker:
-      - image: circleci/golang:1.14-buster
+      - image: circleci/golang:1.13
         environment:
           IMAGE_NAME: quay.io/3scale/marin3r
     steps:

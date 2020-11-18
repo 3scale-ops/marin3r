@@ -2,14 +2,13 @@ package discoveryservice
 
 import (
 	"github.com/3scale/marin3r/pkg/envoy"
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 	envoy_resources_v3 "github.com/3scale/marin3r/pkg/envoy/resources/v3"
-	envoy_config_bootstrap_v3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
 
@@ -41,27 +40,27 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 	switch o := res.(type) {
 
 	case *envoy_config_endpoint_v3.ClusterLoadAssignment:
-		s.v3.Resources[v3CacheResources(envoy_resources.Endpoint)].Items[name] = o
+		s.v3.Resources[v3CacheResources(envoy.Endpoint)].Items[name] = o
 
 	case *envoy_config_cluster_v3.Cluster:
-		s.v3.Resources[v3CacheResources(envoy_resources.Cluster)].Items[name] = o
+		s.v3.Resources[v3CacheResources(envoy.Cluster)].Items[name] = o
 
-	case *envoy_config_route_v3.Route:
-		s.v3.Resources[v3CacheResources(envoy_resources.Route)].Items[name] = o
+	case *envoy_config_route_v3.RouteConfiguration:
+		s.v3.Resources[v3CacheResources(envoy.Route)].Items[name] = o
 
 	case *envoy_config_listener_v3.Listener:
-		s.v3.Resources[v3CacheResources(envoy_resources.Listener)].Items[name] = o
+		s.v3.Resources[v3CacheResources(envoy.Listener)].Items[name] = o
 
 	case *envoy_extensions_transport_sockets_tls_v3.Secret:
-		s.v3.Resources[v3CacheResources(envoy_resources.Secret)].Items[name] = o
+		s.v3.Resources[v3CacheResources(envoy.Secret)].Items[name] = o
 
-	case *envoy_config_bootstrap_v3.Runtime:
-		s.v3.Resources[v3CacheResources(envoy_resources.Runtime)].Items[name] = o
+	case *envoy_service_runtime_v3.Runtime:
+		s.v3.Resources[v3CacheResources(envoy.Runtime)].Items[name] = o
 	}
 }
 
 // GetResources selects snapshot resources by type.
-func (s Snapshot) GetResources(rType envoy_resources.Type) map[string]envoy.Resource {
+func (s Snapshot) GetResources(rType envoy.Type) map[string]envoy.Resource {
 
 	typeURLs := envoy_resources_v3.Mappings()
 	resources := map[string]envoy.Resource{}
@@ -72,24 +71,24 @@ func (s Snapshot) GetResources(rType envoy_resources.Type) map[string]envoy.Reso
 }
 
 // GetVersion returns the version for a resource type.
-func (s Snapshot) GetVersion(rType envoy_resources.Type) string {
+func (s Snapshot) GetVersion(rType envoy.Type) string {
 	typeURLs := envoy_resources_v3.Mappings()
 	return s.v3.GetVersion(typeURLs[rType])
 }
 
 // SetVersion sets the version for a resource type.
-func (s Snapshot) SetVersion(rType envoy_resources.Type, version string) {
+func (s Snapshot) SetVersion(rType envoy.Type, version string) {
 	s.v3.Resources[v3CacheResources(rType)].Version = version
 }
 
-func v3CacheResources(rType envoy_resources.Type) int {
-	types := map[envoy_resources.Type]int{
-		envoy_resources.Endpoint: 0,
-		envoy_resources.Cluster:  1,
-		envoy_resources.Route:    2,
-		envoy_resources.Listener: 3,
-		envoy_resources.Secret:   4,
-		envoy_resources.Runtime:  5,
+func v3CacheResources(rType envoy.Type) int {
+	types := map[envoy.Type]int{
+		envoy.Endpoint: 0,
+		envoy.Cluster:  1,
+		envoy.Route:    2,
+		envoy.Listener: 3,
+		envoy.Secret:   4,
+		envoy.Runtime:  5,
 	}
 
 	return types[rType]

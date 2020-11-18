@@ -2,7 +2,6 @@ package discoveryservice
 
 import (
 	envoy "github.com/3scale/marin3r/pkg/envoy"
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 )
 
 // Cache is a snapshot-based cache that maintains a single versioned
@@ -26,7 +25,7 @@ type Cache interface {
 type Snapshot interface {
 	Consistent() error
 	SetResource(string, envoy.Resource)
-	GetResources(envoy_resources.Type) map[string]envoy.Resource
-	GetVersion(envoy_resources.Type) string
-	SetVersion(envoy_resources.Type, string)
+	GetResources(envoy.Type) map[string]envoy.Resource
+	GetVersion(envoy.Type) string
+	SetVersion(envoy.Type, string)
 }

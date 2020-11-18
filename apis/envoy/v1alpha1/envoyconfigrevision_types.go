@@ -17,11 +17,16 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/3scale/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	"github.com/operator-framework/operator-lib/status"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
+	/* Conditions */
+
 	// RevisionPublishedCondition is a condition that marks the EnvoyConfigRevision object
 	// as the one that should be published in the xds server cache
 	RevisionPublishedCondition status.ConditionType = "RevisionPublished"
@@ -33,6 +38,11 @@ const (
 	// RevisionTaintedCondition is a condition type that's used to report that this
 	// problems have been observed with this revision and should not be published
 	RevisionTaintedCondition status.ConditionType = "RevisionTainted"
+
+	/* Finalizers */
+
+	// EnvoyConfigRevisionFinalizer is the finalizer for EnvoyConfig objects
+	EnvoyConfigRevisionFinalizer string = "finalizer.marin3r.3scale.net"
 )
 
 // EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
@@ -45,11 +55,17 @@ type EnvoyConfigRevisionSpec struct {
 	// Version is a hash of the EnvoyResources field
 	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
 	Version string `json:"version"`
+	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+	// +kubebuilder:validation:Enum=v2;v3
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +optional
+	EnvoyAPI *string `json:"envoyAPI,omitempty"`
 	// Serialization specicifies the serialization format used to describe the resources. "json" and "yaml"
 	// are supported. "json" is used if unset.
 	// +kubebuilder:validation:Enum=json;b64json;yaml
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Serialization string `json:"serialization,omitempty"`
+	// +optional
+	Serialization *string `json:"serialization,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	EnvoyResources *EnvoyResources `json:"envoyResources"`
@@ -81,7 +97,8 @@ type EnvoyConfigRevisionStatus struct {
 // controller and are not intended to be directly used. Use EnvoyConfig objects instead.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=envoyconfigrevisions,scope=Namespaced,shortName=ecr
-// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=Node ID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.envoyAPI",name=Envoy API,type=string
 // +kubebuilder:printcolumn:JSONPath=".spec.version",name=Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.published",name=Published,type=boolean
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Created At",type=string,format=date-time
@@ -94,6 +111,22 @@ type EnvoyConfigRevision struct {
 
 	Spec   EnvoyConfigRevisionSpec   `json:"spec,omitempty"`
 	Status EnvoyConfigRevisionStatus `json:"status,omitempty"`
+}
+
+// GetEnvoyAPIVersion returns envoy's API version for the EnvoyConfigRevision
+func (ecr *EnvoyConfigRevision) GetEnvoyAPIVersion() envoy.APIVersion {
+	if ecr.Spec.EnvoyAPI == nil {
+		return envoy.APIv2
+	}
+	return envoy.APIVersion(*ecr.Spec.EnvoyAPI)
+}
+
+// GetSerialization returns the encoding of the envoy resources.
+func (ecr *EnvoyConfigRevision) GetSerialization() envoy_serializer.Serialization {
+	if ecr.Spec.Serialization == nil {
+		return envoy_serializer.JSON
+	}
+	return envoy_serializer.Serialization(*ecr.Spec.Serialization)
 }
 
 // +kubebuilder:object:root=true

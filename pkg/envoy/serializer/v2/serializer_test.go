@@ -1,26 +1,34 @@
 package envoy
 
 import (
-	"reflect"
 	"testing"
 	"time"
 
+	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoy_api_v2_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	_struct "github.com/golang/protobuf/ptypes/struct"
 
-	_ "github.com/cncf/udpa/go/udpa/annotations"
-	_ "github.com/envoyproxy/go-control-plane/envoy/annotations"
+	// This is the list of imports so all proto types are registered.
+	// Generated with the following command in go-control-plane@v0.9.7
+	//
+	// for proto in $(find envoy -name '*.pb.go' | grep v2 | grep -v v2alpha); do echo "_ \"github.com/envoyproxy/go-control-plane/$(dirname $proto)\""; done | sort | uniq
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/cluster"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/ratelimit"
+	_ "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v2"
-	_ "github.com/envoyproxy/go-control-plane/envoy/config/cluster/redis"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/filter/accesslog/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/filter/fault/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/filter/http/buffer/v2"
@@ -66,9 +74,19 @@ import (
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/omit_canary_hosts/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/omit_host_metadata/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/previous_hosts/v2"
-	_ "github.com/envoyproxy/go-control-plane/envoy/config/retry/previous_priorities"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/trace/v2"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/transport_socket/raw_buffer/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/accesslog/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/auth/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/load_stats/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/metrics/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/ratelimit/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/status/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/service/trace/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/type/metadata/v2"
+	_ "github.com/envoyproxy/go-control-plane/envoy/type/tracing/v2"
 )
 
 var (
@@ -142,13 +160,19 @@ var (
 					Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("xxxx")},
 				}}}}
 
-	routeJSON string                    = `{"name":"route1","match":{"prefix":"/"},"directResponse":{"status":200}}`
-	route     *envoy_api_v2_route.Route = &envoy_api_v2_route.Route{
+	routeJSON string                           = `{"name":"route1","virtualHosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"directResponse":{"status":200}}]}]}`
+	route     *envoy_api_v2.RouteConfiguration = &envoy_api_v2.RouteConfiguration{
 		Name: "route1",
-		Match: &envoy_api_v2_route.RouteMatch{
-			PathSpecifier: &envoy_api_v2_route.RouteMatch_Prefix{Prefix: "/"}},
-		Action: &envoy_api_v2_route.Route_DirectResponse{
-			DirectResponse: &envoy_api_v2_route.DirectResponseAction{Status: 200}},
+		VirtualHosts: []*envoy_api_v2_route.VirtualHost{{
+			Name:    "vhost",
+			Domains: []string{"*"},
+			Routes: []*envoy_api_v2_route.Route{{
+				Match: &envoy_api_v2_route.RouteMatch{
+					PathSpecifier: &envoy_api_v2_route.RouteMatch_Prefix{Prefix: "/"}},
+				Action: &envoy_api_v2_route.Route_DirectResponse{
+					DirectResponse: &envoy_api_v2_route.DirectResponseAction{Status: 200}},
+			}},
+		}},
 	}
 
 	runtimeJSON string                              = `{"name":"runtime1","layer":{"static_layer_0":"value"}}`
@@ -161,89 +185,9 @@ var (
 			}}}
 )
 
-func TestYAMLtoResources(t *testing.T) {
-	type args struct {
-		data []byte
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *Resources
-		wantErr bool
-	}{
-		{
-			name: "Loads yaml into evnoy resources",
-			args: args{data: []byte(`
-                clusters:
-                - name: cluster1
-                  connect_timeout: 2s
-                  type: STRICT_DNS
-                  lb_policy: ROUND_ROBIN
-                  load_assignment:
-                    cluster_name: cluster1
-                    endpoints: []
-
-                listeners:
-                - name: listener1
-                  address:
-                    socket_address:
-                      address: 0.0.0.0
-                      port_value: 8443
-                `,
-			)},
-			want: &Resources{
-				Clusters:  []*envoy_api_v2.Cluster{cluster},
-				Listeners: []*envoy_api_v2.Listener{listener},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := YAMLtoResources(tt.args.data)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("YAMLtoResources() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !proto.Equal(got.Clusters[0], tt.want.Clusters[0]) {
-				t.Errorf("YAMLtoResources() = %v, want %v", got.Clusters[0], tt.want.Clusters[0])
-			}
-			if !proto.Equal(got.Listeners[0], tt.want.Listeners[0]) {
-				t.Errorf("YAMLtoResources() = %v, want %v", got.Listeners[0], tt.want.Listeners[0])
-			}
-		})
-	}
-}
-
-func TestResourcesToJSON(t *testing.T) {
-	type args struct {
-		pb proto.Message
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []byte
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := ResourcesToJSON(tt.args.pb)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ResourcesToJSON() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ResourcesToJSON() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestJSON_Marshal(t *testing.T) {
 	type args struct {
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
@@ -312,13 +256,13 @@ func TestJSON_Marshal(t *testing.T) {
 func TestJSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       JSON
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{
@@ -352,7 +296,7 @@ func TestJSON_Unmarshal(t *testing.T) {
 		{
 			name:    "Deserialize route from json",
 			s:       JSON{},
-			args:    args{str: routeJSON, res: &envoy_api_v2_route.Route{}},
+			args:    args{str: routeJSON, res: &envoy_api_v2.RouteConfiguration{}},
 			want:    route,
 			wantErr: false,
 		},
@@ -366,7 +310,7 @@ func TestJSON_Unmarshal(t *testing.T) {
 		{
 			name:    "Error deserializing resource",
 			s:       JSON{},
-			args:    args{str: `{"this_is": "wrong"}`, res: &envoy_api_v2_route.Route{}},
+			args:    args{str: `{"this_is": "wrong"}`, res: &envoy_api_v2.RouteConfiguration{}},
 			want:    nil,
 			wantErr: true,
 		},
@@ -394,13 +338,13 @@ func TestJSON_Unmarshal(t *testing.T) {
 func TestB64JSON_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       B64JSON
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{
@@ -432,13 +376,13 @@ func TestB64JSON_Unmarshal(t *testing.T) {
 func TestYAML_Unmarshal(t *testing.T) {
 	type args struct {
 		str string
-		res cache_types.Resource
+		res envoy.Resource
 	}
 	tests := []struct {
 		name    string
 		s       YAML
 		args    args
-		want    cache_types.Resource
+		want    envoy.Resource
 		wantErr bool
 	}{
 		{

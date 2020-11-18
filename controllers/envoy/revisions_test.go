@@ -4,8 +4,14 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
+	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
+	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
+	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
+	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -16,6 +22,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func fakeCacheV2() xdss.Cache {
+	cache := xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil))
+	cache.SetSnapshot("node1", xdss_v2.NewSnapshot(&cache_v2.Snapshot{
+		Resources: [6]cache_v2.Resources{
+			{Version: "aaaa", Items: map[string]cache_types.Resource{
+				"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
+			}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{
+				"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
+			}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa-557db659d4", Items: map[string]cache_types.Resource{}},
+			{Version: "aaaa", Items: map[string]cache_types.Resource{}},
+		}}),
+	)
+	return cache
+}
 
 func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 
@@ -34,7 +59,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 			}}
 
 		cl := fake.NewFakeClient(ec)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
 		if gotErr != nil {
@@ -67,8 +92,9 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 				Name:      "ecr",
 				Namespace: "default",
 				Labels: map[string]string{
-					nodeIDTag:  "node1",
-					versionTag: "xxxx",
+					nodeIDTag:   "node1",
+					versionTag:  "xxxx",
+					envoyAPITag: "v2",
 				},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
@@ -88,7 +114,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 			}}
 
 		cl := fake.NewFakeClient(ec, ecr)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
 		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
 		if gotErr != nil {
@@ -113,87 +139,61 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 }
 
 func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
-	t.Run("Consolidates the revision list in the ec status", func(t *testing.T) {
-		ecr := &envoyv1alpha1.EnvoyConfigRevision{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ecr",
-				Namespace: "default",
-				Labels: map[string]string{
-					nodeIDTag:  "node1",
-					versionTag: "xxxx",
-				},
-			},
-			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
-				Version:        "xxxx",
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-		}
-		ec := &envoyv1alpha1.EnvoyConfig{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ec",
-				Namespace: "default",
-			},
-			Spec: envoyv1alpha1.EnvoyConfigSpec{
-				NodeID:         "node1",
-				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
-			},
-		}
-
-		cl := fake.NewFakeClient(ec, ecr)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
-
-		gotErr := r.consolidateRevisionList(context.TODO(), ec, "xxxx")
-		if gotErr != nil {
-			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() error = %v", gotErr)
-			return
-		}
-
-		gotNCC := &envoyv1alpha1.EnvoyConfig{}
-		wantConfigRevisions := []envoyv1alpha1.ConfigRevisionRef{
-			{Version: "xxxx", Ref: corev1.ObjectReference{Name: "ecr", Namespace: "default"}},
-		}
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, gotNCC)
-
-		if !apiequality.Semantic.DeepEqual(gotNCC.Status.ConfigRevisions, wantConfigRevisions) {
-			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() got '%v', want '%v'", gotNCC.Status.ConfigRevisions, wantConfigRevisions)
-			return
-		}
-	})
-
-	t.Run("Moves the published revision to the last position of the list", func(t *testing.T) {
+	t.Run("Generates an ordered list with all the config revisions, with the desired onw on the highes index", func(t *testing.T) {
 		ecr1 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "1",
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
+			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
+				LastPublishedAt: metav1.NewTime(time.Now().Add(-4 * time.Second)),
+			},
 		}
 		ecr2 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr2",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "2",
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
+			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
+				LastPublishedAt: metav1.NewTime(time.Now().Add(-2 * time.Second)),
+			},
 		}
 		ecr3 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr3",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "3"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "3", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "3",
+				NodeID:         "node1",
+				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+			},
+			Status: envoyv1alpha1.EnvoyConfigRevisionStatus{
+				LastPublishedAt: metav1.NewTime(time.Now().Add(-1 * time.Second)),
+			},
+		}
+		ecr4 := &envoyv1alpha1.EnvoyConfigRevision{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "ecr4",
+				Namespace:         "default",
+				Labels:            map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
+				CreationTimestamp: metav1.NewTime(time.Now().Add(-3 * time.Second)),
+			},
+			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
+				Version:        "4",
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
@@ -207,19 +207,12 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 				NodeID:         "node1",
 				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
 			},
-			Status: envoyv1alpha1.EnvoyConfigStatus{
-				ConfigRevisions: []envoyv1alpha1.ConfigRevisionRef{
-					{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "default"}},
-					{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
-					{Version: "3", Ref: corev1.ObjectReference{Name: "ecr3", Namespace: "default"}},
-				},
-			},
 		}
 
-		cl := fake.NewFakeClient(ec, ecr1, ecr2, ecr3)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		cl := fake.NewFakeClient(ec, ecr1, ecr2, ecr3, ecr4)
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.consolidateRevisionList(context.TODO(), ec, "1")
+		gotErr := r.reconcileRevisionList(context.TODO(), ec, "2")
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() error = %v", gotErr)
 			return
@@ -227,9 +220,10 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 
 		gotNCC := &envoyv1alpha1.EnvoyConfig{}
 		wantConfigRevisions := []envoyv1alpha1.ConfigRevisionRef{
-			{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
-			{Version: "3", Ref: corev1.ObjectReference{Name: "ecr3", Namespace: "default"}},
 			{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "default"}},
+			{Version: "4", Ref: corev1.ObjectReference{Name: "ecr4", Namespace: "default"}},
+			{Version: "3", Ref: corev1.ObjectReference{Name: "ecr3", Namespace: "default"}},
+			{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "default"}},
 		}
 		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ec", Namespace: "default"}, gotNCC)
 
@@ -264,11 +258,21 @@ func TestEnvoyConfigReconciler_deleteUnreferencedRevisions(t *testing.T) {
 
 func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 	t.Run("Keeps current revision published", func(t *testing.T) {
+		ec := &envoyv1alpha1.EnvoyConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ec",
+				Namespace: "default",
+			},
+			Spec: envoyv1alpha1.EnvoyConfigSpec{
+				NodeID:         "node1",
+				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+			},
+		}
 		ecr1 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "1",
@@ -284,7 +288,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr2",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "2",
@@ -297,9 +301,9 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ecr1, ecr2)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), "node1", "2", "reason", "msg")
+		gotErr := r.markRevisionPublished(context.TODO(), ec, "2", "reason", "msg")
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return
@@ -321,11 +325,21 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 	})
 
 	t.Run("Changes the published revision", func(t *testing.T) {
+		ec := &envoyv1alpha1.EnvoyConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "ec",
+				Namespace: "default",
+			},
+			Spec: envoyv1alpha1.EnvoyConfigSpec{
+				NodeID:         "node1",
+				EnvoyResources: &envoyv1alpha1.EnvoyResources{},
+			},
+		}
 		ecr1 := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "1", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "1",
@@ -341,7 +355,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr2",
 				Namespace: "default",
-				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2"},
+				Labels:    map[string]string{nodeIDTag: "node1", versionTag: "2", envoyAPITag: "v2"},
 			},
 			Spec: envoyv1alpha1.EnvoyConfigRevisionSpec{
 				Version:        "2",
@@ -354,9 +368,9 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(ecr1, ecr2)
-		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, XdsCache: fakeTestCache(), Log: ctrl.Log.WithName("test")}
+		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), "node1", "1", "reason", "msg")
+		gotErr := r.markRevisionPublished(context.TODO(), ec, "1", "reason", "msg")
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return
@@ -415,48 +429,6 @@ func Test_getRevisionIndex(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getRevisionIndex(tt.args.version, tt.args.revisions); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getRevisionIndex() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_moveRevisionToLast(t *testing.T) {
-	type args struct {
-		list []envoyv1alpha1.ConfigRevisionRef
-		idx  int
-	}
-	tests := []struct {
-		name string
-		args args
-		want []envoyv1alpha1.ConfigRevisionRef
-	}{
-		{
-			name: "Moves the revision to the last position in the list",
-			args: args{
-				list: []envoyv1alpha1.ConfigRevisionRef{
-					{Version: "1", Ref: corev1.ObjectReference{}},
-					{Version: "2", Ref: corev1.ObjectReference{}},
-					{Version: "3", Ref: corev1.ObjectReference{}},
-					{Version: "4", Ref: corev1.ObjectReference{}},
-					{Version: "5", Ref: corev1.ObjectReference{}},
-					{Version: "6", Ref: corev1.ObjectReference{}},
-				},
-				idx: 3,
-			},
-			want: []envoyv1alpha1.ConfigRevisionRef{
-				{Version: "1", Ref: corev1.ObjectReference{}},
-				{Version: "2", Ref: corev1.ObjectReference{}},
-				{Version: "3", Ref: corev1.ObjectReference{}},
-				{Version: "5", Ref: corev1.ObjectReference{}},
-				{Version: "6", Ref: corev1.ObjectReference{}},
-				{Version: "4", Ref: corev1.ObjectReference{}},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := moveRevisionToLast(tt.args.list, tt.args.idx); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("moveRevisionToLast() = %v, want %v", got, tt.want)
 			}
 		})
 	}

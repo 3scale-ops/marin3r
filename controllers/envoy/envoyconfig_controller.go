@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
@@ -29,17 +28,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // EnvoyConfigReconciler reconciles a EnvoyConfig object
 type EnvoyConfigReconciler struct {
-	Client   client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	XdsCache xdss.Cache
+	Client client.Client
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 }
 
 func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -60,33 +58,20 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	// Add finalizer for this CR
-	if !contains(ec.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
-		r.Log.Info("Adding Finalizer for the EnvoyConfig")
-		if err := r.addFinalizer(ctx, ec); err != nil {
-			r.Log.Error(err, "Failed adding finalizer for envoyconfig")
-			return ctrl.Result{}, err
-		}
+	// Set defaults.
+	// TODO: remove this when wwe migrate to CRD v1 api as we will
+	// be able to set defauls directly in the CRD definition.
+	if err := r.reconcileSpecDefaults(ctx, ec); err != nil {
+		return ctrl.Result{}, err
 	}
 
-	// Check if the EnvoyConfig instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set.
-	if ec.GetDeletionTimestamp() != nil {
-		if contains(ec.GetFinalizers(), envoyv1alpha1.EnvoyConfigFinalizer) {
-			r.finalizeEnvoyConfig(ec.Spec.NodeID)
-			r.Log.V(1).Info("Successfully cleared ads server cache")
-			// Remove memcachedFinalizer. Once all finalizers have been
-			// removed, the object will be deleted.
-			controllerutil.RemoveFinalizer(ec, envoyv1alpha1.EnvoyConfigFinalizer)
-			err := r.Client.Update(ctx, ec)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		return ctrl.Result{}, nil
+	// This must be done before any other revision related code due to the addition of support for
+	// envoy API v3 which comes with the addition of a new label to identify revisions belonging
+	// to each api version. The first time this version of the controller runs, it will set the
+	// required labels. This will also help with future labels that get added.
+	if err := r.reconcileRevisionLabels(ctx, ec); err != nil {
+		return ctrl.Result{}, err
 	}
-
-	// TODO: add the label with the nodeID if it is missing
 
 	// desiredVersion is the version that matches the resources described in the spec
 	desiredVersion := calculateRevisionHash(ec.Spec.EnvoyResources)
@@ -97,14 +82,14 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// Update the ConfigRevisions list in the status
-	if err := r.consolidateRevisionList(ctx, ec, desiredVersion); err != nil {
+	if err := r.reconcileRevisionList(ctx, ec, desiredVersion); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// determine the version that should be published
 	version, err := r.getVersionToPublish(ctx, ec)
 	if err != nil {
-		if err.(cacheError).ErrorType == AllRevisionsTaintedError {
+		if err.(ControllerError).ErrorType == AllRevisionsTaintedError {
 			if err := r.setRollbackFailed(ctx, ec); err != nil {
 				return ctrl.Result{}, err
 			}
@@ -116,8 +101,9 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 		return ctrl.Result{}, err
 	}
 
-	// Mark the "version" as teh published revision
-	if err := r.markRevisionPublished(ctx, ec.Spec.NodeID, version, "VersionPublished", fmt.Sprintf("Version '%s' has been published", version)); err != nil {
+	// Mark the "version" as the published revision
+	if err := r.markRevisionPublished(ctx, ec, version, "VersionPublished",
+		fmt.Sprintf("Version '%s' has been published", version)); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -141,11 +127,11 @@ func (r *EnvoyConfigReconciler) getVersionToPublish(ctx context.Context, ec *env
 		MatchLabels: map[string]string{nodeIDTag: ec.Spec.NodeID},
 	})
 	if err != nil {
-		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
+		return "", NewControllerError(UnknownError, "getVersionToPublish", err.Error())
 	}
 	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
 	if err != nil {
-		return "", newCacheError(UnknownError, "getVersionToPublish", err.Error())
+		return "", NewControllerError(UnknownError, "getVersionToPublish", err.Error())
 	}
 
 	// Starting from the highest index in the ConfigRevision list and going
@@ -160,7 +146,7 @@ func (r *EnvoyConfigReconciler) getVersionToPublish(ctx context.Context, ec *env
 
 	// If we get here it means that there is not untainted revision. Return a specific
 	// error to the controller loop so it gets handled appropriately
-	return "", newCacheError(AllRevisionsTaintedError, "getVersionToPublish", "All available revisions are tainted")
+	return "", NewControllerError(AllRevisionsTaintedError, "getVersionToPublish", "All available revisions are tainted")
 }
 
 func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig, desired, published string) error {
@@ -197,7 +183,7 @@ func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *envoyv1alp
 			Message: "Desired resources spec cannot be applied",
 		})
 		changed = true
-	} else if desired == published && !ec.Status.Conditions.IsFalseFor(envoyv1alpha1.CacheOutOfSyncCondition) {
+	} else if desired == published && ec.Status.Conditions.IsTrueFor(envoyv1alpha1.CacheOutOfSyncCondition) {
 		ec.Status.Conditions.SetCondition(status.Condition{
 			Type:    envoyv1alpha1.CacheOutOfSyncCondition,
 			Status:  corev1.ConditionFalse,
@@ -228,17 +214,57 @@ func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *envoyv1alp
 	return nil
 }
 
-func (r *EnvoyConfigReconciler) finalizeEnvoyConfig(nodeID string) {
-	r.XdsCache.ClearSnapshot(nodeID)
+// reconcileRevisionLabels ensures  all the EnvoyConfigRevisions owned by this EnvoyConfig have
+// the appropriate labels. This is important as labels are extensively used to get the lists of
+// EnvoyConfigRevision resources.
+func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
+	// Get all revisions for this EnvoyConfig
+	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
+	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
+		MatchLabels: map[string]string{
+			nodeIDTag: ec.Spec.NodeID,
+		},
+	})
+	if err != nil {
+		return NewControllerError(UnknownError, "reconcileRevisionLabels", err.Error())
+	}
+	err = r.Client.List(ctx, ecrList, &client.ListOptions{LabelSelector: selector})
+	if err != nil {
+		return NewControllerError(UnknownError, "reconcileRevisionLabels", err.Error())
+	}
+
+	for _, ecr := range ecrList.Items {
+		_, okVersionTag := ecr.GetLabels()[versionTag]
+		_, okEnvoyAPITag := ecr.GetLabels()[envoyAPITag]
+		if !okVersionTag || !okEnvoyAPITag {
+			patch := client.MergeFrom(ecr.DeepCopy())
+			ecr.SetLabels(map[string]string{
+				versionTag:  ecr.Spec.Version,
+				envoyAPITag: string(ec.GetEnvoyAPIVersion()),
+			})
+			if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
+				return NewControllerError(UnknownError, "reconcileRevisionLabels", err.Error())
+			}
+		}
+	}
+	return nil
 }
 
-func (r *EnvoyConfigReconciler) addFinalizer(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
-	controllerutil.AddFinalizer(ec, envoyv1alpha1.EnvoyConfigFinalizer)
+func (r *EnvoyConfigReconciler) reconcileSpecDefaults(ctx context.Context, ec *envoyv1alpha1.EnvoyConfig) error {
+	changed := false
+	patch := client.MergeFrom(ec.DeepCopy())
 
-	// Update CR
-	err := r.Client.Update(ctx, ec)
-	if err != nil {
-		return err
+	if ec.Spec.EnvoyAPI == nil {
+		ec.Spec.EnvoyAPI = pointer.StringPtr(string(ec.GetEnvoyAPIVersion()))
+		changed = true
+		r.Log.V(1).Info("Reconciling EnvoyConfig spec defaults")
+	}
+
+	if changed {
+		if err := r.Client.Patch(ctx, ec, patch); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }

@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
@@ -29,11 +30,18 @@ endif
 all: manager
 
 # Run tests
-ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
+ENVTEST_ASSETS_DIR ?= $(shell pwd)/testbin
 test: generate fmt vet manifests
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); \
+		go test ./... -race -coverpkg=./... -coverprofile=cover.out.tmp
+	$(MAKE) coverage
+
+coverage:
+	 cat cover.out.tmp | grep -v "_generated.deepcopy.go"  > cover.out
+	 go tool cover -func=cover.out | awk '/total/{print $$3}'
+	 @rm -f cover.out.tmp
 
 # Build manager binary
 manager: generate fmt vet
@@ -238,6 +246,7 @@ run-envoy: certs
 
 test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: "make test-envoy-config CONFIG=example/config.yaml". To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
 test-envoy-config:
+	@test -f $$(pwd)/$(CONFIG)
 	docker run -ti --rm \
 		--network=host \
 		-v $$(pwd)/$(CONFIG):/config.yaml \

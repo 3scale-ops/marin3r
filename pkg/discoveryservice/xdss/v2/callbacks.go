@@ -18,7 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	envoy_serializer_v2 "github.com/3scale/marin3r/pkg/envoy/serializer/v2"
+	"github.com/3scale/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/go-logr/logr"
@@ -26,7 +27,7 @@ import (
 
 // Callbacks is a type that implements "go-control-plane/pkg/server/".Callbacks
 type Callbacks struct {
-	OnError       func(nodeID, previousVersion, msg string) error
+	OnError       func(nodeID, previousVersion, msg string, envoyAPI envoy.APIVersion) error
 	SnapshotCache *cache_v2.SnapshotCache
 	Logger        logr.Logger
 }
@@ -58,7 +59,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_api_v2.DiscoveryReques
 		// All resource types are always kept at the same version
 		failingVersion := snap.GetVersion("type.googleapis.com/envoy.api.v2.ClusterLoadAssignment")
 		cb.Logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "CurrentVersion", req.VersionInfo, "FailingVersion", failingVersion, "NodeID", req.Node.Id, "StreamID", id)
-		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message); err != nil {
+		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message, envoy.APIv2); err != nil {
 			cb.Logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
 			return err
 		}
@@ -71,7 +72,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_api_v2.DiscoveryReques
 func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_api_v2.DiscoveryRequest, rsp *envoy_api_v2.DiscoveryResponse) {
 	resources := []string{}
 	for _, r := range rsp.Resources {
-		j, _ := envoy_serializer_v2.ResourcesToJSON(r)
+		j, _ := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoy.APIv2).Marshal(r)
 		resources = append(resources, string(j))
 	}
 	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v2.auth.Secret" {

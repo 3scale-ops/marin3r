@@ -67,7 +67,7 @@ func GenerateBootstrapConfig(host string, port uint32) (string, error) {
 					{
 						TargetSpecifier: &envoy_api_v2_core.GrpcService_EnvoyGrpc_{
 							EnvoyGrpc: &envoy_api_v2_core.GrpcService_EnvoyGrpc{
-								ClusterName: "ads_cluster",
+								ClusterName: "xds_cluster",
 							},
 						},
 					},
@@ -87,14 +87,14 @@ func GenerateBootstrapConfig(host string, port uint32) (string, error) {
 		StaticResources: &envoy_config_bootstrap_v2.Bootstrap_StaticResources{
 			Clusters: []*envoy_api_v2.Cluster{
 				{
-					Name:           "ads_cluster",
+					Name:           "xds_cluster",
 					ConnectTimeout: ptypes.DurationProto(1 * time.Second),
 					ClusterDiscoveryType: &envoy_api_v2.Cluster_Type{
 						Type: envoy_api_v2.Cluster_STRICT_DNS,
 					},
 					Http2ProtocolOptions: &envoy_api_v2_core.Http2ProtocolOptions{},
 					LoadAssignment: &envoy_api_v2.ClusterLoadAssignment{
-						ClusterName: "ads_cluster",
+						ClusterName: "xds_cluster",
 						Endpoints: []*envoy_api_v2_endpoint.LocalityLbEndpoints{
 							{
 								LbEndpoints: []*envoy_api_v2_endpoint.LbEndpoint{

@@ -10,7 +10,10 @@ metadata:
 spec:
   additionalPrinterColumns:
   - JSONPath: .spec.nodeID
-    name: NodeID
+    name: Node ID
+    type: string
+  - JSONPath: .spec.envoyAPI
+    name: Envoy API
     type: string
   - JSONPath: .spec.version
     name: Version
@@ -62,6 +65,13 @@ spec:
         spec:
           description: EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
           properties:
+            envoyAPI:
+              description: EnvoyAPI is the version of envoy's API to use. Defaults
+                to v2.
+              enum:
+              - v2
+              - v3
+              type: string
             envoyResources:
               description: EnvoyResources holds the different types of resources suported
                 by the envoy discovery service

@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,11 +36,6 @@ const (
 	// is not able to publish a config revision because all revisions are
 	// tainted
 	RollbackFailedCondition status.ConditionType = "RollbackFailed"
-
-	/* Finalizers */
-
-	// EnvoyConfigFinalizer is the finalizer for EnvoyConfig objects
-	EnvoyConfigFinalizer string = "finalizer.marin3r.3scale.net"
 
 	/* State */
 
@@ -67,7 +63,13 @@ type EnvoyConfigSpec struct {
 	// are supported. "json" is used if unset.
 	// +kubebuilder:validation:Enum=json;b64json;yaml
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Serialization string `json:"serialization,omitempty"`
+	// +optional
+	Serialization *string `json:"serialization,omitempty"`
+	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+	// +kubebuilder:validation:Enum=v2;v3
+	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +optional
+	EnvoyAPI *string `json:"envoyAPI,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	EnvoyResources *EnvoyResources `json:"envoyResources"`
@@ -168,7 +170,8 @@ type ConfigRevisionRef struct {
 // nodeID.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=envoyconfigs,scope=Namespaced,shortName=ec
-// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=NodeID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.nodeID",name=Node ID,type=string
+// +kubebuilder:printcolumn:JSONPath=".spec.envoyAPI",name=Envoy API,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.desiredVersion",name=Desired Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=Published Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.cacheState",name=Cache State,type=string
@@ -180,6 +183,14 @@ type EnvoyConfig struct {
 
 	Spec   EnvoyConfigSpec   `json:"spec,omitempty"`
 	Status EnvoyConfigStatus `json:"status,omitempty"`
+}
+
+// GetEnvoyAPIVersion returns envoy's API version for the EnvoyConfigRevision
+func (ecr *EnvoyConfig) GetEnvoyAPIVersion() envoy.APIVersion {
+	if ecr.Spec.EnvoyAPI == nil {
+		return envoy.APIv2
+	}
+	return envoy.APIVersion(*ecr.Spec.EnvoyAPI)
 }
 
 // +kubebuilder:object:root=true
