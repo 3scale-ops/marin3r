@@ -1,6 +1,10 @@
 package envoy
 
-import "github.com/golang/protobuf/proto"
+import (
+	"fmt"
+
+	"github.com/golang/protobuf/proto"
+)
 
 // Resource is the base interface for the xDS payload.
 // Any envoy resource type implements this interface.
@@ -18,6 +22,28 @@ const (
 	// APIv3 is the envoy v2 API version.
 	APIv3 APIVersion = "v3"
 )
+
+// String returns the string representation of APIVersion
+func (version APIVersion) String() string {
+	switch version {
+	case APIv3:
+		return string(APIv3)
+	default:
+		return string(APIv2)
+	}
+}
+
+// ParseAPIVersion returns an APIVersion for the given string or an error
+func ParseAPIVersion(version string) (APIVersion, error) {
+	switch version {
+	case string(APIv2):
+		return APIv2, nil
+	case string(APIv3):
+		return APIv3, nil
+	default:
+		return "", fmt.Errorf("String '%s' is no a valid APIVersion", version)
+	}
+}
 
 // Type is an enum of the supported envoy resource types
 type Type string

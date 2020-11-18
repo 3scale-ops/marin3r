@@ -130,8 +130,8 @@ func genEnvoyBootstrapObject(namespace string, ds *operatorv1alpha1.DiscoverySer
 				},
 			},
 			EnvoyStaticConfig: &envoyv1alpha1.EnvoyStaticConfig{
-				ConfigMapNameV2:       podv1mutator.DefaultBootstrapConfigMap,
-				ConfigMapNameV3:       fmt.Sprintf("%s-v3", podv1mutator.DefaultBootstrapConfigMap),
+				ConfigMapNameV2:       podv1mutator.DefaultBootstrapConfigMapV2,
+				ConfigMapNameV3:       podv1mutator.DefaultBootstrapConfigMapV3,
 				ConfigFile:            fmt.Sprintf("%s/%s", podv1mutator.DefaultEnvoyConfigBasePath, podv1mutator.DefaultEnvoyConfigFileName),
 				ResourcesDir:          podv1mutator.DefaultEnvoyConfigBasePath,
 				RtdsLayerResourceName: "runtime",

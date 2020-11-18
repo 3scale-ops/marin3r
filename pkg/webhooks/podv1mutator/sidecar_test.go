@@ -47,13 +47,13 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				ports: []corev1.ContainerPort{
 					{Name: "xxxx", ContainerPort: 1111, HostPort: 3000},
 				},
-				adsConfigMap:     "cm",
-				nodeID:           "node-id",
-				clusterID:        "cluster-id",
-				tlsVolume:        "tls-volume",
-				configVolume:     "config-volume",
-				clientCertSecret: "client-cert",
-				extraArgs:        "--log-level debug",
+				bootstrapConfigMap: "cm",
+				nodeID:             "node-id",
+				clusterID:          "cluster-id",
+				tlsVolume:          "tls-volume",
+				configVolume:       "config-volume",
+				clientCertSecret:   "client-cert",
+				extraArgs:          "--log-level debug",
 				resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("500m"),
@@ -73,15 +73,15 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				"marin3r.3scale.net/node-id": "node-id",
 			}},
 			&envoySidecarConfig{
-				name:             DefaultContainerName,
-				image:            DefaultImage,
-				ports:            []corev1.ContainerPort{},
-				adsConfigMap:     DefaultBootstrapConfigMap,
-				nodeID:           "node-id",
-				clusterID:        "node-id",
-				tlsVolume:        DefaultTLSVolume,
-				configVolume:     DefaultConfigVolume,
-				clientCertSecret: DefaultClientCertificate,
+				name:               DefaultContainerName,
+				image:              DefaultImage,
+				ports:              []corev1.ContainerPort{},
+				bootstrapConfigMap: DefaultBootstrapConfigMapV2,
+				nodeID:             "node-id",
+				clusterID:          "node-id",
+				tlsVolume:          DefaultTLSVolume,
+				configVolume:       DefaultConfigVolume,
+				clientCertSecret:   DefaultClientCertificate,
 			},
 			false,
 		},
@@ -371,12 +371,12 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 						ContainerPort: 8443,
 					},
 				},
-				adsConfigMap:     "ads-configmap",
-				nodeID:           "test-id",
-				clusterID:        "cluster-id",
-				tlsVolume:        "tls-volume",
-				configVolume:     "config-volume",
-				clientCertSecret: "secret",
+				bootstrapConfigMap: "ads-configmap",
+				nodeID:             "test-id",
+				clusterID:          "cluster-id",
+				tlsVolume:          "tls-volume",
+				configVolume:       "config-volume",
+				clientCertSecret:   "secret",
 			},
 			corev1.Container{
 				Name:    "sidecar",
@@ -431,13 +431,13 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 						ContainerPort: 8443,
 					},
 				},
-				adsConfigMap:     "ads-configmap",
-				nodeID:           "test-id",
-				clusterID:        "cluster-id",
-				tlsVolume:        "tls-volume",
-				configVolume:     "config-volume",
-				clientCertSecret: "secret",
-				extraArgs:        "-x xxxx -z zzzz",
+				bootstrapConfigMap: "ads-configmap",
+				nodeID:             "test-id",
+				clusterID:          "cluster-id",
+				tlsVolume:          "tls-volume",
+				configVolume:       "config-volume",
+				clientCertSecret:   "secret",
+				extraArgs:          "-x xxxx -z zzzz",
 			},
 			corev1.Container{
 				Name:    "sidecar",
@@ -496,12 +496,12 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 						ContainerPort: 8443,
 					},
 				},
-				adsConfigMap:     "ads-configmap",
-				nodeID:           "test-id",
-				clusterID:        "cluster-id",
-				tlsVolume:        "tls-volume",
-				configVolume:     "config-volume",
-				clientCertSecret: "secret",
+				bootstrapConfigMap: "ads-configmap",
+				nodeID:             "test-id",
+				clusterID:          "cluster-id",
+				tlsVolume:          "tls-volume",
+				configVolume:       "config-volume",
+				clientCertSecret:   "secret",
 				resources: corev1.ResourceRequirements{
 					Requests: corev1.ResourceList{
 						corev1.ResourceCPU:    resource.MustParse("500m"),
@@ -640,10 +640,10 @@ func Test_envoySidecarConfig_volumes(t *testing.T) {
 		{
 			"Returns resolved pod volumes",
 			&envoySidecarConfig{
-				adsConfigMap:     "ads-configmap",
-				tlsVolume:        "tls-volume",
-				configVolume:     "config-volume",
-				clientCertSecret: "secret",
+				bootstrapConfigMap: "ads-configmap",
+				tlsVolume:          "tls-volume",
+				configVolume:       "config-volume",
+				clientCertSecret:   "secret",
 			},
 			[]corev1.Volume{
 				{
@@ -852,4 +852,51 @@ func Test_getContainerResourceRequirements(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_getBootstrapConfigMap(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			"Returns user defined ConfigMap",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramBootstrapConfigMap): "custom-cm",
+			}},
+			"custom-cm",
+		},
+		{
+			"Returns v3 ConfigMap when v3 version specified",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "v3",
+			}},
+			DefaultBootstrapConfigMapV3,
+		},
+		{
+			"Returns v2 ConfigMap when v2 version specified",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "v2",
+			}},
+			DefaultBootstrapConfigMapV2,
+		},
+		{
+			"Returns v2 ConfigMap when the version annotation does not parse correctly",
+			args{map[string]string{
+				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "xx",
+			}},
+			DefaultBootstrapConfigMapV2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getBootstrapConfigMap(tt.args.annotations); got != tt.want {
+				t.Errorf("getBootstrapConfigMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

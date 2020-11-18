@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/3scale/marin3r/pkg/envoy"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -32,17 +33,18 @@ type parameter struct {
 const (
 
 	// parameter names
-	paramNodeID            = "node-id"
-	paramClusterID         = "cluster-id"
-	paramContainerName     = "container-name"
-	paramPorts             = "ports"
-	paramHostPortMapings   = "host-port-mappings"
-	paramImage             = "envoy-image"
-	paramADSConfigMap      = "ads-configmap"
-	paramConfigVolume      = "config-volume"
-	paramTLSVolume         = "tls-volume"
-	paramClientCertificate = "client-certificate"
-	paramEnvoyExtraArgs    = "envoy-extra-args"
+	paramNodeID             = "node-id"
+	paramClusterID          = "cluster-id"
+	paramContainerName      = "container-name"
+	paramPorts              = "ports"
+	paramHostPortMapings    = "host-port-mappings"
+	paramImage              = "envoy-image"
+	paramBootstrapConfigMap = "ads-configmap"
+	paramConfigVolume       = "config-volume"
+	paramTLSVolume          = "tls-volume"
+	paramClientCertificate  = "client-certificate"
+	paramEnvoyExtraArgs     = "envoy-extra-args"
+	paramEnvoyAPIVersion    = "envoy-api-version"
 
 	// Annotations to allow definition of container resource requests
 	// and limits for CPU and Memory. For this annitations, a non-existing
@@ -55,16 +57,18 @@ const (
 	paramResourceLimitsMemory   = "resources.limits.memory"
 
 	// default values
-	DefaultContainerName       = "envoy-sidecar"
-	DefaultImage               = "envoyproxy/envoy:v1.14.1"
-	DefaultBootstrapConfigMap  = "envoy-sidecar-bootstrap"
-	DefaultConfigVolume        = "envoy-sidecar-bootstrap"
-	DefaultTLSVolume           = "envoy-sidecar-tls"
-	DefaultClientCertificate   = "envoy-sidecar-client-cert"
-	DefaultEnvoyExtraArgs      = ""
-	DefaultEnvoyConfigBasePath = "/etc/envoy/bootstrap"
-	DefaultEnvoyConfigFileName = "config.json"
-	DefaultEnvoyTLSBasePath    = "/etc/envoy/tls/client"
+	DefaultContainerName        = "envoy-sidecar"
+	DefaultImage                = "envoyproxy/envoy:v1.14.1"
+	DefaultBootstrapConfigMapV2 = "envoy-sidecar-bootstrap"
+	DefaultBootstrapConfigMapV3 = "envoy-sidecar-bootstrap-v3"
+	DefaultConfigVolume         = "envoy-sidecar-bootstrap"
+	DefaultTLSVolume            = "envoy-sidecar-tls"
+	DefaultClientCertificate    = "envoy-sidecar-client-cert"
+	DefaultEnvoyExtraArgs       = ""
+	DefaultEnvoyConfigBasePath  = "/etc/envoy/bootstrap"
+	DefaultEnvoyConfigFileName  = "config.json"
+	DefaultEnvoyTLSBasePath     = "/etc/envoy/tls/client"
+	DefaultEnvoyAPIVersion      = string(envoy.APIv2)
 
 	TlsCertificateSdsSecretFileName = "tls_certificate_sds_secret.yaml"
 
@@ -72,17 +76,18 @@ const (
 )
 
 type envoySidecarConfig struct {
-	name             string
-	image            string
-	ports            []corev1.ContainerPort
-	adsConfigMap     string
-	nodeID           string
-	clusterID        string
-	tlsVolume        string
-	configVolume     string
-	clientCertSecret string
-	extraArgs        string
-	resources        corev1.ResourceRequirements
+	name               string
+	image              string
+	ports              []corev1.ContainerPort
+	bootstrapConfigMap string
+	nodeID             string
+	clusterID          string
+	tlsVolume          string
+	configVolume       string
+	clientCertSecret   string
+	extraArgs          string
+	resources          corev1.ResourceRequirements
+	envoyAPI           envoy.APIVersion
 }
 
 func lookupMarin3rAnnotation(key string, annotations map[string]string) (string, bool) {
@@ -95,11 +100,11 @@ func getStringParam(key string, annotations map[string]string) string {
 	var defaults = map[string]string{
 		paramContainerName:     DefaultContainerName,
 		paramImage:             DefaultImage,
-		paramADSConfigMap:      DefaultBootstrapConfigMap,
 		paramConfigVolume:      DefaultConfigVolume,
 		paramTLSVolume:         DefaultTLSVolume,
 		paramClientCertificate: DefaultClientCertificate,
 		paramEnvoyExtraArgs:    DefaultEnvoyExtraArgs,
+		paramEnvoyAPIVersion:   DefaultEnvoyAPIVersion,
 	}
 
 	// return the value specified in the corresponding annotation, if any
@@ -135,7 +140,7 @@ func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]st
 		return err
 	}
 	esc.ports = ports
-	esc.adsConfigMap = getStringParam(paramADSConfigMap, annotations)
+	esc.bootstrapConfigMap = getBootstrapConfigMap(annotations)
 	esc.nodeID = getNodeID(annotations)
 	esc.clusterID = getStringParam(paramClusterID, annotations)
 	esc.configVolume = getStringParam(paramConfigVolume, annotations)
@@ -150,6 +155,24 @@ func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]st
 	esc.resources = resources
 
 	return nil
+}
+
+func getBootstrapConfigMap(annotations map[string]string) string {
+
+	// If the ConfigMap is set by the user, return it directly
+	if cm, ok := lookupMarin3rAnnotation(paramBootstrapConfigMap, annotations); ok {
+		return cm
+	}
+
+	// Otherwise check if envoy v3 has been configured
+	if value, ok := lookupMarin3rAnnotation(paramEnvoyAPIVersion, annotations); ok {
+		if version, err := envoy.ParseAPIVersion(value); err == nil && version == envoy.APIv3 {
+			return DefaultBootstrapConfigMapV3
+		}
+	}
+
+	// Fallback to the default V2 ConfigMap for all other cases
+	return DefaultBootstrapConfigMapV2
 }
 
 func getContainerResourceRequirements(annotations map[string]string) (corev1.ResourceRequirements, error) {
@@ -351,7 +374,7 @@ func (esc *envoySidecarConfig) volumes() []corev1.Volume {
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: esc.adsConfigMap,
+						Name: esc.bootstrapConfigMap,
 					},
 				},
 			},
