@@ -37,15 +37,15 @@ type EnvoyBootstrapSpec struct {
 // options
 type EnvoyStaticConfig struct {
 	// The ConfigMap where the envoy client v2 static config will be stored
-	ConfigMapNameV2 string `json:"configMapV2"`
+	ConfigMapNameV2 string `json:"configMapNameV2"`
 	// The ConfigMap where the envoy client v3 static config will be stored
-	ConfigMapNameV3 string `json:"configMapV3"`
+	ConfigMapNameV3 string `json:"configMapNameV3"`
 	// ConfigFile is the path of envoy's bootstrap config file
 	ConfigFile string `json:"configFile"`
 	// ResourcesDir is the path where resource files are loaded from. It is used to
 	// load discovery messages directly from the filesystem, for example in order to be able
 	// to bootstrap certificates and support rotation when they are modified.
-	ResourcesDir string `json:"resourceDir"`
+	ResourcesDir string `json:"resourcesDir"`
 	// RtdsLayerResourceName is the resource name that the envoy client will request when askikng
 	// the discovery service for Runtime resources.
 	RtdsLayerResourceName string `json:"rtdsLayerResourceName"`

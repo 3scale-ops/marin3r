@@ -75,15 +75,15 @@ spec:
                   description: ConfigFile is the path of envoy's bootstrap config
                     file
                   type: string
-                configMapV2:
+                configMapNameV2:
                   description: The ConfigMap where the envoy client v2 static config
                     will be stored
                   type: string
-                configMapV3:
+                configMapNameV3:
                   description: The ConfigMap where the envoy client v3 static config
                     will be stored
                   type: string
-                resourceDir:
+                resourcesDir:
                   description: ResourcesDir is the path where resource files are loaded
                     from. It is used to load discovery messages directly from the
                     filesystem, for example in order to be able to bootstrap certificates
@@ -98,9 +98,9 @@ spec:
               - adminAccessLogPath
               - adminBindAddress
               - configFile
-              - configMapV2
-              - configMapV3
-              - resourceDir
+              - configMapNameV2
+              - configMapNameV3
+              - resourcesDir
               - rtdsLayerResourceName
               type: object
           required:
