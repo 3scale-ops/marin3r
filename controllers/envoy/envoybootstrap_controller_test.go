@@ -122,7 +122,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 
 		})
 
-		FIt("should create the ConfigMaps and the DiscoveryServiceCertificate for the envoy client", func() {
+		It("should create the ConfigMaps and the DiscoveryServiceCertificate for the envoy client", func() {
 
 			By("Checking that the DiscoveryServiceCertificate has been created")
 			{
