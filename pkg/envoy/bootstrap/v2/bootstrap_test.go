@@ -63,7 +63,7 @@ func TestConfig_GenerateSds(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.api.v2.auth.Secret","tls_certificate":{"certificate_chain":{"filename":"/tls.key"},"private_key":{"filename":"/tls.crt"}}}]}`,
+				"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.api.v2.auth.Secret","tls_certificate":{"certificate_chain":{"filename":"/tls.crt"},"private_key":{"filename":"/tls.key"}}}]}`,
 			},
 			wantErr: false,
 		},

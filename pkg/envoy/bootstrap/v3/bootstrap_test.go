@@ -63,7 +63,7 @@ func TestConfig_GenerateSdsResources(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret","tls_certificate":{"certificate_chain":{"filename":"/tls.key"},"private_key":{"filename":"/tls.crt"}}}]}`,
+				"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret","tls_certificate":{"certificate_chain":{"filename":"/tls.crt"},"private_key":{"filename":"/tls.key"}}}]}`,
 			},
 			wantErr: false,
 		},

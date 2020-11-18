@@ -126,7 +126,7 @@ func TestBootstrapConfigReconciler_Reconcile(t *testing.T) {
 				ObjectMeta: v1.ObjectMeta{Name: "cm-v2", Namespace: "default"},
 				Data: map[string]string{
 					"config.json":                     `{"static_resources":{"clusters":[{"name":"xds_cluster","type":"STRICT_DNS","connect_timeout":"1s","load_assignment":{"cluster_name":"xds_cluster","endpoints":[{"lb_endpoints":[{"endpoint":{"address":{"socket_address":{"address":"discoveryservice-ds.default.svc","port_value":18000}}}}]}]},"http2_protocol_options":{},"transport_socket":{"name":"envoy.transport_sockets.tls","typed_config":{"@type":"type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext","common_tls_context":{"tls_certificate_sds_secret_configs":[{"sds_config":{"path":"/resdir/tls_certificate_sds_secret.json"}}]}}}}]},"dynamic_resources":{"lds_config":{"ads":{},"resource_api_version":"V2"},"cds_config":{"ads":{},"resource_api_version":"V2"},"ads_config":{"api_type":"GRPC","transport_api_version":"V2","grpc_services":[{"envoy_grpc":{"cluster_name":"xds_cluster"}}]}},"layered_runtime":{"layers":[{"name":"runtime","rtds_layer":{"name":"runtime","rtds_config":{"ads":{},"resource_api_version":"V2"}}}]},"admin":{"access_log_path":"/dev/null","address":{"socket_address":{"address":"127.0.0.1","port_value":1000}}}}`,
-					"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.api.v2.auth.Secret","tls_certificate":{"certificate_chain":{"filename":"/tls/tls.key"},"private_key":{"filename":"/tls/tls.crt"}}}]}`,
+					"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.api.v2.auth.Secret","tls_certificate":{"certificate_chain":{"filename":"/tls/tls.crt"},"private_key":{"filename":"/tls/tls.key"}}}]}`,
 				},
 			},
 		},
