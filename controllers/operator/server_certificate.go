@@ -70,7 +70,7 @@ func (r *DiscoveryServiceReconciler) getServerCertObject() *operatorv1alpha1.Dis
 						Namespace: OwnedObjectNamespace(r.ds),
 					}},
 			},
-			Hosts: []string{fmt.Sprintf("%s.%s.%s", r.ds.GetServiceConfig().Name, r.ds.GetNamespace(), "svc")},
+			Hosts: []string{fmt.Sprintf("%s.%s.%s", r.ds.GetServiceConfig().Name, OwnedObjectNamespace(r.ds), "svc")},
 			SecretRef: corev1.SecretReference{
 				Name:      getServerCertName(r.ds),
 				Namespace: OwnedObjectNamespace(r.ds),
