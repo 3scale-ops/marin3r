@@ -1,4 +1,0 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - script: kubectl -n $NAMESPACE get pods -l app=nginx | egrep [0-2]/2 && kubectl -n $NAMESPACE create configmap injection-ok

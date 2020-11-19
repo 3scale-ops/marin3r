@@ -64,6 +64,10 @@ deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
+# Deploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
+deploy-test: manifests kustomize
+	$(KUSTOMIZE) build config/test | kubectl apply -f -
+
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
@@ -185,8 +189,15 @@ TETS_ARTIFACTS_DIR ?= tmp/test
 $(TETS_ARTIFACTS_DIR):
 	mkdir -p $(TETS_ARTIFACTS_DIR)
 
-e2e: $(KUTTL) tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
-	$(KUTTL) test
+# e2e: $(KUTTL) tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
+# 	$(KUTTL) test
+e2e: kind-create
+	-$(MAKE) envtest
+	$(MAKE) kind-delete
+
+envtest: docker-build kind-load-image deploy-test
+	# go test ./test/e2e/operator
+	go test ./test/e2e/envoy
 
 #########################3333333333#########
 #### Targets to manually test with Kind ####
@@ -213,6 +224,9 @@ kind-refresh-discoveryservice: ## rebuilds the marin3r image, pushes it to the k
 kind-refresh-discoveryservice: docker-build
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 	kubectl delete pods -A -l app.kubernetes.io/name=marin3r --force --grace-period=0
+
+kind-load-image:
+	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-delete: ## deletes the kind cluster and the registry
 kind-delete: $(KIND)
