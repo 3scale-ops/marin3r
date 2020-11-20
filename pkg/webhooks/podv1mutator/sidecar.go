@@ -22,6 +22,7 @@ import (
 	"github.com/3scale/marin3r/pkg/envoy"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type parameter struct {
@@ -346,6 +347,32 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 				ReadOnly:  true,
 				MountPath: DefaultEnvoyConfigBasePath,
 			},
+		},
+		LivenessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/ready",
+					Port: intstr.IntOrString{IntVal: 9901},
+				},
+			},
+			InitialDelaySeconds: 15,
+			TimeoutSeconds:      1,
+			PeriodSeconds:       5,
+			SuccessThreshold:    1,
+			FailureThreshold:    4,
+		},
+		ReadinessProbe: &corev1.Probe{
+			Handler: corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/ready",
+					Port: intstr.IntOrString{IntVal: 9901},
+				},
+			},
+			InitialDelaySeconds: 15,
+			TimeoutSeconds:      1,
+			PeriodSeconds:       5,
+			SuccessThreshold:    1,
+			FailureThreshold:    1,
 		},
 	}
 
