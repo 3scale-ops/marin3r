@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -54,6 +55,9 @@ var ecrV3Reconciler *EnvoyConfigRevisionReconciler
 var nameGenerator namegenerator.Generator
 
 func TestAPIs(t *testing.T) {
+	if os.Getenv("RUN_ENVTEST") != "1" {
+		t.Skip("Skipping envtest tests")
+	}
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
