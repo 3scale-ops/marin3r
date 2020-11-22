@@ -355,11 +355,11 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 					Port: intstr.IntOrString{IntVal: 9901},
 				},
 			},
-			InitialDelaySeconds: 15,
+			InitialDelaySeconds: 30,
 			TimeoutSeconds:      1,
-			PeriodSeconds:       5,
+			PeriodSeconds:       10,
 			SuccessThreshold:    1,
-			FailureThreshold:    4,
+			FailureThreshold:    10,
 		},
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{

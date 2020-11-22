@@ -8,6 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
@@ -413,6 +414,32 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 						MountPath: "/etc/envoy/bootstrap",
 					},
 				},
+				LivenessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ready",
+							Port: intstr.IntOrString{IntVal: 9901},
+						},
+					},
+					InitialDelaySeconds: 30,
+					TimeoutSeconds:      1,
+					PeriodSeconds:       10,
+					SuccessThreshold:    1,
+					FailureThreshold:    10,
+				},
+				ReadinessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ready",
+							Port: intstr.IntOrString{IntVal: 9901},
+						},
+					},
+					InitialDelaySeconds: 15,
+					TimeoutSeconds:      1,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    1,
+				},
 			},
 		},
 		{
@@ -477,6 +504,32 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 						ReadOnly:  true,
 						MountPath: "/etc/envoy/bootstrap",
 					},
+				},
+				LivenessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ready",
+							Port: intstr.IntOrString{IntVal: 9901},
+						},
+					},
+					InitialDelaySeconds: 30,
+					TimeoutSeconds:      1,
+					PeriodSeconds:       10,
+					SuccessThreshold:    1,
+					FailureThreshold:    10,
+				},
+				ReadinessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ready",
+							Port: intstr.IntOrString{IntVal: 9901},
+						},
+					},
+					InitialDelaySeconds: 15,
+					TimeoutSeconds:      1,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    1,
 				},
 			},
 		},
@@ -557,6 +610,32 @@ func Test_envoySidecarConfig_container(t *testing.T) {
 						ReadOnly:  true,
 						MountPath: "/etc/envoy/bootstrap",
 					},
+				},
+				LivenessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ready",
+							Port: intstr.IntOrString{IntVal: 9901},
+						},
+					},
+					InitialDelaySeconds: 30,
+					TimeoutSeconds:      1,
+					PeriodSeconds:       10,
+					SuccessThreshold:    1,
+					FailureThreshold:    10,
+				},
+				ReadinessProbe: &corev1.Probe{
+					Handler: corev1.Handler{
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/ready",
+							Port: intstr.IntOrString{IntVal: 9901},
+						},
+					},
+					InitialDelaySeconds: 15,
+					TimeoutSeconds:      1,
+					PeriodSeconds:       5,
+					SuccessThreshold:    1,
+					FailureThreshold:    1,
 				},
 			},
 		},
