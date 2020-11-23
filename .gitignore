@@ -28,6 +28,5 @@ certs
 bin
 build/bin
 tmp
-testbin
 kubeconfig
 kind-logs-*

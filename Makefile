@@ -29,20 +29,6 @@ endif
 
 all: manager
 
-# Run tests
-ENVTEST_ASSETS_DIR ?= $(shell pwd)/testbin
-test: generate fmt vet manifests
-	mkdir -p $(ENVTEST_ASSETS_DIR)
-	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); \
-		go test ./... -race -coverpkg=./... -coverprofile=cover.out.tmp
-	$(MAKE) coverage
-
-coverage:
-	 cat cover.out.tmp | grep -v "_generated.deepcopy.go"  > cover.out
-	 go tool cover -func=cover.out | awk '/total/{print $$3}'
-	 @rm -f cover.out.tmp
-
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go
@@ -169,9 +155,55 @@ docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
 	docker build . -t ${IMG_NAME}:$(RELEASE)
 	docker tag ${IMG_NAME}:$(RELEASE) ${IMG_NAME}:test
 
-#######################
-#### kuttl targets ####
-#######################
+######################
+#### test targets ####
+######################
+
+COVERPKGS = ./controllers/...,./apis/...,./pkg/...
+COVER_OUTPUT_DIR = tmp/coverage
+COVERPROFILE = total.coverprofile
+
+$(COVER_OUTPUT_DIR):
+	mkdir -p $(COVER_OUTPUT_DIR)
+
+fix-cover:
+	tmpfile=$$(mktemp) && grep -v "_generated.deepcopy.go" $(COVERPROFILE) > $${tmpfile} && cat $${tmpfile} > $(COVERPROFILE) && rm -f $${tmpfile}
+
+# Run unit tests
+UNIT_COVERPROFILE = unit.coverprofile
+unit-test: export COVERPROFILE=$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE)
+unit-test: export RUN_ENVTEST=0
+unit-test:
+	mkdir -p $(shell dirname $(COVERPROFILE))
+	go test ./controllers/... ./apis/... ./pkg/... -race -coverpkg="$(COVERPKGS)" -coverprofile=$(COVERPROFILE)
+
+# Run integration tests
+ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
+OPERATOR_COVERPROFILE = operator.coverprofile
+ENVOY_COVERPROFILE = envoy.coverprofile
+integration-test: generate fmt vet manifests
+	mkdir -p $(ENVTEST_ASSETS_DIR)
+	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); \
+		ginkgo -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
+
+coverprofile:
+	@which gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		go get -u github.com/wadey/gocovmerge; \
+	fi
+	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(ENVOY_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
+
+
+e2e-test: kind-create
+	$(MAKE) e2e-envtest-suite
+	$(MAKE) e2e-kuttl-suite
+	$(MAKE) kind-delete
+
+e2e-envtest-suite: docker-build kind-load-image deploy-test
+	go test ./test/e2e/operator
+	go test ./test/e2e/envoy
 
 KUTTL_VERSION := 0.7.0
 KUTTL := bin/kuttl
@@ -189,15 +221,9 @@ TETS_ARTIFACTS_DIR ?= tmp/test
 $(TETS_ARTIFACTS_DIR):
 	mkdir -p $(TETS_ARTIFACTS_DIR)
 
-# e2e: $(KUTTL) tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
-# 	$(KUTTL) test
-e2e: kind-create
-	-$(MAKE) envtest
-	$(MAKE) kind-delete
+e2e-kuttl-suite: $(KUTTL) tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
+	$(KUTTL) test
 
-envtest: docker-build kind-load-image deploy-test
-	# go test ./test/e2e/operator
-	go test ./test/e2e/envoy
 
 #########################3333333333#########
 #### Targets to manually test with Kind ####

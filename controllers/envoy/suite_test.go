@@ -55,7 +55,7 @@ var ecrV3Reconciler *EnvoyConfigRevisionReconciler
 var nameGenerator namegenerator.Generator
 
 func TestAPIs(t *testing.T) {
-	if os.Getenv("RUN_ENVTEST") != "1" {
+	if os.Getenv("RUN_ENVTEST") == "0" {
 		t.Skip("Skipping envtest tests")
 	}
 	RegisterFailHandler(Fail)
