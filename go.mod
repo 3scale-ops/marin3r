@@ -13,7 +13,7 @@ require (
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/operator-framework/operator-lib v0.1.0
-	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
+	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/tools v0.0.0-20201121010211-780cb80bd7fb // indirect
 	google.golang.org/genproto v0.0.0-20200701001935-0939c5918c31

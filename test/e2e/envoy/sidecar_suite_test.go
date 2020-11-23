@@ -13,6 +13,7 @@ import (
 	testutil "github.com/3scale/marin3r/test/e2e/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/phayes/freeport"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,11 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	LocalPort uint32 = 8888
-)
-
-var _ = Describe("Sidecars", func() {
+var _ = Describe("Envpoy sidecars", func() {
 	var testNamespace string
 
 	BeforeEach(func() {
@@ -48,7 +45,6 @@ var _ = Describe("Sidecars", func() {
 			}
 			return true
 		}, 30*time.Second, 5*time.Second).Should(BeTrue())
-
 	})
 
 	AfterEach(func() {
@@ -64,13 +60,21 @@ var _ = Describe("Sidecars", func() {
 	})
 
 	Context("Sidecar injection", func() {
+		var localPort int
+		var nodeID string
 		var ec *v1alpha1.EnvoyConfig
 
 		BeforeEach(func() {
+
+			var err error
+			localPort, err = freeport.GetFreePort()
+			Expect(err).ToNot(HaveOccurred())
+			nodeID = nameGenerator.Generate()
+
 			By("enabling injection in the namespace")
 			patch := client.MergeFrom(ds.DeepCopy())
 			ds.Spec.EnabledNamespaces = []string{testNamespace}
-			err := k8sClient.Patch(context.Background(), ds, patch)
+			err = k8sClient.Patch(context.Background(), ds, patch)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() bool {
@@ -90,7 +94,7 @@ var _ = Describe("Sidecars", func() {
 
 			By("applaying an EnvoyConfig that will configure the envoy sidecar through service discovery")
 			key := types.NamespacedName{Name: "nginx-envoyconfig", Namespace: testNamespace}
-			ec = testutil.GenerateEnvoyConfig(key, "nginx", envoy.APIv2,
+			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv2,
 				func() map[string]envoy.Resource {
 					k, v := testutil.EndpointV2("nginx", "127.0.0.1", 80)
 					return map[string]envoy.Resource{k: v}
@@ -104,23 +108,24 @@ var _ = Describe("Sidecars", func() {
 					return map[string]envoy.Resource{k: v}
 				},
 				func() map[string]envoy.Resource {
-					k, v := testutil.HTTPListenerWithRdsV2("http", "proxypass")
+					k, v := testutil.HTTPListenerWithRdsV2("http", "proxypass", testutil.GetAddressV2("0.0.0.0", envoyListenerPort), nil)
 					return map[string]envoy.Resource{k: v}
 				},
+				nil,
 			)
 			err := k8sClient.Create(context.Background(), ec)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("creating a Deployment with the required labels and annotations")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
-			dep := testutil.GenerateDeploymentWithInjection(key, "nginx", "v2", "v1.16.0")
+			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", "v1.16.0", envoyListenerPort)
 			err = k8sClient.Create(context.Background(), dep)
 			Expect(err).ToNot(HaveOccurred())
 
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 			Eventually(func() int {
 				return testutil.ReadyReplicas(k8sClient, testNamespace, selector)
-			}, 60*time.Second, 5*time.Second).Should(Equal(1))
+			}, 30*time.Second, 5*time.Second).Should(Equal(1))
 
 			By("checking that the Pods were mutated to add the envoy sidecar")
 			podList := &corev1.PodList{}
@@ -130,13 +135,13 @@ var _ = Describe("Sidecars", func() {
 			Expect(len(podList.Items)).To(Equal(1))
 			Expect(len(podList.Items[0].Spec.Containers)).To(Equal(2))
 
-			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", LocalPort))
+			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", localPort))
 			stopCh := make(chan struct{})
 			readyCh := make(chan struct{})
 			defer close(stopCh)
 			go func() {
 				defer GinkgoRecover()
-				fw, err := testutil.NewTestPortForwarder(cfg, podList.Items[0], LocalPort, testutil.PodPort, GinkgoWriter, stopCh, readyCh)
+				fw, err := testutil.NewTestPortForwarder(cfg, podList.Items[0], uint32(localPort), envoyListenerPort, GinkgoWriter, stopCh, readyCh)
 				Expect(err).ToNot(HaveOccurred())
 				err = fw.ForwardPorts()
 				Expect(err).ToNot(HaveOccurred())
@@ -150,7 +155,7 @@ var _ = Describe("Sidecars", func() {
 			By("doing a request against envoy sidecar, that should be forwarded to the nginx container")
 			var resp *http.Response
 			Eventually(func() error {
-				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", LocalPort))
+				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
 			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
@@ -169,7 +174,7 @@ var _ = Describe("Sidecars", func() {
 
 			By("applaying an EnvoyConfig that will configure the envoy sidecar through service discovery")
 			key := types.NamespacedName{Name: "nginx-envoyconfig", Namespace: testNamespace}
-			ec = testutil.GenerateEnvoyConfig(key, "nginx", envoy.APIv3,
+			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
 				func() map[string]envoy.Resource {
 					k, v := testutil.EndpointV3("nginx", "127.0.0.1", 80)
 					return map[string]envoy.Resource{k: v}
@@ -183,16 +188,17 @@ var _ = Describe("Sidecars", func() {
 					return map[string]envoy.Resource{k: v}
 				},
 				func() map[string]envoy.Resource {
-					k, v := testutil.HTTPListenerWithRdsV3("http", "proxypass")
+					k, v := testutil.HTTPListenerWithRdsV3("http", "proxypass", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
 					return map[string]envoy.Resource{k: v}
 				},
+				nil,
 			)
 			err := k8sClient.Create(context.Background(), ec)
 			Expect(err).NotTo(HaveOccurred())
 
 			By("creating a Deployment with the required labels and annotations")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
-			dep := testutil.GenerateDeploymentWithInjection(key, "nginx", "v3", "v1.16.0")
+			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v3", "v1.16.0", 8080)
 			err = k8sClient.Create(context.Background(), dep)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -209,13 +215,13 @@ var _ = Describe("Sidecars", func() {
 			Expect(len(podList.Items)).To(Equal(1))
 			Expect(len(podList.Items[0].Spec.Containers)).To(Equal(2))
 
-			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", LocalPort))
+			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", localPort))
 			stopCh := make(chan struct{})
 			readyCh := make(chan struct{})
 			defer close(stopCh)
 			go func() {
 				defer GinkgoRecover()
-				fw, err := testutil.NewTestPortForwarder(cfg, podList.Items[0], LocalPort, testutil.PodPort, GinkgoWriter, stopCh, readyCh)
+				fw, err := testutil.NewTestPortForwarder(cfg, podList.Items[0], uint32(localPort), envoyListenerPort, GinkgoWriter, stopCh, readyCh)
 				Expect(err).ToNot(HaveOccurred())
 				err = fw.ForwardPorts()
 				Expect(err).ToNot(HaveOccurred())
@@ -229,7 +235,7 @@ var _ = Describe("Sidecars", func() {
 			By("doing a request against envoy sidecar, that should be forwarded to the nginx container")
 			var resp *http.Response
 			Eventually(func() error {
-				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", LocalPort))
+				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
 			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
@@ -252,7 +258,7 @@ var _ = Describe("Sidecars", func() {
 			By("applying an EnvoyConfig that will configure the envoy sidecar through service discovery")
 			{
 				key := types.NamespacedName{Name: "nginx-envoyconfig", Namespace: testNamespace}
-				ec = testutil.GenerateEnvoyConfig(key, "nginx", envoy.APIv2,
+				ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv2,
 					func() map[string]envoy.Resource { return nil },
 					func() map[string]envoy.Resource { return nil },
 					func() map[string]envoy.Resource {
@@ -260,9 +266,10 @@ var _ = Describe("Sidecars", func() {
 						return map[string]envoy.Resource{k: v}
 					},
 					func() map[string]envoy.Resource {
-						k, v := testutil.HTTPListenerWithRdsV2("http", "direct_response")
+						k, v := testutil.HTTPListenerWithRdsV2("http", "direct_response", testutil.GetAddressV2("0.0.0.0", envoyListenerPort), nil)
 						return map[string]envoy.Resource{k: v}
 					},
+					nil,
 				)
 				err := k8sClient.Create(context.Background(), ec)
 				Expect(err).NotTo(HaveOccurred())
@@ -271,7 +278,7 @@ var _ = Describe("Sidecars", func() {
 			By("creating a Deployment with the required labels and annotations")
 			{
 				key := types.NamespacedName{Name: "nginx", Namespace: testNamespace}
-				dep := testutil.GenerateDeploymentWithInjection(key, "nginx", "v2", "v1.16.0")
+				dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", "v1.16.0", envoyListenerPort)
 				err := k8sClient.Create(context.Background(), dep)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -293,13 +300,13 @@ var _ = Describe("Sidecars", func() {
 				pod = podList.Items[0]
 			}
 
-			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", LocalPort))
+			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", localPort))
 			{
 				stopCh = make(chan struct{})
 				readyCh = make(chan struct{})
 				go func() {
 					defer GinkgoRecover()
-					fw, err := testutil.NewTestPortForwarder(cfg, pod, LocalPort, testutil.PodPort, GinkgoWriter, stopCh, readyCh)
+					fw, err := testutil.NewTestPortForwarder(cfg, pod, uint32(localPort), envoyListenerPort, GinkgoWriter, stopCh, readyCh)
 					Expect(err).ToNot(HaveOccurred())
 					err = fw.ForwardPorts()
 					Expect(err).ToNot(HaveOccurred())
@@ -317,7 +324,7 @@ var _ = Describe("Sidecars", func() {
 				var err error
 
 				Eventually(func() error {
-					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", LocalPort))
+					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 					return err
 				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
@@ -333,7 +340,7 @@ var _ = Describe("Sidecars", func() {
 			{
 				key := types.NamespacedName{Name: "nginx-envoyconfig", Namespace: testNamespace}
 				patch := client.MergeFrom(ec.DeepCopy())
-				ec.Spec = testutil.GenerateEnvoyConfig(key, "nginx", envoy.APIv3,
+				ec.Spec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
 					func() map[string]envoy.Resource { return nil },
 					func() map[string]envoy.Resource { return nil },
 					func() map[string]envoy.Resource {
@@ -341,9 +348,10 @@ var _ = Describe("Sidecars", func() {
 						return map[string]envoy.Resource{k: v}
 					},
 					func() map[string]envoy.Resource {
-						k, v := testutil.HTTPListenerWithRdsV3("http", "direct_response")
+						k, v := testutil.HTTPListenerWithRdsV3("http", "direct_response", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
 						return map[string]envoy.Resource{k: v}
 					},
+					nil,
 				).Spec
 				err := k8sClient.Patch(context.Background(), ec, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -354,7 +362,7 @@ var _ = Describe("Sidecars", func() {
 				var resp *http.Response
 				var err error
 
-				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", LocalPort))
+				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				Expect(err).ToNot(HaveOccurred())
 				scanner := bufio.NewScanner(resp.Body)
 				Expect(scanner.Scan()).To(BeTrue())
@@ -368,7 +376,7 @@ var _ = Describe("Sidecars", func() {
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
 
-				dep.Spec = testutil.GenerateDeploymentWithInjection(key, "nginx", "v3", "v1.16.0").Spec
+				dep.Spec = testutil.GenerateDeploymentWithInjection(key, nodeID, "v3", "v1.16.0", envoyListenerPort).Spec
 				err = k8sClient.Update(context.Background(), dep)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -403,7 +411,7 @@ var _ = Describe("Sidecars", func() {
 				defer close(stopCh)
 				go func() {
 					defer GinkgoRecover()
-					fw, err := testutil.NewTestPortForwarder(cfg, pod, LocalPort, testutil.PodPort, GinkgoWriter, stopCh, readyCh)
+					fw, err := testutil.NewTestPortForwarder(cfg, pod, uint32(localPort), envoyListenerPort, GinkgoWriter, stopCh, readyCh)
 					Expect(err).ToNot(HaveOccurred())
 					err = fw.ForwardPorts()
 					Expect(err).ToNot(HaveOccurred())
@@ -421,7 +429,7 @@ var _ = Describe("Sidecars", func() {
 				var err error
 
 				Eventually(func() error {
-					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", LocalPort))
+					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 					return err
 				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 

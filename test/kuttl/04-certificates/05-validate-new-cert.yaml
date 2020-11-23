@@ -1,6 +1,0 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-commands:
-  - command: sleep 1
-  # Validate that the certificate has been delivered through xDS to the envoy container
-  - script: subject=$(echo "Q" | openssl s_client -connect localhost:1443 -showcerts | openssl x509 -in - -noout -subject) && echo "$subject/n" && test "$subject" = "subject=CN = envoy1-new.defaul.svc"

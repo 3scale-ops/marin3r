@@ -5,17 +5,21 @@ import (
 	"time"
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
+	"github.com/3scale/marin3r/pkg/util/pki"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoy_api_v2_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
 	envoy_api_v2_listener "github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
@@ -27,15 +31,89 @@ import (
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	http_connection_manager_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
+	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 )
 
 const (
 	DeploymentLabelKey   string = "app"
 	DeploymentLabelValue string = "nginx"
-	PodPort              uint32 = 8080
+	PodLabelKey          string = "app"
+	PodLabelValue        string = "testPod"
+	// SidecarPort          uint32 = 8080
 )
 
-func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI, envoyVersion string) *appsv1.Deployment {
+type TestPod struct {
+	Pod            *corev1.Pod
+	EnvoyBootstrap *envoyv1alpha1.EnvoyBootstrap
+}
+
+func GeneratePodWithBootstrap(key types.NamespacedName, nodeID, envoyAPI, envoyVersion, discoveryService string) TestPod {
+
+	containers := []corev1.Container{{
+		Name:    "envoy",
+		Image:   fmt.Sprintf("envoyproxy/envoy:%s", envoyVersion),
+		Command: []string{"envoy"},
+		Args: []string{
+			"-c", "/etc/envoy/bootstrap/config.json",
+			"--service-node", nodeID,
+			"--service-cluster", nodeID,
+			"--component-log-level", "config:debug",
+		},
+		// Ports: []corev1.ContainerPort{
+		// 	{Name: "envoy-http", ContainerPort: int32(SidecarPort)},
+		// },
+		VolumeMounts: []corev1.VolumeMount{
+			{Name: "tls-volume", ReadOnly: true, MountPath: "/etc/envoy/tls/client"},
+			{Name: "config-volume", ReadOnly: true, MountPath: "/etc/envoy/bootstrap"},
+		},
+		ReadinessProbe: &corev1.Probe{
+			Handler:             corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "/ready", Port: intstr.IntOrString{IntVal: 9901}}},
+			InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1,
+		},
+	}}
+
+	volumes := []corev1.Volume{
+		{Name: "tls-volume", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "xds-client-certificate"}}},
+		{Name: "config-volume", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "envoy-bootstrap-v3"}}}},
+	}
+
+	envoyBootstrap := &envoyv1alpha1.EnvoyBootstrap{
+		ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace},
+		Spec: envoyv1alpha1.EnvoyBootstrapSpec{
+			DiscoveryService: discoveryService,
+			ClientCertificate: &envoyv1alpha1.ClientCertificate{
+				Directory:  "/etc/envoy/tls/client",
+				SecretName: "xds-client-certificate",
+				Duration:   metav1.Duration{Duration: func() time.Duration { d, _ := time.ParseDuration("5m"); return d }()},
+			},
+			EnvoyStaticConfig: &envoyv1alpha1.EnvoyStaticConfig{
+				ConfigMapNameV2:       "envoy-bootstrap-v2",
+				ConfigMapNameV3:       "envoy-bootstrap-v3",
+				ConfigFile:            "config.json",
+				ResourcesDir:          "/etc/envoy/bootstrap/",
+				RtdsLayerResourceName: "runtime",
+				AdminBindAddress:      "0.0.0.0:9901",
+				AdminAccessLogPath:    "/dev/stdout",
+			},
+		},
+	}
+
+	return TestPod{
+		Pod: &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      key.Name,
+				Namespace: key.Namespace,
+				Labels:    map[string]string{PodLabelKey: PodLabelValue},
+			},
+			Spec: corev1.PodSpec{
+				Volumes:    volumes,
+				Containers: containers,
+			}},
+		EnvoyBootstrap: envoyBootstrap,
+	}
+}
+
+func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI, envoyVersion string, envoyPort uint32) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
@@ -54,7 +132,7 @@ func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI,
 					Annotations: map[string]string{
 						"marin3r.3scale.net/node-id":           nodeID,
 						"marin3r.3scale.net/envoy-extra-args":  "--component-log-level config:debug",
-						"marin3r.3scale.net/ports":             "envoy-http:8080",
+						"marin3r.3scale.net/ports":             fmt.Sprintf("envoy-http:%v", envoyPort),
 						"marin3r.3scale.net/envoy-api-version": envoyAPI,
 						"marin3r.3scale.net/envoy-image":       fmt.Sprintf("envoyproxy/envoy:%s", envoyVersion),
 					},
@@ -63,7 +141,7 @@ func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI,
 					Containers: []corev1.Container{{
 						Name:  "nginx",
 						Image: "nginxdemos/hello:plain-text",
-						Ports: []corev1.ContainerPort{{Name: "http", ContainerPort: 8080}},
+						Ports: []corev1.ContainerPort{{Name: "http", ContainerPort: int32(envoyPort)}},
 					}},
 				},
 			},
@@ -71,8 +149,27 @@ func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI,
 	}
 }
 
+func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string) (*corev1.Secret, error) {
+
+	tDuration, err := time.ParseDuration(duration)
+	if err != nil {
+		return nil, err
+	}
+
+	crt, key, err := pki.GenerateCertificate(nil, nil, commonName, tDuration, true, false, commonName)
+	if err != nil {
+		return nil, err
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: k8skey.Name, Namespace: k8skey.Namespace},
+		Type:       corev1.SecretTypeTLS,
+		Data:       map[string][]byte{"tls.crt": crt, "tls.key": key},
+	}
+	return secret, err
+}
+
 func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
-	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn func() map[string]envoy.Resource) *envoyv1alpha1.EnvoyConfig {
+	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn func() map[string]envoy.Resource, secrets map[string]string) *envoyv1alpha1.EnvoyConfig {
 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
 
 	return &envoyv1alpha1.EnvoyConfig{
@@ -128,22 +225,107 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 					}
 					return listeners
 				}(),
+				Secrets: func() []envoyv1alpha1.EnvoySecretResource {
+					s := []envoyv1alpha1.EnvoySecretResource{}
+					for k, v := range secrets {
+						s = append(s, envoyv1alpha1.EnvoySecretResource{
+							Name: k,
+							Ref: corev1.SecretReference{
+								Name:      v,
+								Namespace: key.Namespace,
+							},
+						})
+					}
+					return s
+				}(),
 			},
 		},
 	}
 
 }
 
-func HTTPListenerWithRdsV2(listenerName, routeName string) (string, *envoy_api_v2.Listener) {
+func GetAddressV2(host string, port uint32) *envoy_api_v2_core.Address {
+	return &envoy_api_v2_core.Address{
+		Address: &envoy_api_v2_core.Address_SocketAddress{
+			SocketAddress: &envoy_api_v2_core.SocketAddress{
+				Address: host,
+				PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
+					PortValue: port,
+				}}}}
+}
+
+func GetAddressV3(host string, port uint32) *envoy_config_core_v3.Address {
+	return &envoy_config_core_v3.Address{
+		Address: &envoy_config_core_v3.Address_SocketAddress{
+			SocketAddress: &envoy_config_core_v3.SocketAddress{
+				Address: host,
+				PortSpecifier: &envoy_config_core_v3.SocketAddress_PortValue{
+					PortValue: port,
+				}}}}
+}
+
+func TransportSocketV2(secretName string) *envoy_api_v2_core.TransportSocket {
+	return &envoy_api_v2_core.TransportSocket{
+		Name: "envoy.transport_sockets.tls",
+		ConfigType: &envoy_api_v2_core.TransportSocket_TypedConfig{
+			TypedConfig: func() *any.Any {
+				any, err := ptypes.MarshalAny(&envoy_api_v2_auth.DownstreamTlsContext{
+					CommonTlsContext: &envoy_api_v2_auth.CommonTlsContext{
+						TlsCertificateSdsSecretConfigs: []*envoy_api_v2_auth.SdsSecretConfig{
+							{
+								Name: secretName,
+								SdsConfig: &envoy_api_v2_core.ConfigSource{
+									ConfigSourceSpecifier: &envoy_api_v2_core.ConfigSource_Ads{
+										Ads: &envoy_api_v2_core.AggregatedConfigSource{},
+									},
+									ResourceApiVersion: envoy_api_v2_core.ApiVersion_V2,
+								},
+							},
+						},
+					},
+				})
+				if err != nil {
+					panic(err)
+				}
+				return any
+			}(),
+		},
+	}
+}
+
+func TransportSocketV3(secretName string) *envoy_config_core_v3.TransportSocket {
+	return &envoy_config_core_v3.TransportSocket{
+		Name: "envoy.transport_sockets.tls",
+		ConfigType: &envoy_config_core_v3.TransportSocket_TypedConfig{
+			TypedConfig: func() *any.Any {
+				any, err := ptypes.MarshalAny(&envoy_extensions_transport_sockets_tls_v3.DownstreamTlsContext{
+					CommonTlsContext: &envoy_extensions_transport_sockets_tls_v3.CommonTlsContext{
+						TlsCertificateSdsSecretConfigs: []*envoy_extensions_transport_sockets_tls_v3.SdsSecretConfig{
+							{
+								Name: secretName,
+								SdsConfig: &envoy_config_core_v3.ConfigSource{
+									ConfigSourceSpecifier: &envoy_config_core_v3.ConfigSource_Ads{
+										Ads: &envoy_config_core_v3.AggregatedConfigSource{},
+									},
+									ResourceApiVersion: envoy_config_core_v3.ApiVersion_V3,
+								},
+							},
+						},
+					},
+				})
+				if err != nil {
+					panic(err)
+				}
+				return any
+			}(),
+		},
+	}
+}
+
+func HTTPListenerWithRdsV2(listenerName, routeName string, address, transportSocket proto.Message) (string, *envoy_api_v2.Listener) {
 	return listenerName, &envoy_api_v2.Listener{
-		Name: listenerName,
-		Address: &envoy_api_v2_core.Address{
-			Address: &envoy_api_v2_core.Address_SocketAddress{
-				SocketAddress: &envoy_api_v2_core.SocketAddress{
-					Address: "0.0.0.0",
-					PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
-						PortValue: PodPort,
-					}}}},
+		Name:    listenerName,
+		Address: address.(*envoy_api_v2_core.Address),
 		FilterChains: []*envoy_api_v2_listener.FilterChain{{
 			Filters: []*envoy_api_v2_listener.Filter{{
 				Name: "envoy.http_connection_manager",
@@ -172,20 +354,20 @@ func HTTPListenerWithRdsV2(listenerName, routeName string) (string, *envoy_api_v
 					}(),
 				},
 			}},
+			TransportSocket: func() *envoy_api_v2_core.TransportSocket {
+				if transportSocket != nil {
+					return transportSocket.(*envoy_api_v2_core.TransportSocket)
+				}
+				return nil
+			}(),
 		}},
 	}
 }
 
-func HTTPListenerWithRdsV3(listenerName, routeName string) (string, *envoy_config_listener_v3.Listener) {
+func HTTPListenerWithRdsV3(listenerName, routeName string, address, transportSocket proto.Message) (string, *envoy_config_listener_v3.Listener) {
 	return listenerName, &envoy_config_listener_v3.Listener{
-		Name: listenerName,
-		Address: &envoy_config_core_v3.Address{
-			Address: &envoy_config_core_v3.Address_SocketAddress{
-				SocketAddress: &envoy_config_core_v3.SocketAddress{
-					Address: "0.0.0.0",
-					PortSpecifier: &envoy_config_core_v3.SocketAddress_PortValue{
-						PortValue: PodPort,
-					}}}},
+		Name:    listenerName,
+		Address: address.(*envoy_config_core_v3.Address),
 		FilterChains: []*envoy_config_listener_v3.FilterChain{{
 			Filters: []*envoy_config_listener_v3.Filter{{
 				Name: "envoy.filters.network.http_connection_manager",
@@ -214,6 +396,12 @@ func HTTPListenerWithRdsV3(listenerName, routeName string) (string, *envoy_confi
 					}(),
 				},
 			}},
+			TransportSocket: func() *envoy_config_core_v3.TransportSocket {
+				if transportSocket != nil {
+					return transportSocket.(*envoy_config_core_v3.TransportSocket)
+				}
+				return nil
+			}(),
 		}},
 	}
 }

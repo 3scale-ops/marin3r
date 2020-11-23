@@ -41,8 +41,9 @@ import (
 )
 
 const (
-	image           string = "quay.io/3scale/marin3r:test"
-	targetNamespace string = "default"
+	image             string = "quay.io/3scale/marin3r:test"
+	targetNamespace   string = "default"
+	envoyListenerPort uint32 = 8080
 )
 
 var (

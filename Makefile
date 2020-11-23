@@ -190,7 +190,7 @@ integration-test: generate fmt vet manifests
 
 coverprofile:
 	@which gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		go get -u github.com/wadey/gocovmerge; \
+		GO111MODULE=off go get -u github.com/wadey/gocovmerge; \
 	fi
 	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(ENVOY_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
@@ -199,34 +199,15 @@ coverprofile:
 
 e2e-test: kind-create
 	$(MAKE) e2e-envtest-suite
-	$(MAKE) e2e-kuttl-suite
 	$(MAKE) kind-delete
 
 e2e-envtest-suite: docker-build kind-load-image deploy-test
-	go test ./test/e2e/operator
+	# go test ./test/e2e/operator
 	go test ./test/e2e/envoy
 
-KUTTL_VERSION := 0.7.0
-KUTTL := bin/kuttl
-$(KUTTL):
-	mkdir -p $$(dirname $@)
-	curl -sLo $(KUTTL) https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$$(uname)_x86_64
-	chmod +x $(KUTTL)
+test-all: unit-test integration-test e2e-test coverprofile
 
-TEST_OPERATOR_MANIFEST ?= tmp/deploy
-$(TEST_OPERATOR_MANIFEST): .FORCE
-	mkdir -p $(TEST_OPERATOR_MANIFEST)
-	$(KUSTOMIZE) build config/test > $(TEST_OPERATOR_MANIFEST)/operator.yaml
-
-TETS_ARTIFACTS_DIR ?= tmp/test
-$(TETS_ARTIFACTS_DIR):
-	mkdir -p $(TETS_ARTIFACTS_DIR)
-
-e2e-kuttl-suite: $(KUTTL) tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
-	$(KUTTL) test
-
-
-#########################3333333333#########
+############################################
 #### Targets to manually test with Kind ####
 ############################################
 
