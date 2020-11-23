@@ -162,6 +162,7 @@ docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
 COVERPKGS = ./controllers/...,./apis/...,./pkg/...
 COVER_OUTPUT_DIR = tmp/coverage
 COVERPROFILE = total.coverprofile
+TEST_CPUS ?= $(shell nproc)
 
 $(COVER_OUTPUT_DIR):
 	mkdir -p $(COVER_OUTPUT_DIR)
@@ -175,7 +176,7 @@ unit-test: export COVERPROFILE=$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE)
 unit-test: export RUN_ENVTEST=0
 unit-test:
 	mkdir -p $(shell dirname $(COVERPROFILE))
-	go test ./controllers/... ./apis/... ./pkg/... -race -coverpkg="$(COVERPKGS)" -coverprofile=$(COVERPROFILE)
+	go test -p $(TEST_CPUS) ./controllers/... ./apis/... ./pkg/... -race -coverpkg="$(COVERPKGS)" -coverprofile=$(COVERPROFILE)
 
 # Run integration tests
 ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp

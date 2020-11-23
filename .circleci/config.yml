@@ -2,13 +2,13 @@ version: 2.1
 workflows:
   test-and-release:
     jobs:
-      - test:
+      - unit-test:
           filters: # required since `release` has tag filters AND requires `test`
             tags:
               only: /.*/
       - release:
           requires:
-            - test
+            - unit-test
           filters:
             tags:
               only: /^v.*/
@@ -16,11 +16,13 @@ workflows:
               ignore: /.*/
 
 jobs:
-  test:
-    resource_class: xlarge
+  unit-test:
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
       - image: circleci/golang:1.13
+
+    environment:
+      TEST_CPUS: 2
 
     steps: # steps that comprise the `build` job
       - checkout
@@ -31,25 +33,15 @@ jobs:
           keys:
             - pkg-cache
 
-      - restore_cache:
-          keys:
-            - testbin-cache
-
       - run:
           name: Run unit tests
-          command: make test
+          command: make unit-test
 
       # Store cache in the /go/pkg directory
       - save_cache:
           key: pkg-cache
           paths:
             - "/go/pkg"
-
-      # Store cache /testbin directory
-      - save_cache:
-          key: testbin-cache
-          paths:
-            - "testbin"
 
   release:
     docker:
