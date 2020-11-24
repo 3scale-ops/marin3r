@@ -151,7 +151,7 @@ clean-dirty-builds:
 	rm -rf build/bin/*-dirty
 
 docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
+docker-build:
 	docker build . -t ${IMG_NAME}:$(RELEASE)
 	docker tag ${IMG_NAME}:$(RELEASE) ${IMG_NAME}:test
 
