@@ -27,7 +27,7 @@ import (
 
 	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
-	reconcilers_operator "github.com/3scale/marin3r/pkg/reconcilers/operator"
+	reconcilers_envoy "github.com/3scale/marin3r/pkg/reconcilers/envoy"
 )
 
 // EnvoyBootstrapReconciler reconciles a EnvoyBootstrap object
@@ -58,13 +58,13 @@ func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	certificateReconciler := reconcilers_operator.NewClientCertificateReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
+	certificateReconciler := reconcilers_envoy.NewClientCertificateReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
 	result, err := certificateReconciler.Reconcile()
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	configReconciler := reconcilers_operator.NewBootstrapConfigReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
+	configReconciler := reconcilers_envoy.NewBootstrapConfigReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
 
 	// Reconcile the v2 config
 	result, err = configReconciler.Reconcile(envoy.APIv2)
