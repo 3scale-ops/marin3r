@@ -151,7 +151,7 @@ clean-dirty-builds:
 	rm -rf build/bin/*-dirty
 
 docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-docker-build:
+docker-build: generate
 	docker build . -t ${IMG_NAME}:$(RELEASE)
 	docker tag ${IMG_NAME}:$(RELEASE) ${IMG_NAME}:test
 
@@ -174,7 +174,7 @@ fix-cover:
 UNIT_COVERPROFILE = unit.coverprofile
 unit-test: export COVERPROFILE=$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE)
 unit-test: export RUN_ENVTEST=0
-unit-test:
+unit-test: fmt vet
 	mkdir -p $(shell dirname $(COVERPROFILE))
 	go test -p $(TEST_CPUS) ./controllers/... ./apis/... ./pkg/... -race -coverpkg="$(COVERPKGS)" -coverprofile=$(COVERPROFILE)
 
@@ -182,16 +182,16 @@ unit-test:
 ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
 OPERATOR_COVERPROFILE = operator.coverprofile
 ENVOY_COVERPROFILE = envoy.coverprofile
-integration-test: generate fmt vet manifests
+integration-test: generate fmt vet manifests ginkgo
 	mkdir -p $(ENVTEST_ASSETS_DIR)
-	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); \
+	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
+		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; \
+		fetch_envtest_tools $(ENVTEST_ASSETS_DIR); \
+		setup_envtest_env $(ENVTEST_ASSETS_DIR); \
 		ginkgo -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
 
-coverprofile:
-	@which gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		GO111MODULE=off go get -u github.com/wadey/gocovmerge; \
-	fi
+coverprofile: gocovmerge
 	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(ENVOY_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
@@ -201,11 +201,21 @@ e2e-test: kind-create
 	$(MAKE) e2e-envtest-suite
 	$(MAKE) kind-delete
 
-e2e-envtest-suite: docker-build kind-load-image deploy-test
-	# go test ./test/e2e/operator
-	go test ./test/e2e/envoy
+e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
+	ginkgo -r -nodes=1 ./test/e2e/operator
+	ginkgo -r -p ./test/e2e/envoy
 
-test-all: unit-test integration-test e2e-test coverprofile
+test: unit-test integration-test e2e-test coverprofile
+
+ginkgo:
+	@which ginkgo > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo; \
+	fi
+
+gocovmerge:
+	@which gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		GO111MODULE=off go get -u github.com/wadey/gocovmerge; \
+	fi
 
 ############################################
 #### Targets to manually test with Kind ####
@@ -222,7 +232,7 @@ $(KIND):
 
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
 kind-create: tmp $(KIND)
-	$(KIND) create cluster --config test/kind.yaml
+	$(KIND) create cluster --wait 5m --config test/kind.yaml
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-deploy: manifests kustomize

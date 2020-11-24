@@ -44,7 +44,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
 	AfterEach(func() {
@@ -71,9 +71,13 @@ var _ = Describe("Envpoy sidecars", func() {
 			Expect(err).ToNot(HaveOccurred())
 			nodeID = nameGenerator.Generate()
 
-			By("enabling injection in the namespace")
+			By(fmt.Sprintf("enabling injection in the '%s' namespace", testNamespace))
+			ds := &operatorv1alpha1.DiscoveryService{}
+			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance"}, ds)
+			Expect(err).ToNot(HaveOccurred())
+
 			patch := client.MergeFrom(ds.DeepCopy())
-			ds.Spec.EnabledNamespaces = []string{testNamespace}
+			ds.Spec.EnabledNamespaces = append(ds.Spec.EnabledNamespaces, testNamespace)
 			err = k8sClient.Patch(context.Background(), ds, patch)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -87,7 +91,7 @@ var _ = Describe("Envpoy sidecars", func() {
 					return true
 				}
 				return false
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		It("injects an envoy sidecar container using v2 config", func() {
@@ -125,7 +129,7 @@ var _ = Describe("Envpoy sidecars", func() {
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 			Eventually(func() int {
 				return testutil.ReadyReplicas(k8sClient, testNamespace, selector)
-			}, 30*time.Second, 5*time.Second).Should(Equal(1))
+			}, 60*time.Second, 5*time.Second).Should(Equal(1))
 
 			By("checking that the Pods were mutated to add the envoy sidecar")
 			podList := &corev1.PodList{}
@@ -147,8 +151,12 @@ var _ = Describe("Envpoy sidecars", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}()
 
+			ticker := time.NewTimer(10 * time.Second)
 			select {
+			case <-ticker.C:
+				Fail("timed out while waiting for port forward")
 			case <-readyCh:
+				ticker.Stop()
 				break
 			}
 
@@ -157,7 +165,7 @@ var _ = Describe("Envpoy sidecars", func() {
 			Eventually(func() error {
 				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -227,8 +235,12 @@ var _ = Describe("Envpoy sidecars", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}()
 
+			ticker := time.NewTimer(10 * time.Second)
 			select {
+			case <-ticker.C:
+				Fail("timed out while waiting for port forward")
 			case <-readyCh:
+				ticker.Stop()
 				break
 			}
 
@@ -237,7 +249,7 @@ var _ = Describe("Envpoy sidecars", func() {
 			Eventually(func() error {
 				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -312,8 +324,12 @@ var _ = Describe("Envpoy sidecars", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}()
 
+				ticker := time.NewTimer(10 * time.Second)
 				select {
+				case <-ticker.C:
+					Fail("timed out while waiting for port forward")
 				case <-readyCh:
+					ticker.Stop()
 					break
 				}
 			}
@@ -326,7 +342,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				Eventually(func() error {
 					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 					return err
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -417,8 +433,12 @@ var _ = Describe("Envpoy sidecars", func() {
 					Expect(err).ToNot(HaveOccurred())
 				}()
 
+				ticker := time.NewTimer(10 * time.Second)
 				select {
+				case <-ticker.C:
+					Fail("timed out while waiting for port forward")
 				case <-readyCh:
+					ticker.Stop()
 					break
 				}
 			}
@@ -431,7 +451,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				Eventually(func() error {
 					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 					return err
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))

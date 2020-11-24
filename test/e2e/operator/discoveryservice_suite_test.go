@@ -45,7 +45,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 		By("creating a DiscoveryService instance")
 		ds = &operatorv1alpha1.DiscoveryService{
@@ -66,7 +66,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
 
@@ -88,7 +88,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 					"app.kubernetes.io/instance":   ds.GetName(),
 				},
 			)
-		}, 30*time.Second, 5*time.Second).Should(Equal(0))
+		}, 60*time.Second, 5*time.Second).Should(Equal(0))
 
 		// Delete the namespace
 		ns := &corev1.Namespace{
@@ -114,7 +114,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 						"app.kubernetes.io/instance":   ds.GetName(),
 					},
 				)
-			}, 30*time.Second, 5*time.Second).Should(Equal(1))
+			}, 60*time.Second, 5*time.Second).Should(Equal(1))
 		})
 
 		It("triggers a rollout on certificate change", func() {
@@ -140,7 +140,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
 				return int(dep.Status.ObservedGeneration)
-			}, 30*time.Second, 5*time.Second).Should(Equal(2))
+			}, 60*time.Second, 5*time.Second).Should(Equal(2))
 
 			By("waiting for the ready replicas to be 1")
 			Eventually(func() int {
@@ -154,7 +154,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 						"app.kubernetes.io/instance":   ds.GetName(),
 					},
 				)
-			}, 30*time.Second, 5*time.Second).Should(Equal(1))
+			}, 60*time.Second, 5*time.Second).Should(Equal(1))
 		})
 
 		It("reconciles the discovery service deployment", func() {
@@ -173,7 +173,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
 				return int(dep.Status.ObservedGeneration)
-			}, 30*time.Second, 5*time.Second).Should(Equal(2))
+			}, 60*time.Second, 5*time.Second).Should(Equal(2))
 		})
 
 	})

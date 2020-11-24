@@ -45,7 +45,7 @@ var _ = Describe("Envoy pods", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
 
@@ -112,6 +112,7 @@ var _ = Describe("Envoy pods", func() {
 			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", localPort))
 			stopCh = make(chan struct{})
 			readyCh = make(chan struct{})
+			logger.Info(fmt.Sprintf("%v", cfg))
 			go func() {
 				defer GinkgoRecover()
 				fw, err := testutil.NewTestPortForwarder(cfg, *t.Pod, uint32(localPort), envoyListenerPort, GinkgoWriter, stopCh, readyCh)
@@ -120,8 +121,12 @@ var _ = Describe("Envoy pods", func() {
 				Expect(err).ToNot(HaveOccurred())
 			}()
 
+			ticker := time.NewTimer(10 * time.Second)
 			select {
+			case <-ticker.C:
+				Fail("timed out while waiting for port forward")
 			case <-readyCh:
+				ticker.Stop()
 				break
 			}
 		})
@@ -139,7 +144,7 @@ var _ = Describe("Envoy pods", func() {
 			Eventually(func() error {
 				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -174,14 +179,14 @@ var _ = Describe("Envoy pods", func() {
 			Eventually(func() bool {
 				err = k8sClient.Get(context.Background(), key, ec)
 				return ec.Status.CacheState == envoyv1alpha1.RollbackState
-			}, 30*time.Second, 5*time.Second).ShouldNot(BeTrue())
+			}, 60*time.Second, 5*time.Second).ShouldNot(BeTrue())
 
 			By("validating the envoy Pod still replis anything with 200 OK")
 			var resp *http.Response
 			Eventually(func() error {
 				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -246,7 +251,7 @@ var _ = Describe("Envoy pods", func() {
 					Eventually(func() error {
 						resp, err = tlsClient.Get(fmt.Sprintf("https://localhost:%v", localPort))
 						return err
-					}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+					}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 					defer resp.Body.Close()
 					Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -290,7 +295,7 @@ var _ = Describe("Envoy pods", func() {
 							return ""
 						}
 						return resp.TLS.VerifiedChains[0][0].Subject.CommonName
-					}, 30*time.Second, 5*time.Second).Should(Equal("127.0.0.1"))
+					}, 60*time.Second, 5*time.Second).Should(Equal("127.0.0.1"))
 				}
 			})
 
