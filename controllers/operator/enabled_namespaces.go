@@ -19,21 +19,21 @@ import (
 
 // reconcileEnabledNamespaces is in charge of keep the resources that envoy sidecars require available in all
 // the active namespaces:
-//     - a Secret holding a client certificate for mTLS with the DiscoveryService
-//     - a ConfigMap with the envoy bootstrap configuration to allow envoy sidecars to talk to the DiscoveryService
-//     - keeps the Namespace object marked as owned by the marin3r instance
+//     - an EnvoyBootstrap resource
+//     - a label to enable sidecar injection in the namespace
 func (r *DiscoveryServiceReconciler) reconcileEnabledNamespaces(ctx context.Context) (reconcile.Result, error) {
-	var err error
+	errList := []error{}
 	// Reconcile each namespace in the list of enabled namespaces
 	for _, ns := range r.ds.Spec.EnabledNamespaces {
-		err = r.reconcileEnabledNamespace(ctx, ns)
+		err := r.reconcileEnabledNamespace(ctx, ns)
+		if err != nil {
+			errList = append(errList, err)
+		}
 		// Keep going even if an error is returned
 	}
 
-	if err != nil {
-		// TODO: this will surface just the last error, change it so if several errors
-		// occur in different namespaces all of them are reported to the caller
-		return reconcile.Result{}, fmt.Errorf("Failed reconciling enabled namespaces: %s", err)
+	if len(errList) != 0 {
+		return reconcile.Result{}, fmt.Errorf("Failed reconciling enabled namespaces: %v", errList)
 	}
 
 	return reconcile.Result{}, nil
@@ -51,12 +51,12 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Conte
 		return err
 	}
 
-	owner, err := isSidecarEnabled(r.ds, ns)
+	ok, err := isSidecarEnabled(r.ds, ns)
 	if err != nil {
 		return err
 	}
 
-	if !owner {
+	if !ok {
 
 		patch := client.MergeFrom(ns.DeepCopy())
 
