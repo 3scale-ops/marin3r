@@ -104,7 +104,9 @@ spec:
               - rtdsLayerResourceName
               type: object
           required:
+          - clientCertificate
           - discoveryService
+          - envoyStaticConfig
           type: object
         status:
           description: EnvoyBootstrapStatus defines the observed state of EnvoyBootstrap

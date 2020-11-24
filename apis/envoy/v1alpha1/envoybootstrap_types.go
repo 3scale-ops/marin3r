@@ -26,11 +26,9 @@ type EnvoyBootstrapSpec struct {
 	DiscoveryService string `json:"discoveryService"`
 	// ClientCertificate is a struct containing options for the certificate used to authenticate with the
 	// discovery service
-	// +optional
-	ClientCertificate *ClientCertificate `json:"clientCertificate,omitempty"`
+	ClientCertificate *ClientCertificate `json:"clientCertificate"`
 	// EnvoyStaticConfig is a struct that controls options for the envoy's static config file
-	// +optional
-	EnvoyStaticConfig *EnvoyStaticConfig `json:"envoyStaticConfig,omitempty"`
+	EnvoyStaticConfig *EnvoyStaticConfig `json:"envoyStaticConfig"`
 }
 
 // EnvoyStaticConfig allows specifying envoy static config
