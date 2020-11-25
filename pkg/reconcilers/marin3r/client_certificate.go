@@ -11,8 +11,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -75,6 +77,32 @@ func (r *ClientCertificateReconciler) Reconcile() (ctrl.Result, error) {
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	// This is code only required for upgrading from v0.5.x
+	if err := controllerutil.SetControllerReference(r.eb, dsc, r.scheme); err != nil {
+		switch err.(type) {
+		case *controllerutil.AlreadyOwnedError:
+			// Create a new controller ref. so the EnvoyBootstrap controller adopts this
+			// resource that was in previous versions owned directly by the DiscoveryService
+			// controller
+			gvk, err := apiutil.GVKForObject(r.eb, r.scheme)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			ref := metav1.OwnerReference{
+				APIVersion:         gvk.GroupVersion().String(),
+				Kind:               gvk.Kind,
+				Name:               r.eb.GetName(),
+				UID:                r.eb.GetUID(),
+				BlockOwnerDeletion: pointer.BoolPtr(true),
+				Controller:         pointer.BoolPtr(true),
+			}
+			dsc.ObjectMeta.OwnerReferences = []metav1.OwnerReference{ref}
+			if err := r.client.Update(r.ctx, dsc); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// To reconcile certificates if spec.clientCertificate changes we just delete
