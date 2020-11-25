@@ -236,13 +236,16 @@ func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec 
 	for _, ecr := range ecrList.Items {
 		_, okVersionTag := ecr.GetLabels()[versionTag]
 		_, okEnvoyAPITag := ecr.GetLabels()[envoyAPITag]
-		if !okVersionTag || !okEnvoyAPITag {
+		_, okNodeIDTag := ecr.GetLabels()[nodeIDTag]
+		if !okVersionTag || !okEnvoyAPITag || !okNodeIDTag {
+			r.Log.Info("Reconciling labels for EnvoyConfigRevision", "Name", ecr.GetName(), "Namespace", ecr.GetNamespace())
 			patch := client.MergeFrom(ecr.DeepCopy())
 			ecr.SetLabels(map[string]string{
 				versionTag:  ecr.Spec.Version,
 				envoyAPITag: string(ec.GetEnvoyAPIVersion()),
+				nodeIDTag:   ecr.Spec.NodeID,
 			})
-			if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
+			if err := r.Client.Patch(ctx, &ecr, patch); err != nil {
 				return NewControllerError(UnknownError, "reconcileRevisionLabels", err.Error())
 			}
 		}
