@@ -225,7 +225,7 @@ func (d *DiscoveryService) defaultServiceConfig() *ServiceConfig {
 }
 
 func (d *DiscoveryService) OwnedObjectName() string {
-	return fmt.Sprintf("%s-%s", "discoveryservice", d.GetName())
+	return fmt.Sprintf("%s-%s", "marin3r", d.GetName())
 }
 
 // +kubebuilder:object:root=true
