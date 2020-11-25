@@ -5,7 +5,31 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "envoy.marin3r.3scale.net/v1alpha1",
+          "apiVersion": "marin3r.3scale.net/v1alpha1",
+          "kind": "EnvoyBootstrap",
+          "metadata": {
+            "name": "envoybootstrap-sample"
+          },
+          "spec": {
+            "clientCertificate": {
+              "directory": "/etc/envoy/tls/client",
+              "duration": "1h",
+              "secretName": "discoveryservice-client-certificate"
+            },
+            "discoveryService": "instance",
+            "envoyStaticConfig": {
+              "adminAccessLogPath": "/dev/null",
+              "adminBindAddress": "0.0.0.0:9901",
+              "configFile": "config.yaml",
+              "configMapNameV2": "envoy-bootstrap-v2",
+              "configMapNameV3": "envoy-bootstrap-v3",
+              "resourcesDir": "/etc/envoy/bootstrap",
+              "rtdsLayerResourceName": "runtime"
+            }
+          }
+        },
+        {
+          "apiVersion": "marin3r.3scale.net/v1alpha1",
           "kind": "EnvoyConfig",
           "metadata": {
             "name": "example",
@@ -40,7 +64,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "envoy.marin3r.3scale.net/v1alpha1",
+          "apiVersion": "marin3r.3scale.net/v1alpha1",
           "kind": "EnvoyConfigRevision",
           "metadata": {
             "name": "example",
@@ -137,15 +161,20 @@ spec:
       kind: DiscoveryService
       name: discoveryservices.operator.marin3r.3scale.net
       version: v1alpha1
+    - description: EnvoyBootstrap is the Schema for the envoybootstraps API
+      displayName: Envoy Bootstrap
+      kind: EnvoyBootstrap
+      name: envoybootstraps.marin3r.3scale.net
+      version: v1alpha1
     - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig resources. EnvoyConfigRevisions are automatically created and deleted  by the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig objects instead.
       displayName: Envoy Config Revision
       kind: EnvoyConfigRevision
-      name: envoyconfigrevisions.envoy.marin3r.3scale.net
+      name: envoyconfigrevisions.marin3r.3scale.net
       version: v1alpha1
     - description: EnvoyConfig holds the configuration for a given envoy nodeID. The spec of an EnvoyConfig object holds the envoy resources that conform the desired configuration for the given nodeID and that the discovery service will send to any envoy client that identifies itself with that nodeID.
       displayName: Envoy Config
       kind: EnvoyConfig
-      name: envoyconfigs.envoy.marin3r.3scale.net
+      name: envoyconfigs.marin3r.3scale.net
       version: v1alpha1
   description: |
     marin3r is an operator to deploy and manage an envoy discovery service. It's main purpose is to provide
@@ -4218,13 +4247,33 @@ spec:
           - update
           - watch
         - apiGroups:
-          - envoy.marin3r.3scale.net
+          - marin3r.3scale.net
           resources:
           - '*'
           verbs:
           - '*'
         - apiGroups:
-          - envoy.marin3r.3scale.net
+          - marin3r.3scale.net
+          resources:
+          - envoybootstraps
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - marin3r.3scale.net
+          resources:
+          - envoybootstraps/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - marin3r.3scale.net
           resources:
           - envoyconfigs
           verbs:
@@ -4325,11 +4374,11 @@ spec:
                 name: manager
                 resources:
                   limits:
-                    cpu: 100m
-                    memory: 30Mi
+                    cpu: 300m
+                    memory: 300Mi
                   requests:
                     cpu: 100m
-                    memory: 20Mi
+                    memory: 100Mi
               serviceAccountName: marin3r-controller-manager
               terminationGracePeriodSeconds: 10
       permissions:

@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/3scale/marin3r
-  newTag: v0.6.0
+  newTag: latest

@@ -82,13 +82,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - '*'
   verbs:
   - '*'
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - envoybootstraps
   verbs:
@@ -100,7 +100,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - envoybootstraps/status
   verbs:
@@ -108,7 +108,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - envoyconfigs
   verbs:

@@ -180,8 +180,8 @@ unit-test: fmt vet
 
 # Run integration tests
 ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
-OPERATOR_COVERPROFILE = operator.coverprofile
-ENVOY_COVERPROFILE = envoy.coverprofile
+OPERATOR_COVERPROFILE = operator.marin3r.coverprofile
+MARIN3R_COVERPROFILE = marin3r.coverprofile
 integration-test: generate fmt vet manifests ginkgo
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
@@ -192,7 +192,7 @@ integration-test: generate fmt vet manifests ginkgo
 		ginkgo -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
 
 coverprofile: gocovmerge
-	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(ENVOY_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
 
@@ -203,7 +203,7 @@ e2e-test: kind-create
 
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 	ginkgo -r -nodes=1 ./test/e2e/operator
-	ginkgo -r -p ./test/e2e/envoy
+	ginkgo -r -p ./test/e2e/marin3r
 
 test: unit-test integration-test e2e-test coverprofile
 

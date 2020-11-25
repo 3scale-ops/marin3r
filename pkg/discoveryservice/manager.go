@@ -9,8 +9,8 @@ import (
 	"os"
 	"sync"
 
-	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	envoycontroller "github.com/3scale/marin3r/controllers/envoy"
+	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	"github.com/go-logr/logr"
@@ -35,7 +35,7 @@ var (
 
 func init() {
 	util_runtime.Must(clientgoscheme.AddToScheme(scheme))
-	util_runtime.Must(envoyv1alpha1.AddToScheme(scheme))
+	util_runtime.Must(marin3rv1alpha1.AddToScheme(scheme))
 }
 
 // Manager holds configuration to
@@ -92,7 +92,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    loadCA(dsm.CACertificatePath, setupLog),
 		},
-		envoycontroller.OnError(dsm.Cfg),
+		marin3rcontroller.OnError(dsm.Cfg),
 		setupLog,
 	)
 
@@ -106,7 +106,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 	}()
 
 	// Start controllers
-	if err := (&envoycontroller.EnvoyConfigReconciler{
+	if err := (&marin3rcontroller.EnvoyConfigReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("envoyconfig"),
 		Scheme: mgr.GetScheme(),
@@ -115,7 +115,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 		os.Exit(1)
 	}
 
-	if err := (&envoycontroller.EnvoyConfigRevisionReconciler{
+	if err := (&marin3rcontroller.EnvoyConfigRevisionReconciler{
 		Client:     mgr.GetClient(),
 		Log:        ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv2))),
 		Scheme:     mgr.GetScheme(),
@@ -126,7 +126,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 		os.Exit(1)
 	}
 
-	if err := (&envoycontroller.EnvoyConfigRevisionReconciler{
+	if err := (&marin3rcontroller.EnvoyConfigRevisionReconciler{
 		Client:     mgr.GetClient(),
 		Log:        ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv3))),
 		Scheme:     mgr.GetScheme(),
@@ -137,7 +137,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 		os.Exit(1)
 	}
 
-	if err := (&envoycontroller.SecretReconciler{
+	if err := (&marin3rcontroller.SecretReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("secret"),
 		Scheme: mgr.GetScheme(),

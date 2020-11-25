@@ -1,0 +1,105 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: envoybootstraps.marin3r.3scale.net
+spec:
+  group: marin3r.3scale.net
+  names:
+    kind: EnvoyBootstrap
+    listKind: EnvoyBootstrapList
+    plural: envoybootstraps
+    singular: envoybootstrap
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: EnvoyBootstrap is the Schema for the envoybootstraps API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: EnvoyBootstrapSpec defines the desired state of EnvoyBootstrap
+          properties:
+            clientCertificate:
+              description: ClientCertificate is a struct containing options for the certificate used to authenticate with the discovery service
+              properties:
+                directory:
+                  description: Directory defines the directory in the envoy container where the certificate will be mounted
+                  type: string
+                duration:
+                  description: The requested ‘duration’ (i.e. lifetime) of the Certificate
+                  type: string
+                secretName:
+                  description: The Secret where the certificate will be stored
+                  type: string
+              required:
+              - directory
+              - duration
+              - secretName
+              type: object
+            discoveryService:
+              description: DiscoveryService is the name of the DiscoveryService resource the envoy will be a client of
+              type: string
+            envoyStaticConfig:
+              description: EnvoyStaticConfig is a struct that controls options for the envoy's static config file
+              properties:
+                adminAccessLogPath:
+                  description: AdminAccessLogPath configures where the envoy's admin server logs are written to
+                  type: string
+                adminBindAddress:
+                  description: AdminBindAddress is where envoy's admin server binds to.
+                  type: string
+                configFile:
+                  description: ConfigFile is the path of envoy's bootstrap config file
+                  type: string
+                configMapNameV2:
+                  description: The ConfigMap where the envoy client v2 static config will be stored
+                  type: string
+                configMapNameV3:
+                  description: The ConfigMap where the envoy client v3 static config will be stored
+                  type: string
+                resourcesDir:
+                  description: ResourcesDir is the path where resource files are loaded from. It is used to load discovery messages directly from the filesystem, for example in order to be able to bootstrap certificates and support rotation when they are modified.
+                  type: string
+                rtdsLayerResourceName:
+                  description: RtdsLayerResourceName is the resource name that the envoy client will request when askikng the discovery service for Runtime resources.
+                  type: string
+              required:
+              - adminAccessLogPath
+              - adminBindAddress
+              - configFile
+              - configMapNameV2
+              - configMapNameV3
+              - resourcesDir
+              - rtdsLayerResourceName
+              type: object
+          required:
+          - clientCertificate
+          - discoveryService
+          - envoyStaticConfig
+          type: object
+        status:
+          description: EnvoyBootstrapStatus defines the observed state of EnvoyBootstrap
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

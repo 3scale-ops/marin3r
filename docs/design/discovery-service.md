@@ -67,7 +67,7 @@ The discovery service can also deliver certificates to the envoy proxies. When a
 For example, in the following EnvoyConfig there is a listener configured for TLS termination. The TLS config of the listener specifies that the certificate needs to be retrieved from the discovery service, referencing it by name. This name needs to match the name given to the secret in the secret reference in `spec.envoyResources.secrets`.
 
 ```yaml
-apiVersion: envoy.marin3r.3scale.net/v1alpha1
+apiVersion: marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
   name: test
