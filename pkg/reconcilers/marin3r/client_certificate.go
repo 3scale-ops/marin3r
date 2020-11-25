@@ -87,6 +87,7 @@ func (r *ClientCertificateReconciler) Reconcile() (ctrl.Result, error) {
 		if err := r.client.Delete(r.ctx, dsc); err != nil {
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return ctrl.Result{}, nil
