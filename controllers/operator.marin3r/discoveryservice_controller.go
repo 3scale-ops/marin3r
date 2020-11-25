@@ -21,7 +21,9 @@ import (
 	"fmt"
 	"time"
 
+	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	"github.com/go-logr/logr"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1"
@@ -64,7 +66,6 @@ type DiscoveryServiceReconciler struct {
 
 // +kubebuilder:rbac:groups="core",resources=services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="core",resources=configmaps,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",resources=secrets,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",resources=namespaces,verbs=get;list;watch;watch;patch
 // +kubebuilder:rbac:groups="apps",resources=deployments,verbs=get;list;watch;create;update;patch;delete
@@ -206,6 +207,7 @@ func (r *DiscoveryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&admissionregistrationv1beta1.MutatingWebhookConfiguration{}).
+		Owns(&marin3rv1alpha1.EnvoyBootstrap{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}).
 		WithEventFilter(filterTLSTypeCertificatesPredicate()).
 		Complete(r)

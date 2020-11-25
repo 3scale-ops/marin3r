@@ -31,17 +31,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - configmaps
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - namespaces
   verbs:
   - get
@@ -87,26 +76,6 @@ rules:
   - '*'
   verbs:
   - '*'
-- apiGroups:
-  - marin3r.3scale.net
-  resources:
-  - envoybootstraps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - marin3r.3scale.net
-  resources:
-  - envoybootstraps/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - marin3r.3scale.net
   resources:
