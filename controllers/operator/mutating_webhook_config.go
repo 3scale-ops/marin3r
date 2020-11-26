@@ -114,7 +114,7 @@ func (r *DiscoveryServiceReconciler) genMutatingWebhookConfigurationObject(caBun
 				},
 				ClientConfig: admissionregistrationv1beta1.WebhookClientConfig{
 					Service: &admissionregistrationv1beta1.ServiceReference{
-						Name:      OwnedObjectName(r.ds),
+						Name:      r.ds.GetServiceConfig().Name,
 						Namespace: OwnedObjectNamespace(r.ds),
 						Path:      pointer.StringPtr(podv1mutator.MutatePath),
 						Port:      pointer.Int32Ptr(443),

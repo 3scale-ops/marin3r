@@ -17,10 +17,12 @@ workflows:
 
 jobs:
   test:
-    resource_class: xlarge
     docker:
       # CircleCI Go images available at: https://hub.docker.com/r/circleci/golang/
       - image: circleci/golang:1.13
+
+    environment:
+      TEST_CPUS: 2
 
     steps: # steps that comprise the `build` job
       - checkout
@@ -33,11 +35,19 @@ jobs:
 
       - restore_cache:
           keys:
-            - testbin-cache
+            - tmp-cache
 
       - run:
-          name: Run unit tests
-          command: make test
+          name: Run tests
+          command: |
+            if [[ $(echo "$CIRCLE_BRANCH" | grep -c "pull") -gt 0 ]]; then
+              make test-unit
+              make test-integration
+              make coverprofile
+            else
+              echo "Not a PR, skip running integration tests."
+              make unit-test
+            fi
 
       # Store cache in the /go/pkg directory
       - save_cache:
@@ -45,11 +55,11 @@ jobs:
           paths:
             - "/go/pkg"
 
-      # Store cache /testbin directory
+      # Store cache ./tmp directory
       - save_cache:
-          key: testbin-cache
+          key: tmp-cache
           paths:
-            - "testbin"
+            - "tmp"
 
   release:
     docker:

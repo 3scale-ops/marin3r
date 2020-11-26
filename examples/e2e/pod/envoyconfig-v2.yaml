@@ -36,7 +36,7 @@ spec:
     routes:
       - name: echo-api.3scale.net
         value: |
-          name: ingress
+          name: echo-api.3scale.net
           virtual_hosts:
             - name: ingress
               domains: ["*"]
@@ -64,7 +64,7 @@ spec:
                       config:
                         path: /dev/stdout
                   stat_prefix: ingress_http
-                  rds: { route_config_name: "ingress", config_source: { ads: {}}}
+                  rds: { route_config_name: "echo-api.3scale.net", config_source: { ads: {}}}
                   http_filters:
                     - name: envoy.router
       - name: https
@@ -84,7 +84,7 @@ spec:
                       config:
                         path: /dev/stdout
                   stat_prefix: ingress_https
-                  rds: { route_config_name: "ingress", config_source: { ads: {}}}
+                  rds: { route_config_name: "echo-api.3scale.net", config_source: { ads: {}}}
                   http_filters:
                     - name: envoy.router
               transport_socket:
@@ -94,5 +94,4 @@ spec:
                   common_tls_context:
                     tls_certificate_sds_secret_configs:
                       - name: envoy1.default.svc
-                        sds_config:
-                          ads: {}
+                        sds_config: { ads: {}}

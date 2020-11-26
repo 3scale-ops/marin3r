@@ -4,4 +4,5 @@ resources:
 - operator_v1alpha1_discoveryservicecertificate.yaml
 - envoy_v1alpha1_envoyconfig.yaml
 - envoy_v1alpha1_envoyconfigrevision.yaml
+- envoy_v1alpha1_envoybootstrap.yaml
 # +kubebuilder:scaffold:manifestskustomizesamples

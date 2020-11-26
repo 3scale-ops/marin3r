@@ -68,21 +68,24 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 									"--discovery-service",
 									"--server-certificate-path=/etc/marin3r/tls/server",
 									"--ca-certificate-path=/etc/marin3r/tls/ca",
+									func() string { return fmt.Sprintf("--xdss-port=%v", ds.GetXdsServerPort()) }(),
+									func() string { return fmt.Sprintf("--webhook-port=%v", ds.GetWebhookPort()) }(),
+									func() string { return fmt.Sprintf("--metrics-addr=:%v", ds.GetMetricsPort()) }(),
 								},
 								Ports: []corev1.ContainerPort{
 									{
 										Name:          "discovery",
-										ContainerPort: 18000,
+										ContainerPort: int32(ds.GetXdsServerPort()),
 										Protocol:      corev1.ProtocolTCP,
 									},
 									{
 										Name:          "webhook",
-										ContainerPort: 8443,
+										ContainerPort: int32(ds.GetWebhookPort()),
 										Protocol:      corev1.ProtocolTCP,
 									},
 									{
 										Name:          "metrics",
-										ContainerPort: 8383,
+										ContainerPort: int32(ds.GetMetricsPort()),
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},

@@ -32,7 +32,7 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 	// Get the list of revisions for the current version
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
-	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.GetNamespace(), &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
 		return NewControllerError(UnknownError, "ensureEnvoyConfigRevision", err.Error())
 	}
 
@@ -47,7 +47,7 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 		ecr := &envoyv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s-%s-%s", ec.Spec.NodeID, envoyAPI, version),
-				Namespace: ec.ObjectMeta.Namespace,
+				Namespace: ec.GetNamespace(),
 				Labels: map[string]string{
 					nodeIDTag:   ec.Spec.NodeID,
 					versionTag:  version,
@@ -79,7 +79,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 	// Get all revisions owned by this EnvoyConfig that match the envoy API version
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
-	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.GetNamespace(), &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
 		return NewControllerError(UnknownError, "consolidateRevisionList", err.Error())
 	}
 
@@ -115,7 +115,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *e
 			Ref: corev1.ObjectReference{
 				Kind:       ecr.Kind,
 				Name:       ecr.ObjectMeta.Name,
-				Namespace:  ecr.Namespace,
+				Namespace:  ecr.GetNamespace(),
 				UID:        ecr.UID,
 				APIVersion: ecr.APIVersion,
 			},
@@ -148,7 +148,7 @@ func (r *EnvoyConfigReconciler) deleteUnreferencedRevisions(ctx context.Context,
 	// Get all revisions that belong to this ec
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
-	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.GetNamespace(), &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
 		return NewControllerError(UnknownError, "deleteUnreferencedRevisions", err.Error())
 	}
 
@@ -175,7 +175,7 @@ func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *e
 	// Get all revisions for this EnvoyConfig
 	ecrList := &envoyv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
-	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.GetNamespace(), &ec.Spec.NodeID, nil, &envoyAPI)...); err != nil {
 		return NewControllerError(UnknownError, "markRevisionPublished", err.Error())
 	}
 
@@ -203,7 +203,7 @@ func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *e
 
 	// Set the the revision that holds the given version with 'RevisionPublished' = True
 	ecrList = &envoyv1alpha1.EnvoyConfigRevisionList{}
-	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
+	if err := r.Client.List(ctx, ecrList, getRevisionListOptions(ec.GetNamespace(), &ec.Spec.NodeID, &version, &envoyAPI)...); err != nil {
 		return NewControllerError(UnknownError, "markRevisionPublished", err.Error())
 	}
 

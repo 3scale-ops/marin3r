@@ -29,20 +29,6 @@ endif
 
 all: manager
 
-# Run tests
-ENVTEST_ASSETS_DIR ?= $(shell pwd)/testbin
-test: generate fmt vet manifests
-	mkdir -p $(ENVTEST_ASSETS_DIR)
-	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); \
-		go test ./... -race -coverpkg=./... -coverprofile=cover.out.tmp
-	$(MAKE) coverage
-
-coverage:
-	 cat cover.out.tmp | grep -v "_generated.deepcopy.go"  > cover.out
-	 go tool cover -func=cover.out | awk '/total/{print $$3}'
-	 @rm -f cover.out.tmp
-
 # Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go
@@ -63,6 +49,10 @@ uninstall: manifests kustomize
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+
+# Deploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
+deploy-test: manifests kustomize
+	$(KUSTOMIZE) build config/test | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -161,34 +151,73 @@ clean-dirty-builds:
 	rm -rf build/bin/*-dirty
 
 docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-docker-build: build/bin/$(NAME)_amd64_$(RELEASE)
+docker-build: generate
 	docker build . -t ${IMG_NAME}:$(RELEASE)
 	docker tag ${IMG_NAME}:$(RELEASE) ${IMG_NAME}:test
 
-#######################
-#### kuttl targets ####
-#######################
+######################
+#### test targets ####
+######################
 
-KUTTL_VERSION := 0.7.0
-KUTTL := bin/kuttl
-$(KUTTL):
-	mkdir -p $$(dirname $@)
-	curl -sLo $(KUTTL) https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$$(uname)_x86_64
-	chmod +x $(KUTTL)
+COVERPKGS = ./controllers/...,./apis/...,./pkg/...
+COVER_OUTPUT_DIR = tmp/coverage
+COVERPROFILE = total.coverprofile
+TEST_CPUS ?= $(shell nproc)
 
-TEST_OPERATOR_MANIFEST ?= tmp/deploy
-$(TEST_OPERATOR_MANIFEST): .FORCE
-	mkdir -p $(TEST_OPERATOR_MANIFEST)
-	$(KUSTOMIZE) build config/test > $(TEST_OPERATOR_MANIFEST)/operator.yaml
+$(COVER_OUTPUT_DIR):
+	mkdir -p $(COVER_OUTPUT_DIR)
 
-TETS_ARTIFACTS_DIR ?= tmp/test
-$(TETS_ARTIFACTS_DIR):
-	mkdir -p $(TETS_ARTIFACTS_DIR)
+fix-cover:
+	tmpfile=$$(mktemp) && grep -v "_generated.deepcopy.go" $(COVERPROFILE) > $${tmpfile} && cat $${tmpfile} > $(COVERPROFILE) && rm -f $${tmpfile}
 
-e2e: $(KUTTL) tmp manifests docker-build $(TEST_OPERATOR_MANIFEST)
-	$(KUTTL) test
+# Run unit tests
+UNIT_COVERPROFILE = unit.coverprofile
+unit-test: export COVERPROFILE=$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE)
+unit-test: export RUN_ENVTEST=0
+unit-test: fmt vet
+	mkdir -p $(shell dirname $(COVERPROFILE))
+	go test -p $(TEST_CPUS) ./controllers/... ./apis/... ./pkg/... -race -coverpkg="$(COVERPKGS)" -coverprofile=$(COVERPROFILE)
 
-#########################3333333333#########
+# Run integration tests
+ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
+OPERATOR_COVERPROFILE = operator.coverprofile
+ENVOY_COVERPROFILE = envoy.coverprofile
+integration-test: generate fmt vet manifests ginkgo
+	mkdir -p $(ENVTEST_ASSETS_DIR)
+	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
+		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; \
+		fetch_envtest_tools $(ENVTEST_ASSETS_DIR); \
+		setup_envtest_env $(ENVTEST_ASSETS_DIR); \
+		ginkgo -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
+
+coverprofile: gocovmerge
+	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(ENVOY_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
+
+
+e2e-test: kind-create
+	$(MAKE) e2e-envtest-suite
+	$(MAKE) kind-delete
+
+e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
+	ginkgo -r -nodes=1 ./test/e2e/operator
+	ginkgo -r -p ./test/e2e/envoy
+
+test: unit-test integration-test e2e-test coverprofile
+
+ginkgo:
+	@which ginkgo > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo; \
+	fi
+
+gocovmerge:
+	@which gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
+		GO111MODULE=off go get -u github.com/wadey/gocovmerge; \
+	fi
+
+############################################
 #### Targets to manually test with Kind ####
 ############################################
 
@@ -203,7 +232,7 @@ $(KIND):
 
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
 kind-create: tmp $(KIND)
-	$(KIND) create cluster --config test/kind.yaml
+	$(KIND) create cluster --wait 5m --config test/kind.yaml
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-deploy: manifests kustomize
@@ -213,6 +242,9 @@ kind-refresh-discoveryservice: ## rebuilds the marin3r image, pushes it to the k
 kind-refresh-discoveryservice: docker-build
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 	kubectl delete pods -A -l app.kubernetes.io/name=marin3r --force --grace-period=0
+
+kind-load-image:
+	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-delete: ## deletes the kind cluster and the registry
 kind-delete: $(KIND)

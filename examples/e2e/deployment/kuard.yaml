@@ -16,11 +16,13 @@ spec:
         app: kuard
         marin3r.3scale.net/status: "enabled"
       annotations:
+        marin3r.3scale.net/envoy-extra-args: "--component-log-level config:debug"
         marin3r.3scale.net/node-id: kuard
-        marin3r.3scale.net/ports: envoy-http:1080,envoy-https:1443
-        # Map envoy ports to the to the kind extraPortMappings so services
+        marin3r.3scale.net/ports: envoy-https:8443
+        # Map envoy ports to extraPortMappings so they
         # are reachable from the docker host
-        marin3r.3scale.net/host-port-mappings: envoy-http:1080,envoy-https:1443
+        marin3r.3scale.net/host-port-mappings: envoy-https:8443
+        marin3r.3scale.net/envoy-api-version: v3
     spec:
       containers:
         - name: kuard

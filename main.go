@@ -30,7 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
+	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	envoycontroller "github.com/3scale/marin3r/controllers/envoy"
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
 	// +kubebuilder:scaffold:imports
@@ -38,10 +40,6 @@ import (
 
 // Change below variables to serve metrics on different host or port.
 const (
-	host               string = "0.0.0.0"
-	metricsPort        int    = 8383
-	webhookPort        int    = 8443
-	envoyXdsServerPort int    = 18000
 	certificateFile    string = "tls.crt"
 	certificateKeyFile string = "tls.key"
 )
@@ -52,6 +50,8 @@ var (
 	isDiscoveryService       bool
 	debug                    bool
 	metricsAddr              string
+	xdssPort                 int
+	webhookPort              int
 	enableLeaderElection     bool
 )
 
@@ -63,11 +63,14 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(envoyv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
-	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", metricsPort), "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metric endpoint binds to.")
+	flag.IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
+	flag.IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the mutating webhook server will listen.")
 	flag.StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
 		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
 	flag.StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
@@ -129,6 +132,14 @@ func main() {
 			os.Exit(1)
 		}
 
+		if err = (&envoycontroller.EnvoyBootstrapReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("EnvoyBootstrap"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "EnvoyBootstrap")
+			os.Exit(1)
+		}
 		// +kubebuilder:scaffold:builder
 
 		setupLog.Info("Starting the Operator.")
@@ -140,7 +151,7 @@ func main() {
 	} else {
 
 		mgr := discoveryservice.Manager{
-			XdsServerPort:         envoyXdsServerPort,
+			XdsServerPort:         xdssPort,
 			WebhookPort:           webhookPort,
 			MetricsAddr:           metricsAddr,
 			ServerCertificatePath: tlsServerCertificatePath,

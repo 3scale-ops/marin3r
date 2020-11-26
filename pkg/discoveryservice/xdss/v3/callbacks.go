@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/3scale/marin3r/pkg/envoy"
+	envoy_resources_v3 "github.com/3scale/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
@@ -60,7 +61,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.D
 			return err
 		}
 		// All resource types are always kept at the same version
-		failingVersion := snap.GetVersion("type.googleapis.com/envoy.api.v3.ClusterLoadAssignment")
+		failingVersion := snap.GetVersion(req.TypeUrl)
 		cb.Logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "CurrentVersion", req.VersionInfo, "FailingVersion", failingVersion, "NodeID", req.Node.Id, "StreamID", id)
 		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message, envoy.APIv3); err != nil {
 			cb.Logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
@@ -78,7 +79,7 @@ func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_service_discovery_v3.
 		j, _ := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoy.APIv3).Marshal(r)
 		resources = append(resources, string(j))
 	}
-	if rsp.TypeUrl == "type.googleapis.com/envoy.api.v3.auth.Secret" {
+	if rsp.TypeUrl == envoy_resources_v3.Mappings()[envoy.Secret] {
 		cb.Logger.V(1).Info("Response sent to gateway",
 			"ResourcesNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id, "Version", rsp.GetVersionInfo())
 	} else {

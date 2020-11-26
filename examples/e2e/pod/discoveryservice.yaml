@@ -6,6 +6,4 @@ spec:
   image: quay.io/3scale/marin3r:test
   discoveryServiceNamespace: default
   debug: true
-  enabledNamespaces:
-    - default
-
+  enabledNamespaces: []
