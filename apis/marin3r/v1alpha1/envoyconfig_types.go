@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/3scale/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -186,11 +187,19 @@ type EnvoyConfig struct {
 }
 
 // GetEnvoyAPIVersion returns envoy's API version for the EnvoyConfigRevision
-func (ecr *EnvoyConfig) GetEnvoyAPIVersion() envoy.APIVersion {
-	if ecr.Spec.EnvoyAPI == nil {
+func (ec *EnvoyConfig) GetEnvoyAPIVersion() envoy.APIVersion {
+	if ec.Spec.EnvoyAPI == nil {
 		return envoy.APIv2
 	}
-	return envoy.APIVersion(*ecr.Spec.EnvoyAPI)
+	return envoy.APIVersion(*ec.Spec.EnvoyAPI)
+}
+
+// GetSerialization returns the encoding of the envoy resources.
+func (ec *EnvoyConfig) GetSerialization() envoy_serializer.Serialization {
+	if ec.Spec.Serialization == nil {
+		return envoy_serializer.JSON
+	}
+	return envoy_serializer.Serialization(*ec.Spec.Serialization)
 }
 
 // +kubebuilder:object:root=true

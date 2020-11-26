@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -63,6 +64,13 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
+		return ctrl.Result{}, err
+	}
+
+	// Set defaults.
+	// TODO: remove this when wwe migrate to CRD v1 api as we will
+	// be able to set defauls directly in the CRD definition.
+	if err := r.reconcileSpecDefaults(ctx, ecr); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -206,6 +214,29 @@ func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *mari
 		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (r *EnvoyConfigRevisionReconciler) reconcileSpecDefaults(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision) error {
+	changed := false
+
+	if ecr.Spec.EnvoyAPI == nil {
+		ecr.Spec.EnvoyAPI = pointer.StringPtr(string(ecr.GetEnvoyAPIVersion()))
+		changed = true
+	}
+
+	if ecr.Spec.Serialization == nil {
+		ecr.Spec.Serialization = pointer.StringPtr(string(ecr.GetSerialization()))
+		changed = true
+	}
+
+	if changed {
+		r.Log.V(1).Info("setting EnvoyConfigRevision defaults")
+		if err := r.Client.Update(ctx, ecr); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }

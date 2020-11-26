@@ -260,16 +260,20 @@ func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec 
 
 func (r *EnvoyConfigReconciler) reconcileSpecDefaults(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
 	changed := false
-	patch := client.MergeFrom(ec.DeepCopy())
 
 	if ec.Spec.EnvoyAPI == nil {
 		ec.Spec.EnvoyAPI = pointer.StringPtr(string(ec.GetEnvoyAPIVersion()))
 		changed = true
-		r.Log.V(1).Info("Reconciling EnvoyConfig spec defaults")
+	}
+
+	if ec.Spec.Serialization == nil {
+		ec.Spec.Serialization = pointer.StringPtr(string(ec.GetSerialization()))
+		changed = true
 	}
 
 	if changed {
-		if err := r.Client.Patch(ctx, ec, patch); err != nil {
+		r.Log.V(1).Info("setting EnvoyConfigRevision defaults")
+		if err := r.Client.Update(ctx, ec); err != nil {
 			return err
 		}
 
