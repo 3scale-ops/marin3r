@@ -41,6 +41,11 @@ type EnvoyConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigrevisions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigrevisions/status,verbs=get;update;patch
+
 func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	r.Log = r.Log.WithValues("name", req.Name, "namespace", req.Namespace)

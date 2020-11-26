@@ -63,10 +63,9 @@ type DiscoveryServiceReconciler struct {
 
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=*,verbs=*
 // +kubebuilder:rbac:groups=marin3r.3scale.net,resources=*,verbs=*
-
 // +kubebuilder:rbac:groups="core",resources=services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="core",resources=secrets,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="core",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="core",resources=namespaces,verbs=get;list;watch;watch;patch
 // +kubebuilder:rbac:groups="apps",resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles,verbs=get;list;watch;create;patch
