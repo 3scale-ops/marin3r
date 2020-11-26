@@ -162,7 +162,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
 				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
 				Expect(len(ec.Status.ConfigRevisions)).To(Equal(1))
-				Expect(ec.Status.ConfigRevisions[0].Ref.Name).To(Equal(fmt.Sprintf("%s-%s-%s", ec.Spec.NodeID, string(ec.GetEnvoyAPIVersion()), wantRevision)))
+				Expect(ec.Status.ConfigRevisions[0].Ref.Name).To(Equal(fmt.Sprintf("%s-%s", ec.Spec.NodeID, wantRevision)))
 			})
 		})
 
@@ -205,7 +205,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
 				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
 				Expect(len(ec.Status.ConfigRevisions)).To(Equal(2))
-				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(fmt.Sprintf("%s-%s-%s", ec.Spec.NodeID, string(ec.GetEnvoyAPIVersion()), wantRevision)))
+				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(fmt.Sprintf("%s-%s", ec.Spec.NodeID, wantRevision)))
 
 				// Get the EnvoyConfigRevision that should have been created
 				ecr := &marin3rv1alpha1.EnvoyConfigRevision{}
@@ -260,7 +260,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
 				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
 				Expect(len(ec.Status.ConfigRevisions)).To(Equal(2))
-				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(fmt.Sprintf("%s-%s-%s", ec.Spec.NodeID, string(ec.GetEnvoyAPIVersion()), wantRevision)))
+				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(fmt.Sprintf("%s-%s", ec.Spec.NodeID, wantRevision)))
 
 				// Get the EnvoyConfigRevision that should have been created
 				ecr := &marin3rv1alpha1.EnvoyConfigRevision{}
