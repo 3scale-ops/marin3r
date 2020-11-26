@@ -31,6 +31,7 @@ import (
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // EnvoyConfigReconciler reconciles a EnvoyConfig object
@@ -62,6 +63,10 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// TODO: remove this when wwe migrate to CRD v1 api as we will
 	// be able to set defauls directly in the CRD definition.
 	if err := r.reconcileSpecDefaults(ctx, ec); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileFinalizer(ctx, ec); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -299,6 +304,17 @@ func (r *EnvoyConfigReconciler) setRollbackFailed(ctx context.Context, ec *marin
 		ec.Status.CacheState = marin3rv1alpha1.RollbackFailedState
 
 		if err := r.Client.Status().Patch(ctx, ec, patch); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *EnvoyConfigReconciler) reconcileFinalizer(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+
+	if len(ec.GetObjectMeta().GetFinalizers()) != 0 {
+		controllerutil.RemoveFinalizer(ec, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)
+		if err := r.Client.Update(ctx, ec); err != nil {
 			return err
 		}
 	}
