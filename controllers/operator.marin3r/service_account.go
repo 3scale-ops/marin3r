@@ -13,7 +13,7 @@ import (
 
 func (r *DiscoveryServiceReconciler) reconcileServiceAccount(ctx context.Context) (reconcile.Result, error) {
 
-	r.Log.V(1).Info("Reconciling ServiceAccount")
+	// r.Log.V(1).Info("Reconciling ServiceAccount")
 	existent := &corev1.ServiceAccount{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, existent)
 

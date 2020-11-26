@@ -24,7 +24,7 @@ const (
 // reconcileMutatingWebhook keeps the marin3r MutatingWebhookConfiguration object in sync with the desired state
 func (r *DiscoveryServiceReconciler) reconcileMutatingWebhook(ctx context.Context) (reconcile.Result, error) {
 
-	r.Log.V(1).Info("Reconciling MutatingWebhookConfiguration")
+	// r.Log.V(1).Info("Reconciling MutatingWebhookConfiguration")
 
 	caBundle, err := r.getCABundle(ctx)
 	if err != nil {

@@ -47,7 +47,7 @@ type DiscoveryServiceCertificateReconciler struct {
 
 func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	_ = r.Log.WithValues("discoveryservicecertificate", request.NamespacedName)
+	r.Log = r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
 	// Fetch the DiscoveryServiceCertificate instance
 	dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}

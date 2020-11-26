@@ -17,7 +17,7 @@ import (
 // reconcileCA is responsible of keeping the root CA available at all times
 func (r *DiscoveryServiceReconciler) reconcileCA(ctx context.Context) (reconcile.Result, error) {
 
-	r.Log.V(1).Info("Reconciling CA certificate")
+	// r.Log.V(1).Info("Reconciling CA certificate")
 	ca := &operatorv1alpha1.DiscoveryServiceCertificate{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: getCACertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, ca)
 

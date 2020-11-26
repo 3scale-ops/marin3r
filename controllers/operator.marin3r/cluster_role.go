@@ -17,7 +17,7 @@ import (
 
 func (r *DiscoveryServiceReconciler) reconcileClusterRole(ctx context.Context) (reconcile.Result, error) {
 
-	r.Log.V(1).Info("Reconciling CusterRole")
+	// r.Log.V(1).Info("Reconciling CusterRole")
 	existent := &rbacv1.ClusterRole{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
 

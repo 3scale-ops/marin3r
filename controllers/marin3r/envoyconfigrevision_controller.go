@@ -50,8 +50,7 @@ type EnvoyConfigRevisionReconciler struct {
 
 func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	_ = r.Log.WithValues("envoyconfigrevision", req.NamespacedName)
-	r.Log.Info("Reconciling EnvoyConfigRevision")
+	r.Log = r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyConfigRevision instance
 	ecr := &marin3rv1alpha1.EnvoyConfigRevision{}

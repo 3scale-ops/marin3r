@@ -17,7 +17,7 @@ import (
 
 func (r *DiscoveryServiceReconciler) reconcileService(ctx context.Context) (reconcile.Result, error) {
 
-	r.Log.V(1).Info("Reconciling Service")
+	// r.Log.V(1).Info("Reconciling Service")
 	existent := &corev1.Service{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: r.ds.GetServiceConfig().Name, Namespace: OwnedObjectNamespace(r.ds)}, existent)
 

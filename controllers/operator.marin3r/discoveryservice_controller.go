@@ -26,7 +26,7 @@ import (
 
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	"github.com/go-logr/logr"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1"
+	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -75,7 +75,7 @@ type DiscoveryServiceReconciler struct {
 
 func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	_ = r.Log.WithValues("discoveryservice", request.NamespacedName)
+	r.Log = r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
 	// Fetch the DiscoveryService instance
 	dsList := &operatorv1alpha1.DiscoveryServiceList{}

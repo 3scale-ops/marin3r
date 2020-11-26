@@ -42,7 +42,7 @@ type EnvoyConfigReconciler struct {
 
 func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	_ = r.Log.WithValues("envoyconfig", req.NamespacedName)
+	r.Log = r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyConfig instance
 	ec := &marin3rv1alpha1.EnvoyConfig{}

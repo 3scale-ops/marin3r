@@ -44,7 +44,6 @@ func NewDeploymentReconciler(ctx context.Context, logger logr.Logger, client cli
 // Reconcile reconciles the Deployment object using the given generator
 func (r *DeploymentReconciler) Reconcile(o types.NamespacedName, generatorFn DeploymentGeneratorFn) (reconcile.Result, error) {
 
-	r.logger.V(1).Info("Reconciling Deployment")
 	deployment := &appsv1.Deployment{}
 	err := r.client.Get(r.ctx, types.NamespacedName{Name: o.Name, Namespace: o.Namespace}, deployment)
 

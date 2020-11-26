@@ -50,7 +50,7 @@ type DiscoveryServiceCertificateWatcher struct {
 
 func (r *DiscoveryServiceCertificateWatcher) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	_ = r.Log.WithValues("discoveryservicecertificate_watcher", request.NamespacedName)
+	r.Log = r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
 	r.Log.V(1).Info("Watching certificate validity")
 

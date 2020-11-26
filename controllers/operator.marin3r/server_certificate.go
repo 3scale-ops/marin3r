@@ -17,7 +17,7 @@ import (
 // reconcileServerCertificate is in charge of keeping the DiscoveryService server certificate available as a secret
 func (r *DiscoveryServiceReconciler) reconcileServerCertificate(ctx context.Context) (reconcile.Result, error) {
 
-	r.Log.V(1).Info("Reconciling server certificate")
+	// r.Log.V(1).Info("Reconciling server certificate")
 
 	cert := &operatorv1alpha1.DiscoveryServiceCertificate{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: getServerCertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, cert)

@@ -107,37 +107,37 @@ func main() {
 
 		if err := (&operatorcontroller.DiscoveryServiceReconciler{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("DiscoveryService"),
+			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "DiscoveryService")
+			setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
 			os.Exit(1)
 		}
 
 		if err := (&operatorcontroller.DiscoveryServiceCertificateReconciler{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("DiscoveryServiceCertificate"),
+			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "DiscoveryServiceCertificate")
+			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
 			os.Exit(1)
 		}
 
 		if err := (&operatorcontroller.DiscoveryServiceCertificateWatcher{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("DiscoveryServiceCertificateWatcher"),
+			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificatewatcher"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "DiscoveryServiceCertificateWatcher")
+			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificatewatcher")
 			os.Exit(1)
 		}
 
 		if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("EnvoyBootstrap"),
+			Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "EnvoyBootstrap")
+			setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
 			os.Exit(1)
 		}
 		// +kubebuilder:scaffold:builder

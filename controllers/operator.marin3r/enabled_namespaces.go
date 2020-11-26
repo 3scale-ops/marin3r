@@ -41,7 +41,7 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespaces(ctx context.Cont
 
 func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Context, namespace string) error {
 
-	r.Log.V(1).Info("Reconciling enabled Namespace", "Namespace", namespace)
+	// r.Log.V(1).Info("Reconciling enabled Namespace", "Namespace", namespace)
 
 	ns := &corev1.Namespace{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: namespace}, ns)
