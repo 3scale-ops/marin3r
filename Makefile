@@ -209,11 +209,11 @@ coverprofile: gocovmerge
 	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
 
 
+e2e-test: export KUBECONFIG = ${PWD}/kubeconfig
 e2e-test: kind-create
 	$(MAKE) e2e-envtest-suite
 	$(MAKE) kind-delete
 
-e2e-envtest-suite: export KUBECONFIG = ${PWD}/kubeconfig
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 	ginkgo -r -nodes=1 ./test/e2e/operator
 	ginkgo -r -p ./test/e2e/marin3r
@@ -243,6 +243,7 @@ $(KIND):
 	chmod +x $(KIND)
 
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
+kind-create: export KUBECONFIG = ${PWD}/kubeconfig
 kind-create: tmp $(KIND)
 	$(KIND) create cluster --wait 5m --config test/kind.yaml
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
