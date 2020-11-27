@@ -22,6 +22,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -38,7 +39,6 @@ import (
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
 	"github.com/3scale/marin3r/pkg/version"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
-	"github.com/spf13/cobra"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -56,9 +56,9 @@ var (
 	xdssTLSServerCertificatePath string
 	xdssTLSCACertificatePath     string
 	webhookPort                  int
-	podMutatorTLSCertDir         string
-	podMutatorTLSKeyName         string
-	podMutatorTLSCertName        string
+	webhookTLSCertDir            string
+	webhookTLSKeyName            string
+	webhookTLSCertName           string
 )
 
 var (
@@ -88,10 +88,10 @@ var (
 	}
 
 	// Webhook subcommand
-	podMutatorCmd = &cobra.Command{
-		Use:   "pod-mutator",
+	webhookCmd = &cobra.Command{
+		Use:   "webhook",
 		Short: "Run the Pod mutating webhook",
-		Run:   runPodMutator,
+		Run:   runWebhook,
 	}
 )
 
@@ -104,12 +104,13 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(marin3rv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(corev1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	// Subcommands
 	rootCmd.AddCommand(operatorCmd)
 	rootCmd.AddCommand(discoveryServiceCmd)
-	rootCmd.AddCommand(podMutatorCmd)
+	rootCmd.AddCommand(webhookCmd)
 
 	// Global flags
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logs")
@@ -128,10 +129,10 @@ func init() {
 	discoveryServiceCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
 
 	// Webhook flags
-	podMutatorCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
-	podMutatorCmd.Flags().StringVar(&podMutatorTLSCertDir, "tls-dir", "/apiserver.local.config/certificates", "The path where the certificate and key for the webhook are located.")
-	podMutatorCmd.Flags().StringVar(&podMutatorTLSCertName, "tls-cert-name", "apiserver.crt", "The file name of the certificate for the webhook.")
-	podMutatorCmd.Flags().StringVar(&podMutatorTLSKeyName, "tls-key-name", "apiserver.key", "The file name of the private key for the webhook.")
+	webhookCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
+	webhookCmd.Flags().StringVar(&webhookTLSCertDir, "tls-dir", "/apiserver.local.config/certificates", "The path where the certificate and key for the webhook are located.")
+	webhookCmd.Flags().StringVar(&webhookTLSCertName, "tls-cert-name", "apiserver.crt", "The file name of the certificate for the webhook.")
+	webhookCmd.Flags().StringVar(&webhookTLSKeyName, "tls-key-name", "apiserver.key", "The file name of the private key for the webhook.")
 
 }
 
@@ -196,6 +197,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 		setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
 		os.Exit(1)
 	}
+
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting the Operator.")
@@ -224,7 +226,7 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	mgr.Start(ctx)
 }
 
-func runPodMutator(cmd *cobra.Command, args []string) {
+func runWebhook(cmd *cobra.Command, args []string) {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 	printVersion()
@@ -234,7 +236,7 @@ func runPodMutator(cmd *cobra.Command, args []string) {
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
+		MetricsBindAddress: "0",
 		Port:               webhookPort,
 		LeaderElection:     false,
 	})
@@ -245,14 +247,14 @@ func runPodMutator(cmd *cobra.Command, args []string) {
 
 	// Setup the webhook
 	hookServer := mgr.GetWebhookServer()
-	hookServer.CertDir = podMutatorTLSCertDir
-	hookServer.KeyName = podMutatorTLSKeyName
-	hookServer.CertName = podMutatorTLSCertName
+	hookServer.CertDir = webhookTLSCertDir
+	hookServer.KeyName = webhookTLSKeyName
+	hookServer.CertName = webhookTLSCertName
 	hookServer.Port = webhookPort
 	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
 	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
 
-	setupLog.Info("starting the Pod mutating webhook")
+	setupLog.Info("starting the webhook")
 	if err := mgr.Start(stopCh); err != nil {
 		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)

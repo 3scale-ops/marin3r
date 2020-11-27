@@ -48,6 +48,7 @@ uninstall: manifests kustomize
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
+	cd config/webhook && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Undeploy controller from the configured Kubernetes cluster in ~/.kube/config
@@ -61,6 +62,10 @@ deploy-test: manifests kustomize
 # Undeploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
 undeploy-test: manifests kustomize
 	$(KUSTOMIZE) build config/test | kubectl delete -f -
+
+deploy-cert-manager:
+	# kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.crds.yaml
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen

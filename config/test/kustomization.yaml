@@ -6,6 +6,8 @@ resources:
 - ../crd
 - ../rbac
 - ../manager
+- ../webhook
+- ../certmanager
 images:
 - name: quay.io/3scale/marin3r
   newName: quay.io/3scale/marin3r
@@ -22,7 +24,57 @@ patchesStrategicMerge:
       spec:
         containers:
         - name: manager
+          image: quay.io/3scale/marin3r:test
           args:
           - "operator"
           - "--debug"
           - "--enable-leader-election"
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: controller-webhook
+    namespace: system
+  spec:
+    template:
+      spec:
+        containers:
+        - name: webhook
+          image: quay.io/3scale/marin3r:test
+- |-
+  apiVersion: admissionregistration.k8s.io/v1beta1
+  kind: MutatingWebhookConfiguration
+  metadata:
+    name: mutating-webhook-configuration
+    annotations:
+      cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+
+# the following config is for teaching kustomize how to do var substitution
+vars:
+  # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER' prefix.
+  - name: CERTIFICATE_NAMESPACE # namespace of the certificate CR
+    objref:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1alpha2
+      name: serving-cert # this name should match the one in certificate.yaml
+    fieldref:
+      fieldpath: metadata.namespace
+  - name: CERTIFICATE_NAME
+    objref:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1alpha2
+      name: serving-cert # this name should match the one in certificate.yaml
+  - name: SERVICE_NAMESPACE # namespace of the service
+    objref:
+      kind: Service
+      version: v1
+      name: webhook-service
+    fieldref:
+      fieldpath: metadata.namespace
+  - name: SERVICE_NAME
+    objref:
+      kind: Service
+      version: v1
+      name: webhook-service
