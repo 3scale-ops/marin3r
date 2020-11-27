@@ -37,6 +37,7 @@ import (
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator.marin3r"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
 	"github.com/3scale/marin3r/pkg/version"
+	"github.com/spf13/cobra"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -57,6 +58,12 @@ var (
 	enableLeaderElection     bool
 )
 
+var rootCmd = &cobra.Command{
+	Use:   "marin3r",
+	Short: "marin3r, the simple envoy control plane",
+	Run:   run,
+}
+
 var (
 	scheme   = apimachineryruntime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
@@ -69,21 +76,27 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-func main() {
-	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metric endpoint binds to.")
-	flag.IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
-	flag.IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the mutating webhook server will listen.")
-	flag.StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
+func init() {
+	rootCmd.Flags().IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
+	rootCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the mutating webhook server will listen.")
+	rootCmd.Flags().StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
 		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
-	flag.StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
+	rootCmd.Flags().StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
 		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
-	flag.BoolVar(&isDiscoveryService, "discovery-service", false, "Run the discovery-service instead of the operator")
-	flag.BoolVar(&debug, "debug", false, "Enable debug logs")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	rootCmd.Flags().BoolVar(&isDiscoveryService, "discovery-service", false, "Run the discovery-service instead of the operator")
+	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logs")
+	rootCmd.Flags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metric endpoint binds to.")
+}
 
-	flag.Parse()
+func main() {
+
+	rootCmd.Execute()
+}
+
+func run(cmd *cobra.Command, args []string) {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 
