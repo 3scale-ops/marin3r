@@ -457,7 +457,7 @@ DiscoveryService represents an envoy discovery service server. Currently only on
 [id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificate"]
 ==== DiscoveryServiceCertificate 
 
-DiscoveryServiceCertificate is used to create certificates, either self-signed or by using a cert-manager CA issuer. This object is used by the DiscoveryService controller to create the required certificates for the diferent components of the discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
+DiscoveryServiceCertificate is used to create certificates, either self-signed or by using a cert-manager CA issuer. This object is used by the DiscoveryService controller to create the required certificates for the different components of the discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
 
 .Appears In:
 ****
@@ -584,7 +584,7 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`discoveryServiceNamespace`* __string__ | DiscoveryServiceNamespcae is the name of the namespace where the envoy discovery service server should be deployed.
+| *`discoveryServiceNamespace`* __string__ | DiscoveryServiceNamespace is the name of the namespace where the envoy discovery service server should be deployed.
 | *`enabledNamespaces`* __string array__ | EnabledNamespaces is a list of namespaces where the envoy discovery service is enabled. In order to be able to use marin3r from a given namespace its name needs to be included in this list because the operator needs to add some required resources in that namespace.
 | *`image`* __string__ | Image holds the image to use for the discovery service Deployment
 | *`debug`* __boolean__ | Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.

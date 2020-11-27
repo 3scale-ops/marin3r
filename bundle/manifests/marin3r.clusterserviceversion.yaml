@@ -145,7 +145,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/3scale/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.6.0
+  name: marin3r.v0.7.0-alpha2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -4257,8 +4257,6 @@ spec:
           resources:
           - envoybootstraps
           verbs:
-          - create
-          - delete
           - get
           - list
           - patch
@@ -4275,12 +4273,43 @@ spec:
         - apiGroups:
           - marin3r.3scale.net
           resources:
-          - envoyconfigs
+          - envoyconfigrevisions
           verbs:
+          - create
+          - delete
           - get
           - list
           - patch
+          - update
           - watch
+        - apiGroups:
+          - marin3r.3scale.net
+          resources:
+          - envoyconfigrevisions/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - marin3r.3scale.net
+          resources:
+          - envoyconfigs
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - marin3r.3scale.net
+          resources:
+          - envoyconfigs/status
+          verbs:
+          - get
+          - patch
+          - update
         - apiGroups:
           - operator.marin3r.3scale.net
           resources:
@@ -4436,4 +4465,5 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.6.0
+  replaces: marin3r.v0.6.0
+  version: 0.7.0-alpha2
