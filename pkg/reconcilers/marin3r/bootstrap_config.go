@@ -109,6 +109,10 @@ func (r *BootstrapConfigReconciler) Reconcile(envoyAPI envoy.APIVersion) (ctrl.R
 
 	// Reconcile the configs in the ConfigMap
 	desired, err := r.getBootstrapConfigMapObject(ds, envoyAPI)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if equality.Semantic.DeepEqual(desired.Data, cm.Data) {
 		patch := client.MergeFrom(cm.DeepCopy())
 		cm.Data = desired.Data

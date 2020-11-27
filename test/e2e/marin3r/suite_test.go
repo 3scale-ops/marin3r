@@ -129,6 +129,7 @@ var _ = SynchronizedBeforeSuite(
 
 		var err error
 		cfg, err = testEnv.Start()
+		Expect(err).NotTo(HaveOccurred())
 
 		err = marin3rv1alpha1.AddToScheme(scheme.Scheme)
 		Expect(err).NotTo(HaveOccurred())
