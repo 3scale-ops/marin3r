@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -11,9 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *DiscoveryServiceReconciler) reconcileServiceAccount(ctx context.Context) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileServiceAccount(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
-	// r.Log.V(1).Info("Reconciling ServiceAccount")
 	existent := &corev1.ServiceAccount{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, existent)
 
@@ -26,7 +26,7 @@ func (r *DiscoveryServiceReconciler) reconcileServiceAccount(ctx context.Context
 			if err := r.Client.Create(ctx, existent); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info("Created ServiceAccount")
+			log.Info("Created ServiceAccount")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err

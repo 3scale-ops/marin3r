@@ -6,6 +6,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/util/pki"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *DiscoveryServiceCertificateReconciler) reconcileSelfSignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate) error {
+func (r *DiscoveryServiceCertificateReconciler) reconcileSelfSignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate, log logr.Logger) error {
 
 	// Fetch the certmanagerv1alpha2.Certificate instance
 	secret := &corev1.Secret{}
@@ -38,7 +39,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileSelfSignedCertificate(c
 			if err := r.Client.Create(ctx, secret); err != nil {
 				return err
 			}
-			r.Log.Info("Created self-signed certificate")
+			log.Info("Created self-signed certificate")
 			return nil
 		}
 		return err
@@ -58,7 +59,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileSelfSignedCertificate(c
 	// Check if certificate is invalid
 	err = pki.Verify(cert, cert)
 	if err != nil {
-		r.Log.Error(err, "Invalid certificate detected")
+		log.Error(err, "Invalid certificate detected")
 	}
 
 	// If certificate is invalid or has been marked for renewal, reissue it
@@ -72,7 +73,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileSelfSignedCertificate(c
 		if err := r.Client.Patch(ctx, secret, patch); err != nil {
 			return err
 		}
-		r.Log.Info("Re-issued self-signed certificate")
+		log.Info("Re-issued self-signed certificate")
 
 	}
 

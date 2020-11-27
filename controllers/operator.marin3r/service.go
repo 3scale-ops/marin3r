@@ -4,6 +4,7 @@ import (
 	"context"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -15,9 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *DiscoveryServiceReconciler) reconcileService(ctx context.Context) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileService(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
-	// r.Log.V(1).Info("Reconciling Service")
 	existent := &corev1.Service{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: r.ds.GetServiceConfig().Name, Namespace: OwnedObjectNamespace(r.ds)}, existent)
 
@@ -30,7 +30,7 @@ func (r *DiscoveryServiceReconciler) reconcileService(ctx context.Context) (reco
 			if err := r.Client.Create(ctx, existent); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info("Created Service")
+			log.Info("Created Service")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -46,7 +46,7 @@ func (r *DiscoveryServiceReconciler) reconcileService(ctx context.Context) (reco
 		if err := r.Client.Patch(ctx, existent, patch); err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Log.Info("Patched Service")
+		log.Info("Patched Service")
 	}
 
 	return reconcile.Result{}, nil

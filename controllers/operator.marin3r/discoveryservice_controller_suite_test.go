@@ -15,6 +15,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("EnvoyConfigRevision controller", func() {
@@ -49,7 +50,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Name: "instance",
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image:                     "image",
+				Image:                     pointer.StringPtr("image"),
 				DiscoveryServiceNamespace: namespace,
 				EnabledNamespaces:         []string{namespace},
 			},

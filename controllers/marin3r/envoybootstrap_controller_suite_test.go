@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
@@ -76,7 +77,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 					Name: "instance",
 				},
 				Spec: operatorv1alpha1.DiscoveryServiceSpec{
-					Image:                     "image",
+					Image:                     pointer.StringPtr("image"),
 					DiscoveryServiceNamespace: namespace,
 					EnabledNamespaces:         []string{namespace},
 				},

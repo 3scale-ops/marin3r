@@ -7,6 +7,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/util/pki"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate) error {
+func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate, log logr.Logger) error {
 
 	// Get the issuer certificate
 	issuerCert, issuerKey, err := r.getCACertificate(ctx, dsc.Spec)
@@ -43,7 +44,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 			if err := r.Client.Create(ctx, secret); err != nil {
 				return err
 			}
-			r.Log.Info("Created ca-signed certificate")
+			log.Info("Created ca-signed certificate")
 			return nil
 		}
 		return err
@@ -63,7 +64,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 	// Check if certificate is invalid
 	err = pki.Verify(cert, cert)
 	if err != nil {
-		r.Log.Error(err, "Invalid certificate detected")
+		log.Error(err, "Invalid certificate detected")
 	}
 
 	// If certificate is invalid or has been marked for renewal, reissue it
@@ -77,7 +78,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 		if err := r.Client.Patch(ctx, secret, patch); err != nil {
 			return err
 		}
-		r.Log.Info("Re-issued ca-signed certificate")
+		log.Info("Re-issued ca-signed certificate")
 
 	}
 

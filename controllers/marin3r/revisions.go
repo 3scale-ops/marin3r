@@ -10,6 +10,7 @@ import (
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	common "github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/go-logr/logr"
 
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -28,7 +29,7 @@ const (
 )
 
 func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
-	ec *marin3rv1alpha1.EnvoyConfig, version string) error {
+	ec *marin3rv1alpha1.EnvoyConfig, version string, log logr.Logger) error {
 
 	// Get the list of revisions for the current version
 	ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
@@ -80,7 +81,7 @@ func (r *EnvoyConfigReconciler) ensureEnvoyConfigRevision(ctx context.Context,
 	return nil
 }
 
-func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, desiredVersion string) error {
+func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, desiredVersion string, log logr.Logger) error {
 
 	// Get all revisions owned by this EnvoyConfig that match the envoy API version
 	ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
@@ -150,7 +151,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *m
 	return nil
 }
 
-func (r *EnvoyConfigReconciler) deleteUnreferencedRevisions(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+func (r *EnvoyConfigReconciler) deleteUnreferencedRevisions(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, log logr.Logger) error {
 	// Get all revisions that belong to this ec
 	ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 	envoyAPI := string(ec.GetEnvoyAPIVersion())
@@ -176,7 +177,7 @@ func (r *EnvoyConfigReconciler) deleteUnreferencedRevisions(ctx context.Context,
 //  - It will set the 'RevisionPublished' condition to true in the revision that matches the given version
 // This ensures that at a given point in time 0 or 1 revisions can have the 'PublishedRevision' to true, being
 // 1 the case most of the time
-func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, version, reason, msg string) error {
+func (r *EnvoyConfigReconciler) markRevisionPublished(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, version, reason, msg string, log logr.Logger) error {
 
 	// Get all revisions for this EnvoyConfig
 	ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}

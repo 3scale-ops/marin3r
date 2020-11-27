@@ -48,7 +48,7 @@ type EnvoyConfigReconciler struct {
 
 func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	r.Log = r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
+	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyConfig instance
 	ec := &marin3rv1alpha1.EnvoyConfig{}
@@ -67,11 +67,11 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// Set defaults.
 	// TODO: remove this when wwe migrate to CRD v1 api as we will
 	// be able to set defauls directly in the CRD definition.
-	if err := r.reconcileSpecDefaults(ctx, ec); err != nil {
+	if err := r.reconcileSpecDefaults(ctx, ec, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := r.reconcileFinalizer(ctx, ec); err != nil {
+	if err := r.reconcileFinalizer(ctx, ec, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -79,7 +79,7 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	// envoy API v3 which comes with the addition of a new label to identify revisions belonging
 	// to each api version. The first time this version of the controller runs, it will set the
 	// required labels. This will also help with future labels that get added.
-	if err := r.reconcileRevisionLabels(ctx, ec); err != nil {
+	if err := r.reconcileRevisionLabels(ctx, ec, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -87,20 +87,20 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	desiredVersion := calculateRevisionHash(ec.Spec.EnvoyResources)
 
 	// ensure that the desiredVersion has a matching revision object
-	if err := r.ensureEnvoyConfigRevision(ctx, ec, desiredVersion); err != nil {
+	if err := r.ensureEnvoyConfigRevision(ctx, ec, desiredVersion, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Update the ConfigRevisions list in the status
-	if err := r.reconcileRevisionList(ctx, ec, desiredVersion); err != nil {
+	if err := r.reconcileRevisionList(ctx, ec, desiredVersion, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// determine the version that should be published
-	version, err := r.getVersionToPublish(ctx, ec)
+	version, err := r.getVersionToPublish(ctx, ec, log)
 	if err != nil {
 		if err.(ControllerError).ErrorType == AllRevisionsTaintedError {
-			if err := r.setRollbackFailed(ctx, ec); err != nil {
+			if err := r.setRollbackFailed(ctx, ec, log); err != nil {
 				return ctrl.Result{}, err
 			}
 			// This is an unrecoverable error because there are no
@@ -113,24 +113,24 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 
 	// Mark the "version" as the published revision
 	if err := r.markRevisionPublished(ctx, ec, version, "VersionPublished",
-		fmt.Sprintf("Version '%s' has been published", version)); err != nil {
+		fmt.Sprintf("Version '%s' has been published", version), log); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Update the status
-	if err := r.updateStatus(ctx, ec, desiredVersion, version); err != nil {
+	if err := r.updateStatus(ctx, ec, desiredVersion, version, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Cleanup unreferenced EnvoyConfigRevision objects
-	if err := r.deleteUnreferencedRevisions(ctx, ec); err != nil {
+	if err := r.deleteUnreferencedRevisions(ctx, ec, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *EnvoyConfigReconciler) getVersionToPublish(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) (string, error) {
+func (r *EnvoyConfigReconciler) getVersionToPublish(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, log logr.Logger) (string, error) {
 	// Get the list of revisions for this nodeID
 	ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
@@ -159,7 +159,7 @@ func (r *EnvoyConfigReconciler) getVersionToPublish(ctx context.Context, ec *mar
 	return "", NewControllerError(AllRevisionsTaintedError, "getVersionToPublish", "All available revisions are tainted")
 }
 
-func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, desired, published string) error {
+func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, desired, published string, log logr.Logger) error {
 
 	changed := false
 	patch := client.MergeFrom(ec.DeepCopy())
@@ -227,7 +227,7 @@ func (r *EnvoyConfigReconciler) updateStatus(ctx context.Context, ec *marin3rv1a
 // reconcileRevisionLabels ensures  all the EnvoyConfigRevisions owned by this EnvoyConfig have
 // the appropriate labels. This is important as labels are extensively used to get the lists of
 // EnvoyConfigRevision resources.
-func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, log logr.Logger) error {
 	// Get all revisions for this EnvoyConfig
 	ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
@@ -248,7 +248,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec 
 		_, okEnvoyAPITag := ecr.GetLabels()[envoyAPITag]
 		_, okNodeIDTag := ecr.GetLabels()[nodeIDTag]
 		if !okVersionTag || !okEnvoyAPITag || !okNodeIDTag {
-			r.Log.Info("Reconciling labels for EnvoyConfigRevision", "Name", ecr.GetName(), "Namespace", ecr.GetNamespace())
+			log.Info("Reconciling labels for EnvoyConfigRevision", "Name", ecr.GetName(), "Namespace", ecr.GetNamespace())
 			patch := client.MergeFrom(ecr.DeepCopy())
 			ecr.SetLabels(map[string]string{
 				versionTag:  ecr.Spec.Version,
@@ -263,7 +263,7 @@ func (r *EnvoyConfigReconciler) reconcileRevisionLabels(ctx context.Context, ec 
 	return nil
 }
 
-func (r *EnvoyConfigReconciler) reconcileSpecDefaults(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+func (r *EnvoyConfigReconciler) reconcileSpecDefaults(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, log logr.Logger) error {
 	changed := false
 
 	if ec.Spec.EnvoyAPI == nil {
@@ -277,7 +277,7 @@ func (r *EnvoyConfigReconciler) reconcileSpecDefaults(ctx context.Context, ec *m
 	}
 
 	if changed {
-		r.Log.V(1).Info("setting EnvoyConfigRevision defaults")
+		log.V(1).Info("setting EnvoyConfigRevision defaults")
 		if err := r.Client.Update(ctx, ec); err != nil {
 			return err
 		}
@@ -295,7 +295,7 @@ func contains(list []string, s string) bool {
 	return false
 }
 
-func (r *EnvoyConfigReconciler) setRollbackFailed(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+func (r *EnvoyConfigReconciler) setRollbackFailed(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, log logr.Logger) error {
 	if !ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
 		patch := client.MergeFrom(ec.DeepCopy())
 		ec.Status.Conditions.SetCondition(status.Condition{
@@ -319,7 +319,7 @@ func (r *EnvoyConfigReconciler) setRollbackFailed(ctx context.Context, ec *marin
 	return nil
 }
 
-func (r *EnvoyConfigReconciler) reconcileFinalizer(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig) error {
+func (r *EnvoyConfigReconciler) reconcileFinalizer(ctx context.Context, ec *marin3rv1alpha1.EnvoyConfig, log logr.Logger) error {
 
 	if len(ec.GetObjectMeta().GetFinalizers()) != 0 {
 		controllerutil.RemoveFinalizer(ec, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)

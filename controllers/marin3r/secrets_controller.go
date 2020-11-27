@@ -43,7 +43,6 @@ type SecretReconciler struct {
 // +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs,verbs=get;list;watch;patch
 
 func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-
 	ctx := context.Background()
 
 	// Fetch the Secret instance
@@ -61,8 +60,8 @@ func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	_ = r.Log.WithValues("Namespace", req.Namespace, "Name", req.Name)
-	r.Log.Info("Reconciling from 'kubernetes.io/tls' Secret")
+	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
+	log.Info("Reconciling from 'kubernetes.io/tls' Secret")
 
 	// Get the list of EnvoyConfigRevisions published and
 	// check which of them contain refs to this secret
@@ -77,7 +76,7 @@ func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 			for _, secret := range ecr.Spec.EnvoyResources.Secrets {
 				if secret.Ref.Name == req.Name && secret.Ref.Namespace == req.Namespace {
-					r.Log.Info("Triggered EnvoyConfigRevision reconcile",
+					log.Info("Triggered EnvoyConfigRevision reconcile",
 						"EnvoyConfigRevision_Name", ecr.ObjectMeta.Name, "EnvoyConfigRevision_Namespace", ecr.GetNamespace())
 					if err != nil {
 						return reconcile.Result{}, err
@@ -95,7 +94,7 @@ func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 						if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
 							return reconcile.Result{}, err
 						}
-						r.Log.V(1).Info("Condition should have been added ...")
+						log.V(1).Info("Condition should have been added ...")
 					}
 				}
 			}

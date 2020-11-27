@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -13,9 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *DiscoveryServiceReconciler) reconcileClusterRoleBinding(ctx context.Context) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileClusterRoleBinding(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
-	// r.Log.V(1).Info("Reconciling CusterRoleBinding")
 	existent := &rbacv1.ClusterRoleBinding{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
 
@@ -28,7 +28,7 @@ func (r *DiscoveryServiceReconciler) reconcileClusterRoleBinding(ctx context.Con
 			if err := r.Client.Create(ctx, existent); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info("Created CusterRoleBinding")
+			log.Info("Created CusterRoleBinding")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -42,7 +42,7 @@ func (r *DiscoveryServiceReconciler) reconcileClusterRoleBinding(ctx context.Con
 		if err := r.Client.Patch(ctx, existent, patch); err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Log.Info("Patched CusterRoleBinding")
+		log.Info("Patched CusterRoleBinding")
 	}
 
 	return reconcile.Result{}, nil

@@ -8,6 +8,7 @@ import (
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,11 +22,11 @@ import (
 // the active namespaces:
 //     - an EnvoyBootstrap resource
 //     - a label to enable sidecar injection in the namespace
-func (r *DiscoveryServiceReconciler) reconcileEnabledNamespaces(ctx context.Context) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileEnabledNamespaces(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 	errList := []error{}
 	// Reconcile each namespace in the list of enabled namespaces
 	for _, ns := range r.ds.Spec.EnabledNamespaces {
-		err := r.reconcileEnabledNamespace(ctx, ns)
+		err := r.reconcileEnabledNamespace(ctx, ns, log)
 		if err != nil {
 			errList = append(errList, err)
 		}
@@ -39,9 +40,7 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespaces(ctx context.Cont
 	return reconcile.Result{}, nil
 }
 
-func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Context, namespace string) error {
-
-	// r.Log.V(1).Info("Reconciling enabled Namespace", "Namespace", namespace)
+func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Context, namespace string, log logr.Logger) error {
 
 	ns := &corev1.Namespace{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: namespace}, ns)
@@ -72,7 +71,7 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Conte
 		if err := r.Client.Patch(ctx, ns, patch); err != nil {
 			return err
 		}
-		r.Log.Info("Patched Namespace", "Namespace", namespace)
+		log.Info("Patched Namespace", "Namespace", namespace)
 	}
 
 	eb := &marin3rv1alpha1.EnvoyBootstrap{}
@@ -89,7 +88,7 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Conte
 			if err := r.Client.Create(ctx, eb); err != nil {
 				return err
 			}
-			r.Log.Info("Created EnvoyBootstrap", "Name", r.ds.GetName(), "Namespace", namespace)
+			log.Info("Created EnvoyBootstrap", "Name", r.ds.GetName(), "Namespace", namespace)
 			return nil
 		}
 		return err

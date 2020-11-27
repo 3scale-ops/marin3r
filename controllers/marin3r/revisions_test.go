@@ -61,7 +61,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 		cl := fake.NewFakeClient(ec)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
+		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx", nil)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_ensureEnvoyConfigRevision() error = %v", gotErr)
 			return
@@ -116,7 +116,7 @@ func TestEnvoyConfigReconciler_ensureEnvoyConfigRevision(t *testing.T) {
 		cl := fake.NewFakeClient(ec, ecr)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx")
+		gotErr := r.ensureEnvoyConfigRevision(context.TODO(), ec, "xxxx", nil)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_ensureEnvoyConfigRevision() error = %v", gotErr)
 			return
@@ -212,7 +212,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 		cl := fake.NewFakeClient(ec, ecr1, ecr2, ecr3, ecr4)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.reconcileRevisionList(context.TODO(), ec, "2")
+		gotErr := r.reconcileRevisionList(context.TODO(), ec, "2", nil)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_consolidateRevisionList() error = %v", gotErr)
 			return
@@ -249,7 +249,7 @@ func TestEnvoyConfigReconciler_deleteUnreferencedRevisions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.r.deleteUnreferencedRevisions(tt.args.ctx, tt.args.ec); (err != nil) != tt.wantErr {
+			if err := tt.r.deleteUnreferencedRevisions(tt.args.ctx, tt.args.ec, nil); (err != nil) != tt.wantErr {
 				t.Errorf("EnvoyConfigReconciler.deleteUnreferencedRevisions() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -303,7 +303,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		cl := fake.NewFakeClient(ecr1, ecr2)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), ec, "2", "reason", "msg")
+		gotErr := r.markRevisionPublished(context.TODO(), ec, "2", "reason", "msg", nil)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return
@@ -370,7 +370,7 @@ func TestEnvoyConfigReconciler_markRevisionPublished(t *testing.T) {
 		cl := fake.NewFakeClient(ecr1, ecr2)
 		r := &EnvoyConfigReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		gotErr := r.markRevisionPublished(context.TODO(), ec, "1", "reason", "msg")
+		gotErr := r.markRevisionPublished(context.TODO(), ec, "1", "reason", "msg", nil)
 		if gotErr != nil {
 			t.Errorf("TestEnvoyConfigReconciler_markRevisionPublished() error = %v", gotErr)
 			return

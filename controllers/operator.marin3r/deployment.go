@@ -63,7 +63,7 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 						Containers: []corev1.Container{
 							{
 								Name:  "marin3r",
-								Image: ds.Spec.Image,
+								Image: ds.GetImage(),
 								Args: []string{
 									"--discovery-service",
 									"--server-certificate-path=/etc/marin3r/tls/server",
@@ -143,7 +143,7 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 			},
 		}
 
-		if ds.Spec.Debug {
+		if ds.Debug() {
 			dep.Spec.Template.Spec.Containers[0].Args = append(dep.Spec.Template.Spec.Containers[0].Args, "--debug")
 		}
 

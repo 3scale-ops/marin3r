@@ -4,6 +4,7 @@ import (
 	"context"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -15,9 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *DiscoveryServiceReconciler) reconcileClusterRole(ctx context.Context) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileClusterRole(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
-	// r.Log.V(1).Info("Reconciling CusterRole")
 	existent := &rbacv1.ClusterRole{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
 
@@ -30,7 +30,7 @@ func (r *DiscoveryServiceReconciler) reconcileClusterRole(ctx context.Context) (
 			if err := r.Client.Create(ctx, existent); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info("Created CusterRole")
+			log.Info("Created CusterRole")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -43,7 +43,7 @@ func (r *DiscoveryServiceReconciler) reconcileClusterRole(ctx context.Context) (
 		if err := r.Client.Patch(ctx, existent, patch); err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Log.Info("Patched CusterRole")
+		log.Info("Patched CusterRole")
 	}
 
 	return reconcile.Result{}, nil

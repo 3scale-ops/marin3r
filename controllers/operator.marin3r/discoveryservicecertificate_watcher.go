@@ -50,9 +50,9 @@ type DiscoveryServiceCertificateWatcher struct {
 
 func (r *DiscoveryServiceCertificateWatcher) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	r.Log = r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
+	log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
-	r.Log.V(1).Info("Watching certificate validity")
+	log.V(1).Info("Watching certificate validity")
 
 	// Fetch the DiscoveryServiceCertificate instance
 	dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
@@ -70,7 +70,7 @@ func (r *DiscoveryServiceCertificateWatcher) Reconcile(request ctrl.Request) (ct
 	// namespace. The controller checks this and fixes it for the user, showing a log line indicating
 	// so. In the future, usage of 'corev1.SecretReference' should be dropped.
 	if dsc.GetNamespace() != dsc.Spec.SecretRef.Namespace {
-		r.Log.Info("Namespace indication in 'spec.SecretRef.Namespace' will be ignored and should be removed")
+		log.Info("Namespace indication in 'spec.SecretRef.Namespace' will be ignored and should be removed")
 		dsc.Spec.SecretRef.Namespace = dsc.GetNamespace()
 	}
 
@@ -96,12 +96,12 @@ func (r *DiscoveryServiceCertificateWatcher) Reconcile(request ctrl.Request) (ct
 
 		// renewalWindow is the 20% of the certificate validity window
 		renewalWindow := float64(dsc.Spec.ValidFor) * 0.20
-		r.Log.V(1).Info("Debug", "RenewalWindow", renewalWindow)
-		r.Log.V(1).Info("Debug", "TimeToExpiracy", cert.NotAfter.Sub(time.Now()).Seconds())
+		log.V(1).Info("Debug", "RenewalWindow", renewalWindow)
+		log.V(1).Info("Debug", "TimeToExpiracy", cert.NotAfter.Sub(time.Now()).Seconds())
 
 		if cert.NotAfter.Sub(time.Now()).Seconds() < renewalWindow {
 			if !dsc.Status.Conditions.IsTrueFor(operatorv1alpha1.CertificateNeedsRenewalCondition) {
-				r.Log.Info("Certificate needs renewal")
+				log.Info("Certificate needs renewal")
 
 				// add condition
 				patch := client.MergeFrom(dsc.DeepCopy())

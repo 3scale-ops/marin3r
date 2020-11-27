@@ -55,7 +55,7 @@ type EnvoyConfigRevisionReconciler struct {
 
 func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	r.Log = r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
+	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyConfigRevision instance
 	ecr := &marin3rv1alpha1.EnvoyConfigRevision{}
@@ -74,15 +74,15 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	// Set defaults.
 	// TODO: remove this when wwe migrate to CRD v1 api as we will
 	// be able to set defauls directly in the CRD definition.
-	if err := r.reconcileSpecDefaults(ctx, ecr); err != nil {
+	if err := r.reconcileSpecDefaults(ctx, ecr, log); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Add finalizer for this CR
 	if !contains(ecr.GetFinalizers(), marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
-		r.Log.V(1).Info("Adding Finalizer for the EnvoyConfigRevision")
+		log.V(1).Info("Adding Finalizer for the EnvoyConfigRevision")
 		if err := r.addFinalizer(ctx, ecr); err != nil {
-			r.Log.Error(err, "Failed adding finalizer for EnvoyConfigRevision")
+			log.Error(err, "Failed adding finalizer for EnvoyConfigRevision")
 			return ctrl.Result{}, err
 		}
 	}
@@ -94,7 +94,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			// Only the published version deletes the nodeID from the cache
 			if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 				r.finalizeEnvoyConfigRevision(ecr.Spec.NodeID)
-				r.Log.Info("Successfully cleared xDS server cache", "XDSS", string(ecr.GetEnvoyAPIVersion()), "NodeID", ecr.Spec.NodeID)
+				log.Info("Successfully cleared xDS server cache", "XDSS", string(ecr.GetEnvoyAPIVersion()), "NodeID", ecr.Spec.NodeID)
 			}
 			// Remove EnvoyConfigFinalizer. Once all finalizers have been
 			// removed, the object will be deleted.
@@ -222,7 +222,7 @@ func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *mari
 	return nil
 }
 
-func (r *EnvoyConfigRevisionReconciler) reconcileSpecDefaults(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision) error {
+func (r *EnvoyConfigRevisionReconciler) reconcileSpecDefaults(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision, log logr.Logger) error {
 	changed := false
 
 	if ecr.Spec.EnvoyAPI == nil {
@@ -236,7 +236,7 @@ func (r *EnvoyConfigRevisionReconciler) reconcileSpecDefaults(ctx context.Contex
 	}
 
 	if changed {
-		r.Log.V(1).Info("setting EnvoyConfigRevision defaults")
+		log.V(1).Info("setting EnvoyConfigRevision defaults")
 		if err := r.Client.Update(ctx, ecr); err != nil {
 			return err
 		}

@@ -5,6 +5,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
+	"github.com/go-logr/logr"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -22,9 +23,7 @@ const (
 )
 
 // reconcileMutatingWebhook keeps the marin3r MutatingWebhookConfiguration object in sync with the desired state
-func (r *DiscoveryServiceReconciler) reconcileMutatingWebhook(ctx context.Context) (reconcile.Result, error) {
-
-	// r.Log.V(1).Info("Reconciling MutatingWebhookConfiguration")
+func (r *DiscoveryServiceReconciler) reconcileMutatingWebhook(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
 	caBundle, err := r.getCABundle(ctx)
 	if err != nil {
@@ -43,7 +42,7 @@ func (r *DiscoveryServiceReconciler) reconcileMutatingWebhook(ctx context.Contex
 			if err := r.Client.Create(ctx, existent); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info("Created MutatingWebhookConfiguration")
+			log.Info("Created MutatingWebhookConfiguration")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
@@ -58,7 +57,7 @@ func (r *DiscoveryServiceReconciler) reconcileMutatingWebhook(ctx context.Contex
 		if err := r.Client.Patch(ctx, existent, patch); err != nil {
 			return reconcile.Result{}, err
 		}
-		r.Log.Info("Patched MutatingWebhookConfiguration")
+		log.Info("Patched MutatingWebhookConfiguration")
 	}
 
 	return reconcile.Result{}, nil

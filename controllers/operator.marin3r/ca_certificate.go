@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,9 +16,8 @@ import (
 )
 
 // reconcileCA is responsible of keeping the root CA available at all times
-func (r *DiscoveryServiceReconciler) reconcileCA(ctx context.Context) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileCA(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
-	// r.Log.V(1).Info("Reconciling CA certificate")
 	ca := &operatorv1alpha1.DiscoveryServiceCertificate{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: getCACertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, ca)
 
@@ -30,7 +30,7 @@ func (r *DiscoveryServiceReconciler) reconcileCA(ctx context.Context) (reconcile
 			if err := r.Client.Create(ctx, ca); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info("Created CA certificate")
+			log.Info("Created CA certificate")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err

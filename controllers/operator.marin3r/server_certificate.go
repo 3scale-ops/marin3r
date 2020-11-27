@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,9 +16,7 @@ import (
 )
 
 // reconcileServerCertificate is in charge of keeping the DiscoveryService server certificate available as a secret
-func (r *DiscoveryServiceReconciler) reconcileServerCertificate(ctx context.Context) (reconcile.Result, error) {
-
-	// r.Log.V(1).Info("Reconciling server certificate")
+func (r *DiscoveryServiceReconciler) reconcileServerCertificate(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
 	cert := &operatorv1alpha1.DiscoveryServiceCertificate{}
 	err := r.Client.Get(ctx, types.NamespacedName{Name: getServerCertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, cert)
@@ -31,7 +30,7 @@ func (r *DiscoveryServiceReconciler) reconcileServerCertificate(ctx context.Cont
 			if err := r.Client.Create(ctx, cert); err != nil {
 				return reconcile.Result{}, err
 			}
-			r.Log.Info("Created server certificate")
+			log.Info("Created server certificate")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err

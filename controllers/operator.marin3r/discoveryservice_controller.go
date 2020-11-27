@@ -74,7 +74,7 @@ type DiscoveryServiceReconciler struct {
 
 func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	r.Log = r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
+	log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
 	// Fetch the DiscoveryService instance
 	dsList := &operatorv1alpha1.DiscoveryServiceList{}
@@ -93,7 +93,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 
 	if len(dsList.Items) > 1 {
 		err := fmt.Errorf("More than one DiscoveryService object in the cluster, refusing to reconcile")
-		r.Log.Error(err, "Only one marin3r installation per cluster is supported")
+		log.Error(err, "Only one marin3r installation per cluster is supported")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	}
 
@@ -101,27 +101,27 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 	var result ctrl.Result
 	r.ds = &dsList.Items[0]
 
-	result, err = r.reconcileCA(ctx)
+	result, err = r.reconcileCA(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	result, err = r.reconcileServerCertificate(ctx)
+	result, err = r.reconcileServerCertificate(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	result, err = r.reconcileServiceAccount(ctx)
+	result, err = r.reconcileServiceAccount(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	result, err = r.reconcileClusterRole(ctx)
+	result, err = r.reconcileClusterRole(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	result, err = r.reconcileClusterRoleBinding(ctx)
+	result, err = r.reconcileClusterRoleBinding(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
@@ -135,7 +135,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return ctrl.Result{}, err
 	}
 
-	dr := reconcilers.NewDeploymentReconciler(ctx, r.Log, r.Client, r.Scheme, r.ds)
+	dr := reconcilers.NewDeploymentReconciler(ctx, log, r.Client, r.Scheme, r.ds)
 	result, err = dr.Reconcile(
 		types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)},
 		deploymentGeneratorFn(r.ds, secret),
@@ -144,7 +144,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return result, err
 	}
 
-	result, err = r.reconcileService(ctx)
+	result, err = r.reconcileService(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
@@ -154,12 +154,12 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 	// This is necessary because namespaces are not
 	// resources owned by this controller so the usual
 	// garbage collection mechanisms won't
-	result, err = r.reconcileEnabledNamespaces(ctx)
+	result, err = r.reconcileEnabledNamespaces(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	result, err = r.reconcileMutatingWebhook(ctx)
+	result, err = r.reconcileMutatingWebhook(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}

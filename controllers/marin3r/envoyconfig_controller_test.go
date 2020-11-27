@@ -205,7 +205,7 @@ func TestEnvoyConfigReconciler_getVersionToPublish(t *testing.T) {
 				Scheme: s,
 				Log:    ctrl.Log.WithName("test"),
 			}
-			got, err := r.getVersionToPublish(context.TODO(), tt.ec)
+			got, err := r.getVersionToPublish(context.TODO(), tt.ec, nil)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("EnvoyConfigReconciler.getVersionToPublish() error = %v, wantErr %v", err, tt.wantErr)
 				return

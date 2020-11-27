@@ -47,7 +47,7 @@ type DiscoveryServiceCertificateReconciler struct {
 
 func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	r.Log = r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
+	log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
 	// Fetch the DiscoveryServiceCertificate instance
 	dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
@@ -65,18 +65,18 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) 
 	// namespace. The controller checks this and fixes it for the user, showing a log line indicating
 	// so. In the future, usage of 'corev1.SecretReference' should be dropped.
 	if dsc.GetNamespace() != dsc.Spec.SecretRef.Namespace {
-		r.Log.Info("Namespace indication in 'spec.SecretRef.Namespace' will be ignored and should be removed")
+		log.Info("Namespace indication in 'spec.SecretRef.Namespace' will be ignored and should be removed")
 		dsc.Spec.SecretRef.Namespace = dsc.GetNamespace()
 	}
 
 	if dsc.Spec.Signer.CASigned != nil {
-		r.Log.Info("Reconciling ca-signed certificate")
-		if err := r.reconcileCASignedCertificate(ctx, dsc); err != nil {
+		log.Info("Reconciling ca-signed certificate")
+		if err := r.reconcileCASignedCertificate(ctx, dsc, log); err != nil {
 			return ctrl.Result{}, err
 		}
 	} else {
-		r.Log.Info("Reconciling self-signed certificate")
-		if err := r.reconcileSelfSignedCertificate(ctx, dsc); err != nil {
+		log.Info("Reconciling self-signed certificate")
+		if err := r.reconcileSelfSignedCertificate(ctx, dsc, log); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
