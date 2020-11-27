@@ -4399,7 +4399,7 @@ spec:
                 - --enable-leader-election
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:latest
+                image: quay.io/3scale/marin3r:0.7.0-alpha2
                 name: manager
                 resources:
                   limits:
@@ -4465,5 +4465,4 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  replaces: marin3r.v0.6.0
   version: 0.7.0-alpha2
