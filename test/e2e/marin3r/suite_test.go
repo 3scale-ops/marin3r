@@ -103,11 +103,10 @@ var _ = SynchronizedBeforeSuite(
 				Name: "instance",
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image:                     image,
+				Image:                     pointer.StringPtr(image),
 				DiscoveryServiceNamespace: targetNamespace,
 				EnabledNamespaces:         []string{},
-				Debug:                     true,
-			},
+				Debug:                     pointer.BoolPtr(false)},
 		}
 		err = k8sClient.Create(context.Background(), ds)
 		Expect(err).ToNot(HaveOccurred())

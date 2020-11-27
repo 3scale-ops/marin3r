@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
@@ -53,7 +54,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				Name: "instance",
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image:                     image,
+				Image:                     pointer.StringPtr(image),
 				DiscoveryServiceNamespace: targetNamespace,
 				EnabledNamespaces:         []string{testNamespace},
 			},
@@ -159,7 +160,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 
 		It("reconciles the discovery service deployment", func() {
 
-			ds.Spec.Debug = true
+			ds.Spec.Debug = pointer.BoolPtr(true)
 			err := k8sClient.Update(context.Background(), ds)
 			Expect(err).ToNot(HaveOccurred())
 

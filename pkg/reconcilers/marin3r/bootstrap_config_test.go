@@ -17,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -90,8 +91,8 @@ func TestBootstrapConfigReconciler_Reconcile(t *testing.T) {
 						Spec: operatorv1alpha1.DiscoveryServiceSpec{
 							DiscoveryServiceNamespace: "default",
 							EnabledNamespaces:         []string{"default"},
-							Image:                     "xxx",
-							Debug:                     false,
+							Image:                     pointer.StringPtr("xxx"),
+							Debug:                     pointer.BoolPtr(false),
 						},
 					},
 				),
