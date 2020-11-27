@@ -73,7 +73,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 
 	// Set defaults.
 	// TODO: remove this when wwe migrate to CRD v1 api as we will
-	// be able to set defauls directly in the CRD definition.
+	// be able to set defaults directly in the CRD definition.
 	if err := r.reconcileSpecDefaults(ctx, ecr, log); err != nil {
 		return ctrl.Result{}, err
 	}

@@ -12,7 +12,7 @@ const (
 	AllRevisionsTaintedError ControllerErrorType = "AllRevisionsTainted"
 
 	// UnknownError is used for non specific errors that don't
-	// require special treatment or are yet unkown
+	// require special treatment or are yet unknown
 	UnknownError ControllerErrorType = "Unknown"
 )
 

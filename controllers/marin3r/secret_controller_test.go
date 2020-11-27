@@ -24,7 +24,7 @@ func init() {
 }
 
 func TestReconcileSecret_Reconcile(t *testing.T) {
-	t.Run("Adds ResourcesOutOfSyncCondition to NCR when a refered secret changes", func(t *testing.T) {
+	t.Run("Adds ResourcesOutOfSyncCondition to NCR when a referred secret changes", func(t *testing.T) {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret",

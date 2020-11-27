@@ -102,7 +102,7 @@ type DiscoveryServiceCertificateStatus struct {
 
 // DiscoveryServiceCertificate is used to create certificates, either self-signed
 // or by using a cert-manager CA issuer. This object is used by the DiscoveryService
-// controller to create the required certificates for the diferent components of the
+// controller to create the required certificates for the different components of the
 // discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced

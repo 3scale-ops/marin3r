@@ -163,7 +163,7 @@ func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
 			close(stopped)
 		}()
 
-		// Timeout on gracefull stop
+		// Timeout on graceful stop
 		t := time.NewTimer(10 * time.Second)
 		select {
 		case <-t.C:

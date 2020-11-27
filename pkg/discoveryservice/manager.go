@@ -56,7 +56,7 @@ type Manager struct {
 }
 
 // Start runs the DiscoveryServiceManager, which runs the EnvoyConfig and
-// EnvoyConfigRevision controlles, the xDS server and the mutating webhook server
+// EnvoyConfigRevision controller, the xDS server and the mutating webhook server
 func (dsm *Manager) Start(ctx context.Context) {
 
 	mgr, err := ctrl.NewManager(dsm.Cfg, ctrl.Options{

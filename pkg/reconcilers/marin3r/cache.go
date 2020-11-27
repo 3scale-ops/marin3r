@@ -57,14 +57,14 @@ func (r *CacheReconciler) Reconcile(req types.NamespacedName, resources *marin3r
 	// been written to the cache for that specific nodeID.
 	if snap.GetVersion(envoy.Secret) != oldSnap.GetVersion(envoy.Secret) || err != nil {
 
-		r.logger.Info("Writting new snapshot to xDS cache", "Version", version, "NodeID", nodeID, "Secrets Hash", snap.GetVersion(envoy.Secret))
+		r.logger.Info("Writing new snapshot to xDS cache", "Version", version, "NodeID", nodeID, "Secrets Hash", snap.GetVersion(envoy.Secret))
 
 		if err := r.xdsCache.SetSnapshot(nodeID, snap); err != nil {
 			return ctrl.Result{}, err
 		}
 
 	} else {
-		r.logger.V(1).Info("Snapshot has not changed, skipping writting to xDS cache", "NodeID", nodeID)
+		r.logger.V(1).Info("Snapshot has not changed, skipping writing to xDS cache", "NodeID", nodeID)
 	}
 
 	return ctrl.Result{}, nil

@@ -14,7 +14,7 @@ import (
 )
 
 func TestDiscoveryService_Resources(t *testing.T) {
-	explicitelySetResources := &v1.ResourceRequirements{
+	explicitlySetResources := &v1.ResourceRequirements{
 		Requests: v1.ResourceList{
 			v1.ResourceCPU:    resource.MustParse("100m"),
 			v1.ResourceMemory: resource.MustParse("200Mi"),
@@ -36,15 +36,15 @@ func TestDiscoveryService_Resources(t *testing.T) {
 			},
 			v1.ResourceRequirements{},
 		},
-		{"With explicitely set Resources",
+		{"With explicitly set Resources",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
-						Resources: explicitelySetResources,
+						Resources: explicitlySetResources,
 					},
 				}
 			},
-			*explicitelySetResources,
+			*explicitlySetResources,
 		},
 	}
 
@@ -59,7 +59,7 @@ func TestDiscoveryService_Resources(t *testing.T) {
 }
 
 func TestDiscoveryService_GetRootCertificateAuthorityOptions(t *testing.T) {
-	explicitelySet := &CertificateOptions{
+	explicitlySet := &CertificateOptions{
 		SecretName: "test",
 		Duration: metav1.Duration{
 			Duration: func() time.Duration {
@@ -80,17 +80,17 @@ func TestDiscoveryService_GetRootCertificateAuthorityOptions(t *testing.T) {
 			},
 			(&DiscoveryService{}).defaultRootCertificateAuthorityOptions(),
 		},
-		{"With explicitely set options",
+		{"With explicitly set options",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
 						PKIConfig: &PKIConfig{
-							RootCertificateAuthority: explicitelySet,
+							RootCertificateAuthority: explicitlySet,
 						},
 					},
 				}
 			},
-			explicitelySet,
+			explicitlySet,
 		},
 	}
 
@@ -105,7 +105,7 @@ func TestDiscoveryService_GetRootCertificateAuthorityOptions(t *testing.T) {
 }
 
 func TestDiscoveryService_GetServerCertificateOptions(t *testing.T) {
-	explicitelySet := &CertificateOptions{
+	explicitlySet := &CertificateOptions{
 		SecretName: "test",
 		Duration: metav1.Duration{
 			Duration: func() time.Duration {
@@ -126,17 +126,17 @@ func TestDiscoveryService_GetServerCertificateOptions(t *testing.T) {
 			},
 			(&DiscoveryService{}).defaultServerCertificateOptions(),
 		},
-		{"With explicitely set options",
+		{"With explicitly set options",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
 						PKIConfig: &PKIConfig{
-							ServerCertificate: explicitelySet,
+							ServerCertificate: explicitlySet,
 						},
 					},
 				}
 			},
-			explicitelySet,
+			explicitlySet,
 		},
 	}
 
@@ -162,7 +162,7 @@ func TestDiscoveryService_GetXdsServerPort(t *testing.T) {
 			},
 			DefaultXdsServerPort,
 		},
-		{"With explicitely set value",
+		{"With explicitly set value",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
@@ -196,7 +196,7 @@ func TestDiscoveryService_GetMetricsPort(t *testing.T) {
 			},
 			DefaultMetricsPort,
 		},
-		{"With explicitely set value",
+		{"With explicitly set value",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
@@ -230,7 +230,7 @@ func TestDiscoveryService_GetWebhookPort(t *testing.T) {
 			},
 			DefaultWebhookPort,
 		},
-		{"With explicitely set value",
+		{"With explicitly set value",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
@@ -253,7 +253,7 @@ func TestDiscoveryService_GetWebhookPort(t *testing.T) {
 }
 
 func TestDiscoveryService_GetServiceConfig(t *testing.T) {
-	explicitelySet := &ServiceConfig{
+	explicitlySet := &ServiceConfig{
 		Name: "my-service",
 		Type: HeadlessType,
 	}
@@ -269,14 +269,14 @@ func TestDiscoveryService_GetServiceConfig(t *testing.T) {
 			},
 			(&DiscoveryService{}).defaultServiceConfig(),
 		},
-		{"With explicitely set options",
+		{"With explicitly set options",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
-						ServiceConfig: explicitelySet,
+						ServiceConfig: explicitlySet,
 					}}
 			},
-			explicitelySet,
+			explicitlySet,
 		},
 	}
 
@@ -302,7 +302,7 @@ func TestDiscoveryService_GetImage(t *testing.T) {
 			},
 			fmt.Sprintf("%s:%s", DefaultImageRegistry, version.Current()),
 		},
-		{"With explicitely set value",
+		{"With explicitly set value",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
@@ -336,7 +336,7 @@ func TestDiscoveryService_Debug(t *testing.T) {
 			},
 			false,
 		},
-		{"With explicitely set value",
+		{"With explicitly set value",
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
