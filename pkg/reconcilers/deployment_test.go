@@ -229,7 +229,7 @@ func TestDeploymentReconciler_reconcileDeployment(t *testing.T) {
 							},
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
-									corev1.Container{
+									{
 										Name: "container1",
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
@@ -267,7 +267,7 @@ func TestDeploymentReconciler_reconcileDeployment(t *testing.T) {
 							},
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
-									corev1.Container{
+									{
 										Name: "container2",
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
@@ -301,7 +301,7 @@ func TestDeploymentReconciler_reconcileDeployment(t *testing.T) {
 						Template: corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
-									corev1.Container{
+									{
 										Name: "container1",
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
@@ -328,7 +328,7 @@ func TestDeploymentReconciler_reconcileDeployment(t *testing.T) {
 						Template: corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
-									corev1.Container{
+									{
 										Name: "container1",
 										Resources: corev1.ResourceRequirements{
 											Requests: corev1.ResourceList{
