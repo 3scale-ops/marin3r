@@ -23,5 +23,6 @@ patchesStrategicMerge:
         containers:
         - name: manager
           args:
+          - "operator"
           - "--debug"
           - "--enable-leader-election"

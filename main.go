@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"runtime"
@@ -50,7 +49,6 @@ const (
 var (
 	tlsServerCertificatePath string
 	tlsCACertificatePath     string
-	isDiscoveryService       bool
 	debug                    bool
 	metricsAddr              string
 	xdssPort                 int
@@ -58,11 +56,39 @@ var (
 	enableLeaderElection     bool
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "marin3r",
-	Short: "marin3r, the simple envoy control plane",
-	Run:   run,
-}
+var (
+	// Root command
+	rootCmd = &cobra.Command{
+		Use:   "marin3r",
+		Short: "Lightweight, CRD based envoy control plane for kubernetes",
+		Run: func(cmd *cobra.Command, args []string) {
+			ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+			printVersion()
+			fmt.Println("May the force be with you ...")
+		},
+	}
+
+	// Operator subcommand
+	operatorCmd = &cobra.Command{
+		Use:   "operator",
+		Short: "Run the operator",
+		Run:   runOperator,
+	}
+
+	// Discovery service subcommand
+	discoveryServiceCmd = &cobra.Command{
+		Use:   "discovery-service",
+		Short: "Run the discovery service",
+		Run:   runDiscoveryService,
+	}
+
+	// Webhook subcommand
+	podMutatorCmd = &cobra.Command{
+		Use:   "pod-mutator",
+		Short: "Run the Pod mutating webhook",
+		Run:   runPodMutator,
+	}
+)
 
 var (
 	scheme   = apimachineryruntime.NewScheme()
@@ -74,114 +100,130 @@ func init() {
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(marin3rv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
-}
 
-func init() {
-	rootCmd.Flags().IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
-	rootCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the mutating webhook server will listen.")
-	rootCmd.Flags().StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
+	// Subcommands
+	rootCmd.AddCommand(operatorCmd)
+	rootCmd.AddCommand(discoveryServiceCmd)
+	rootCmd.AddCommand(podMutatorCmd)
+
+	// Global flags
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logs")
+	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metrics endpoint binds to.")
+
+	// Operator flags
+	operatorCmd.Flags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
+		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+
+	// Discovery service flags
+	discoveryServiceCmd.Flags().IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
+	discoveryServiceCmd.Flags().StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
 		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
-	rootCmd.Flags().StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
+	discoveryServiceCmd.Flags().StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
 		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
-	rootCmd.Flags().BoolVar(&isDiscoveryService, "discovery-service", false, "Run the discovery-service instead of the operator")
-	rootCmd.Flags().BoolVar(&debug, "debug", false, "Enable debug logs")
-	rootCmd.Flags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metric endpoint binds to.")
+	discoveryServiceCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
+
+	// Webhook flags
+	podMutatorCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
 }
 
 func main() {
-
 	rootCmd.Execute()
 }
 
-func run(cmd *cobra.Command, args []string) {
+func runOperator(cmd *cobra.Command, args []string) {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+	printVersion()
 
+	cfg := ctrl.GetConfigOrDie()
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: metricsAddr,
+		Port:               webhookPort,
+		LeaderElection:     enableLeaderElection,
+		LeaderElectionID:   "2cfbe7d6.operator.marin3r.3scale.net",
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	// watch for syscalls
+	stopCh := signals.SetupSignalHandler()
+
+	if err := (&operatorcontroller.DiscoveryServiceReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
+		os.Exit(1)
+	}
+
+	if err := (&operatorcontroller.DiscoveryServiceCertificateReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
+		os.Exit(1)
+	}
+
+	if err := (&operatorcontroller.DiscoveryServiceCertificateWatcher{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificatewatcher"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificatewatcher")
+		os.Exit(1)
+	}
+
+	if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
+		os.Exit(1)
+	}
+	// +kubebuilder:scaffold:builder
+
+	setupLog.Info("Starting the Operator.")
+	if err := mgr.Start(stopCh); err != nil {
+		setupLog.Error(err, "Controller manager exited non-zero")
+		os.Exit(1)
+	}
+}
+
+func runDiscoveryService(cmd *cobra.Command, args []string) {
+
+	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 	printVersion()
 
 	cfg := ctrl.GetConfigOrDie()
 	ctx := context.Background()
 
-	if !isDiscoveryService {
-
-		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:             scheme,
-			MetricsBindAddress: metricsAddr,
-			Port:               webhookPort,
-			LeaderElection:     enableLeaderElection,
-			LeaderElectionID:   "2cfbe7d6.marin3r.3scale.net",
-		})
-		if err != nil {
-			setupLog.Error(err, "unable to start manager")
-			os.Exit(1)
-		}
-
-		// watch for syscalls
-		stopCh := signals.SetupSignalHandler()
-
-		if err := (&operatorcontroller.DiscoveryServiceReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
-			os.Exit(1)
-		}
-
-		if err := (&operatorcontroller.DiscoveryServiceCertificateReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
-			os.Exit(1)
-		}
-
-		if err := (&operatorcontroller.DiscoveryServiceCertificateWatcher{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificatewatcher"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificatewatcher")
-			os.Exit(1)
-		}
-
-		if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
-			os.Exit(1)
-		}
-		// +kubebuilder:scaffold:builder
-
-		setupLog.Info("Starting the Operator.")
-		if err := mgr.Start(stopCh); err != nil {
-			setupLog.Error(err, "Controller manager exited non-zero")
-			os.Exit(1)
-		}
-
-	} else {
-
-		mgr := discoveryservice.Manager{
-			XdsServerPort:         xdssPort,
-			WebhookPort:           webhookPort,
-			MetricsAddr:           metricsAddr,
-			ServerCertificatePath: tlsServerCertificatePath,
-			CACertificatePath:     tlsCACertificatePath,
-			Cfg:                   cfg,
-		}
-
-		mgr.Start(ctx)
+	mgr := discoveryservice.Manager{
+		XdsServerPort:         xdssPort,
+		WebhookPort:           webhookPort,
+		MetricsAddr:           metricsAddr,
+		ServerCertificatePath: tlsServerCertificatePath,
+		CACertificatePath:     tlsCACertificatePath,
+		Cfg:                   cfg,
 	}
+
+	mgr.Start(ctx)
+}
+
+func runPodMutator(cmd *cobra.Command, args []string) {
+
+	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+	printVersion()
 }
 
 func printVersion() {
-	setupLog.Info(fmt.Sprintf("Operator Version: %s", version.Current()))
+	setupLog.Info(fmt.Sprintf("Marin3r Version: %s", version.Current()))
 	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 }

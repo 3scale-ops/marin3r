@@ -28,6 +28,7 @@ spec:
       - command:
         - /manager
         args:
+        - operator
         - --enable-leader-election
         image: controller:latest
         name: manager

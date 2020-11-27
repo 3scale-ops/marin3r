@@ -65,7 +65,7 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 								Name:  "marin3r",
 								Image: ds.GetImage(),
 								Args: []string{
-									"--discovery-service",
+									"discovery-service",
 									"--server-certificate-path=/etc/marin3r/tls/server",
 									"--ca-certificate-path=/etc/marin3r/tls/ca",
 									func() string { return fmt.Sprintf("--xdss-port=%v", ds.GetXdsServerPort()) }(),

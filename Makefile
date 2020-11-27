@@ -35,7 +35,7 @@ manager: generate fmt vet
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
-	go run ./main.go --debug
+	go run ./main.go operator --debug
 
 # Install CRDs into a cluster
 install: manifests kustomize
@@ -275,7 +275,7 @@ ENVOY_VERSION ?= v1.14.1
 run-ds: ## locally starts marin3r's discovery service
 run-ds: certs
 	WATCH_NAMESPACE="" go run main.go \
-		--discovery-service \
+		discovery-service \
 		--server-certificate-path certs/server \
 		--ca-certificate-path certs/ca \
 		--debug
