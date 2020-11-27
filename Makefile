@@ -123,6 +123,11 @@ bundle: manifests
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
+bump-release:
+	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
+
+prepare-release: bump-release generate fmt vet manifests bundle refdocs
+
 #########################
 #### General targets ####
 #########################
