@@ -21,8 +21,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -35,6 +36,7 @@ import (
 	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator.marin3r"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
+	"github.com/3scale/marin3r/pkg/version"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -56,7 +58,7 @@ var (
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme   = apimachineryruntime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
 
@@ -84,6 +86,8 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+
+	printVersion()
 
 	cfg := ctrl.GetConfigOrDie()
 	ctx := context.Background()
@@ -161,4 +165,10 @@ func main() {
 
 		mgr.Start(ctx)
 	}
+}
+
+func printVersion() {
+	setupLog.Info(fmt.Sprintf("Operator Version: %s", version.Current()))
+	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 }
