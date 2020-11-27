@@ -29,6 +29,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
@@ -36,6 +37,7 @@ import (
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator.marin3r"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
 	"github.com/3scale/marin3r/pkg/version"
+	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	"github.com/spf13/cobra"
 	// +kubebuilder:scaffold:imports
 )
@@ -47,13 +49,16 @@ const (
 )
 
 var (
-	tlsServerCertificatePath string
-	tlsCACertificatePath     string
-	debug                    bool
-	metricsAddr              string
-	xdssPort                 int
-	webhookPort              int
-	enableLeaderElection     bool
+	debug                        bool
+	metricsAddr                  string
+	enableLeaderElection         bool
+	xdssPort                     int
+	xdssTLSServerCertificatePath string
+	xdssTLSCACertificatePath     string
+	webhookPort                  int
+	podMutatorTLSCertDir         string
+	podMutatorTLSKeyName         string
+	podMutatorTLSCertName        string
 )
 
 var (
@@ -116,14 +121,18 @@ func init() {
 
 	// Discovery service flags
 	discoveryServiceCmd.Flags().IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
-	discoveryServiceCmd.Flags().StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
+	discoveryServiceCmd.Flags().StringVar(&xdssTLSServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
 		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
-	discoveryServiceCmd.Flags().StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
+	discoveryServiceCmd.Flags().StringVar(&xdssTLSCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
 		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
 	discoveryServiceCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
 
 	// Webhook flags
 	podMutatorCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
+	podMutatorCmd.Flags().StringVar(&podMutatorTLSCertDir, "tls-dir", "/apiserver.local.config/certificates", "The path where the certificate and key for the webhook are located.")
+	podMutatorCmd.Flags().StringVar(&podMutatorTLSCertName, "tls-cert-name", "apiserver.crt", "The file name of the certificate for the webhook.")
+	podMutatorCmd.Flags().StringVar(&podMutatorTLSKeyName, "tls-key-name", "apiserver.key", "The file name of the private key for the webhook.")
+
 }
 
 func main() {
@@ -189,9 +198,9 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("Starting the Operator.")
+	setupLog.Info("starting the Operator.")
 	if err := mgr.Start(stopCh); err != nil {
-		setupLog.Error(err, "Controller manager exited non-zero")
+		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)
 	}
 }
@@ -206,10 +215,9 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 
 	mgr := discoveryservice.Manager{
 		XdsServerPort:         xdssPort,
-		WebhookPort:           webhookPort,
 		MetricsAddr:           metricsAddr,
-		ServerCertificatePath: tlsServerCertificatePath,
-		CACertificatePath:     tlsCACertificatePath,
+		ServerCertificatePath: xdssTLSServerCertificatePath,
+		CACertificatePath:     xdssTLSCACertificatePath,
 		Cfg:                   cfg,
 	}
 
@@ -220,6 +228,35 @@ func runPodMutator(cmd *cobra.Command, args []string) {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 	printVersion()
+
+	stopCh := signals.SetupSignalHandler()
+	cfg := ctrl.GetConfigOrDie()
+
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: metricsAddr,
+		Port:               webhookPort,
+		LeaderElection:     false,
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	// Setup the webhook
+	hookServer := mgr.GetWebhookServer()
+	hookServer.CertDir = podMutatorTLSCertDir
+	hookServer.KeyName = podMutatorTLSKeyName
+	hookServer.CertName = podMutatorTLSCertName
+	hookServer.Port = webhookPort
+	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
+	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
+
+	setupLog.Info("starting the Pod mutating webhook")
+	if err := mgr.Start(stopCh); err != nil {
+		setupLog.Error(err, "controller manager exited non-zero")
+		os.Exit(1)
+	}
 }
 
 func printVersion() {

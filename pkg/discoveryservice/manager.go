@@ -12,7 +12,6 @@ import (
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
-	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	util_runtime "k8s.io/apimachinery/pkg/util/runtime"
@@ -20,7 +19,6 @@ import (
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 const (
@@ -44,8 +42,6 @@ type Manager struct {
 	// The xDS server port
 	XdsServerPort int
 	// The mutating webhook server port
-	WebhookPort int
-	// Bind address for the metrics server
 	MetricsAddr string
 	// The directory where server certificate and key are located
 	ServerCertificatePath string
@@ -62,7 +58,6 @@ func (dsm *Manager) Start(ctx context.Context) {
 	mgr, err := ctrl.NewManager(dsm.Cfg, ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: dsm.MetricsAddr,
-		Port:               dsm.WebhookPort,
 		LeaderElection:     false,
 	})
 	if err != nil {
@@ -145,12 +140,6 @@ func (dsm *Manager) Start(ctx context.Context) {
 		setupLog.Error(err, "unable to create controller", "controller", "secret")
 		os.Exit(1)
 	}
-
-	// Setup webhooks
-	hookServer := mgr.GetWebhookServer()
-	hookServer.CertDir = dsm.ServerCertificatePath
-	ctrl.Log.Info("registering webhooks to the webhook server")
-	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
 
 	// Start the controllers
 	wait.Add(1)
