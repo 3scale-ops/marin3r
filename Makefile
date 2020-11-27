@@ -50,9 +50,18 @@ deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
+# Undeploy controller from the configured Kubernetes cluster in ~/.kube/config
+undeploy: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
+
 # Deploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
 deploy-test: manifests kustomize
 	$(KUSTOMIZE) build config/test | kubectl apply -f -
+
+# Undeploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
+undeploy-test: manifests kustomize
+	$(KUSTOMIZE) build config/test | kubectl delete -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -201,6 +210,7 @@ e2e-test: kind-create
 	$(MAKE) e2e-envtest-suite
 	$(MAKE) kind-delete
 
+e2e-envtest-suite: export KUBECONFIG = ${PWD}/kubeconfig
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 	ginkgo -r -nodes=1 ./test/e2e/operator
 	ginkgo -r -p ./test/e2e/marin3r
@@ -223,7 +233,6 @@ gocovmerge:
 
 KIND_VERSION ?= v0.9.0
 KIND ?= bin/kind
-export KUBECONFIG = ${PWD}/kubeconfig
 
 $(KIND):
 	mkdir -p $$(dirname $@)
@@ -235,14 +244,17 @@ kind-create: tmp $(KIND)
 	$(KIND) create cluster --wait 5m --config test/kind.yaml
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
+kind-deploy: export KUBECONFIG = ${PWD}/kubeconfig
 kind-deploy: manifests kustomize
 	$(KUSTOMIZE) build config/test | kubectl apply -f -
 
 kind-refresh-discoveryservice: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
+kind-refresh-discoveryservice: export KUBECONFIG = ${PWD}/kubeconfig
 kind-refresh-discoveryservice: docker-build
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 	kubectl delete pods -A -l app.kubernetes.io/name=marin3r --force --grace-period=0
 
+kind-load-image: export KUBECONFIG = ${PWD}/kubeconfig
 kind-load-image:
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
