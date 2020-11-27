@@ -59,7 +59,7 @@ const (
 
 	// default values
 	DefaultContainerName        = "envoy-sidecar"
-	DefaultImage                = "envoyproxy/envoy:v1.14.1"
+	DefaultImage                = "envoyproxy/envoy:v1.16.0"
 	DefaultBootstrapConfigMapV2 = "envoy-sidecar-bootstrap"
 	DefaultBootstrapConfigMapV3 = "envoy-sidecar-bootstrap-v3"
 	DefaultConfigVolume         = "envoy-sidecar-bootstrap"
