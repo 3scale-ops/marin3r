@@ -273,6 +273,16 @@ func (in *DiscoveryServiceSpec) DeepCopyInto(out *DiscoveryServiceSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Image != nil {
+		in, out := &in.Image, &out.Image
+		*out = new(string)
+		**out = **in
+	}
+	if in.Debug != nil {
+		in, out := &in.Debug, &out.Debug
+		*out = new(bool)
+		**out = **in
+	}
 	if in.Resources != nil {
 		in, out := &in.Resources, &out.Resources
 		*out = new(v1.ResourceRequirements)

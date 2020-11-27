@@ -1,13 +1,16 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/3scale/marin3r/pkg/version"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 )
 
 func TestDiscoveryService_Resources(t *testing.T) {
@@ -281,6 +284,74 @@ func TestDiscoveryService_GetServiceConfig(t *testing.T) {
 		t.Run(tc.testName, func(subT *testing.T) {
 			receivedResult := tc.discoveryServiceFactory().GetServiceConfig()
 			if !equality.Semantic.DeepEqual(tc.expectedResult, receivedResult) {
+				subT.Errorf("Expected result differs: Expected: %v, Received: %v", tc.expectedResult, receivedResult)
+			}
+		})
+	}
+}
+
+func TestDiscoveryService_GetImage(t *testing.T) {
+	cases := []struct {
+		testName                string
+		discoveryServiceFactory func() *DiscoveryService
+		expectedResult          string
+	}{
+		{"With default",
+			func() *DiscoveryService {
+				return &DiscoveryService{}
+			},
+			fmt.Sprintf("%s:%s", DefaultImageRegistry, version.Current()),
+		},
+		{"With explicitely set value",
+			func() *DiscoveryService {
+				return &DiscoveryService{
+					Spec: DiscoveryServiceSpec{
+						Image: pointer.StringPtr("image:test"),
+					},
+				}
+			},
+			"image:test",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.testName, func(subT *testing.T) {
+			receivedResult := tc.discoveryServiceFactory().GetImage()
+			if tc.expectedResult != receivedResult {
+				subT.Errorf("Expected result differs: Expected: %v, Received: %v", tc.expectedResult, receivedResult)
+			}
+		})
+	}
+}
+
+func TestDiscoveryService_Debug(t *testing.T) {
+	cases := []struct {
+		testName                string
+		discoveryServiceFactory func() *DiscoveryService
+		expectedResult          bool
+	}{
+		{"With default",
+			func() *DiscoveryService {
+				return &DiscoveryService{}
+			},
+			false,
+		},
+		{"With explicitely set value",
+			func() *DiscoveryService {
+				return &DiscoveryService{
+					Spec: DiscoveryServiceSpec{
+						Debug: pointer.BoolPtr(true),
+					},
+				}
+			},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.testName, func(subT *testing.T) {
+			receivedResult := tc.discoveryServiceFactory().Debug()
+			if tc.expectedResult != receivedResult {
 				subT.Errorf("Expected result differs: Expected: %v, Received: %v", tc.expectedResult, receivedResult)
 			}
 		})

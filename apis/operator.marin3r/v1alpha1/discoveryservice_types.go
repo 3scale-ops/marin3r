@@ -20,39 +20,67 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/3scale/marin3r/pkg/version"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	DiscoveryServiceKind                    string = "DiscoveryService"
-	DiscoveryServiceEnabledKey              string = "marin3r.3scale.net/status"
-	DiscoveryServiceEnabledValue            string = "enabled"
-	DiscoveryServiceLabelKey                string = "marin3r.3scale.net/discovery-service"
+	// DiscoveryServiceKind is Kind of the DiscoveryService resources
+	DiscoveryServiceKind string = "DiscoveryService"
+	// DiscoveryServiceListind is the Kind of the DiscoveryServiceList resources
+	DiscoveryServiceListind string = "DiscoveryServiceList"
+	// DiscoveryServiceEnabledKey is the label key that the mutating webhook uses
+	// to determine if mutation is enabled for a Pod
+	DiscoveryServiceEnabledKey string = "marin3r.3scale.net/status"
+	// DiscoveryServiceEnabledValue is the label value that the mutating webhook uses
+	// to determine if mutation is enabled for a Pod
+	DiscoveryServiceEnabledValue string = "enabled"
+	// DiscoveryServiceLabelKey is the label key that the mutating webhook uses to determine if
+	// Pod mutation is enabled in a namespace
+	DiscoveryServiceLabelKey string = "marin3r.3scale.net/discovery-service"
+	// DiscoveryServiceCertificateHashLabelKey is the label in the discovery service Deployment that
+	// stores the hash of the current server certificate
 	DiscoveryServiceCertificateHashLabelKey string = "marin3r.3scale.net/server-certificate-hash"
 
 	/* Default values */
-	DefaultMetricsPort                       uint32 = 8383
-	DefaultWebhookPort                       uint32 = 8443
-	DefaultXdsServerPort                     uint32 = 18000
-	DefaultRootCertificateDuration           string = "26280h" // 3 years
-	DefaultRootCertificateSecretNamePrefix   string = "marin3r-ca-cert"
-	DefaultServerCertificateDuration         string = "2160h" // 3 months
+
+	// DefaultMetricsPort is the default port where the discovery service metrics server listens
+	DefaultMetricsPort uint32 = 8383
+	// DefaultWebhookPort is the default port where the discovery service webhook server listens
+	DefaultWebhookPort uint32 = 8443
+	// DefaultXdsServerPort is the default port where the discovery service xds server port listens
+	DefaultXdsServerPort uint32 = 18000
+	// DefaultRootCertificateDuration is the default root CA certificate duration
+	DefaultRootCertificateDuration string = "26280h" // 3 years
+	// DefaultRootCertificateSecretNamePrefix is the default prefix for the Secret
+	// where the root CA certificate is stored
+	DefaultRootCertificateSecretNamePrefix string = "marin3r-ca-cert"
+	// DefaultServerCertificateDuration is the default discovery service server certificate duration
+	DefaultServerCertificateDuration string = "2160h" // 3 months
+	// DefaultServerCertificateSecretNamePrefix is the default prefix for the Secret
+	// where the server certificate is stored
 	DefaultServerCertificateSecretNamePrefix string = "marin3r-server-cert"
+	// DefaultImageRegistry is the default registry to pull discovery service images from
+	DefaultImageRegistry string = "quay.io/3scale/marin3r"
 )
 
+// ServiceType is an enum with the available discovery service Service types
 type ServiceType string
 
 const (
-	ClusterIPType    ServiceType = "ClusterIP"
+	// ClusterIPType represents a ClusterIP Service
+	ClusterIPType ServiceType = "ClusterIP"
+	// LoadBalancerType represents a LoadBalancer Service
 	LoadBalancerType ServiceType = "LoadBalancer"
-	HeadlessType     ServiceType = "Headless"
+	// HeadlessType represents a headless Service
+	HeadlessType ServiceType = "Headless"
 )
 
 // DiscoveryServiceSpec defines the desired state of DiscoveryService
 type DiscoveryServiceSpec struct {
-	// DiscoveryServiceNamespcae is the name of the namespace where the envoy discovery
+	// DiscoveryServiceNamespace is the name of the namespace where the envoy discovery
 	// service server should be deployed.
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	DiscoveryServiceNamespace string `json:"discoveryServiceNamespace"`
@@ -64,11 +92,13 @@ type DiscoveryServiceSpec struct {
 	EnabledNamespaces []string `json:"enabledNamespaces,omitempty"`
 	// Image holds the image to use for the discovery service Deployment
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Image string `json:"image"`
+	// +optional
+	Image *string `json:"image,omitempty"`
 	// Debug enables debugging log level for the discovery service controllers. It is safe to
 	// use since secret data is never shown in the logs.
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	Debug bool `json:"debug,omitempty"`
+	// +optional
+	Debug *bool `json:"debug,omitempty"`
 	// Resources holds the Resource Requirements to use for the discovery service
 	// Deployment. When not set it defaults to no resource requests nor limits.
 	// CPU and Memory resources are supported.
@@ -140,11 +170,32 @@ type DiscoveryService struct {
 	Status DiscoveryServiceStatus `json:"status,omitempty"`
 }
 
+// Resources returns the Pod resources for the discovery service pod
 func (d *DiscoveryService) Resources() corev1.ResourceRequirements {
 	if d.Spec.Resources == nil {
 		return d.defaultDeploymentResources()
 	}
 	return *d.Spec.Resources
+}
+
+// GetImage returns the DiscoveryService image that matches the current version of the operator
+func (d *DiscoveryService) GetImage() string {
+	if d.Spec.Image == nil {
+		return d.defaultImage()
+	}
+	return *d.Spec.Image
+}
+
+func (d *DiscoveryService) defaultImage() string {
+	return fmt.Sprintf("%s:%s", DefaultImageRegistry, version.Current())
+}
+
+// Debug returns a boolean value that indicates if debug loggin is enabled
+func (d *DiscoveryService) Debug() bool {
+	if d.Spec.Debug == nil {
+		return false
+	}
+	return *d.Spec.Debug
 }
 
 func (d *DiscoveryService) defaultDeploymentResources() corev1.ResourceRequirements {
@@ -189,6 +240,7 @@ func (d *DiscoveryService) defaultServerCertificateOptions() *CertificateOptions
 		}}
 }
 
+// GetXdsServerPort returns the port the xDS server will listen at
 func (d *DiscoveryService) GetXdsServerPort() uint32 {
 	if d.Spec.XdsServerPort != nil {
 		return *d.Spec.XdsServerPort
@@ -196,6 +248,7 @@ func (d *DiscoveryService) GetXdsServerPort() uint32 {
 	return DefaultXdsServerPort
 }
 
+// GetMetricsPort returns the port the metrics server will listen at
 func (d *DiscoveryService) GetMetricsPort() uint32 {
 	if d.Spec.MetricsPort != nil {
 		return *d.Spec.MetricsPort
@@ -203,6 +256,7 @@ func (d *DiscoveryService) GetMetricsPort() uint32 {
 	return DefaultMetricsPort
 }
 
+// GetWebhookPort returns the port the mutating webhook server will listen at
 func (d *DiscoveryService) GetWebhookPort() uint32 {
 	if d.Spec.WebhookPort != nil {
 		return *d.Spec.WebhookPort
@@ -210,6 +264,7 @@ func (d *DiscoveryService) GetWebhookPort() uint32 {
 	return DefaultWebhookPort
 }
 
+// GetServiceConfig returns the Service configuration for the discovery service servers
 func (d *DiscoveryService) GetServiceConfig() *ServiceConfig {
 	if d.Spec.ServiceConfig != nil {
 		return d.Spec.ServiceConfig
@@ -224,6 +279,8 @@ func (d *DiscoveryService) defaultServiceConfig() *ServiceConfig {
 	}
 }
 
+// OwnedObjectName returns the name of the resources the discoveryservices controller
+// needs to create
 func (d *DiscoveryService) OwnedObjectName() string {
 	return fmt.Sprintf("%s-%s", "marin3r", d.GetName())
 }
