@@ -47,13 +47,12 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Undeploy controller from the configured Kubernetes cluster in ~/.kube/config
 undeploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 # Deploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
 deploy-test: manifests kustomize
