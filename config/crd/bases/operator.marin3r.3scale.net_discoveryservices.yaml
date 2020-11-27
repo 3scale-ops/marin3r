@@ -44,6 +44,8 @@ spec:
                 name:
                   type: string
                 type:
+                  description: ServiceType is an enum with the available discovery
+                    service Service types
                   type: string
               type: object
             debug:
@@ -52,7 +54,7 @@ spec:
                 the logs.
               type: boolean
             discoveryServiceNamespace:
-              description: DiscoveryServiceNamespcae is the name of the namespace
+              description: DiscoveryServiceNamespace is the name of the namespace
                 where the envoy discovery service server should be deployed.
               type: string
             enabledNamespaces:
@@ -146,7 +148,6 @@ spec:
               type: integer
           required:
           - discoveryServiceNamespace
-          - image
           type: object
         status:
           description: DiscoveryServiceStatus defines the observed state of DiscoveryService
