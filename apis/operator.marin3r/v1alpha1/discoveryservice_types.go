@@ -179,6 +179,7 @@ func (d *DiscoveryService) Resources() corev1.ResourceRequirements {
 }
 
 // GetImage returns the DiscoveryService image that matches the current version of the operator
+// or the one defined by the user if the filed is set in the resource
 func (d *DiscoveryService) GetImage() string {
 	if d.Spec.Image == nil {
 		return d.defaultImage()
