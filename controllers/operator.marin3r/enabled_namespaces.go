@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -50,29 +49,29 @@ func (r *DiscoveryServiceReconciler) reconcileEnabledNamespace(ctx context.Conte
 		return err
 	}
 
-	ok, err := isSidecarEnabled(r.ds, ns)
-	if err != nil {
-		return err
-	}
+	// ok, err := isSidecarEnabled(r.ds, ns)
+	// if err != nil {
+	// 	return err
+	// }
 
-	if !ok {
+	// if !ok {
 
-		patch := client.MergeFrom(ns.DeepCopy())
+	// 	patch := client.MergeFrom(ns.DeepCopy())
 
-		// Init label's map
-		if ns.GetLabels() == nil {
-			ns.SetLabels(map[string]string{})
-		}
+	// 	// Init label's map
+	// 	if ns.GetLabels() == nil {
+	// 		ns.SetLabels(map[string]string{})
+	// 	}
 
-		// Set namespace labels
-		ns.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceEnabledKey] = operatorv1alpha1.DiscoveryServiceEnabledValue
-		ns.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceLabelKey] = r.ds.GetName()
+	// 	// Set namespace labels
+	// 	ns.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceEnabledKey] = operatorv1alpha1.DiscoveryServiceEnabledValue
+	// 	ns.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceLabelKey] = r.ds.GetName()
 
-		if err := r.Client.Patch(ctx, ns, patch); err != nil {
-			return err
-		}
-		log.Info("Patched Namespace", "Namespace", namespace)
-	}
+	// 	if err := r.Client.Patch(ctx, ns, patch); err != nil {
+	// 		return err
+	// 	}
+	// 	log.Info("Patched Namespace", "Namespace", namespace)
+	// }
 
 	eb := &marin3rv1alpha1.EnvoyBootstrap{}
 	if err := r.Client.Get(ctx, types.NamespacedName{Name: r.ds.GetName(), Namespace: namespace}, eb); err != nil {

@@ -26,7 +26,6 @@ import (
 
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	"github.com/go-logr/logr"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -70,7 +69,6 @@ type DiscoveryServiceReconciler struct {
 // +kubebuilder:rbac:groups="apps",resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterrolebindings,verbs=get;list;watch;create;patch
-// +kubebuilder:rbac:groups="admissionregistration.k8s.io",resources=mutatingwebhookconfigurations,verbs=get;list;watch;create;patch
 
 func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -159,11 +157,6 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return result, err
 	}
 
-	result, err = r.reconcileMutatingWebhook(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
-	}
-
 	return ctrl.Result{}, nil
 }
 
@@ -205,7 +198,6 @@ func (r *DiscoveryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.ClusterRole{}).
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&corev1.ServiceAccount{}).
-		Owns(&admissionregistrationv1beta1.MutatingWebhookConfiguration{}).
 		Owns(&marin3rv1alpha1.EnvoyBootstrap{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}).
 		WithEventFilter(filterTLSTypeCertificatesPredicate()).
