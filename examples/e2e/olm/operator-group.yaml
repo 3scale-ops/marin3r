@@ -2,5 +2,5 @@
 apiVersion: operators.coreos.com/v1alpha2
 kind: OperatorGroup
 metadata:
-  name: marin3r
-  namespace: marin3r
+  name: marin3r-system
+  namespace: marin3r-system

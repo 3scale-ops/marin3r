@@ -8,7 +8,8 @@ metadata:
           "apiVersion": "marin3r.3scale.net/v1alpha1",
           "kind": "EnvoyBootstrap",
           "metadata": {
-            "name": "envoybootstrap-sample"
+            "name": "marin3r-envoybootstrap-sample",
+            "namespace": "marin3r-system"
           },
           "spec": {
             "clientCertificate": {
@@ -32,8 +33,8 @@ metadata:
           "apiVersion": "marin3r.3scale.net/v1alpha1",
           "kind": "EnvoyConfig",
           "metadata": {
-            "name": "example",
-            "namespace": "my-namespace"
+            "name": "marin3r-example",
+            "namespace": "marin3r-system"
           },
           "spec": {
             "envoyResources": {
@@ -67,8 +68,8 @@ metadata:
           "apiVersion": "marin3r.3scale.net/v1alpha1",
           "kind": "EnvoyConfigRevision",
           "metadata": {
-            "name": "example",
-            "namespace": "my-namespace"
+            "name": "marin3r-example",
+            "namespace": "marin3r-system"
           },
           "spec": {
             "envoyResources": {
@@ -103,7 +104,8 @@ metadata:
           "apiVersion": "operator.marin3r.3scale.net/v1alpha1",
           "kind": "DiscoveryService",
           "metadata": {
-            "name": "instance"
+            "name": "marin3r-instance",
+            "namespace": "marin3r-system"
           },
           "spec": {
             "debug": true,
@@ -119,8 +121,8 @@ metadata:
           "apiVersion": "operator.marin3r.3scale.net/v1alpha1",
           "kind": "DiscoveryServiceCertificate",
           "metadata": {
-            "name": "test-cert",
-            "namespace": "default"
+            "name": "marin3r-test-cert",
+            "namespace": "marin3r-system"
           },
           "spec": {
             "commonName": "test-client",
@@ -4395,6 +4397,7 @@ spec:
                   name: https
                 resources: {}
               - args:
+                - operator
                 - --metrics-addr=127.0.0.1:8080
                 - --enable-leader-election
                 command:
@@ -4410,6 +4413,33 @@ spec:
                     memory: 100Mi
               serviceAccountName: marin3r-controller-manager
               terminationGracePeriodSeconds: 10
+      - name: marin3r-controller-webhook
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              control-plane: controller-webhook
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                control-plane: controller-webhook
+            spec:
+              containers:
+              - args:
+                - webhook
+                - --tls-dir=/tmp/k8s-webhook-server/serving-certs
+                - --tls-cert-name=tls.crt
+                - --tls-key-name=tls.key
+                command:
+                - /manager
+                image: quay.io/3scale/marin3r:0.7.0-alpha2
+                name: webhook
+                ports:
+                - containerPort: 9443
+                  name: webhook-server
+                  protocol: TCP
+                resources: {}
       permissions:
       - rules:
         - apiGroups:
@@ -4466,3 +4496,29 @@ spec:
   provider:
     name: Red Hat
   version: 0.7.0-alpha2
+  webhookdefinitions:
+  - admissionReviewVersions:
+    - v1beta1
+    containerPort: 9443
+    deploymentName: marin3r-controller-webhook
+    failurePolicy: Fail
+    generateName: sidecar-injector.marin3r.3scale.net
+    matchPolicy: Equivalent
+    objectSelector:
+      matchLabels:
+        marin3r.3scale.net/status: enabled
+    reinvocationPolicy: Never
+    rules:
+    - apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      resources:
+      - pods
+      scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 5
+    type: MutatingAdmissionWebhook
+    webhookPath: /pod-v1-mutate

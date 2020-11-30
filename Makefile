@@ -4,7 +4,8 @@ NAME := marin3r
 # Current Operator version
 VERSION ?= 0.7.0-alpha2
 # Default bundle image tag
-BUNDLE_IMG ?= controller-bundle:$(VERSION)
+BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:$(VERSION)
+CATALOG_IMG ?= quay.io/3scale/marin3r-catalog:latest
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -119,13 +120,39 @@ endif
 bundle: manifests
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):$(VERSION)
+	cd config/webhook && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):$(VERSION)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
 # Build the bundle image.
 .PHONY: bundle-build
-bundle-build:
+bundle-build: bundle
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+bundle-publish:
+	opm index add \
+		--build-tool docker \
+		--mode replaces \
+		--bundles $(BUNDLE_IMG) \
+		--from-index $(CATALOG_IMG) \
+		--tag $(CATALOG_IMG)
+	docker push $(CATALOG_IMG)
+
+bundle-publish-replace:
+	docker pull $(CATALOG_IMG)
+	opm index rm \
+		--build-tool docker \
+		--operators marin3r \
+		--from-index $(CATALOG_IMG) \
+		--tag $(CATALOG_IMG)
+	docker push $(CATALOG_IMG)
+	opm index add \
+		--build-tool docker \
+		--mode replaces \
+		--bundles $(BUNDLE_IMG) \
+		--from-index $(CATALOG_IMG) \
+		--tag $(CATALOG_IMG)
+	docker push $(CATALOG_IMG)
 
 bump-release:
 	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
