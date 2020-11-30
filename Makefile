@@ -278,6 +278,10 @@ kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000
 kind-create: export KUBECONFIG = ${PWD}/kubeconfig
 kind-create: tmp $(KIND)
 	$(KIND) create cluster --wait 5m --config test/kind.yaml
+	$(MAKE) deploy-cert-manager && \
+		while [[ $$(kubectl -n cert-manager get deployment cert-manager-webhook -o 'jsonpath={.status.readyReplicas}') != "1" ]]; \
+			do echo "waiting for cert-manager webhook" && sleep 3; \
+		done
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-deploy: export KUBECONFIG = ${PWD}/kubeconfig

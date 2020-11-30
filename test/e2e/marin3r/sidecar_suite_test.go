@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+
 	"github.com/3scale/marin3r/pkg/envoy"
 	testutil "github.com/3scale/marin3r/test/e2e/util"
 	. "github.com/onsi/ginkgo"
@@ -62,7 +63,7 @@ var _ = Describe("Envpoy sidecars", func() {
 	Context("Sidecar injection", func() {
 		var localPort int
 		var nodeID string
-		var ec *v1alpha1.EnvoyConfig
+		var ec *marin3rv1alpha1.EnvoyConfig
 
 		BeforeEach(func() {
 
@@ -81,17 +82,11 @@ var _ = Describe("Envpoy sidecars", func() {
 			err = k8sClient.Patch(context.Background(), ds, patch)
 			Expect(err).ToNot(HaveOccurred())
 
-			Eventually(func() bool {
-				ns := &corev1.Namespace{}
-				key := types.NamespacedName{Name: testNamespace}
-				if err := k8sClient.Get(context.Background(), key, ns); err != nil {
-					return false
-				}
-				if _, ok := ns.GetLabels()[operatorv1alpha1.DiscoveryServiceLabelKey]; ok {
-					return true
-				}
-				return false
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
+			Eventually(func() error {
+				ns := &marin3rv1alpha1.EnvoyBootstrap{}
+				key := types.NamespacedName{Name: "instance", Namespace: testNamespace}
+				return k8sClient.Get(context.Background(), key, ns)
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 		})
 
 		It("injects an envoy sidecar container using v2 config", func() {

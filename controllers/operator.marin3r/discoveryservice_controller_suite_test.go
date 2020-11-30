@@ -8,7 +8,6 @@ import (
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -69,7 +68,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 	Context("DiscoveryService", func() {
 
-		It("Create the required resources", func() {
+		It("creates the required resources", func() {
 
 			By("waiting for the root CA DiscoveryServiceCertificate to be created")
 			{
@@ -185,37 +184,6 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					}
 					return true
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
-			}
-
-			By("waiting for the discovery service MutatingWebhookConfiguration to be created")
-			{
-
-				mwc := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
-				Eventually(func() bool {
-					if err := k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds)},
-						mwc,
-					); err != nil {
-						return false
-					}
-					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
-			}
-
-			By("checking the namespaces in 'spec.enabledNamespaces' have the required label")
-
-			{
-				for _, name := range ds.Spec.EnabledNamespaces {
-					ns := &corev1.Namespace{}
-					Eventually(func() bool {
-						if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: name}, ns); err != nil {
-							return false
-						}
-						return true
-					}, 30*time.Second, 5*time.Second).Should(BeTrue())
-					Expect(ns.Labels[operatorv1alpha1.DiscoveryServiceLabelKey]).To(Equal(ds.GetName()))
-				}
 			}
 
 			By("checking the namespaces in 'spec.enabledNamespaces' have an EnvoyBootstrap resource each")
