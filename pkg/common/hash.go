@@ -1,9 +1,12 @@
 package common
 
 import (
+	"fmt"
 	"hash"
+	"hash/fnv"
 
 	"github.com/davecgh/go-spew/spew"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 // DeepHashObject writes specified object to hash using the spew library
@@ -18,4 +21,10 @@ func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 		SpewKeys:       true,
 	}
 	printer.Fprintf(hasher, "%#v", objectToWrite)
+}
+
+func Hash(o interface{}) string {
+	hasher := fnv.New32a()
+	DeepHashObject(hasher, o)
+	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32()))
 }
