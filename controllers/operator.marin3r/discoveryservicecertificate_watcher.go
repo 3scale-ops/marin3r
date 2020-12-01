@@ -44,9 +44,9 @@ type DiscoveryServiceCertificateWatcher struct {
 	Log    logr.Logger
 }
 
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates,verbs=get;list;watch;patch
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="core",resources=secrets,verbs=get
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;patch
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get
 
 func (r *DiscoveryServiceCertificateWatcher) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()

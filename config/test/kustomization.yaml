@@ -5,6 +5,7 @@ namespace: marin3r-system
 resources:
 - ../crd
 - ../rbac
+- ../rbac_cluster_scope
 - ../manager
 - ../webhook
 - ../certmanager

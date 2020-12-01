@@ -39,10 +39,10 @@ type EnvoyBootstrapReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoybootstraps,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoybootstraps/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="core",resources=configmaps,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoybootstraps,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoybootstraps/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="core",namespace=placeholder,resources=configmaps,verbs=get;list;watch;create;update;patch
 
 func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()

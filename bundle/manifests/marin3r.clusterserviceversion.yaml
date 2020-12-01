@@ -4174,6 +4174,122 @@ spec:
       clusterPermissions:
       - rules:
         - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        serviceAccountName: marin3r-controller-manager
+      deployments:
+      - name: marin3r-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              control-plane: controller-manager
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                control-plane: controller-manager
+            spec:
+              containers:
+              - args:
+                - --secure-listen-address=0.0.0.0:8443
+                - --upstream=http://127.0.0.1:8080/
+                - --logtostderr=true
+                - --v=10
+                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+                name: kube-rbac-proxy
+                ports:
+                - containerPort: 8443
+                  name: https
+                resources: {}
+              - args:
+                - operator
+                - --metrics-addr=127.0.0.1:8080
+                - --enable-leader-election
+                command:
+                - /manager
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                image: quay.io/3scale/marin3r:0.7.0-alpha3
+                name: manager
+                resources:
+                  limits:
+                    cpu: 300m
+                    memory: 300Mi
+                  requests:
+                    cpu: 100m
+                    memory: 100Mi
+              serviceAccountName: marin3r-controller-manager
+              terminationGracePeriodSeconds: 10
+      - name: marin3r-controller-webhook
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              control-plane: controller-webhook
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                control-plane: controller-webhook
+            spec:
+              containers:
+              - args:
+                - webhook
+                - --tls-dir=/tmp/k8s-webhook-server/serving-certs
+                - --tls-cert-name=tls.crt
+                - --tls-key-name=tls.key
+                command:
+                - /manager
+                image: quay.io/3scale/marin3r:0.7.0-alpha3
+                name: webhook
+                ports:
+                - containerPort: 9443
+                  name: webhook-server
+                  protocol: TCP
+                resources: {}
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps/status
+          verbs:
+          - get
+          - update
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        - apiGroups:
           - apps
           resources:
           - deployments
@@ -4339,125 +4455,14 @@ spec:
           - list
           - patch
           - watch
-        - apiGroups:
-          - authentication.k8s.io
-          resources:
-          - tokenreviews
-          verbs:
-          - create
-        - apiGroups:
-          - authorization.k8s.io
-          resources:
-          - subjectaccessreviews
-          verbs:
-          - create
-        serviceAccountName: marin3r-controller-manager
-      deployments:
-      - name: marin3r-controller-manager
-        spec:
-          replicas: 1
-          selector:
-            matchLabels:
-              control-plane: controller-manager
-          strategy: {}
-          template:
-            metadata:
-              labels:
-                control-plane: controller-manager
-            spec:
-              containers:
-              - args:
-                - --secure-listen-address=0.0.0.0:8443
-                - --upstream=http://127.0.0.1:8080/
-                - --logtostderr=true
-                - --v=10
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
-                name: kube-rbac-proxy
-                ports:
-                - containerPort: 8443
-                  name: https
-                resources: {}
-              - args:
-                - operator
-                - --metrics-addr=127.0.0.1:8080
-                - --enable-leader-election
-                command:
-                - /manager
-                image: quay.io/3scale/marin3r:0.7.0-alpha3
-                name: manager
-                resources:
-                  limits:
-                    cpu: 300m
-                    memory: 300Mi
-                  requests:
-                    cpu: 100m
-                    memory: 100Mi
-              serviceAccountName: marin3r-controller-manager
-              terminationGracePeriodSeconds: 10
-      - name: marin3r-controller-webhook
-        spec:
-          replicas: 2
-          selector:
-            matchLabels:
-              control-plane: controller-webhook
-          strategy: {}
-          template:
-            metadata:
-              labels:
-                control-plane: controller-webhook
-            spec:
-              containers:
-              - args:
-                - webhook
-                - --tls-dir=/tmp/k8s-webhook-server/serving-certs
-                - --tls-cert-name=tls.crt
-                - --tls-key-name=tls.key
-                command:
-                - /manager
-                image: quay.io/3scale/marin3r:0.7.0-alpha3
-                name: webhook
-                ports:
-                - containerPort: 9443
-                  name: webhook-server
-                  protocol: TCP
-                resources: {}
-      permissions:
-      - rules:
-        - apiGroups:
-          - ""
-          resources:
-          - configmaps
-          verbs:
-          - get
-          - list
-          - watch
-          - create
-          - update
-          - patch
-          - delete
-        - apiGroups:
-          - ""
-          resources:
-          - configmaps/status
-          verbs:
-          - get
-          - update
-          - patch
-        - apiGroups:
-          - ""
-          resources:
-          - events
-          verbs:
-          - create
-          - patch
         serviceAccountName: marin3r-controller-manager
     strategy: deployment
   installModes:
-  - supported: false
+  - supported: true
     type: OwnNamespace
-  - supported: false
+  - supported: true
     type: SingleNamespace
-  - supported: false
+  - supported: true
     type: MultiNamespace
   - supported: true
     type: AllNamespaces
@@ -4476,7 +4481,6 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  replaces: marin3r.v0.7.0-alpha2
   version: 0.7.0-alpha3
   webhookdefinitions:
   - admissionReviewVersions:

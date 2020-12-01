@@ -40,9 +40,9 @@ type DiscoveryServiceCertificateReconciler struct {
 	certificateWatch bool
 }
 
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="core",resources=secrets,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch;create;update;patch
 
 func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()

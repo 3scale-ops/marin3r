@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +29,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -44,8 +46,12 @@ import (
 
 // Change below variables to serve metrics on different host or port.
 const (
-	certificateFile    string = "tls.crt"
-	certificateKeyFile string = "tls.key"
+	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
+	// which specifies the Namespace to watch.
+	// An empty value means the operator is running with cluster scope.
+	watchNamespaceEnvVar string = "WATCH_NAMESPACE"
+	certificateFile      string = "tls.crt"
+	certificateKeyFile   string = "tls.key"
 )
 
 var (
@@ -146,13 +152,33 @@ func runOperator(cmd *cobra.Command, args []string) {
 
 	cfg := ctrl.GetConfigOrDie()
 
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	watchNamespace, err := getWatchNamespace()
+	if err != nil {
+		setupLog.Error(err, "unable to get WatchNamespace, "+
+			"the manager will watch and manage resources in all Namespaces")
+	}
+
+	options := ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		Port:               webhookPort,
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "2cfbe7d6.operator.marin3r.3scale.net",
-	})
+		Namespace:          watchNamespace, // namespaced-scope when the value is not an empty string
+	}
+
+	if strings.Contains(watchNamespace, ",") {
+		setupLog.Info(fmt.Sprintf("manager in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
+		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
+	} else if watchNamespace == "" {
+		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
+		options.Namespace = watchNamespace
+	} else {
+		setupLog.Info(fmt.Sprintf("manager in Namespaced mode will be watching namespace %q", watchNamespace))
+		options.Namespace = ""
+	}
+
+	mgr, err := ctrl.NewManager(cfg, options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -259,6 +285,16 @@ func runWebhook(cmd *cobra.Command, args []string) {
 		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)
 	}
+}
+
+// getWatchNamespace returns the Namespace the operator should be watching for changes
+func getWatchNamespace() (string, error) {
+
+	ns, found := os.LookupEnv(watchNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
+	}
+	return ns, nil
 }
 
 func printVersion() {

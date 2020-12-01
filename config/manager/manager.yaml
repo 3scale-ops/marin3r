@@ -27,6 +27,9 @@ spec:
       containers:
       - command:
         - /manager
+        env:
+          - name: WATCH_NAMESPACE
+            value: ""
         args:
         - operator
         - --enable-leader-election
