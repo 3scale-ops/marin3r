@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"time"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
