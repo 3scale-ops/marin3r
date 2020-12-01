@@ -147,17 +147,104 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/3scale/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.7.0-alpha3
+  name: marin3r.v0.7.0-alpha4
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: DiscoveryServiceCertificate
+    - description: DiscoveryServiceCertificate is used to create certificates, either self-signed or by using a cert-manager CA issuer. This object is used by the DiscoveryService controller to create the required certificates for the different components of the discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
+      displayName: DiscoveryServiceCertificate
+      kind: DiscoveryServiceCertificate
       name: discoveryservicecertificates.operator.marin3r.3scale.net
+      specDescriptors:
+      - description: CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
+        displayName: Certificate Renewal Config
+        path: certificateRenewalNotification
+      - description: Enabled is a flag to enable or disable renewal of the certificate
+        displayName: Enabled
+        path: certificateRenewalNotification.enabled
+      - description: CommonName is the CommonName of the certificate
+        displayName: Common Name
+        path: commonName
+      - description: Hosts is the list of hosts the certificate is valid for. Only use when 'IsServerCertificate' is true. If unset, the CommonName field will be used to populate the valid hosts of the certificate.
+        displayName: Hosts
+        path: hosts
+      - description: IsCA is a boolean specifying that the certificate is a CA
+        displayName: Is CA
+        path: isCA
+      - description: SecretRef is a reference to the secret that will hold the certificate and the private key.
+        displayName: Secret Ref
+        path: secretRef
+      - description: IsServerCertificate is a boolean specifying if the certificate should be issued with server auth usage enabled
+        displayName: Is Server Certificate
+        path: server
+      - description: Signer specifies  the signer to use to create this certificate. Supported signers are CertManager and SelfSigned.
+        displayName: Signer
+        path: signer
+      - description: CASigned holds specific configuration for the CASigned signer
+        displayName: CASigned
+        path: signer.caSigned
+      - description: A reference to a Secret containing the CA
+        displayName: Secret Ref
+        path: signer.caSigned.caSecretRef
+      - description: SelfSigned holds specific configuration for the SelfSigned signer
+        displayName: Self Signed
+        path: signer.selfSigned
+      - description: ValidFor specifies the validity of the certificate in seconds
+        displayName: Valid For
+        path: validFor
+      statusDescriptors:
+      - description: Conditions represent the latest available observations of an object's state
+        displayName: Conditions
+        path: conditions
       version: v1alpha1
-    - kind: DiscoveryService
+    - description: DiscoveryService represents an envoy discovery service server. Currently only one DiscoveryService per cluster is supported.
+      displayName: DiscoveryService
+      kind: DiscoveryService
       name: discoveryservices.operator.marin3r.3scale.net
+      specDescriptors:
+      - description: ServiceConfig configures the way the DiscoveryService endpoints are exposed
+        displayName: Service Config
+        path: ServiceConfig
+      - displayName: Name
+        path: ServiceConfig.name
+      - displayName: Type
+        path: ServiceConfig.type
+      - description: Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
+        displayName: Debug
+        path: debug
+      - description: Image holds the image to use for the discovery service Deployment
+        displayName: Image
+        path: image
+      - description: MetricsPort is the port where metrics are served. Defaults to 8383.
+        displayName: Metrics Port
+        path: metricsPort
+      - description: PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
+        displayName: PKIConfig
+        path: pkiConfg
+      - displayName: Root Certificate Authority
+        path: pkiConfg.rootCertificateAuthority
+      - displayName: Duration
+        path: pkiConfg.rootCertificateAuthority.duration
+      - displayName: Secret Name
+        path: pkiConfg.rootCertificateAuthority.secretName
+      - displayName: Server Certificate
+        path: pkiConfg.serverCertificate
+      - displayName: Duration
+        path: pkiConfg.serverCertificate.duration
+      - displayName: Secret Name
+        path: pkiConfg.serverCertificate.secretName
+      - description: Resources holds the Resource Requirements to use for the discovery service Deployment. When not set it defaults to no resource requests nor limits. CPU and Memory resources are supported.
+        displayName: Resources
+        path: resources
+      - description: XdsServerPort is the port where the xDS server listens. Defaults to 18000.
+        displayName: Xds Server Port
+        path: xdsPort
+      statusDescriptors:
+      - description: Conditions represent the latest available observations of an object's state
+        displayName: Conditions
+        path: conditions
       version: v1alpha1
     - description: EnvoyBootstrap is the Schema for the envoybootstraps API
       displayName: EnvoyBootstrap
@@ -339,9 +426,11 @@ spec:
         path: revisions[0].version
       version: v1alpha1
   description: |
-    marin3r is an operator to deploy and manage an envoy discovery service. It's main purpose is to provide
+    marin3r is an operator to deploy and manage an envoy discovery service and a fleet of envoy proxies that
+    connect to it to fetch their configurations dynamically. It's main purpose is to provide
     an easy way to deploy a discovery service with the basic functionality already in place so you
-    can focus on developing your envoy configs or even new CRDs leveraging the ones that marin3r provides.
+    can focus on developing your envoy configurationss or even new your own domain specifig CRDs leveraging
+    the ones that marin3r provides.
 
 
     ## Managed installation (kind DiscoveryService)
@@ -350,9 +439,7 @@ spec:
     * Automatic deployment of a kubernetes mutating admission webhook to inject envoy sidecars in your pods
     * Automatic configuration of envoy sidecars to find the discovery service within the cluster
     * Mututal TLS authentication between envoy sidecars and the discovery service
-    * The admisson webhook is enabled only in user selected namespaces
-    * Currenly only a cluster wide installation is supported
-
+    * The discovery service and the envoy proxies that conenct to it must live in the same namespace
 
     ## Deploy envoy configurations as kubernetes custom resources (kind EnvoyConfig)
 
@@ -4382,7 +4469,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.7.0-alpha3
+                image: quay.io/3scale/marin3r:v0.7.0-alpha4
                 name: manager
                 resources:
                   limits:
@@ -4413,7 +4500,7 @@ spec:
                 - --tls-key-name=tls.key
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:v0.7.0-alpha3
+                image: quay.io/3scale/marin3r:v0.7.0-alpha4
                 name: webhook
                 ports:
                 - containerPort: 9443
@@ -4629,9 +4716,11 @@ spec:
   keywords:
   - envoy
   - discovery
-  - control-plane
+  - controlplane
   - proxy
   - sidecar
+  - xds
+  - network
   links:
   - name: GitHub
     url: https://github.com/3scale/marin3r
@@ -4641,7 +4730,8 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.7.0-alpha3
+  replaces: marin3r.v0.7.0-alpha3
+  version: 0.7.0-alpha4
   webhookdefinitions:
   - admissionReviewVersions:
     - v1beta1
