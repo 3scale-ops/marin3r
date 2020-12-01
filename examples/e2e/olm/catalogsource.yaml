@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
   name: marin3r-catalog
-  namespace: openshift-marketplace
+  namespace: marin3r-system
 spec:
   sourceType: grpc
   image: quay.io/roivaz/marin3r-catalog:latest

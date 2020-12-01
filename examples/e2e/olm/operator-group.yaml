@@ -4,3 +4,5 @@ kind: OperatorGroup
 metadata:
   name: marin3r-system
   namespace: marin3r-system
+spec:
+  targetNamespaces: ["marin3r-system", "default"]
