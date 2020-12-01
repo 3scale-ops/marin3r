@@ -3,19 +3,16 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"hash/fnv"
 	"reflect"
 	"sort"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	common "github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/go-logr/logr"
 
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -239,12 +236,6 @@ func trimRevisions(list []marin3rv1alpha1.ConfigRevisionRef, max int) []marin3rv
 		list = list[1:]
 	}
 	return list
-}
-
-func calculateRevisionHash(resources *marin3rv1alpha1.EnvoyResources) string {
-	resourcesHasher := fnv.New32a()
-	common.DeepHashObject(resourcesHasher, resources)
-	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }
 
 func getRevisionIndex(version string, revisions []marin3rv1alpha1.ConfigRevisionRef) *int {

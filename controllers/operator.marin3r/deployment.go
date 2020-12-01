@@ -2,16 +2,13 @@ package controllers
 
 import (
 	"fmt"
-	"hash/fnv"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
-	common "github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/utils/pointer"
 )
 
@@ -142,14 +139,8 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, certificateHas
 		}
 
 		// Set a label with the server certificate hash
-		dep.Spec.Template.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey] = certificateHash(secret.Data)
+		dep.Spec.Template.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey] = certificateHash
 
 		return dep
 	}
-}
-
-func certificateHash(data map[string][]byte) string {
-	resourcesHasher := fnv.New32a()
-	common.DeepHashObject(resourcesHasher, data)
-	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }

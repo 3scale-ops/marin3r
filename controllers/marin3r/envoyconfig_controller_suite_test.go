@@ -7,6 +7,7 @@ import (
 	"time"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	"github.com/3scale/marin3r/pkg/common"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale/marin3r/pkg/envoy"
@@ -136,7 +137,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Validate the cache for the nodeID
-				wantRevision := calculateRevisionHash(ec.Spec.EnvoyResources)
+				wantRevision := common.Hash(ec.Spec.EnvoyResources)
 				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 					Resources: [6]cache_v2.Resources{
 						{Version: wantRevision, Items: map[string]cache_types.Resource{
@@ -189,7 +190,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Wait for the new revision to get published
-				wantRevision = calculateRevisionHash(ec.Spec.EnvoyResources)
+				wantRevision = common.Hash(ec.Spec.EnvoyResources)
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
@@ -247,7 +248,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Wait for the existent revision to get published
-				wantRevision = calculateRevisionHash(ec.Spec.EnvoyResources)
+				wantRevision = common.Hash(ec.Spec.EnvoyResources)
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
@@ -338,7 +339,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Validate the cache for the nodeID
-				wantRevision := calculateRevisionHash(ec.Spec.EnvoyResources)
+				wantRevision := common.Hash(ec.Spec.EnvoyResources)
 				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 					Resources: [6]cache_v3.Resources{
 						{Version: wantRevision, Items: map[string]cache_types.Resource{
@@ -623,7 +624,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				By("checking the v2 xDS server cache")
 				{
-					wantRevision := calculateRevisionHash(ec.Spec.EnvoyResources)
+					wantRevision := common.Hash(ec.Spec.EnvoyResources)
 					wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 						Resources: [6]cache_v2.Resources{
 							{Version: wantRevision, Items: map[string]cache_types.Resource{
@@ -641,7 +642,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				By("checking the v3 xDS server cache")
 				{
-					wantRevision := calculateRevisionHash(ec.Spec.EnvoyResources)
+					wantRevision := common.Hash(ec.Spec.EnvoyResources)
 					wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 						Resources: [6]cache_v3.Resources{
 							{Version: wantRevision, Items: map[string]cache_types.Resource{
@@ -728,7 +729,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 			BeforeEach(func() {
 				OnErrorFn := OnError(cfg)
-				version := calculateRevisionHash(ec.Spec.EnvoyResources)
+				version := common.Hash(ec.Spec.EnvoyResources)
 				err := OnErrorFn(nodeID, version, "msg", envoy.APIv2)
 				Expect(err).ToNot(HaveOccurred())
 			})
