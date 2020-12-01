@@ -16,17 +16,13 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"testing"
 	"time"
 
-	testutil "github.com/3scale/marin3r/test/e2e/util"
 	"github.com/go-logr/logr"
 	"github.com/goombaio/namegenerator"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
@@ -65,117 +61,37 @@ func TestAPIs(t *testing.T) {
 		[]Reporter{printer.NewlineReporter{}})
 }
 
-var _ = SynchronizedBeforeSuite(
+var _ = BeforeSuite(func(done Done) {
 
-	// Only runs in node 1
-	func(done Done) []byte {
+	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	logger = ctrl.Log.WithName("e2e")
 
-		logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
-		logger = ctrl.Log.WithName("e2e")
+	seed := time.Now().UTC().UnixNano()
+	nameGenerator = namegenerator.NewNameGenerator(seed)
 
-		seed := time.Now().UTC().UnixNano()
-		nameGenerator = namegenerator.NewNameGenerator(seed)
+	testEnv = &envtest.Environment{
+		UseExistingCluster: pointer.BoolPtr(true),
+	}
 
-		By("bootstrapping test environment")
-		testEnv = &envtest.Environment{
-			CRDDirectoryPaths:  []string{"../../../config/crd/bases"},
-			UseExistingCluster: pointer.BoolPtr(true),
-		}
+	var err error
+	cfg, err = testEnv.Start()
+	Expect(err).NotTo(HaveOccurred())
 
-		var err error
-		cfg, err = testEnv.Start()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(cfg).ToNot(BeNil())
+	err = marin3rv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = operatorv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 
-		err = marin3rv1alpha1.AddToScheme(scheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-		err = operatorv1alpha1.AddToScheme(scheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
+	Expect(err).ToNot(HaveOccurred())
+	Expect(k8sClient).ToNot(BeNil())
 
-		k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-		Expect(err).ToNot(HaveOccurred())
-		Expect(k8sClient).ToNot(BeNil())
+	close(done)
+}, 60)
 
-		// Use the same DiscoveryService instance for the whole suite
-		By("creating a DiscoveryService instance")
-		ds = &operatorv1alpha1.DiscoveryService{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "instance",
-			},
-			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image:                     pointer.StringPtr(image),
-				DiscoveryServiceNamespace: targetNamespace,
-				EnabledNamespaces:         []string{},
-				Debug:                     pointer.BoolPtr(false)},
-		}
-		err = k8sClient.Create(context.Background(), ds)
-		Expect(err).ToNot(HaveOccurred())
+var _ = AfterSuite(func() {
+	By("tearing down the test environment")
 
-		close(done)
-		return []byte{}
-	},
-
-	// Runs in all nodes but 1
-	func(data []byte, done Done) {
-		logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
-		logger = ctrl.Log.WithName("e2e")
-
-		seed := time.Now().UTC().UnixNano()
-		nameGenerator = namegenerator.NewNameGenerator(seed)
-
-		testEnv = &envtest.Environment{
-			UseExistingCluster: pointer.BoolPtr(true),
-		}
-
-		var err error
-		cfg, err = testEnv.Start()
-		Expect(err).NotTo(HaveOccurred())
-
-		err = marin3rv1alpha1.AddToScheme(scheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-		err = operatorv1alpha1.AddToScheme(scheme.Scheme)
-		Expect(err).NotTo(HaveOccurred())
-
-		k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-		Expect(err).ToNot(HaveOccurred())
-		Expect(k8sClient).ToNot(BeNil())
-
-		ds = &operatorv1alpha1.DiscoveryService{}
-		key := types.NamespacedName{Name: "instance"}
-		err = k8sClient.Get(context.Background(), key, ds)
-		Expect(err).ToNot(HaveOccurred())
-
-		Eventually(func() int {
-			return testutil.ReadyReplicas(
-				k8sClient,
-				targetNamespace,
-				client.MatchingLabels{
-					"app.kubernetes.io/name":       "marin3r",
-					"app.kubernetes.io/managed-by": "marin3r-operator",
-					"app.kubernetes.io/component":  "discovery-service",
-					"app.kubernetes.io/instance":   ds.GetName(),
-				},
-			)
-		}, 60*time.Second, 5*time.Second).Should(Equal(1))
-		close(done)
-	},
-	60,
-)
-
-var _ = SynchronizedAfterSuite(
-
-	// Runs un all other nodes
-	func() {},
-	// Runs in node 1
-	func() {
-		By("tearing down the test environment")
-
-		// Delete DiscoveryService instance, but do not wait
-		logger.Info("Cleanup", "DiscoveryService", ds.GetName())
-		err := k8sClient.Delete(context.Background(), ds)
-		Expect(err).ToNot(HaveOccurred())
-
-		err = testEnv.Stop()
-		Expect(err).ToNot(HaveOccurred())
-	},
-)
+	err := testEnv.Stop()
+	Expect(err).ToNot(HaveOccurred())
+})

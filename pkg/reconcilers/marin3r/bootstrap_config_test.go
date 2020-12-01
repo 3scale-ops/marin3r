@@ -87,12 +87,10 @@ func TestBootstrapConfigReconciler_Reconcile(t *testing.T) {
 				client: fake.NewFakeClientWithScheme(
 					s,
 					&operatorv1alpha1.DiscoveryService{
-						ObjectMeta: v1.ObjectMeta{Name: "ds"},
+						ObjectMeta: v1.ObjectMeta{Name: "ds", Namespace: "default"},
 						Spec: operatorv1alpha1.DiscoveryServiceSpec{
-							DiscoveryServiceNamespace: "default",
-							EnabledNamespaces:         []string{"default"},
-							Image:                     pointer.StringPtr("xxx"),
-							Debug:                     pointer.BoolPtr(false),
+							Image: pointer.StringPtr("xxx"),
+							Debug: pointer.BoolPtr(false),
 						},
 					},
 				),

@@ -32,15 +32,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - namespaces
-  verbs:
-  - get
-  - list
-  - patch
-  - watch
-- apiGroups:
-  - ""
-  resources:
   - secrets
   verbs:
   - create
@@ -164,7 +155,7 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
-  - clusterrolebindings
+  - rolebindings
   verbs:
   - create
   - get
@@ -174,7 +165,7 @@ rules:
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
-  - clusterroles
+  - roles
   verbs:
   - create
   - get

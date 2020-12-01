@@ -218,40 +218,6 @@ func TestDiscoveryService_GetMetricsPort(t *testing.T) {
 	}
 }
 
-func TestDiscoveryService_GetWebhookPort(t *testing.T) {
-	cases := []struct {
-		testName                string
-		discoveryServiceFactory func() *DiscoveryService
-		expectedResult          uint32
-	}{
-		{"With default",
-			func() *DiscoveryService {
-				return &DiscoveryService{}
-			},
-			DefaultWebhookPort,
-		},
-		{"With explicitly set value",
-			func() *DiscoveryService {
-				return &DiscoveryService{
-					Spec: DiscoveryServiceSpec{
-						WebhookPort: func() *uint32 { var u uint32 = 1000; return &u }(),
-					},
-				}
-			},
-			1000,
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.testName, func(subT *testing.T) {
-			receivedResult := tc.discoveryServiceFactory().GetWebhookPort()
-			if tc.expectedResult != receivedResult {
-				subT.Errorf("Expected result differs: Expected: %v, Received: %v", tc.expectedResult, receivedResult)
-			}
-		})
-	}
-}
-
 func TestDiscoveryService_GetServiceConfig(t *testing.T) {
 	explicitlySet := &ServiceConfig{
 		Name: "my-service",

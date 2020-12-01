@@ -74,12 +74,11 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 			By("Creating a DiscoveryService instance")
 			ds = &operatorv1alpha1.DiscoveryService{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "instance",
+					Name:      "instance",
+					Namespace: namespace,
 				},
 				Spec: operatorv1alpha1.DiscoveryServiceSpec{
-					Image:                     pointer.StringPtr("image"),
-					DiscoveryServiceNamespace: namespace,
-					EnabledNamespaces:         []string{namespace},
+					Image: pointer.StringPtr("image"),
 				},
 			}
 			err := k8sClient.Create(context.Background(), ds)

@@ -40,7 +40,8 @@ func (r *ClientCertificateReconciler) Reconcile() (ctrl.Result, error) {
 
 	// Get the DiscoveryService instance this client want to connect to
 	ds := &operatorv1alpha1.DiscoveryService{}
-	if err := r.client.Get(r.ctx, types.NamespacedName{Name: r.eb.Spec.DiscoveryService}, ds); err != nil {
+	key := types.NamespacedName{Name: r.eb.Spec.DiscoveryService, Namespace: r.eb.GetNamespace()}
+	if err := r.client.Get(r.ctx, key, ds); err != nil {
 		if errors.IsNotFound(err) {
 			r.logger.Error(err, "DiscoveryService does not exist", "DiscoveryService", r.eb.Spec.DiscoveryService)
 		}
@@ -63,7 +64,7 @@ func (r *ClientCertificateReconciler) Reconcile() (ctrl.Result, error) {
 				},
 				types.NamespacedName{
 					Name:      ds.GetRootCertificateAuthorityOptions().SecretName,
-					Namespace: ds.Spec.DiscoveryServiceNamespace,
+					Namespace: ds.GetNamespace(),
 				},
 			)
 			if err := controllerutil.SetControllerReference(r.eb, dsc, r.scheme); err != nil {

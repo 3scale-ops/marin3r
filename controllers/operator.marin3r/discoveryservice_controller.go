@@ -45,7 +45,7 @@ const (
 	// in the future when renewal is managed by the operator
 	caCertValidFor             int64  = 3600 * 24 * 365 * 3 // 3 years
 	serverCertValidFor         int64  = 3600 * 24 * 90      // 90 days
-	clientCertValidFor         int64  = 3600 * 48           // 48 hours
+	clientCertValidFor         string = "48h"
 	caCommonName               string = "marin3r-ca"
 	caCertSecretNamePrefix     string = "marin3r-ca-cert"
 	serverCommonName           string = "marin3r-server"
@@ -64,40 +64,28 @@ type DiscoveryServiceReconciler struct {
 // +kubebuilder:rbac:groups=marin3r.3scale.net,resources=*,verbs=*
 // +kubebuilder:rbac:groups="core",resources=services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",resources=serviceaccounts,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="core",resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups="core",resources=namespaces,verbs=get;list;watch;watch;patch
 // +kubebuilder:rbac:groups="apps",resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterroles,verbs=get;list;watch;create;patch
-// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=clusterrolebindings,verbs=get;list;watch;create;patch
+// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=roles,verbs=get;list;watch;create;patch
+// +kubebuilder:rbac:groups="rbac.authorization.k8s.io",resources=rolebindings,verbs=get;list;watch;create;patch
 
 func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
-	// Fetch the DiscoveryService instance
-	dsList := &operatorv1alpha1.DiscoveryServiceList{}
-	err := r.Client.List(ctx, dsList)
+	ds := &operatorv1alpha1.DiscoveryService{}
+	key := types.NamespacedName{Name: request.Name, Namespace: request.Namespace}
+	err := r.Client.Get(ctx, key, ds)
 	if err != nil {
-		// Error reading the object - requeue the request.
+		if errors.IsNotFound(err) {
+			// Return and don't requeue
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
-	}
-
-	if len(dsList.Items) == 0 {
-		// Request object not found, could have been deleted after reconcile request.
-		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-		// Return and don't requeue
-		return ctrl.Result{}, nil
-	}
-
-	if len(dsList.Items) > 1 {
-		err := fmt.Errorf("More than one DiscoveryService object in the cluster, refusing to reconcile")
-		log.Error(err, "Only one marin3r installation per cluster is supported")
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	}
 
 	// Call reconcilers in the proper installation order
 	var result ctrl.Result
-	r.ds = &dsList.Items[0]
+	r.ds = ds
 
 	result, err = r.reconcileCA(ctx, log)
 	if result.Requeue || err != nil {
@@ -114,12 +102,12 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return result, err
 	}
 
-	result, err = r.reconcileClusterRole(ctx, log)
+	result, err = r.reconcileRole(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	result, err = r.reconcileClusterRoleBinding(ctx, log)
+	result, err = r.reconcileRoleBinding(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
@@ -147,12 +135,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return result, err
 	}
 
-	// TODO: mechanism to cleanup resorces from namespaces
-	// TODO: finalizer to cleanup labels in namespaces
-	// This is necessary because namespaces are not
-	// resources owned by this controller so the usual
-	// garbage collection mechanisms won't
-	result, err = r.reconcileEnabledNamespaces(ctx, log)
+	result, err = r.reconcileEnvoyBootstrap(ctx, log)
 	if result.Requeue || err != nil {
 		return result, err
 	}
@@ -195,8 +178,8 @@ func (r *DiscoveryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&operatorv1alpha1.DiscoveryServiceCertificate{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
-		Owns(&rbacv1.ClusterRole{}).
-		Owns(&rbacv1.ClusterRoleBinding{}).
+		Owns(&rbacv1.Role{}).
+		Owns(&rbacv1.RoleBinding{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&marin3rv1alpha1.EnvoyBootstrap{}).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}).

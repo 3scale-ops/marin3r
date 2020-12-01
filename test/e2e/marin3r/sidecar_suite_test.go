@@ -9,7 +9,6 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
-
 	"github.com/3scale/marin3r/pkg/envoy"
 	testutil "github.com/3scale/marin3r/test/e2e/util"
 	. "github.com/onsi/ginkgo"
@@ -19,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -46,6 +46,31 @@ var _ = Describe("Envpoy sidecars", func() {
 			}
 			return true
 		}, 60*time.Second, 5*time.Second).Should(BeTrue())
+
+		By("creating a DiscoveryService instance")
+		ds = &operatorv1alpha1.DiscoveryService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "instance",
+				Namespace: testNamespace,
+			},
+			Spec: operatorv1alpha1.DiscoveryServiceSpec{
+				Image: pointer.StringPtr(image),
+			},
+		}
+		err = k8sClient.Create(context.Background(), ds)
+		Expect(err).ToNot(HaveOccurred())
+
+		Eventually(func() int {
+			dep := &appsv1.Deployment{}
+			key := types.NamespacedName{
+				Name:      "marin3r-instance",
+				Namespace: testNamespace,
+			}
+			if err := k8sClient.Get(context.Background(), key, dep); err != nil {
+				return 0
+			}
+			return int(dep.Status.ReadyReplicas)
+		}, 60*time.Second, 5*time.Second).Should(Equal(1))
 	})
 
 	AfterEach(func() {
@@ -72,21 +97,6 @@ var _ = Describe("Envpoy sidecars", func() {
 			Expect(err).ToNot(HaveOccurred())
 			nodeID = nameGenerator.Generate()
 
-			By(fmt.Sprintf("enabling injection in the '%s' namespace", testNamespace))
-			ds := &operatorv1alpha1.DiscoveryService{}
-			err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance"}, ds)
-			Expect(err).ToNot(HaveOccurred())
-
-			patch := client.MergeFrom(ds.DeepCopy())
-			ds.Spec.EnabledNamespaces = append(ds.Spec.EnabledNamespaces, testNamespace)
-			err = k8sClient.Patch(context.Background(), ds, patch)
-			Expect(err).ToNot(HaveOccurred())
-
-			Eventually(func() error {
-				ns := &marin3rv1alpha1.EnvoyBootstrap{}
-				key := types.NamespacedName{Name: "instance", Namespace: testNamespace}
-				return k8sClient.Get(context.Background(), key, ns)
-			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 		})
 
 		It("injects an envoy sidecar container using v2 config", func() {

@@ -39,6 +39,8 @@ func init() {
 // Manager holds configuration to
 // run a marin3r discovery service
 type Manager struct {
+	// The namespace to watch for EnvoyConfig resources
+	Namespace string
 	// The xDS server port
 	XdsServerPort int
 	// The mutating webhook server port
@@ -59,6 +61,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 		Scheme:             scheme,
 		MetricsBindAddress: dsm.MetricsAddr,
 		LeaderElection:     false,
+		Namespace:          dsm.Namespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

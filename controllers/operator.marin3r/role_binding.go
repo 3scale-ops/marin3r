@@ -14,14 +14,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *DiscoveryServiceReconciler) reconcileClusterRoleBinding(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileRoleBinding(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
-	existent := &rbacv1.ClusterRoleBinding{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
+	existent := &rbacv1.RoleBinding{}
+	key := types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: r.ds.GetNamespace()}
+	err := r.Client.Get(ctx, key, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			existent = r.genClusterRoleBindingObject()
+			existent = r.genRoleBindingObject()
 			if err := controllerutil.SetControllerReference(r.ds, existent, r.Scheme); err != nil {
 				return reconcile.Result{}, err
 			}
@@ -35,10 +36,10 @@ func (r *DiscoveryServiceReconciler) reconcileClusterRoleBinding(ctx context.Con
 	}
 
 	// We just reconcile "Subjects" field. "RoleRef" is an immutable field.
-	if !equality.Semantic.DeepEqual(existent.RoleRef, r.genClusterRoleBindingObject().RoleRef) ||
-		!equality.Semantic.DeepEqual(existent.Subjects, r.genClusterRoleBindingObject().Subjects) {
+	if !equality.Semantic.DeepEqual(existent.RoleRef, r.genRoleBindingObject().RoleRef) ||
+		!equality.Semantic.DeepEqual(existent.Subjects, r.genRoleBindingObject().Subjects) {
 		patch := client.MergeFrom(existent.DeepCopy())
-		existent.Subjects = r.genClusterRoleBindingObject().Subjects
+		existent.Subjects = r.genRoleBindingObject().Subjects
 		if err := r.Client.Patch(ctx, existent, patch); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -48,23 +49,24 @@ func (r *DiscoveryServiceReconciler) reconcileClusterRoleBinding(ctx context.Con
 	return reconcile.Result{}, nil
 }
 
-func (r *DiscoveryServiceReconciler) genClusterRoleBindingObject() *rbacv1.ClusterRoleBinding {
+func (r *DiscoveryServiceReconciler) genRoleBindingObject() *rbacv1.RoleBinding {
 
-	return &rbacv1.ClusterRoleBinding{
+	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   OwnedObjectName(r.ds),
-			Labels: Labels(r.ds),
+			Name:      OwnedObjectName(r.ds),
+			Namespace: r.ds.GetNamespace(),
+			Labels:    Labels(r.ds),
 		},
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.SchemeGroupVersion.Group,
-			Kind:     "ClusterRole",
+			Kind:     "Role",
 			Name:     OwnedObjectName(r.ds),
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
 				Name:      OwnedObjectName(r.ds),
-				Namespace: OwnedObjectNamespace(r.ds),
+				Namespace: r.ds.GetNamespace(),
 			},
 		},
 	}

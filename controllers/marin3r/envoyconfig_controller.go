@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	"github.com/3scale/marin3r/pkg/common"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"

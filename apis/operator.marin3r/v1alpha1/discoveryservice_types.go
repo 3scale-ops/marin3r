@@ -80,16 +80,6 @@ const (
 
 // DiscoveryServiceSpec defines the desired state of DiscoveryService
 type DiscoveryServiceSpec struct {
-	// DiscoveryServiceNamespace is the name of the namespace where the envoy discovery
-	// service server should be deployed.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	DiscoveryServiceNamespace string `json:"discoveryServiceNamespace"`
-	// EnabledNamespaces is a list of namespaces where the envoy discovery service is
-	// enabled. In order to be able to use marin3r from a given namespace its name needs
-	// to be included in this list because the operator needs to add some required resources in
-	// that namespace.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	EnabledNamespaces []string `json:"enabledNamespaces,omitempty"`
 	// Image holds the image to use for the discovery service Deployment
 	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
 	// +optional
@@ -112,9 +102,6 @@ type DiscoveryServiceSpec struct {
 	// XdsServerPort is the port where the xDS server listens. Defaults to 18000.
 	// +optional
 	XdsServerPort *uint32 `json:"xdsPort,omitempty"`
-	// WebhookPort is the port where the Pod mutating webhooks listens. Defaults to 8443.
-	// +optional
-	WebhookPort *uint32 `json:"webhookPort,omitempty"`
 	// MetricsPort is the port where metrics are served. Defaults to 8383.
 	// +optional
 	MetricsPort *uint32 `json:"metricsPort,omitempty"`
@@ -156,11 +143,10 @@ type ServiceConfig struct {
 // DiscoveryService represents an envoy discovery service server. Currently
 // only one DiscoveryService per cluster is supported.
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=discoveryservices,scope=Cluster
+// +kubebuilder:resource:path=discoveryservices,scope=Namespaced
 // +operator-sdk:gen-csv:customresourcedefinitions.displayName="DiscoveryService"
 // +operator-sdk:gen-csv:customresourcedefinitions.resources=`Deployment,v1`
 // +operator-sdk:gen-csv:customresourcedefinitions.resources=`Service,v1`
-// +operator-sdk:gen-csv:customresourcedefinitions.resources=`MutatingWebhookConfiguration,v1`
 // +operator-sdk:gen-csv:customresourcedefinitions.resources=`DiscoveryServiceCertificate,v1alpha1`
 type DiscoveryService struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -255,14 +241,6 @@ func (d *DiscoveryService) GetMetricsPort() uint32 {
 		return *d.Spec.MetricsPort
 	}
 	return DefaultMetricsPort
-}
-
-// GetWebhookPort returns the port the mutating webhook server will listen at
-func (d *DiscoveryService) GetWebhookPort() uint32 {
-	if d.Spec.WebhookPort != nil {
-		return *d.Spec.WebhookPort
-	}
-	return DefaultWebhookPort
 }
 
 // GetServiceConfig returns the Service configuration for the discovery service servers

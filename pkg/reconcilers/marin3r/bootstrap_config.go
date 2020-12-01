@@ -49,7 +49,8 @@ func (r *BootstrapConfigReconciler) Reconcile(envoyAPI envoy.APIVersion) (ctrl.R
 
 	// Get the DiscoveryService instance this client want to connect to
 	ds := &operatorv1alpha1.DiscoveryService{}
-	if err := r.client.Get(r.ctx, types.NamespacedName{Name: r.eb.Spec.DiscoveryService}, ds); err != nil {
+	key := types.NamespacedName{Name: r.eb.Spec.DiscoveryService, Namespace: r.eb.GetNamespace()}
+	if err := r.client.Get(r.ctx, key, ds); err != nil {
 		if errors.IsNotFound(err) {
 			r.logger.Error(err, "DiscoveryService does not exist", "DiscoveryService", r.eb.Spec.DiscoveryService)
 		}
@@ -134,7 +135,7 @@ func (r *BootstrapConfigReconciler) getBootstrapConfigMapObject(ds *operatorv1al
 	}
 
 	bootstrap := envoy_bootstrap.NewConfig(envoyAPI, envoy_bootstrap_options.ConfigOptions{
-		XdsHost:                     fmt.Sprintf("%s.%s.%s", ds.GetServiceConfig().Name, ds.Spec.DiscoveryServiceNamespace, "svc"),
+		XdsHost:                     fmt.Sprintf("%s.%s.%s", ds.GetServiceConfig().Name, ds.GetNamespace(), "svc"),
 		XdsPort:                     ds.GetXdsServerPort(),
 		XdsClientCertificatePath:    fmt.Sprintf("%s/%s", r.eb.Spec.ClientCertificate.Directory, corev1.TLSCertKey),
 		XdsClientCertificateKeyPath: fmt.Sprintf("%s/%s", r.eb.Spec.ClientCertificate.Directory, corev1.TLSPrivateKeyKey),

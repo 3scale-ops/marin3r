@@ -28,6 +28,12 @@ const (
 	// CertificateNeedsRenewalCondition is a condition that indicates that a
 	// DiscoveryServiceCertificate is invalid and needs replacement
 	CertificateNeedsRenewalCondition status.ConditionType = "CertificateNeedsRenewal"
+	// CertificateHashLabelKey is the label that stores the hash of the certificate managed
+	// by the DiscoveryServiceCertificate resource
+	CertificateHashLabelKey string = "certificate-hash"
+	// IssuerCertificateHashLabelKey is the label that stores the hash of the certificate managed
+	// by the DiscoveryServiceCertificate resource
+	IssuerCertificateHashLabelKey string = "issuer-certificate-hash"
 )
 
 // DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate

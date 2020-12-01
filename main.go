@@ -215,6 +215,7 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
 	mgr := discoveryservice.Manager{
+		Namespace:             os.Getenv("WATCH_NAMESPACE"),
 		XdsServerPort:         xdssPort,
 		MetricsAddr:           metricsAddr,
 		ServerCertificatePath: xdssTLSServerCertificatePath,

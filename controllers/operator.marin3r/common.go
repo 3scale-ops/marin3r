@@ -11,7 +11,7 @@ func OwnedObjectName(ds *operatorv1alpha1.DiscoveryService) string {
 }
 
 func OwnedObjectNamespace(ds *operatorv1alpha1.DiscoveryService) string {
-	return ds.Spec.DiscoveryServiceNamespace
+	return ds.GetNamespace()
 }
 
 func OwnedObjectAppLabel(ds *operatorv1alpha1.DiscoveryService) string {

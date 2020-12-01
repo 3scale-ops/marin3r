@@ -17,7 +17,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("EnvoyConfigRevision controller", func() {
+var _ = Describe("DiscoveryService controller", func() {
 	var namespace string
 	var ds *operatorv1alpha1.DiscoveryService
 
@@ -46,18 +46,17 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		By("creating a DiscoveryService instance")
 		ds = &operatorv1alpha1.DiscoveryService{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "instance",
+				Name:      "instance",
+				Namespace: namespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image:                     pointer.StringPtr("image"),
-				DiscoveryServiceNamespace: namespace,
-				EnabledNamespaces:         []string{namespace},
+				Image: pointer.StringPtr("image"),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() bool {
-			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance"}, ds)
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ds)
 			if err != nil {
 				return false
 			}
@@ -122,14 +121,14 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
-			By("waiting for the discovery service ClusterRole to be created")
+			By("waiting for the discovery service Role to be created")
 
 			{
-				cr := &rbacv1.ClusterRole{}
+				cr := &rbacv1.Role{}
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds)},
+						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
 						cr,
 					); err != nil {
 						return false
@@ -138,14 +137,14 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
-			By("waiting for the discovery service ClusterRoleBinding to be created")
+			By("waiting for the discovery service RoleBinding to be created")
 
 			{
-				crb := &rbacv1.ClusterRoleBinding{}
+				crb := &rbacv1.RoleBinding{}
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds)},
+						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
 						crb,
 					); err != nil {
 						return false
@@ -189,15 +188,13 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			By("checking the namespaces in 'spec.enabledNamespaces' have an EnvoyBootstrap resource each")
 
 			{
-				for _, ns := range ds.Spec.EnabledNamespaces {
-					eb := &marin3rv1alpha1.EnvoyBootstrap{}
-					Eventually(func() bool {
-						if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: ds.GetName(), Namespace: ns}, eb); err != nil {
-							return false
-						}
-						return true
-					}, 30*time.Second, 5*time.Second).Should(BeTrue())
-				}
+				eb := &marin3rv1alpha1.EnvoyBootstrap{}
+				Eventually(func() bool {
+					if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: ds.GetName(), Namespace: namespace}, eb); err != nil {
+						return false
+					}
+					return true
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			}
 		})
 	})

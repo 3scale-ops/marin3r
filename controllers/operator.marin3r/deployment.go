@@ -19,14 +19,14 @@ const (
 	appLabelKey string = "app"
 )
 
-func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1.Secret) reconcilers.DeploymentGeneratorFn {
+func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, certificateHash string) reconcilers.DeploymentGeneratorFn {
 
 	return func() *appsv1.Deployment {
 
 		dep := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      OwnedObjectName(ds),
-				Namespace: OwnedObjectNamespace(ds),
+				Namespace: ds.GetNamespace(),
 				Labels:    Labels(ds),
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -69,7 +69,6 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 									"--server-certificate-path=/etc/marin3r/tls/server",
 									"--ca-certificate-path=/etc/marin3r/tls/ca",
 									func() string { return fmt.Sprintf("--xdss-port=%v", ds.GetXdsServerPort()) }(),
-									func() string { return fmt.Sprintf("--webhook-port=%v", ds.GetWebhookPort()) }(),
 									func() string { return fmt.Sprintf("--metrics-addr=:%v", ds.GetMetricsPort()) }(),
 								},
 								Ports: []corev1.ContainerPort{
@@ -79,18 +78,13 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 										Protocol:      corev1.ProtocolTCP,
 									},
 									{
-										Name:          "webhook",
-										ContainerPort: int32(ds.GetWebhookPort()),
-										Protocol:      corev1.ProtocolTCP,
-									},
-									{
 										Name:          "metrics",
 										ContainerPort: int32(ds.GetMetricsPort()),
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
 								Env: []corev1.EnvVar{
-									{Name: "WATCH_NAMESPACE", Value: ""},
+									{Name: "WATCH_NAMESPACE", Value: ds.GetNamespace()},
 									{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
 											APIVersion: corev1.SchemeGroupVersion.Version,

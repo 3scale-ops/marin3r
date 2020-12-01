@@ -16,30 +16,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *DiscoveryServiceReconciler) reconcileClusterRole(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
+func (r *DiscoveryServiceReconciler) reconcileRole(ctx context.Context, log logr.Logger) (reconcile.Result, error) {
 
-	existent := &rbacv1.ClusterRole{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: OwnedObjectName(r.ds)}, existent)
+	existent := &rbacv1.Role{}
+	key := types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: r.ds.GetNamespace()}
+	err := r.Client.Get(ctx, key, existent)
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			existent = r.genClusterRoleObject()
+			existent = r.genRoleObject()
 			if err := controllerutil.SetControllerReference(r.ds, existent, r.Scheme); err != nil {
 				return reconcile.Result{}, err
 			}
 			if err := r.Client.Create(ctx, existent); err != nil {
 				return reconcile.Result{}, err
 			}
-			log.Info("Created CusterRole")
+			log.Info("Created Role")
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, err
 	}
 
 	// We just reconcile the "Rules" for the moment
-	if !equality.Semantic.DeepEqual(existent.Rules, r.genClusterRoleObject().Rules) {
+	if !equality.Semantic.DeepEqual(existent.Rules, r.genRoleObject().Rules) {
 		patch := client.MergeFrom(existent.DeepCopy())
-		existent.Rules = r.genClusterRoleObject().Rules
+		existent.Rules = r.genRoleObject().Rules
 		if err := r.Client.Patch(ctx, existent, patch); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -49,11 +50,12 @@ func (r *DiscoveryServiceReconciler) reconcileClusterRole(ctx context.Context, l
 	return reconcile.Result{}, nil
 }
 
-func (r *DiscoveryServiceReconciler) genClusterRoleObject() *rbacv1.ClusterRole {
-	return &rbacv1.ClusterRole{
+func (r *DiscoveryServiceReconciler) genRoleObject() *rbacv1.Role {
+	return &rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   OwnedObjectName(r.ds),
-			Labels: Labels(r.ds),
+			Name:      OwnedObjectName(r.ds),
+			Namespace: r.ds.GetNamespace(),
+			Labels:    Labels(r.ds),
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
