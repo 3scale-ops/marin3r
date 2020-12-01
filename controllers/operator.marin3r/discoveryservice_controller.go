@@ -28,14 +28,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -114,16 +111,20 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 	// Fetch the server certificate to calculate the hash and
 	// populate the deployment's label.
 	// This will trigger rollouts on server certificate changes.
-	secret := &corev1.Secret{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: getServerCertName(r.ds), Namespace: OwnedObjectNamespace(r.ds)}, secret)
+	serverDSC := &operatorv1alpha1.DiscoveryServiceCertificate{}
+	err = r.Client.Get(ctx, types.NamespacedName{Name: getServerCertName(r.ds), Namespace: r.ds.GetNamespace()}, serverDSC)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if serverDSC.GetLabels() == nil {
+		log.Info("Server certificate still not available, requeue")
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	dr := reconcilers.NewDeploymentReconciler(ctx, log, r.Client, r.Scheme, r.ds)
 	result, err = dr.Reconcile(
 		types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)},
-		deploymentGeneratorFn(r.ds, secret),
+		deploymentGeneratorFn(r.ds, serverDSC.GetLabels()[operatorv1alpha1.CertificateHashLabelKey]),
 	)
 	if result.Requeue || err != nil {
 		return result, err
@@ -142,35 +143,6 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 	return ctrl.Result{}, nil
 }
 
-func filterTLSTypeCertificatesPredicate() predicate.Predicate {
-	return predicate.Funcs{
-		CreateFunc: func(e event.CreateEvent) bool {
-			switch o := e.Object.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					return true
-				}
-				return false
-
-			default:
-				return true
-			}
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			switch o := e.ObjectNew.(type) {
-			case *corev1.Secret:
-				if o.Type == "kubernetes.io/tls" {
-					return true
-				}
-				return false
-			default:
-				return true
-			}
-		},
-		DeleteFunc: func(e event.DeleteEvent) bool { return false },
-	}
-}
-
 func (r *DiscoveryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).For(&operatorv1alpha1.DiscoveryService{}).
@@ -181,7 +153,5 @@ func (r *DiscoveryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.RoleBinding{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&marin3rv1alpha1.EnvoyBootstrap{}).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}).
-		WithEventFilter(filterTLSTypeCertificatesPredicate()).
 		Complete(r)
 }

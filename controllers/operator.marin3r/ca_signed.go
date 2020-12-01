@@ -92,6 +92,48 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 		}
 	}
 
+	if err := r.reconcileLabels(ctx, dsc, secret, issuerCert, log); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *DiscoveryServiceCertificateReconciler) reconcileLabels(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate,
+	secret *corev1.Secret, issuer *x509.Certificate, log logr.Logger) error {
+	update := false
+
+	// Label with the hash of the certificate
+	if hash, ok := dsc.GetLabels()[operatorv1alpha1.CertificateHashLabelKey]; ok {
+		if hash != common.Hash(secret.Data) {
+			update = true
+		}
+	} else {
+		update = true
+	}
+
+	// Label with the hash of the issuer certificate
+	if hash, ok := dsc.GetLabels()[operatorv1alpha1.IssuerCertificateHashLabelKey]; ok {
+		if hash != common.Hash(issuer) {
+			update = true
+		}
+	} else {
+		update = true
+	}
+
+	if update {
+		patch := client.MergeFrom(dsc.DeepCopy())
+		if dsc.GetLabels() == nil {
+			dsc.SetLabels(map[string]string{})
+		}
+		dsc.ObjectMeta.Labels[operatorv1alpha1.CertificateHashLabelKey] = common.Hash(secret.Data)
+		dsc.ObjectMeta.Labels[operatorv1alpha1.IssuerCertificateHashLabelKey] = common.Hash(issuer)
+		if err := r.Client.Patch(ctx, dsc, patch); err != nil {
+			return err
+		}
+		log.Info("Updated 'certificate-hash' label")
+	}
+
 	return nil
 }
 
