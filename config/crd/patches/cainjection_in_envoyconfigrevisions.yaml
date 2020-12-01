@@ -5,4 +5,4 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  name: envoyconfigrevisions.envoy.marin3r.3scale.net
+  name: envoyconfigrevisions.marin3r.3scale.net

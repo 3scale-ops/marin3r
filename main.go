@@ -21,8 +21,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -30,11 +31,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
-	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	envoycontroller "github.com/3scale/marin3r/controllers/envoy"
-	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
+	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
+	operatorcontroller "github.com/3scale/marin3r/controllers/operator.marin3r"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
+	"github.com/3scale/marin3r/pkg/version"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -56,14 +58,14 @@ var (
 )
 
 var (
-	scheme   = runtime.NewScheme()
+	scheme   = apimachineryruntime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(envoyv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(marin3rv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -84,6 +86,8 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+
+	printVersion()
 
 	cfg := ctrl.GetConfigOrDie()
 	ctx := context.Background()
@@ -107,37 +111,37 @@ func main() {
 
 		if err := (&operatorcontroller.DiscoveryServiceReconciler{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("DiscoveryService"),
+			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "DiscoveryService")
+			setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
 			os.Exit(1)
 		}
 
 		if err := (&operatorcontroller.DiscoveryServiceCertificateReconciler{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("DiscoveryServiceCertificate"),
+			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "DiscoveryServiceCertificate")
+			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
 			os.Exit(1)
 		}
 
 		if err := (&operatorcontroller.DiscoveryServiceCertificateWatcher{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("DiscoveryServiceCertificateWatcher"),
+			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificatewatcher"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "DiscoveryServiceCertificateWatcher")
+			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificatewatcher")
 			os.Exit(1)
 		}
 
-		if err = (&envoycontroller.EnvoyBootstrapReconciler{
+		if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("EnvoyBootstrap"),
+			Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "EnvoyBootstrap")
+			setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
 			os.Exit(1)
 		}
 		// +kubebuilder:scaffold:builder
@@ -161,4 +165,10 @@ func main() {
 
 		mgr.Start(ctx)
 	}
+}
+
+func printVersion() {
+	setupLog.Info(fmt.Sprintf("Operator Version: %s", version.Current()))
+	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 }

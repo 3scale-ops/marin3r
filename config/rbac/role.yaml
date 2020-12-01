@@ -82,15 +82,33 @@ rules:
   - update
   - watch
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - '*'
   verbs:
   - '*'
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - envoybootstraps
+  verbs:
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - marin3r.3scale.net
+  resources:
+  - envoybootstraps/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - marin3r.3scale.net
+  resources:
+  - envoyconfigrevisions
   verbs:
   - create
   - delete
@@ -100,22 +118,33 @@ rules:
   - update
   - watch
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
-  - envoybootstraps/status
+  - envoyconfigrevisions/status
   verbs:
   - get
   - patch
   - update
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - envoyconfigs
   verbs:
+  - create
+  - delete
   - get
   - list
   - patch
+  - update
   - watch
+- apiGroups:
+  - marin3r.3scale.net
+  resources:
+  - envoyconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - operator.marin3r.3scale.net
   resources:

@@ -4,9 +4,9 @@
 resources:
 - bases/operator.marin3r.3scale.net_discoveryservices.yaml
 - bases/operator.marin3r.3scale.net_discoveryservicecertificates.yaml
-- bases/envoy.marin3r.3scale.net_envoyconfigs.yaml
-- bases/envoy.marin3r.3scale.net_envoyconfigrevisions.yaml
-- bases/envoy.marin3r.3scale.net_envoybootstraps.yaml
+- bases/marin3r.3scale.net_envoyconfigs.yaml
+- bases/marin3r.3scale.net_envoyconfigrevisions.yaml
+- bases/marin3r.3scale.net_envoybootstraps.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

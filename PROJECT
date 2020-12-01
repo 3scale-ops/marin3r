@@ -1,22 +1,22 @@
-domain: marin3r.3scale.net
+domain: 3scale.net
 layout: go.kubebuilder.io/v2
 multigroup: true
 projectName: marin3r
 repo: github.com/3scale/marin3r
 resources:
-- group: operator
+- group: operator.marin3r
   kind: DiscoveryService
   version: v1alpha1
-- group: operator
+- group: operator.marin3r
   kind: DiscoveryServiceCertificate
   version: v1alpha1
-- group: envoy
+- group: marin3r
   kind: EnvoyConfig
   version: v1alpha1
-- group: envoy
+- group: marin3r
   kind: EnvoyConfigRevision
   version: v1alpha1
-- group: envoy
+- group: marin3r
   kind: EnvoyBootstrap
   version: v1alpha1
 version: 3-alpha

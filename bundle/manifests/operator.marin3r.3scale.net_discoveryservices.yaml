@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.2.4
+    controller-gen.kubebuilder.io/version: v0.3.0
   creationTimestamp: null
   name: discoveryservices.operator.marin3r.3scale.net
 spec:
@@ -30,11 +30,20 @@ spec:
         spec:
           description: DiscoveryServiceSpec defines the desired state of DiscoveryService
           properties:
+            ServiceConfig:
+              description: ServiceConfig configures the way the DiscoveryService endpoints are exposed
+              properties:
+                name:
+                  type: string
+                type:
+                  description: ServiceType is an enum with the available discovery service Service types
+                  type: string
+              type: object
             debug:
               description: Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
               type: boolean
             discoveryServiceNamespace:
-              description: DiscoveryServiceNamespcae is the name of the namespace where the envoy discovery service server should be deployed.
+              description: DiscoveryServiceNamespace is the name of the namespace where the envoy discovery service server should be deployed.
               type: string
             enabledNamespaces:
               description: EnabledNamespaces is a list of namespaces where the envoy discovery service is enabled. In order to be able to use marin3r from a given namespace its name needs to be included in this list because the operator needs to add some required resources in that namespace.
@@ -44,9 +53,71 @@ spec:
             image:
               description: Image holds the image to use for the discovery service Deployment
               type: string
+            metricsPort:
+              description: MetricsPort is the port where metrics are served. Defaults to 8383.
+              format: int32
+              type: integer
+            pkiConfg:
+              description: PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
+              properties:
+                rootCertificateAuthority:
+                  description: CertificateOptions specifies options to generate the server certificate used both for the xDS server and the mutating webhook server.
+                  properties:
+                    duration:
+                      type: string
+                    secretName:
+                      type: string
+                  required:
+                  - duration
+                  - secretName
+                  type: object
+                serverCertificate:
+                  description: CertificateOptions specifies options to generate the server certificate used both for the xDS server and the mutating webhook server.
+                  properties:
+                    duration:
+                      type: string
+                    secretName:
+                      type: string
+                  required:
+                  - duration
+                  - secretName
+                  type: object
+              required:
+              - rootCertificateAuthority
+              - serverCertificate
+              type: object
+            resources:
+              description: Resources holds the Resource Requirements to use for the discovery service Deployment. When not set it defaults to no resource requests nor limits. CPU and Memory resources are supported.
+              properties:
+                limits:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+                requests:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+              type: object
+            webhookPort:
+              description: WebhookPort is the port where the Pod mutating webhooks listens. Defaults to 8443.
+              format: int32
+              type: integer
+            xdsPort:
+              description: XdsServerPort is the port where the xDS server listens. Defaults to 18000.
+              format: int32
+              type: integer
           required:
           - discoveryServiceNamespace
-          - image
           type: object
         status:
           description: DiscoveryServiceStatus defines the observed state of DiscoveryService

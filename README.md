@@ -182,7 +182,7 @@ Apply the following EnvoyConfig custom resource to the cluster. The EnvoyConfig 
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
-apiVersion: envoy.marin3r.3scale.net/v1alpha1
+apiVersion: marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
   name: kuard
@@ -321,7 +321,7 @@ First, modify the EnvoyConfig object to change the port that the https listener 
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
-apiVersion: envoy.marin3r.3scale.net/v1alpha1
+apiVersion: marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
   name: kuard

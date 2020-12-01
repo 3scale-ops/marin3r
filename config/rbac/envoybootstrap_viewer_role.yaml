@@ -5,7 +5,7 @@ metadata:
   name: envoybootstrap-viewer-role
 rules:
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - envoybootstraps
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - envoy.marin3r.3scale.net
+  - marin3r.3scale.net
   resources:
   - envoybootstraps/status
   verbs:

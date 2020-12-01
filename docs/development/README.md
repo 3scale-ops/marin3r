@@ -91,9 +91,9 @@ You will see in the logs of the discovery service server that the envoy process 
 ```bash
 [...]
 urce": "kind source: /, Kind="}
-2020-10-29T17:48:29.767+0100    INFO    controller      Starting workers        {"reconcilerGroup": "envoy.marin3r.3scale.net", "reconcilerKind": "EnvoyConfigRevision", "controller": "envoyconfigrevision", "worker count": 1}
-2020-10-29T17:48:29.767+0100    INFO    controller      Starting Controller     {"reconcilerGroup": "envoy.marin3r.3scale.net", "reconcilerKind": "EnvoyConfig", "controller": "envoyconfig"}
-2020-10-29T17:48:29.767+0100    INFO    controller      Starting workers        {"reconcilerGroup": "envoy.marin3r.3scale.net", "reconcilerKind": "EnvoyConfig", "controller": "envoyconfig", "worker count": 1}
+2020-10-29T17:48:29.767+0100    INFO    controller      Starting workers        {"reconcilerGroup": "marin3r.3scale.net", "reconcilerKind": "EnvoyConfigRevision", "controller": "envoyconfigrevision", "worker count": 1}
+2020-10-29T17:48:29.767+0100    INFO    controller      Starting Controller     {"reconcilerGroup": "marin3r.3scale.net", "reconcilerKind": "EnvoyConfig", "controller": "envoyconfig"}
+2020-10-29T17:48:29.767+0100    INFO    controller      Starting workers        {"reconcilerGroup": "marin3r.3scale.net", "reconcilerKind": "EnvoyConfig", "controller": "envoyconfig", "worker count": 1}
 
 
 

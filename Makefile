@@ -2,7 +2,7 @@ SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
-VERSION ?= 0.6.0
+VERSION ?= 0.7.0-alpha2
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -47,12 +47,20 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
+
+# Undeploy controller from the configured Kubernetes cluster in ~/.kube/config
+undeploy: manifests kustomize
+	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 # Deploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
 deploy-test: manifests kustomize
 	$(KUSTOMIZE) build config/test | kubectl apply -f -
+
+# Undeploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
+undeploy-test: manifests kustomize
+	$(KUSTOMIZE) build config/test | kubectl delete -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -60,8 +68,7 @@ manifests: controller-gen
 
 # Run go fmt against code
 fmt:
-	go fmt ./...
-
+	gofmt -s -w ./
 # Run go vet against code
 vet:
 	go vet ./...
@@ -106,7 +113,7 @@ endif
 .PHONY: bundle
 bundle: manifests
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):$(VERSION)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
@@ -114,6 +121,11 @@ bundle: manifests
 .PHONY: bundle-build
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+bump-release:
+	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
+
+prepare-release: bump-release generate fmt vet manifests bundle refdocs
 
 #########################
 #### General targets ####
@@ -180,8 +192,8 @@ unit-test: fmt vet
 
 # Run integration tests
 ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
-OPERATOR_COVERPROFILE = operator.coverprofile
-ENVOY_COVERPROFILE = envoy.coverprofile
+OPERATOR_COVERPROFILE = operator.marin3r.coverprofile
+MARIN3R_COVERPROFILE = marin3r.coverprofile
 integration-test: generate fmt vet manifests ginkgo
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
@@ -192,18 +204,19 @@ integration-test: generate fmt vet manifests ginkgo
 		ginkgo -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
 
 coverprofile: gocovmerge
-	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(ENVOY_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
 
 
+e2e-test: export KUBECONFIG = ${PWD}/kubeconfig
 e2e-test: kind-create
 	$(MAKE) e2e-envtest-suite
 	$(MAKE) kind-delete
 
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 	ginkgo -r -nodes=1 ./test/e2e/operator
-	ginkgo -r -p ./test/e2e/envoy
+	ginkgo -r -p ./test/e2e/marin3r
 
 test: unit-test integration-test e2e-test coverprofile
 
@@ -223,7 +236,6 @@ gocovmerge:
 
 KIND_VERSION ?= v0.9.0
 KIND ?= bin/kind
-export KUBECONFIG = ${PWD}/kubeconfig
 
 $(KIND):
 	mkdir -p $$(dirname $@)
@@ -231,18 +243,22 @@ $(KIND):
 	chmod +x $(KIND)
 
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
+kind-create: export KUBECONFIG = ${PWD}/kubeconfig
 kind-create: tmp $(KIND)
 	$(KIND) create cluster --wait 5m --config test/kind.yaml
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
+kind-deploy: export KUBECONFIG = ${PWD}/kubeconfig
 kind-deploy: manifests kustomize
 	$(KUSTOMIZE) build config/test | kubectl apply -f -
 
 kind-refresh-discoveryservice: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
+kind-refresh-discoveryservice: export KUBECONFIG = ${PWD}/kubeconfig
 kind-refresh-discoveryservice: docker-build
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 	kubectl delete pods -A -l app.kubernetes.io/name=marin3r --force --grace-period=0
 
+kind-load-image: export KUBECONFIG = ${PWD}/kubeconfig
 kind-load-image:
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 

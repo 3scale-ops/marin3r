@@ -18,8 +18,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	envoyv1alpha1 "github.com/3scale/marin3r/apis/envoy/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 )
 
 var (
@@ -57,7 +57,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = envoyv1alpha1.AddToScheme(scheme.Scheme)
+	err = marin3rv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = operatorv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
