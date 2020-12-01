@@ -58,48 +58,53 @@ type EnvoyConfigSpec struct {
 	// NodeID holds the envoy identifier for the discovery service to know which set
 	// of resources to send to each of the envoy clients that connect to it.
 	// +kubebuilder:validation:Pattern:[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	NodeID string `json:"nodeID"`
 	// Serialization specicifies the serialization format used to describe the resources. "json" and "yaml"
 	// are supported. "json" is used if unset.
 	// +kubebuilder:validation:Enum=json;b64json;yaml
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Serialization *string `json:"serialization,omitempty"`
 	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
 	// +kubebuilder:validation:Enum=v2;v3
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	EnvoyAPI *string `json:"envoyAPI,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	EnvoyResources *EnvoyResources `json:"envoyResources"`
 }
 
 // EnvoyResources holds each envoy api resource type
 type EnvoyResources struct {
 	// Endpoints is a list of the envoy ClusterLoadAssignment resource type.
-	// Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto
+	// V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Endpoints []EnvoyResource `json:"endpoints,omitempty"`
 	// Clusters is a list of the envoy Cluster resource type.
-	// Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto
+	// V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Clusters []EnvoyResource `json:"clusters,omitempty"`
 	// Routes is a list of the envoy Route resource type.
-	// Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto
+	// V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Routes []EnvoyResource `json:"routes,omitempty"`
 	// Listeners is a list of the envoy Listener resource type.
-	// Referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto
+	// V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Listeners []EnvoyResource `json:"listeners,omitempty"`
 	// Runtimes is a list of the envoy Runtime resource type.
-	// Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto
+	// V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Runtimes []EnvoyResource `json:"runtime,omitempty"`
 	// Secrets is a list of references to Kubernetes Secret objects.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Secrets []EnvoySecretResource `json:"secrets,omitempty"`
 }
 
@@ -107,10 +112,10 @@ type EnvoyResources struct {
 // resource
 type EnvoyResource struct {
 	// Name of the envoy resource
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Name string `json:"name"`
 	// Value is the serialized representation of the envoy resource
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Value string `json:"value"`
 }
 
@@ -118,12 +123,11 @@ type EnvoyResource struct {
 // Secret from where to take a secret from
 type EnvoySecretResource struct {
 	// Name of the envoy resource
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Name string `json:"name"`
 	// Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls" from which
 	// an envoy Secret resource will be automatically created.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors.x-descriptors="urn:alm:descriptor:io.kubernetes:SecretReference"
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors="urn:alm:descriptor:io.kubernetes:SecretReference"
 	Ref corev1.SecretReference `json:"ref"`
 }
 
@@ -133,33 +137,33 @@ type EnvoyConfigStatus struct {
 	// to give the user a concrete idea on the general status of the discovery servie cache.
 	// It is intended only for human consumption. Other controllers should relly on conditions
 	// to determine the status of the discovery server cache.
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	CacheState string `json:"cacheState,omitempty"`
 	// PublishedVersion is the config version currently
 	// served by the envoy discovery service for the give nodeID
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	PublishedVersion string `json:"publishedVersion,omitempty"`
 	// DesiredVersion represents the resources version described in
 	// the spec of the EnvoyConfig object
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	DesiredVersion string `json:"desiredVersion,omitempty"`
 	// Conditions represent the latest available observations of an object's state
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Conditions status.Conditions `json:"conditions,omitempty"`
 	// ConfigRevisions is an ordered list of references to EnvoyConfigRevision
 	// objects
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	ConfigRevisions []ConfigRevisionRef `json:"revisions,omitempty"`
 }
 
 // ConfigRevisionRef holds a reference to EnvoyConfigRevision object
 type ConfigRevisionRef struct {
 	// Version is a hash of the EnvoyResources field
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Version string `json:"version"`
 	// Ref is a reference to the EnvoyConfigRevision object that
 	// holds the configuration matching the Version field.
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Ref corev1.ObjectReference `json:"ref"`
 }
 
@@ -176,8 +180,8 @@ type ConfigRevisionRef struct {
 // +kubebuilder:printcolumn:JSONPath=".status.desiredVersion",name=Desired Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.publishedVersion",name=Published Version,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.cacheState",name=Cache State,type=string
-// +operator-sdk:gen-csv:customresourcedefinitions.displayName="EnvoyConfig"
-// +operator-sdk:gen-csv:customresourcedefinitions.resources=`EnvoyConfigRevision,v1alpha1`
+// +operator-sdk:csv:customresourcedefinitions:displayName="EnvoyConfig"
+// +operator-sdk:csv:customresourcedefinitions:resources={{EnvoyConfigRevision,v1alpha1}}
 type EnvoyConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

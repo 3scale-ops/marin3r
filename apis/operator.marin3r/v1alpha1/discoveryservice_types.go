@@ -81,31 +81,35 @@ const (
 // DiscoveryServiceSpec defines the desired state of DiscoveryService
 type DiscoveryServiceSpec struct {
 	// Image holds the image to use for the discovery service Deployment
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Image *string `json:"image,omitempty"`
 	// Debug enables debugging log level for the discovery service controllers. It is safe to
 	// use since secret data is never shown in the logs.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Debug *bool `json:"debug,omitempty"`
 	// Resources holds the Resource Requirements to use for the discovery service
 	// Deployment. When not set it defaults to no resource requests nor limits.
 	// CPU and Memory resources are supported.
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 	// PKIConfig has configuration for the PKI that marin3r manages for the
 	// different certificates it requires
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	PKIConfig *PKIConfig `json:"pkiConfg,omitempty"`
 	// XdsServerPort is the port where the xDS server listens. Defaults to 18000.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	XdsServerPort *uint32 `json:"xdsPort,omitempty"`
 	// MetricsPort is the port where metrics are served. Defaults to 8383.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	MetricsPort *uint32 `json:"metricsPort,omitempty"`
 	// ServiceConfig configures the way the DiscoveryService endpoints are exposed
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ServiceConfig *ServiceConfig `json:"ServiceConfig,omitempty"`
 }
@@ -113,28 +117,34 @@ type DiscoveryServiceSpec struct {
 // DiscoveryServiceStatus defines the observed state of DiscoveryService
 type DiscoveryServiceStatus struct {
 	// Conditions represent the latest available observations of an object's state
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Conditions status.Conditions `json:"conditions"`
 }
 
 // PKIConfig has configuration for the PKI that marin3r manages for the
 // different certificates it requires
 type PKIConfig struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	RootCertificateAuthority *CertificateOptions `json:"rootCertificateAuthority"`
-	ServerCertificate        *CertificateOptions `json:"serverCertificate"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	ServerCertificate *CertificateOptions `json:"serverCertificate"`
 }
 
 // CertificateOptions specifies options to generate the server certificate used both
 // for the xDS server and the mutating webhook server.
 type CertificateOptions struct {
-	SecretName string          `json:"secretName"`
-	Duration   metav1.Duration `json:"duration"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	SecretName string `json:"secretName"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Duration metav1.Duration `json:"duration"`
 }
 
 // ServiceConfig has options to configure the way the Service
 // is deployed
 type ServiceConfig struct {
-	Name string      `json:"name,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Name string `json:"name,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Type ServiceType `json:"type,omitempty"`
 }
 
@@ -144,10 +154,8 @@ type ServiceConfig struct {
 // only one DiscoveryService per cluster is supported.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=discoveryservices,scope=Namespaced
-// +operator-sdk:gen-csv:customresourcedefinitions.displayName="DiscoveryService"
-// +operator-sdk:gen-csv:customresourcedefinitions.resources=`Deployment,v1`
-// +operator-sdk:gen-csv:customresourcedefinitions.resources=`Service,v1`
-// +operator-sdk:gen-csv:customresourcedefinitions.resources=`DiscoveryServiceCertificate,v1alpha1`
+// +operator-sdk:csv:customresourcedefinitions:displayName="DiscoveryService"
+// +operator-sdk:csv:customresourcedefinitions.resources={{Deployment,v1},{Service,v1},{DiscoveryServiceCertificate,v1alpha1}
 type DiscoveryService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

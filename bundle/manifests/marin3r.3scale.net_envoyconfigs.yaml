@@ -58,7 +58,7 @@ spec:
               description: EnvoyResources holds the different types of resources suported by the envoy discovery service
               properties:
                 clusters:
-                  description: 'Clusters is a list of the envoy Cluster resource type. Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto'
+                  description: 'Clusters is a list of the envoy Cluster resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
                   items:
                     description: EnvoyResource holds serialized representation of an envoy resource
                     properties:
@@ -74,7 +74,7 @@ spec:
                     type: object
                   type: array
                 endpoints:
-                  description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto'
+                  description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
                   items:
                     description: EnvoyResource holds serialized representation of an envoy resource
                     properties:
@@ -90,7 +90,7 @@ spec:
                     type: object
                   type: array
                 listeners:
-                  description: 'Listeners is a list of the envoy Listener resource type. Referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto'
+                  description: 'Listeners is a list of the envoy Listener resource type. V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
                   items:
                     description: EnvoyResource holds serialized representation of an envoy resource
                     properties:
@@ -106,7 +106,7 @@ spec:
                     type: object
                   type: array
                 routes:
-                  description: 'Routes is a list of the envoy Route resource type. Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto'
+                  description: 'Routes is a list of the envoy Route resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
                   items:
                     description: EnvoyResource holds serialized representation of an envoy resource
                     properties:
@@ -122,7 +122,7 @@ spec:
                     type: object
                   type: array
                 runtime:
-                  description: 'Runtimes is a list of the envoy Runtime resource type. Reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto'
+                  description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
                   items:
                     description: EnvoyResource holds serialized representation of an envoy resource
                     properties:

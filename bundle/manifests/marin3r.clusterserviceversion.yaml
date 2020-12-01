@@ -153,30 +153,190 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: DiscoveryServiceCertificate is used to create certificates, either self-signed or by using a cert-manager CA issuer. This object is used by the DiscoveryService controller to create the required certificates for the diferent components of the discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
-      displayName: Discovery Service Certificate
-      kind: DiscoveryServiceCertificate
+    - kind: DiscoveryServiceCertificate
       name: discoveryservicecertificates.operator.marin3r.3scale.net
       version: v1alpha1
-    - description: DiscoveryService represents an envoy discovery service server. Currently only one DiscoveryService per cluster is supported.
-      displayName: Discovery Service
-      kind: DiscoveryService
+    - kind: DiscoveryService
       name: discoveryservices.operator.marin3r.3scale.net
       version: v1alpha1
     - description: EnvoyBootstrap is the Schema for the envoybootstraps API
-      displayName: Envoy Bootstrap
+      displayName: EnvoyBootstrap
       kind: EnvoyBootstrap
       name: envoybootstraps.marin3r.3scale.net
+      specDescriptors:
+      - description: ClientCertificate is a struct containing options for the certificate used to authenticate with the discovery service
+        displayName: Client Certificate
+        path: clientCertificate
+      - description: Directory defines the directory in the envoy container where the certificate will be mounted
+        displayName: Directory
+        path: clientCertificate.directory
+      - description: The requested ‘duration’ (i.e. lifetime) of the Certificate
+        displayName: Duration
+        path: clientCertificate.duration
+      - description: The Secret where the certificate will be stored
+        displayName: Secret Name
+        path: clientCertificate.secretName
+      - description: DiscoveryService is the name of the DiscoveryService resource the envoy will be a client of
+        displayName: Discovery Service
+        path: discoveryService
+      - description: EnvoyStaticConfig is a struct that controls options for the envoy's static config file
+        displayName: Envoy Static Config
+        path: envoyStaticConfig
+      - description: AdminAccessLogPath configures where the envoy's admin server logs are written to
+        displayName: Admin Access Log Path
+        path: envoyStaticConfig.adminAccessLogPath
+      - description: AdminBindAddress is where envoy's admin server binds to.
+        displayName: Admin Bind Address
+        path: envoyStaticConfig.adminBindAddress
+      - description: ConfigFile is the path of envoy's bootstrap config file
+        displayName: Config File
+        path: envoyStaticConfig.configFile
+      - description: The ConfigMap where the envoy client v2 static config will be stored
+        displayName: Config Map Name V2
+        path: envoyStaticConfig.configMapNameV2
+      - description: The ConfigMap where the envoy client v3 static config will be stored
+        displayName: Config Map Name V3
+        path: envoyStaticConfig.configMapNameV3
+      - description: ResourcesDir is the path where resource files are loaded from. It is used to load discovery messages directly from the filesystem, for example in order to be able to bootstrap certificates and support rotation when they are modified.
+        displayName: Resources Dir
+        path: envoyStaticConfig.resourcesDir
+      - description: RtdsLayerResourceName is the resource name that the envoy client will request when askikng the discovery service for Runtime resources.
+        displayName: Rtds Layer Resource Name
+        path: envoyStaticConfig.rtdsLayerResourceName
       version: v1alpha1
     - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig resources. EnvoyConfigRevisions are automatically created and deleted  by the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig objects instead.
-      displayName: Envoy Config Revision
+      displayName: EnvoyConfigRevision
       kind: EnvoyConfigRevision
       name: envoyconfigrevisions.marin3r.3scale.net
+      specDescriptors:
+      - description: EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+        displayName: Envoy API
+        path: envoyAPI
+      - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
+        displayName: Envoy Resources
+        path: envoyResources
+      - description: NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
+        displayName: Node ID
+        path: nodeID
+      - description: Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
+        displayName: Serialization
+        path: serialization
+      - description: Version is a hash of the EnvoyResources field
+        displayName: Version
+        path: version
+      statusDescriptors:
+      - description: Conditions represent the latest available observations of an object's state
+        displayName: Conditions
+        path: conditions
+      - description: LastPublishedAt indicates the last time this config review transitioned to published
+        displayName: Last Published At
+        path: lastPublishedAt
+      - description: Published signals if the EnvoyConfigRevision is the one currently published in the xds server cache
+        displayName: Published
+        path: published
+      - description: Tainted indicates whether the EnvoyConfigRevision is eligible for publishing or not
+        displayName: Tainted
+        path: tainted
       version: v1alpha1
     - description: EnvoyConfig holds the configuration for a given envoy nodeID. The spec of an EnvoyConfig object holds the envoy resources that conform the desired configuration for the given nodeID and that the discovery service will send to any envoy client that identifies itself with that nodeID.
-      displayName: Envoy Config
+      displayName: EnvoyConfig
       kind: EnvoyConfig
       name: envoyconfigs.marin3r.3scale.net
+      resources:
+      - kind: EnvoyConfigRevision
+        name: ""
+        version: v1alpha1
+      specDescriptors:
+      - description: EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+        displayName: Envoy API
+        path: envoyAPI
+      - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
+        displayName: Envoy Resources
+        path: envoyResources
+      - description: 'Clusters is a list of the envoy Cluster resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
+        displayName: Clusters
+        path: envoyResources.clusters
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.clusters[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.clusters[0].value
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
+        displayName: Endpoints
+        path: envoyResources.endpoints
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.endpoints[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.endpoints[0].value
+      - description: 'Listeners is a list of the envoy Listener resource type. V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
+        displayName: Listeners
+        path: envoyResources.listeners
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.listeners[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.listeners[0].value
+      - description: 'Routes is a list of the envoy Route resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
+        displayName: Routes
+        path: envoyResources.routes
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.routes[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.routes[0].value
+      - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
+        displayName: Runtimes
+        path: envoyResources.runtime
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.runtime[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.runtime[0].value
+      - description: Secrets is a list of references to Kubernetes Secret objects.
+        displayName: Secrets
+        path: envoyResources.secrets
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.secrets[0].name
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls" from which an envoy Secret resource will be automatically created.
+        displayName: Ref
+        path: envoyResources.secrets[0].ref
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:SecretReference
+      - description: NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
+        displayName: Node ID
+        path: nodeID
+      - description: Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
+        displayName: Serialization
+        path: serialization
+      statusDescriptors:
+      - description: CacheState summarizes all the observations about the EnvoyConfig to give the user a concrete idea on the general status of the discovery servie cache. It is intended only for human consumption. Other controllers should relly on conditions to determine the status of the discovery server cache.
+        displayName: Cache State
+        path: cacheState
+      - description: Conditions represent the latest available observations of an object's state
+        displayName: Conditions
+        path: conditions
+      - description: DesiredVersion represents the resources version described in the spec of the EnvoyConfig object
+        displayName: Desired Version
+        path: desiredVersion
+      - description: PublishedVersion is the config version currently served by the envoy discovery service for the give nodeID
+        displayName: Published Version
+        path: publishedVersion
+      - description: ConfigRevisions is an ordered list of references to EnvoyConfigRevision objects
+        displayName: Config Revisions
+        path: revisions
+      - description: Ref is a reference to the EnvoyConfigRevision object that holds the configuration matching the Version field.
+        displayName: Ref
+        path: revisions[0].ref
+      - description: Version is a hash of the EnvoyResources field
+        displayName: Version
+        path: revisions[0].version
       version: v1alpha1
   description: |
     marin3r is an operator to deploy and manage an envoy discovery service. It's main purpose is to provide
