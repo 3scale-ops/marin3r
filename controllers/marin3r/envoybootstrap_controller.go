@@ -46,7 +46,7 @@ type EnvoyBootstrapReconciler struct {
 
 func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	r.Log = r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
+	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyBootstrap instance
 	eb := &marin3rv1alpha1.EnvoyBootstrap{}
@@ -62,13 +62,13 @@ func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	certificateReconciler := reconcilers_marin3r.NewClientCertificateReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
+	certificateReconciler := reconcilers_marin3r.NewClientCertificateReconciler(ctx, log, r.Client, r.Scheme, eb)
 	result, err := certificateReconciler.Reconcile()
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	configReconciler := reconcilers_marin3r.NewBootstrapConfigReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
+	configReconciler := reconcilers_marin3r.NewBootstrapConfigReconciler(ctx, log, r.Client, r.Scheme, eb)
 
 	// Reconcile the v2 config
 	result, err = configReconciler.Reconcile(envoy.APIv2)
