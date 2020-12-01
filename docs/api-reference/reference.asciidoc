@@ -584,14 +584,11 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`discoveryServiceNamespace`* __string__ | DiscoveryServiceNamespace is the name of the namespace where the envoy discovery service server should be deployed.
-| *`enabledNamespaces`* __string array__ | EnabledNamespaces is a list of namespaces where the envoy discovery service is enabled. In order to be able to use marin3r from a given namespace its name needs to be included in this list because the operator needs to add some required resources in that namespace.
 | *`image`* __string__ | Image holds the image to use for the discovery service Deployment
 | *`debug`* __boolean__ | Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
 | *`resources`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#resourcerequirements-v1-core[$$ResourceRequirements$$]__ | Resources holds the Resource Requirements to use for the discovery service Deployment. When not set it defaults to no resource requests nor limits. CPU and Memory resources are supported.
 | *`pkiConfg`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-pkiconfig[$$PKIConfig$$]__ | PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
 | *`xdsPort`* __integer__ | XdsServerPort is the port where the xDS server listens. Defaults to 18000.
-| *`webhookPort`* __integer__ | WebhookPort is the port where the Pod mutating webhooks listens. Defaults to 8443.
 | *`metricsPort`* __integer__ | MetricsPort is the port where metrics are served. Defaults to 8383.
 | *`ServiceConfig`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-serviceconfig[$$ServiceConfig$$]__ | ServiceConfig configures the way the DiscoveryService endpoints are exposed
 |===

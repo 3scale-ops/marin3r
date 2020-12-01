@@ -12,7 +12,7 @@ spec:
     listKind: DiscoveryServiceList
     plural: discoveryservices
     singular: discoveryservice
-  scope: Cluster
+  scope: Namespaced
   subresources:
     status: {}
   validation:
@@ -42,14 +42,6 @@ spec:
             debug:
               description: Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
               type: boolean
-            discoveryServiceNamespace:
-              description: DiscoveryServiceNamespace is the name of the namespace where the envoy discovery service server should be deployed.
-              type: string
-            enabledNamespaces:
-              description: EnabledNamespaces is a list of namespaces where the envoy discovery service is enabled. In order to be able to use marin3r from a given namespace its name needs to be included in this list because the operator needs to add some required resources in that namespace.
-              items:
-                type: string
-              type: array
             image:
               description: Image holds the image to use for the discovery service Deployment
               type: string
@@ -108,16 +100,10 @@ spec:
                   description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                   type: object
               type: object
-            webhookPort:
-              description: WebhookPort is the port where the Pod mutating webhooks listens. Defaults to 8443.
-              format: int32
-              type: integer
             xdsPort:
               description: XdsServerPort is the port where the xDS server listens. Defaults to 18000.
               format: int32
               type: integer
-          required:
-          - discoveryServiceNamespace
           type: object
         status:
           description: DiscoveryServiceStatus defines the observed state of DiscoveryService

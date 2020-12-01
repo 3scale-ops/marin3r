@@ -147,7 +147,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/3scale/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.7.0-alpha2
+  name: marin3r.v0.7.0-alpha3
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -4174,16 +4174,6 @@ spec:
       clusterPermissions:
       - rules:
         - apiGroups:
-          - admissionregistration.k8s.io
-          resources:
-          - mutatingwebhookconfigurations
-          verbs:
-          - create
-          - get
-          - list
-          - patch
-          - watch
-        - apiGroups:
           - apps
           resources:
           - deployments
@@ -4205,15 +4195,6 @@ spec:
           - list
           - patch
           - update
-          - watch
-        - apiGroups:
-          - ""
-          resources:
-          - namespaces
-          verbs:
-          - get
-          - list
-          - patch
           - watch
         - apiGroups:
           - ""
@@ -4341,7 +4322,7 @@ spec:
         - apiGroups:
           - rbac.authorization.k8s.io
           resources:
-          - clusterrolebindings
+          - rolebindings
           verbs:
           - create
           - get
@@ -4351,7 +4332,7 @@ spec:
         - apiGroups:
           - rbac.authorization.k8s.io
           resources:
-          - clusterroles
+          - roles
           verbs:
           - create
           - get
@@ -4402,7 +4383,7 @@ spec:
                 - --enable-leader-election
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:0.7.0-alpha2
+                image: quay.io/3scale/marin3r:0.7.0-alpha3
                 name: manager
                 resources:
                   limits:
@@ -4433,7 +4414,7 @@ spec:
                 - --tls-key-name=tls.key
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:0.7.0-alpha2
+                image: quay.io/3scale/marin3r:0.7.0-alpha3
                 name: webhook
                 ports:
                 - containerPort: 9443
@@ -4495,7 +4476,8 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.7.0-alpha2
+  replaces: marin3r.v0.7.0-alpha2
+  version: 0.7.0-alpha3
   webhookdefinitions:
   - admissionReviewVersions:
     - v1beta1
