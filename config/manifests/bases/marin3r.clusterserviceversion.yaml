@@ -290,9 +290,11 @@ spec:
         path: conditions
       version: v1alpha1
   description: |
-    marin3r is an operator to deploy and manage an envoy discovery service. It's main purpose is to provide
+    marin3r is an operator to deploy and manage an envoy discovery service and a fleet of envoy proxies that
+    connect to it to fetch their configurations dynamically. It's main purpose is to provide
     an easy way to deploy a discovery service with the basic functionality already in place so you
-    can focus on developing your envoy configs or even new CRDs leveraging the ones that marin3r provides.
+    can focus on developing your envoy configurationss or even new your own domain specifig CRDs leveraging
+    the ones that marin3r provides.
 
 
     ## Managed installation (kind DiscoveryService)
@@ -301,9 +303,7 @@ spec:
     * Automatic deployment of a kubernetes mutating admission webhook to inject envoy sidecars in your pods
     * Automatic configuration of envoy sidecars to find the discovery service within the cluster
     * Mututal TLS authentication between envoy sidecars and the discovery service
-    * The admisson webhook is enabled only in user selected namespaces
-    * Currenly only a cluster wide installation is supported
-
+    * The discovery service and the envoy proxies that conenct to it must live in the same namespace
 
     ## Deploy envoy configurations as kubernetes custom resources (kind EnvoyConfig)
 
@@ -4296,9 +4296,11 @@ spec:
   keywords:
   - envoy
   - discovery
-  - control-plane
+  - controlplane
   - proxy
   - sidecar
+  - xds
+  - network
   links:
   - name: GitHub
     url: https://github.com/3scale/marin3r
