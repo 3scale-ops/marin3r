@@ -64,7 +64,6 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) 
 	// namespace. The controller checks this and fixes it for the user, showing a log line indicating
 	// so. In the future, usage of 'corev1.SecretReference' should be dropped.
 	if dsc.GetNamespace() != dsc.Spec.SecretRef.Namespace {
-		log.Info("Namespace indication in 'spec.SecretRef.Namespace' will be ignored and should be removed")
 		dsc.Spec.SecretRef.Namespace = dsc.GetNamespace()
 	}
 
