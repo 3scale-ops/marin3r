@@ -1,7 +1,7 @@
 apiVersion: scorecard.operatorframework.io/v1alpha3
 kind: Configuration
 metadata:
-  name: marin3r-config
+  name: config
 stages:
 - parallel: true
   tests:
