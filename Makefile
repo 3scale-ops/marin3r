@@ -126,7 +126,7 @@ bundle: manifests
 
 # Build the bundle image.
 .PHONY: bundle-build
-bundle-build: bundle
+bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 bundle-publish:
@@ -153,6 +153,27 @@ bundle-publish-replace:
 		--from-index $(CATALOG_IMG) \
 		--tag $(CATALOG_IMG)
 	docker push $(CATALOG_IMG)
+
+.PHONY: bundle-custom-updates
+bundle-custom-updates: yq
+	@echo "Update metadata to avoid collision with existing 3scale Operator official public operators catalog entries"
+	@echo "using BUNDLE_SUFFIX $(BUNDLE_SUFFIX)"
+	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml metadata.name marin3r-$(BUNDLE_SUFFIX).$(VERSION)
+	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml spec.displayName "Marin3r $(BUNDLE_SUFFIX)"
+	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml spec.provider.name $(BUNDLE_SUFFIX)
+	$(YQ) w --inplace bundle/metadata/annotations.yaml 'annotations."operators.operatorframework.io.bundle.package.v1"' marin3r-$(BUNDLE_SUFFIX)
+	sed -E -i 's/(operators\.operatorframework\.io\.bundle\.package\.v1=).+/\1marin3r-$(BUNDLE_SUFFIX)/' bundle.Dockerfile
+	@echo "Update operator image reference URL"
+
+# find or download yq
+# download yq if necessary
+yq:
+ifeq (, $(shell command -v yq 2> /dev/null))
+	@GO111MODULE=off go get github.com/mikefarah/yq/v3
+YQ=$(GOBIN)/yq
+else
+YQ=$(shell command -v yq 2> /dev/null)
+endif
 
 bump-release:
 	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
@@ -233,10 +254,10 @@ integration-test: generate fmt vet manifests ginkgo
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; \
 		fetch_envtest_tools $(ENVTEST_ASSETS_DIR); \
 		setup_envtest_env $(ENVTEST_ASSETS_DIR); \
-		ginkgo -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
+		$(GINKGO) -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
 
 coverprofile: gocovmerge
-	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	$(GOCOVMERGE) $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
 
@@ -247,20 +268,26 @@ e2e-test: kind-create
 	$(MAKE) kind-delete
 
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
-	ginkgo -r -nodes=1 ./test/e2e/operator
-	ginkgo -r -p ./test/e2e/marin3r
+	$(GINKGO) -r -nodes=1 ./test/e2e/operator
+	$(GINKGO) -r -p ./test/e2e/marin3r
 
 test: unit-test integration-test e2e-test coverprofile
 
 ginkgo:
-	@which ginkgo > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo; \
-	fi
+ifeq (, $(shell command -v ginkgo 2> /dev/null))
+	@GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo;
+GINKGO=$(GOBIN)/ginkgo
+else
+GINKGO=$(shell command -v ginkgo 2> /dev/null)
+endif
 
 gocovmerge:
-	@which gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		GO111MODULE=off go get -u github.com/wadey/gocovmerge; \
-	fi
+ifeq (, $(shell command -v gocovmerge 2> /dev/null))
+	@GO111MODULE=off go get -u github.com/wadey/gocovmerge
+GOCOVMERGE=$(GOBIN)/gocovmerge
+else
+GOCOVMERGE=$(shell command -v gocovmerge 2> /dev/null)
+endif
 
 ############################################
 #### Targets to manually test with Kind ####
