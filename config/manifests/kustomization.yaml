@@ -51,9 +51,13 @@ patchesStrategicMerge:
             - "--enable-leader-election"
 
 patches:
-- path: webhook_patch.yaml
-  target:
-    group: apps
-    version: v1
-    kind: Deployment
-    name: controller-webhook
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: controller-webhook
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/volumes
+      - op: remove
+        path: /spec/template/spec/containers/0/volumeMounts
