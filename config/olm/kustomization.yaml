@@ -59,3 +59,16 @@ patches:
         path: /spec/template/spec/volumes
       - op: remove
         path: /spec/template/spec/containers/0/volumeMounts
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: controller-webhook
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/args
+        value:
+        - webhook
+        - --tls-dir=/apiserver.local.config/certificates
+        - --tls-cert-name=apiserver.crt
+        - --tls-key-name=apiserver.key

@@ -534,9 +534,9 @@ spec:
               containers:
               - args:
                 - webhook
-                - --tls-dir=/tmp/k8s-webhook-server/serving-certs
-                - --tls-cert-name=tls.crt
-                - --tls-key-name=tls.key
+                - --tls-dir=/apiserver.local.config/certificates
+                - --tls-cert-name=apiserver.crt
+                - --tls-key-name=apiserver.key
                 command:
                 - /manager
                 image: quay.io/3scale/marin3r:v0.7.0-alpha4
