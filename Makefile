@@ -2,7 +2,7 @@ SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
-VERSION ?= 0.7.0-alpha4
+VERSION ?= 0.7.0-alpha5
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:$(VERSION)
 CATALOG_IMG ?= quay.io/3scale/marin3r-catalog:latest
@@ -142,7 +142,7 @@ bundle-publish-replace:
 	docker pull $(CATALOG_IMG)
 	opm index rm \
 		--build-tool docker \
-		--operators marin3r \
+		--operators marin3r-threescale \
 		--from-index $(CATALOG_IMG) \
 		--tag $(CATALOG_IMG)
 	docker push $(CATALOG_IMG)
