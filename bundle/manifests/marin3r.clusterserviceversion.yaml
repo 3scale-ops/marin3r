@@ -769,7 +769,6 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  replaces: marin3r-threescale.0.7.0-alpha4
   version: 0.7.0-alpha5
   webhookdefinitions:
   - admissionReviewVersions:
