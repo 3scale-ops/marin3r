@@ -5,10 +5,9 @@ import (
 	"time"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -18,7 +17,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var _ = Describe("EnvoyConfigRevision controller", func() {
+var _ = Describe("DiscoveryService controller", func() {
 	var namespace string
 	var ds *operatorv1alpha1.DiscoveryService
 
@@ -47,18 +46,17 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		By("creating a DiscoveryService instance")
 		ds = &operatorv1alpha1.DiscoveryService{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "instance",
+				Name:      "instance",
+				Namespace: namespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image:                     pointer.StringPtr("image"),
-				DiscoveryServiceNamespace: namespace,
-				EnabledNamespaces:         []string{namespace},
+				Image: pointer.StringPtr("image"),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() bool {
-			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance"}, ds)
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ds)
 			if err != nil {
 				return false
 			}
@@ -69,7 +67,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 	Context("DiscoveryService", func() {
 
-		It("Create the required resources", func() {
+		It("creates the required resources", func() {
 
 			By("waiting for the root CA DiscoveryServiceCertificate to be created")
 			{
@@ -123,14 +121,14 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
-			By("waiting for the discovery service ClusterRole to be created")
+			By("waiting for the discovery service Role to be created")
 
 			{
-				cr := &rbacv1.ClusterRole{}
+				cr := &rbacv1.Role{}
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds)},
+						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
 						cr,
 					); err != nil {
 						return false
@@ -139,14 +137,14 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
-			By("waiting for the discovery service ClusterRoleBinding to be created")
+			By("waiting for the discovery service RoleBinding to be created")
 
 			{
-				crb := &rbacv1.ClusterRoleBinding{}
+				crb := &rbacv1.RoleBinding{}
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds)},
+						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
 						crb,
 					); err != nil {
 						return false
@@ -187,49 +185,16 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
-			By("waiting for the discovery service MutatingWebhookConfiguration to be created")
-			{
+			By("checking the namespaces in 'spec.enabledNamespaces' have an EnvoyBootstrap resource each")
 
-				mwc := &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+			{
+				eb := &marin3rv1alpha1.EnvoyBootstrap{}
 				Eventually(func() bool {
-					if err := k8sClient.Get(
-						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds)},
-						mwc,
-					); err != nil {
+					if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: ds.GetName(), Namespace: namespace}, eb); err != nil {
 						return false
 					}
 					return true
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
-			}
-
-			By("checking the namespaces in 'spec.enabledNamespaces' have the required label")
-
-			{
-				for _, name := range ds.Spec.EnabledNamespaces {
-					ns := &corev1.Namespace{}
-					Eventually(func() bool {
-						if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: name}, ns); err != nil {
-							return false
-						}
-						return true
-					}, 30*time.Second, 5*time.Second).Should(BeTrue())
-					Expect(ns.Labels[operatorv1alpha1.DiscoveryServiceLabelKey]).To(Equal(ds.GetName()))
-				}
-			}
-
-			By("checking the namespaces in 'spec.enabledNamespaces' have an EnvoyBootstrap resource each")
-
-			{
-				for _, ns := range ds.Spec.EnabledNamespaces {
-					eb := &marin3rv1alpha1.EnvoyBootstrap{}
-					Eventually(func() bool {
-						if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: ds.GetName(), Namespace: ns}, eb); err != nil {
-							return false
-						}
-						return true
-					}, 30*time.Second, 5*time.Second).Should(BeTrue())
-				}
 			}
 		})
 	})

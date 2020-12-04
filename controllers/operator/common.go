@@ -3,7 +3,7 @@ package controllers
 import (
 	"fmt"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 )
 
 func OwnedObjectName(ds *operatorv1alpha1.DiscoveryService) string {
@@ -11,7 +11,7 @@ func OwnedObjectName(ds *operatorv1alpha1.DiscoveryService) string {
 }
 
 func OwnedObjectNamespace(ds *operatorv1alpha1.DiscoveryService) string {
-	return ds.Spec.DiscoveryServiceNamespace
+	return ds.GetNamespace()
 }
 
 func OwnedObjectAppLabel(ds *operatorv1alpha1.DiscoveryService) string {

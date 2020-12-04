@@ -7,7 +7,7 @@ import (
 	"time"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -81,12 +81,10 @@ func TestClientCertificateReconciler_Reconcile(t *testing.T) {
 				client: fake.NewFakeClientWithScheme(
 					s,
 					&operatorv1alpha1.DiscoveryService{
-						ObjectMeta: v1.ObjectMeta{Name: "ds"},
+						ObjectMeta: v1.ObjectMeta{Name: "ds", Namespace: "default"},
 						Spec: operatorv1alpha1.DiscoveryServiceSpec{
-							DiscoveryServiceNamespace: "default",
-							EnabledNamespaces:         []string{"default"},
-							Image:                     pointer.StringPtr("xxx"),
-							Debug:                     pointer.BoolPtr(false),
+							Image: pointer.StringPtr("xxx"),
+							Debug: pointer.BoolPtr(false),
 						},
 					},
 				),

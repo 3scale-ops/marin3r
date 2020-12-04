@@ -2,9 +2,10 @@ SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
-VERSION ?= 0.7.0-alpha2
+VERSION ?= 0.7.0-alpha5
 # Default bundle image tag
-BUNDLE_IMG ?= controller-bundle:$(VERSION)
+BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:$(VERSION)
+CATALOG_IMG ?= quay.io/3scale/marin3r-catalog:latest
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -35,7 +36,7 @@ manager: generate fmt vet
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
-	go run ./main.go --debug
+	go run ./main.go operator --debug
 
 # Install CRDs into a cluster
 install: manifests kustomize
@@ -48,6 +49,7 @@ uninstall: manifests kustomize
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
+	cd config/webhook && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Undeploy controller from the configured Kubernetes cluster in ~/.kube/config
@@ -61,6 +63,9 @@ deploy-test: manifests kustomize
 # Undeploy controller (test configuration) in the configured Kubernetes cluster in ~/.kube/config
 undeploy-test: manifests kustomize
 	$(KUSTOMIZE) build config/test | kubectl delete -f -
+
+deploy-cert-manager:
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -113,7 +118,8 @@ endif
 .PHONY: bundle
 bundle: manifests
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):$(VERSION)
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
+	cd config/webhook && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
 
@@ -121,6 +127,36 @@ bundle: manifests
 .PHONY: bundle-build
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+bundle-publish:
+	opm index add \
+		--build-tool docker \
+		--mode replaces \
+		--bundles $(BUNDLE_IMG) \
+		--from-index $(CATALOG_IMG) \
+		--tag $(CATALOG_IMG)
+	docker push $(CATALOG_IMG)
+
+.PHONY: bundle-custom-updates
+bundle-custom-updates: yq
+	@echo "Update metadata to avoid collision with existing 3scale Operator official public operators catalog entries"
+	@echo "using BUNDLE_SUFFIX $(BUNDLE_SUFFIX)"
+	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml metadata.name marin3r-$(BUNDLE_SUFFIX).$(VERSION)
+	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml spec.displayName "Marin3r $(BUNDLE_SUFFIX)"
+	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml spec.provider.name $(BUNDLE_SUFFIX)
+	$(YQ) w --inplace bundle/metadata/annotations.yaml 'annotations."operators.operatorframework.io.bundle.package.v1"' marin3r-$(BUNDLE_SUFFIX)
+	sed -E -i 's/(operators\.operatorframework\.io\.bundle\.package\.v1=).+/\1marin3r-$(BUNDLE_SUFFIX)/' bundle.Dockerfile
+	@echo "Update operator image reference URL"
+
+# find or download yq
+# download yq if necessary
+yq:
+ifeq (, $(shell command -v yq 2> /dev/null))
+	@GO111MODULE=off go get github.com/mikefarah/yq/v3
+YQ=$(GOBIN)/yq
+else
+YQ=$(shell command -v yq 2> /dev/null)
+endif
 
 bump-release:
 	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
@@ -201,10 +237,10 @@ integration-test: generate fmt vet manifests ginkgo
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; \
 		fetch_envtest_tools $(ENVTEST_ASSETS_DIR); \
 		setup_envtest_env $(ENVTEST_ASSETS_DIR); \
-		ginkgo -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
+		$(GINKGO) -p -r -cover -race -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
 
 coverprofile: gocovmerge
-	gocovmerge $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	$(GOCOVMERGE) $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
 
@@ -215,20 +251,26 @@ e2e-test: kind-create
 	$(MAKE) kind-delete
 
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
-	ginkgo -r -nodes=1 ./test/e2e/operator
-	ginkgo -r -p ./test/e2e/marin3r
+	$(GINKGO) -r -nodes=1 ./test/e2e/operator
+	$(GINKGO) -r -p ./test/e2e/marin3r
 
 test: unit-test integration-test e2e-test coverprofile
 
 ginkgo:
-	@which ginkgo > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo; \
-	fi
+ifeq (, $(shell command -v ginkgo 2> /dev/null))
+	@GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo;
+GINKGO=$(GOBIN)/ginkgo
+else
+GINKGO=$(shell command -v ginkgo 2> /dev/null)
+endif
 
 gocovmerge:
-	@which gocovmerge > /dev/null 2>&1; if [ $$? -ne 0 ]; then \
-		GO111MODULE=off go get -u github.com/wadey/gocovmerge; \
-	fi
+ifeq (, $(shell command -v gocovmerge 2> /dev/null))
+	@GO111MODULE=off go get -u github.com/wadey/gocovmerge
+GOCOVMERGE=$(GOBIN)/gocovmerge
+else
+GOCOVMERGE=$(shell command -v gocovmerge 2> /dev/null)
+endif
 
 ############################################
 #### Targets to manually test with Kind ####
@@ -246,6 +288,10 @@ kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000
 kind-create: export KUBECONFIG = ${PWD}/kubeconfig
 kind-create: tmp $(KIND)
 	$(KIND) create cluster --wait 5m --config test/kind.yaml
+	$(MAKE) deploy-cert-manager && \
+		while [[ $$(kubectl -n cert-manager get deployment cert-manager-webhook -o 'jsonpath={.status.readyReplicas}') != "1" ]]; \
+			do echo "waiting for cert-manager webhook" && sleep 3; \
+		done
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-deploy: export KUBECONFIG = ${PWD}/kubeconfig
@@ -275,7 +321,7 @@ ENVOY_VERSION ?= v1.14.1
 run-ds: ## locally starts marin3r's discovery service
 run-ds: certs
 	WATCH_NAMESPACE="" go run main.go \
-		--discovery-service \
+		discovery-service \
 		--server-certificate-path certs/server \
 		--ca-certificate-path certs/ca \
 		--debug

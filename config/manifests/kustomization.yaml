@@ -1,4 +1,4 @@
 resources:
-- ../default
+- ../olm
 - ../samples
 - ../scorecard

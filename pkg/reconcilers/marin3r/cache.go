@@ -3,7 +3,6 @@ package reconcilers
 import (
 	"context"
 	"fmt"
-	"hash/fnv"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/common"
@@ -16,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -161,7 +159,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 	// that changes in the content of secret resources wont be reflected in the hash of spec.envoyResources.
 	// To reflect changes to the content of secrets we append the hash of the runtime calculated secrets to
 	// the hash of sepc.envoyResources in the version of secret resources in the snapshot.
-	secretsHash := calculateSecretsHash(snap.GetResources(envoy.Secret))
+	secretsHash := common.Hash(snap.GetResources(envoy.Secret))
 	snap.SetVersion(envoy.Secret, fmt.Sprintf("%s-%s", version, secretsHash))
 
 	return snap, nil
@@ -174,10 +172,4 @@ func resourceLoaderError(req types.NamespacedName, value interface{}, resPath *f
 		fmt.Sprintf("%s/%s", req.Namespace, req.Name),
 		field.ErrorList{field.Invalid(resPath, value, fmt.Sprint(msg))},
 	)
-}
-
-func calculateSecretsHash(resources map[string]envoy.Resource) string {
-	resourcesHasher := fnv.New32a()
-	common.DeepHashObject(resourcesHasher, resources)
-	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }

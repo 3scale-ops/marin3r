@@ -14,12 +14,12 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 )
 
 const (
-	image           string = "quay.io/3scale/marin3r:test"
-	targetNamespace string = "default"
+	image         string = "quay.io/3scale/marin3r:test"
+	testNamespace string = "default"
 )
 
 var _ = Describe("DiscoveryService intall and lifecycle", func() {
@@ -51,18 +51,18 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 		By("creating a DiscoveryService instance")
 		ds = &operatorv1alpha1.DiscoveryService{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "instance",
+				Name:      "instance",
+				Namespace: testNamespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image:                     pointer.StringPtr(image),
-				DiscoveryServiceNamespace: targetNamespace,
-				EnabledNamespaces:         []string{testNamespace},
+				Image: pointer.StringPtr(image),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() bool {
-			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance"}, ds)
+			key := types.NamespacedName{Name: "instance", Namespace: testNamespace}
+			err := k8sClient.Get(context.Background(), key, ds)
 			if err != nil {
 				return false
 			}
@@ -73,59 +73,39 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 
 	AfterEach(func() {
 
-		// Delete DiscoveryService instance
-		logger.Info("Cleanup", "DiscoveryService", ds.GetName())
-		err := k8sClient.Delete(context.Background(), ds)
-		Expect(err).ToNot(HaveOccurred())
-
-		Eventually(func() int {
-			return testutil.ReadyReplicas(
-				k8sClient,
-				targetNamespace,
-				client.MatchingLabels{
-					"app.kubernetes.io/name":       "marin3r",
-					"app.kubernetes.io/managed-by": "marin3r-operator",
-					"app.kubernetes.io/component":  "discovery-service",
-					"app.kubernetes.io/instance":   ds.GetName(),
-				},
-			)
-		}, 60*time.Second, 5*time.Second).Should(Equal(0))
-
 		// Delete the namespace
 		ns := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: testNamespace},
 		}
 		logger.Info("Cleanup", "Namespace", testNamespace)
-		err = k8sClient.Delete(context.Background(), ns, client.PropagationPolicy(metav1.DeletePropagationForeground))
+		err := k8sClient.Delete(context.Background(), ns, client.PropagationPolicy(metav1.DeletePropagationForeground))
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	Context("DiscoveryService installation and lifecycle", func() {
 
 		BeforeEach(func() {
+			By("waiting for the Deployment to be ready")
 			Eventually(func() int {
-				return testutil.ReadyReplicas(
-					k8sClient,
-					targetNamespace,
-					client.MatchingLabels{
-						"app.kubernetes.io/name":       "marin3r",
-						"app.kubernetes.io/managed-by": "marin3r-operator",
-						"app.kubernetes.io/component":  "discovery-service",
-						"app.kubernetes.io/instance":   ds.GetName(),
-					},
-				)
+				dep := &appsv1.Deployment{}
+				key := types.NamespacedName{
+					Name:      "marin3r-instance",
+					Namespace: testNamespace,
+				}
+				if err := k8sClient.Get(context.Background(), key, dep); err != nil {
+					return 0
+				}
+				return int(dep.Status.ReadyReplicas)
 			}, 60*time.Second, 5*time.Second).Should(Equal(1))
 		})
 
 		It("triggers a rollout on certificate change", func() {
-
 			By("deleting the Secret that holds the current certificate to force recreation")
 			serverCert := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: ds.GetServerCertificateOptions().SecretName,
-					// Name:      "marin3r-server-cert-instance",
-					Namespace: targetNamespace,
+					Name:      ds.GetServerCertificateOptions().SecretName,
+					Namespace: testNamespace,
 				},
 			}
 			err := k8sClient.Delete(context.Background(), serverCert)
@@ -136,7 +116,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				dep := &appsv1.Deployment{}
 				key := types.NamespacedName{
 					Name:      "marin3r-instance",
-					Namespace: targetNamespace,
+					Namespace: testNamespace,
 				}
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
@@ -147,7 +127,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 			Eventually(func() int {
 				return testutil.ReadyReplicas(
 					k8sClient,
-					targetNamespace,
+					testNamespace,
 					client.MatchingLabels{
 						"app.kubernetes.io/name":       "marin3r",
 						"app.kubernetes.io/managed-by": "marin3r-operator",
@@ -169,7 +149,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				dep := &appsv1.Deployment{}
 				key := types.NamespacedName{
 					Name:      "marin3r-instance",
-					Namespace: targetNamespace,
+					Namespace: testNamespace,
 				}
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())

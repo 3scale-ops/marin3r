@@ -2,16 +2,13 @@ package controllers
 
 import (
 	"fmt"
-	"hash/fnv"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
-	common "github.com/3scale/marin3r/pkg/common"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/reconcilers"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/utils/pointer"
 )
 
@@ -19,14 +16,14 @@ const (
 	appLabelKey string = "app"
 )
 
-func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1.Secret) reconcilers.DeploymentGeneratorFn {
+func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, certificateHash string) reconcilers.DeploymentGeneratorFn {
 
 	return func() *appsv1.Deployment {
 
 		dep := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      OwnedObjectName(ds),
-				Namespace: OwnedObjectNamespace(ds),
+				Namespace: ds.GetNamespace(),
 				Labels:    Labels(ds),
 			},
 			Spec: appsv1.DeploymentSpec{
@@ -65,11 +62,10 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 								Name:  "marin3r",
 								Image: ds.GetImage(),
 								Args: []string{
-									"--discovery-service",
+									"discovery-service",
 									"--server-certificate-path=/etc/marin3r/tls/server",
 									"--ca-certificate-path=/etc/marin3r/tls/ca",
 									func() string { return fmt.Sprintf("--xdss-port=%v", ds.GetXdsServerPort()) }(),
-									func() string { return fmt.Sprintf("--webhook-port=%v", ds.GetWebhookPort()) }(),
 									func() string { return fmt.Sprintf("--metrics-addr=:%v", ds.GetMetricsPort()) }(),
 								},
 								Ports: []corev1.ContainerPort{
@@ -79,18 +75,13 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 										Protocol:      corev1.ProtocolTCP,
 									},
 									{
-										Name:          "webhook",
-										ContainerPort: int32(ds.GetWebhookPort()),
-										Protocol:      corev1.ProtocolTCP,
-									},
-									{
 										Name:          "metrics",
 										ContainerPort: int32(ds.GetMetricsPort()),
 										Protocol:      corev1.ProtocolTCP,
 									},
 								},
 								Env: []corev1.EnvVar{
-									{Name: "WATCH_NAMESPACE", Value: ""},
+									{Name: "WATCH_NAMESPACE", Value: ds.GetNamespace()},
 									{Name: "POD_NAME", ValueFrom: &corev1.EnvVarSource{
 										FieldRef: &corev1.ObjectFieldSelector{
 											APIVersion: corev1.SchemeGroupVersion.Version,
@@ -148,14 +139,8 @@ func deploymentGeneratorFn(ds *operatorv1alpha1.DiscoveryService, secret *corev1
 		}
 
 		// Set a label with the server certificate hash
-		dep.Spec.Template.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey] = certificateHash(secret.Data)
+		dep.Spec.Template.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey] = certificateHash
 
 		return dep
 	}
-}
-
-func certificateHash(data map[string][]byte) string {
-	resourcesHasher := fnv.New32a()
-	common.DeepHashObject(resourcesHasher, data)
-	return rand.SafeEncodeString(fmt.Sprint(resourcesHasher.Sum32()))
 }

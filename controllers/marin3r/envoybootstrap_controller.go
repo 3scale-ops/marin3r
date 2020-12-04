@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
 	reconcilers_marin3r "github.com/3scale/marin3r/pkg/reconcilers/marin3r"
 	corev1 "k8s.io/api/core/v1"
@@ -39,14 +39,14 @@ type EnvoyBootstrapReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoybootstraps,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoybootstraps/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="core",resources=configmaps,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoybootstraps,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoybootstraps/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="core",namespace=placeholder,resources=configmaps,verbs=get;list;watch;create;update;patch
 
 func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	r.Log = r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
+	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyBootstrap instance
 	eb := &marin3rv1alpha1.EnvoyBootstrap{}
@@ -62,13 +62,13 @@ func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	certificateReconciler := reconcilers_marin3r.NewClientCertificateReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
+	certificateReconciler := reconcilers_marin3r.NewClientCertificateReconciler(ctx, log, r.Client, r.Scheme, eb)
 	result, err := certificateReconciler.Reconcile()
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	configReconciler := reconcilers_marin3r.NewBootstrapConfigReconciler(ctx, r.Log, r.Client, r.Scheme, eb)
+	configReconciler := reconcilers_marin3r.NewBootstrapConfigReconciler(ctx, log, r.Client, r.Scheme, eb)
 
 	// Reconcile the v2 config
 	result, err = configReconciler.Reconcile(envoy.APIv2)

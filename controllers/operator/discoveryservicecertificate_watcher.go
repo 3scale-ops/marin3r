@@ -30,7 +30,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/util/pki"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -44,9 +44,9 @@ type DiscoveryServiceCertificateWatcher struct {
 	Log    logr.Logger
 }
 
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates,verbs=get;list;watch;patch
-// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=discoveryservicecertificates/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="core",resources=secrets,verbs=get
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;patch
+// +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get
 
 func (r *DiscoveryServiceCertificateWatcher) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -70,7 +70,6 @@ func (r *DiscoveryServiceCertificateWatcher) Reconcile(request ctrl.Request) (ct
 	// namespace. The controller checks this and fixes it for the user, showing a log line indicating
 	// so. In the future, usage of 'corev1.SecretReference' should be dropped.
 	if dsc.GetNamespace() != dsc.Spec.SecretRef.Namespace {
-		log.Info("Namespace indication in 'spec.SecretRef.Namespace' will be ignored and should be removed")
 		dsc.Spec.SecretRef.Namespace = dsc.GetNamespace()
 	}
 

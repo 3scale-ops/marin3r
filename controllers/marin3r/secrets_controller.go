@@ -39,8 +39,8 @@ type SecretReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs,verbs=get;list;watch;patch
+// +kubebuilder:rbac:groups=core,namespace=placeholder,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigs,verbs=get;list;watch;patch
 
 func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()

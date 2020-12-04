@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 )
 
 var _ = Describe("EnvoyBootstrap controller", func() {
@@ -74,12 +74,11 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 			By("Creating a DiscoveryService instance")
 			ds = &operatorv1alpha1.DiscoveryService{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "instance",
+					Name:      "instance",
+					Namespace: namespace,
 				},
 				Spec: operatorv1alpha1.DiscoveryServiceSpec{
-					Image:                     pointer.StringPtr("image"),
-					DiscoveryServiceNamespace: namespace,
-					EnabledNamespaces:         []string{namespace},
+					Image: pointer.StringPtr("image"),
 				},
 			}
 			err := k8sClient.Create(context.Background(), ds)

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -40,7 +40,8 @@ func (r *ClientCertificateReconciler) Reconcile() (ctrl.Result, error) {
 
 	// Get the DiscoveryService instance this client want to connect to
 	ds := &operatorv1alpha1.DiscoveryService{}
-	if err := r.client.Get(r.ctx, types.NamespacedName{Name: r.eb.Spec.DiscoveryService}, ds); err != nil {
+	key := types.NamespacedName{Name: r.eb.Spec.DiscoveryService, Namespace: r.eb.GetNamespace()}
+	if err := r.client.Get(r.ctx, key, ds); err != nil {
 		if errors.IsNotFound(err) {
 			r.logger.Error(err, "DiscoveryService does not exist", "DiscoveryService", r.eb.Spec.DiscoveryService)
 		}
@@ -63,7 +64,7 @@ func (r *ClientCertificateReconciler) Reconcile() (ctrl.Result, error) {
 				},
 				types.NamespacedName{
 					Name:      ds.GetRootCertificateAuthorityOptions().SecretName,
-					Namespace: ds.Spec.DiscoveryServiceNamespace,
+					Namespace: ds.GetNamespace(),
 				},
 			)
 			if err := controllerutil.SetControllerReference(r.eb, dsc, r.scheme); err != nil {

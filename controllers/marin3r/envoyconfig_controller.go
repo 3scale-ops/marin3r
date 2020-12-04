@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	"github.com/3scale/marin3r/pkg/common"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
@@ -41,10 +42,10 @@ type EnvoyConfigReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigs/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigrevisions,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=marin3r.3scale.net,resources=envoyconfigrevisions/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigs/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions/status,verbs=get;update;patch
 
 func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
@@ -84,7 +85,7 @@ func (r *EnvoyConfigReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error)
 	}
 
 	// desiredVersion is the version that matches the resources described in the spec
-	desiredVersion := calculateRevisionHash(ec.Spec.EnvoyResources)
+	desiredVersion := common.Hash(ec.Spec.EnvoyResources)
 
 	// ensure that the desiredVersion has a matching revision object
 	if err := r.ensureEnvoyConfigRevision(ctx, ec, desiredVersion, log); err != nil {

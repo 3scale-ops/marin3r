@@ -18,43 +18,87 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
+	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
-	operatorcontroller "github.com/3scale/marin3r/controllers/operator.marin3r"
+	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
 	"github.com/3scale/marin3r/pkg/version"
+	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	// +kubebuilder:scaffold:imports
 )
 
 // Change below variables to serve metrics on different host or port.
 const (
-	certificateFile    string = "tls.crt"
-	certificateKeyFile string = "tls.key"
+	// WatchNamespaceEnvVar is the constant for env variable WATCH_NAMESPACE
+	// which specifies the Namespace to watch.
+	// An empty value means the operator is running with cluster scope.
+	watchNamespaceEnvVar string = "WATCH_NAMESPACE"
+	certificateFile      string = "tls.crt"
+	certificateKeyFile   string = "tls.key"
 )
 
 var (
-	tlsServerCertificatePath string
-	tlsCACertificatePath     string
-	isDiscoveryService       bool
-	debug                    bool
-	metricsAddr              string
-	xdssPort                 int
-	webhookPort              int
-	enableLeaderElection     bool
+	debug                        bool
+	metricsAddr                  string
+	enableLeaderElection         bool
+	xdssPort                     int
+	xdssTLSServerCertificatePath string
+	xdssTLSCACertificatePath     string
+	webhookPort                  int
+	webhookTLSCertDir            string
+	webhookTLSKeyName            string
+	webhookTLSCertName           string
+)
+
+var (
+	// Root command
+	rootCmd = &cobra.Command{
+		Use:   "marin3r",
+		Short: "Lightweight, CRD based envoy control plane for kubernetes",
+		Run: func(cmd *cobra.Command, args []string) {
+			ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+			printVersion()
+			fmt.Println("May the force be with you ...")
+		},
+	}
+
+	// Operator subcommand
+	operatorCmd = &cobra.Command{
+		Use:   "operator",
+		Short: "Run the operator",
+		Run:   runOperator,
+	}
+
+	// Discovery service subcommand
+	discoveryServiceCmd = &cobra.Command{
+		Use:   "discovery-service",
+		Short: "Run the discovery service",
+		Run:   runDiscoveryService,
+	}
+
+	// Webhook subcommand
+	webhookCmd = &cobra.Command{
+		Use:   "webhook",
+		Short: "Run the Pod mutating webhook",
+		Run:   runWebhook,
+	}
 )
 
 var (
@@ -67,108 +111,194 @@ func init() {
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(marin3rv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
+	// Subcommands
+	rootCmd.AddCommand(operatorCmd)
+	rootCmd.AddCommand(discoveryServiceCmd)
+	rootCmd.AddCommand(webhookCmd)
+
+	// Global flags
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logs")
+	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metrics endpoint binds to.")
+
+	// Operator flags
+	operatorCmd.Flags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
+		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+
+	// Discovery service flags
+	discoveryServiceCmd.Flags().IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
+	discoveryServiceCmd.Flags().StringVar(&xdssTLSServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
+		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
+	discoveryServiceCmd.Flags().StringVar(&xdssTLSCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
+		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
+	discoveryServiceCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
+
+	// Webhook flags
+	webhookCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
+	webhookCmd.Flags().StringVar(&webhookTLSCertDir, "tls-dir", "/apiserver.local.config/certificates", "The path where the certificate and key for the webhook are located.")
+	webhookCmd.Flags().StringVar(&webhookTLSCertName, "tls-cert-name", "apiserver.crt", "The file name of the certificate for the webhook.")
+	webhookCmd.Flags().StringVar(&webhookTLSKeyName, "tls-key-name", "apiserver.key", "The file name of the private key for the webhook.")
+
 }
 
 func main() {
-	flag.StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metric endpoint binds to.")
-	flag.IntVar(&xdssPort, "xdss-port", int(operatorv1alpha1.DefaultXdsServerPort), "The port where the xDS will listen.")
-	flag.IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the mutating webhook server will listen.")
-	flag.StringVar(&tlsServerCertificatePath, "server-certificate-path", "/etc/marin3r/tls/server",
-		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
-	flag.StringVar(&tlsCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
-		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
-	flag.BoolVar(&isDiscoveryService, "discovery-service", false, "Run the discovery-service instead of the operator")
-	flag.BoolVar(&debug, "debug", false, "Enable debug logs")
-	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+	rootCmd.Execute()
+}
 
-	flag.Parse()
+func runOperator(cmd *cobra.Command, args []string) {
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+	printVersion()
 
+	cfg := ctrl.GetConfigOrDie()
+
+	watchNamespace, err := getWatchNamespace()
+	if err != nil {
+		setupLog.Error(err, "unable to get WatchNamespace, "+
+			"the manager will watch and manage resources in all Namespaces")
+	}
+
+	options := ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: metricsAddr,
+		Port:               webhookPort,
+		LeaderElection:     enableLeaderElection,
+		LeaderElectionID:   "2cfbe7d6.operator.marin3r.3scale.net",
+		Namespace:          watchNamespace, // namespaced-scope when the value is not an empty string
+	}
+
+	if strings.Contains(watchNamespace, ",") {
+		setupLog.Info(fmt.Sprintf("manager in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
+		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
+	} else if watchNamespace == "" {
+		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
+		options.Namespace = watchNamespace
+	} else {
+		setupLog.Info(fmt.Sprintf("manager in Namespaced mode will be watching namespace %q", watchNamespace))
+		options.Namespace = ""
+	}
+
+	mgr, err := ctrl.NewManager(cfg, options)
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	// watch for syscalls
+	stopCh := signals.SetupSignalHandler()
+
+	if err := (&operatorcontroller.DiscoveryServiceReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
+		os.Exit(1)
+	}
+
+	if err := (&operatorcontroller.DiscoveryServiceCertificateReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
+		os.Exit(1)
+	}
+
+	if err := (&operatorcontroller.DiscoveryServiceCertificateWatcher{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificatewatcher"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificatewatcher")
+		os.Exit(1)
+	}
+
+	if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
+		os.Exit(1)
+	}
+
+	// +kubebuilder:scaffold:builder
+
+	setupLog.Info("starting the Operator.")
+	if err := mgr.Start(stopCh); err != nil {
+		setupLog.Error(err, "controller manager exited non-zero")
+		os.Exit(1)
+	}
+}
+
+func runDiscoveryService(cmd *cobra.Command, args []string) {
+
+	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 	printVersion()
 
 	cfg := ctrl.GetConfigOrDie()
 	ctx := context.Background()
 
-	if !isDiscoveryService {
+	mgr := discoveryservice.Manager{
+		Namespace:             os.Getenv("WATCH_NAMESPACE"),
+		XdsServerPort:         xdssPort,
+		MetricsAddr:           metricsAddr,
+		ServerCertificatePath: xdssTLSServerCertificatePath,
+		CACertificatePath:     xdssTLSCACertificatePath,
+		Cfg:                   cfg,
+	}
 
-		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:             scheme,
-			MetricsBindAddress: metricsAddr,
-			Port:               webhookPort,
-			LeaderElection:     enableLeaderElection,
-			LeaderElectionID:   "2cfbe7d6.marin3r.3scale.net",
-		})
-		if err != nil {
-			setupLog.Error(err, "unable to start manager")
-			os.Exit(1)
-		}
+	mgr.Start(ctx)
+}
 
-		// watch for syscalls
-		stopCh := signals.SetupSignalHandler()
+func runWebhook(cmd *cobra.Command, args []string) {
 
-		if err := (&operatorcontroller.DiscoveryServiceReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
-			os.Exit(1)
-		}
+	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+	printVersion()
 
-		if err := (&operatorcontroller.DiscoveryServiceCertificateReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
-			os.Exit(1)
-		}
+	stopCh := signals.SetupSignalHandler()
+	cfg := ctrl.GetConfigOrDie()
 
-		if err := (&operatorcontroller.DiscoveryServiceCertificateWatcher{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificatewatcher"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificatewatcher")
-			os.Exit(1)
-		}
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: "0",
+		Port:               webhookPort,
+		LeaderElection:     false,
+	})
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
 
-		if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
-			os.Exit(1)
-		}
-		// +kubebuilder:scaffold:builder
+	// Setup the webhook
+	hookServer := mgr.GetWebhookServer()
+	hookServer.CertDir = webhookTLSCertDir
+	hookServer.KeyName = webhookTLSKeyName
+	hookServer.CertName = webhookTLSCertName
+	hookServer.Port = webhookPort
+	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
+	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
 
-		setupLog.Info("Starting the Operator.")
-		if err := mgr.Start(stopCh); err != nil {
-			setupLog.Error(err, "Controller manager exited non-zero")
-			os.Exit(1)
-		}
-
-	} else {
-
-		mgr := discoveryservice.Manager{
-			XdsServerPort:         xdssPort,
-			WebhookPort:           webhookPort,
-			MetricsAddr:           metricsAddr,
-			ServerCertificatePath: tlsServerCertificatePath,
-			CACertificatePath:     tlsCACertificatePath,
-			Cfg:                   cfg,
-		}
-
-		mgr.Start(ctx)
+	setupLog.Info("starting the webhook")
+	if err := mgr.Start(stopCh); err != nil {
+		setupLog.Error(err, "controller manager exited non-zero")
+		os.Exit(1)
 	}
 }
 
+// getWatchNamespace returns the Namespace the operator should be watching for changes
+func getWatchNamespace() (string, error) {
+
+	ns, found := os.LookupEnv(watchNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("%s must be set", watchNamespaceEnvVar)
+	}
+	return ns, nil
+}
+
 func printVersion() {
-	setupLog.Info(fmt.Sprintf("Operator Version: %s", version.Current()))
+	setupLog.Info(fmt.Sprintf("Marin3r Version: %s", version.Current()))
 	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 }

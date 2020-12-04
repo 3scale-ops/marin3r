@@ -50,24 +50,24 @@ type EnvoyConfigRevisionSpec struct {
 	// NodeID holds the envoy identifier for the discovery service to know which set
 	// of resources to send to each of the envoy clients that connect to it.
 	// +kubebuilder:validation:Pattern:[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	NodeID string `json:"nodeID"`
 	// Version is a hash of the EnvoyResources field
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Version string `json:"version"`
 	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
 	// +kubebuilder:validation:Enum=v2;v3
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	EnvoyAPI *string `json:"envoyAPI,omitempty"`
 	// Serialization specicifies the serialization format used to describe the resources. "json" and "yaml"
 	// are supported. "json" is used if unset.
 	// +kubebuilder:validation:Enum=json;b64json;yaml
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Serialization *string `json:"serialization,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
-	// +operator-sdk:gen-csv:customresourcedefinitions.specDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	EnvoyResources *EnvoyResources `json:"envoyResources"`
 }
 
@@ -75,18 +75,18 @@ type EnvoyConfigRevisionSpec struct {
 type EnvoyConfigRevisionStatus struct {
 	// Published signals if the EnvoyConfigRevision is the one currently published
 	// in the xds server cache
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Published bool `json:"published,omitempty"`
 	// LastPublishedAt indicates the last time this config review transitioned to
 	// published
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	LastPublishedAt metav1.Time `json:"lastPublishedAt,omitempty"`
 	// Tainted indicates whether the EnvoyConfigRevision is eligible for publishing
 	// or not
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Tainted bool `json:"tainted,omitempty"`
 	// Conditions represent the latest available observations of an object's state
-	// +operator-sdk:gen-csv:customresourcedefinitions.statusDescriptors=true
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Conditions status.Conditions `json:"conditions"`
 }
 
@@ -104,7 +104,7 @@ type EnvoyConfigRevisionStatus struct {
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name="Created At",type=string,format=date-time
 // +kubebuilder:printcolumn:JSONPath=".status.lastPublishedAt",name="Last Published At",type=string,format=date-time
 // +kubebuilder:printcolumn:JSONPath=".status.tainted",name=Tainted,type=boolean
-// +operator-sdk:gen-csv:customresourcedefinitions.displayName="EnvoyConfigRevision"
+// +operator-sdk:csv:customresourcedefinitions:displayName="EnvoyConfigRevision"
 type EnvoyConfigRevision struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

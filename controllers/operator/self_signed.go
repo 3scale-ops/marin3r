@@ -2,10 +2,9 @@ package controllers
 
 import (
 	"context"
-	"crypto/x509"
 	"time"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -16,16 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate, log logr.Logger) error {
+func (r *DiscoveryServiceCertificateReconciler) reconcileSelfSignedCertificate(ctx context.Context, dsc *operatorv1alpha1.DiscoveryServiceCertificate, log logr.Logger) error {
 
-	// Get the issuer certificate
-	issuerCert, issuerKey, err := r.getCACertificate(ctx, dsc.Spec)
-	if err != nil {
-		return err
-	}
-
+	// Fetch the certmanagerv1alpha2.Certificate instance
 	secret := &corev1.Secret{}
-	err = r.Client.Get(ctx,
+	err := r.Client.Get(context.TODO(),
 		types.NamespacedName{
 			Name:      dsc.Spec.SecretRef.Name,
 			Namespace: dsc.Spec.SecretRef.Namespace,
@@ -34,7 +28,8 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 
 	if err != nil {
 		if errors.IsNotFound(err) {
-			secret, err := genCASignedCertificateObject(dsc.Spec, issuerCert, issuerKey)
+			// Generate secret with a self signed certificate
+			secret, err := genSelfSignedCertificateObject(dsc.Spec)
 			if err != nil {
 				return err
 			}
@@ -44,7 +39,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 			if err := r.Client.Create(ctx, secret); err != nil {
 				return err
 			}
-			log.Info("Created ca-signed certificate")
+			log.Info("Created self-signed certificate")
 			return nil
 		}
 		return err
@@ -69,7 +64,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 
 	// If certificate is invalid or has been marked for renewal, reissue it
 	if err != nil || dsc.Status.Conditions.IsTrueFor(operatorv1alpha1.CertificateNeedsRenewalCondition) {
-		new, err := genCASignedCertificateObject(dsc.Spec, issuerCert, issuerKey)
+		new, err := genSelfSignedCertificateObject(dsc.Spec)
 		if err != nil {
 			return err
 		}
@@ -78,7 +73,7 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 		if err := r.Client.Patch(ctx, secret, patch); err != nil {
 			return err
 		}
-		log.Info("Re-issued ca-signed certificate")
+		log.Info("Re-issued self-signed certificate")
 
 	}
 
@@ -94,40 +89,11 @@ func (r *DiscoveryServiceCertificateReconciler) reconcileCASignedCertificate(ctx
 	return nil
 }
 
-func (r *DiscoveryServiceCertificateReconciler) getCACertificate(ctx context.Context, cfg operatorv1alpha1.DiscoveryServiceCertificateSpec) (*x509.Certificate, interface{}, error) {
-
-	s := &corev1.Secret{}
-	err := r.Client.Get(
-		ctx,
-		types.NamespacedName{
-			Name:      cfg.Signer.CASigned.SecretRef.Name,
-			Namespace: cfg.Signer.CASigned.SecretRef.Namespace,
-		},
-		s,
-	)
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cert, err := pki.LoadX509Certificate(s.Data["tls.crt"])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	key, err := pki.DecodePrivateKeyBytes(s.Data["tls.key"])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return cert, key, nil
-}
-
-func genCASignedCertificateObject(cfg operatorv1alpha1.DiscoveryServiceCertificateSpec, issuerCert *x509.Certificate, issuerKey interface{}) (*corev1.Secret, error) {
+func genSelfSignedCertificateObject(cfg operatorv1alpha1.DiscoveryServiceCertificateSpec) (*corev1.Secret, error) {
 
 	crt, key, err := pki.GenerateCertificate(
-		issuerCert,
-		issuerKey,
+		nil,
+		nil,
 		cfg.CommonName,
 		time.Duration(cfg.ValidFor)*time.Second,
 		cfg.IsServerCertificate,
