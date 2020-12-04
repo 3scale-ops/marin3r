@@ -65,7 +65,6 @@ undeploy-test: manifests kustomize
 	$(KUSTOMIZE) build config/test | kubectl delete -f -
 
 deploy-cert-manager:
-	# kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.crds.yaml
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
