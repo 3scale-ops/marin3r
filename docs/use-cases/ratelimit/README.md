@@ -11,6 +11,7 @@ This is the network diagram of the Ratelimit use case:
 
 <!-- omit in toc -->
 # Table of Contents
+
 - [Requirement](#requirement)
 - [Components](#components)
   - [Mandatory](#mandatory)
@@ -23,7 +24,7 @@ This is the network diagram of the Ratelimit use case:
 
 ## Requirement
 
-As a requirement, initially you need to deploy marin3r in a k8s cluster. You can follow the [Installation](../../../README.md#installation) documentation in order to successfully deploy `marin3r-control-manager`, and a `DiscoveryService` instance which by default is deployed on `default` namespace, and it is configured to watch resources on the `default` namespace (`spec.enabledNamespaces`). If you want to do the ratelimit test on a different namespace, just update the `DiscoveryService` field `spec.enabledNamespaces`.
+As a requirement, initially you need to deploy MARIN3R in a k8s cluster. You can follow the [Installation](../../../README.md#installation) documentation in order to successfully deploy `marin3r-control-manager`, and a `DiscoveryService` instance which by default is deployed on `default` namespace, and it is configured to watch resources on the `default` namespace. If you want to do the ratelimit test on a different namespace, just deploy the `DiscoveryService` in a different namespace.
 
 ## Components
 
@@ -56,27 +57,31 @@ In order to that that ratelimit test, we need to deploy a few components. Some o
 
 ## K8s deployment
 
-* Deploy the redis instance that will keep the limits for different limitador pods:
+- Deploy the redis instance that will keep the limits for different limitador pods:
+
 ```bash
 kubectl apply -f redis-service.yaml
 kubectl apply -f redis-statefulset.yaml
 ```
 
-* Deploy limitador application. It is important to create the configmap with limitador limits before the deployment, in order to load it from limitador pods. At the moment, if you update the limits configmap you need to restart the pods. Additionally, limitador has an API in order to load limits dynamically, but for simplicity for this test use case a configmap has been used:
+- Deploy limitador application. It is important to create the configmap with limitador limits before the deployment, in order to load it from limitador pods. At the moment, if you update the limits configmap you need to restart the pods. Additionally, limitador has an API in order to load limits dynamically, but for simplicity for this test use case a configmap has been used:
+
 ```bash
 kubectl apply -f limitador-config-configmap.yaml
 kubectl apply -f limitador-service.yaml
 kubectl apply -f limitador-deployment.yaml
 ```
 
-* Deploy sample kuard application with proper marin3r label and annotations (in order to be processed by the marin3r discovery service, and inject the envoy sidecar container on every new kuard pod):
+- Deploy sample kuard application with proper MARIN3R label and annotations (in order to be processed by the MARIN3R discovery service, and inject the envoy sidecar container on every new kuard pod):
+
 ```bash
 kubectl apply -f kuard-envoyconfig.yaml
 kubectl apply -f kuard-service.yaml
 kubectl apply -f kuard-deployment.yaml
 ```
 
-* At this point you shoud see all pods running, and kuard pods should have 2 containers (the one specified in the kuard deployment, and the envoyproxy sidecar container injected by marin3r):
+- At this point you shoud see all pods running, and kuard pods should have 2 containers (the one specified in the kuard deployment, and the envoyproxy sidecar container injected by MARIN3R):
+
 ```bash
 ▶ kubectl get pods
 NAME                               READY   STATUS    RESTARTS   AGE
@@ -87,14 +92,16 @@ limitador-7985d88c4d-mfzs6         1/1     Running   0          5m
 marin3r-instance-9d8fddf94-jqjdj   1/1     Running   0          10m
 redis-0                            1/1     Running   0          7m
 ```
-* Now you should be able to access to kuard application using the load balancer DNS name:
-```
+
+- Now you should be able to access to kuard application using the load balancer DNS name:
+
+```bash
 ▶ kubectl get service kuard
 NAME    TYPE           CLUSTER-IP      EXTERNAL-IP                                                              PORT(S)        AGE
 kuard   LoadBalancer   172.30.31.219   ab375134de1ed442e959a28f458abcca-787341357.us-east-1.elb.amazonaws.com   80:31830/TCP   4m
 ```
 
-* If you go to the browser and paste the `EXTERNAL-IP`, your request will follow the next workflow:
+- If you go to the browser and paste the `EXTERNAL-IP`, your request will follow the next workflow:
   - The requests will go from your local machine through internet to the public AWS ELB where the app is published
   - Then it will go to the `NodePort` of your k8s cluster nodes
   - Once on a k8s node, it will go to kuard `Service` Virtual IP, and will arrive to an envoyproxy sidecar container inside kuard pod
@@ -109,13 +116,16 @@ Both `envoyproxy` sidecar and `limitador` applications include built-in promethe
 ### Prometheus
 
 In order to scrape that metrics within a prometheus-operator deployed in the cluster, you need to create a `PodMonitor` resource for every application:
+
 ```bash
 kubectl apply -f kuard-podmonitor.yaml
 kubectl apply -f limitador-podmonitor.yaml
 ```
 
 ### Grafana dashboard
+
 Then, if you have grafana deployed in the cluster, you can import a [3scale Limitador](limitador-grafanadashboard.json) grafana dashboard that we have prepared, which includes:
+
 - Kuard envoyproxy sidecar metrics (globally and per pod)
 - Limitador metrics (globally and per pod)
 - And for every deployed component (limitador, kuard, redis):
@@ -126,20 +136,26 @@ Then, if you have grafana deployed in the cluster, you can import a [3scale Limi
 
 ## Benchmarking
 
-* In order to check that the ratelimit is working as expected, you can use any benchmarking tool, like [hey](https://github.com/rakyll/hey)
-* You can use if you want a centos pod (better to create it on a different custer within the same Region):
+- In order to check that the ratelimit is working as expected, you can use any benchmarking tool, like [hey](https://github.com/rakyll/hey)
+- You can use if you want a centos pod (better to create it on a different custer within the same Region):
+
 ```bash
 kubectl apply -f centos-pod.yaml
 ```
-* Connect to centos pod:
+
+- Connect to centos pod:
+
 ```bash
 kubectl exec --stdin --tty centos -- /bin/bash
 ```
-* And install `hey` with:
+
+- And install `hey` with:
+
 ```bash
 [root@centos /]# curl -sf https://gobinaries.com/rakyll/hey | sh
 ```
-* Now you can execute the benchmark using the following escenario:
+
+- Now you can execute the benchmark using the following escenario:
 
 | Item | Value |
 |:---:|:---:|
@@ -150,9 +166,9 @@ kubectl exec --stdin --tty centos -- /bin/bash
 | Hey duration | 1 minute |
 | Hey Traffic | -c 60 -q 20 (around 1.200 rps) |
 
-* Theoretically:
+- Theoretically:
   - It should let pass 1.000 requests, and limit 200 requests per second
-  - It should let pass 60 * 1.000 = 60.0000 requests, and limit 60 * 200 = 12.000 requests per minute
+  - It should let pass 60 *1.000 = 60.0000 requests, and limit 60* 200 = 12.000 requests per minute
   - Each limitador pod should handle half of the traffic (500 rps OK, and 200 rps limited)
 
 ```bash
@@ -202,18 +218,19 @@ Status code distribution:
   [200]	59861 responses
   [429]	11684 responses
 ```
-* We can see that:
+
+- We can see that:
   - Client could send 1192.2171rps (about 1200rps)
   - 59861 requests (about 60000) were OK (HTTP 200)
   - 11684 requests (about 12000) were limited (HTTP 429)
   - Average latency (since the request goes out from the client to AWS ELB, k8s node, envoyproxy container, limitador+redis, kuar app container) is 10ms
 
-* In addition, if we do a longer test with 5 minutes traffic for example, you can check with the grafana dashboard how these requests are processed by envoyproxy sidecar container of kuard pods and limitador pods:
+- In addition, if we do a longer test with 5 minutes traffic for example, you can check with the grafana dashboard how these requests are processed by envoyproxy sidecar container of kuard pods and limitador pods:
   - **Kuard Envoyproxy Sidecar Metrics**:
-     - Globally it handles around 1200rps: it permits around 1krps and limits around 200rps  
-     - Each envoyproxy sidecar of each kuard pod handles around half of the traffic: it permits around 500rps and limits around 100rps. The balance between pods is not 100% perfect, caused by random iptables forwarding when using a k8s service
+    - Globally it handles around 1200rps: it permits around 1krps and limits around 200rps
+    - Each envoyproxy sidecar of each kuard pod handles around half of the traffic: it permits around 500rps and limits around 100rps. The balance between pods is not 100% perfect, caused by random iptables forwarding when using a k8s service
      ![Kuard Envoyproxy Sidecar Metrics](kuard-envoyproxy-sidecar-metrics-dashboard-screenshot.png)
   - **Limitador Metrics**:
-     - Globally it handles around 1200rps: it permits around 1krps and limits around 200rps  
-     - Each limitador pod handles around half of the traffic: it permits around 500rps and limits around 100rps. The balance between pods is perfect thanks to using a headless service with GRPC connections
+    - Globally it handles around 1200rps: it permits around 1krps and limits around 200rps
+    - Each limitador pod handles around half of the traffic: it permits around 500rps and limits around 100rps. The balance between pods is perfect thanks to using a headless service with GRPC connections
      ![Limitador Metrics](limitador-metrics-dashboard-screenshot.png)
