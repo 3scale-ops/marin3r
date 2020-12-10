@@ -51,6 +51,7 @@ patchesStrategicMerge:
               name: https
           - name: manager
             args:
+            - "operator"
             - "--metrics-addr=127.0.0.1:8080"
             - "--enable-leader-election"
   # Enable the CA injection in the admission webhooks using cert-manager.

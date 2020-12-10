@@ -4,7 +4,7 @@ NAME := marin3r
 # Current Operator version
 VERSION ?= 0.7.0-alpha6
 # Default bundle image tag
-BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:$(VERSION)
+BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/3scale/marin3r-catalog:latest
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
@@ -66,6 +66,9 @@ undeploy-test: manifests kustomize
 
 deploy-cert-manager:
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
+	while [[ $$(kubectl -n cert-manager get deployment cert-manager-webhook -o 'jsonpath={.status.readyReplicas}') != "1" ]]; \
+		do echo "waiting for cert-manager webhook" && sleep 3; \
+	done
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -288,10 +291,7 @@ kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000
 kind-create: export KUBECONFIG = ${PWD}/kubeconfig
 kind-create: tmp $(KIND)
 	$(KIND) create cluster --wait 5m --config test/kind.yaml
-	$(MAKE) deploy-cert-manager && \
-		while [[ $$(kubectl -n cert-manager get deployment cert-manager-webhook -o 'jsonpath={.status.readyReplicas}') != "1" ]]; \
-			do echo "waiting for cert-manager webhook" && sleep 3; \
-		done
+	$(MAKE) deploy-cert-manager
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-deploy: export KUBECONFIG = ${PWD}/kubeconfig
