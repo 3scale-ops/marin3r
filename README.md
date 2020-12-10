@@ -7,11 +7,11 @@
 
 Lighweight, CRD based Envoy control plane for Kubernetes:
 
-* Implemented as a Kubernetes Operator
-* Dynamic Envoy configuration using Kubernetes Custom Resources
-* Use any secret of type `kubernetes.io/tls` as a certificate source
-* Self-healing
-* Injects Envoy sidecar containers based on Pod annotations
+- Implemented as a Kubernetes Operator
+- Dynamic Envoy configuration using Kubernetes Custom Resources
+- Use any secret of type `kubernetes.io/tls` as a certificate source
+- Self-healing
+- Injects Envoy sidecar containers based on Pod annotations
 
 <!-- omit in toc -->
 ## Table of Contents
