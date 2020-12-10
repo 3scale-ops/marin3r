@@ -1,7 +1,7 @@
 <!-- omit in toc -->
 # Development
 
-The development process for marin3r is based on running locally the operator against a local [Kind (Kubernetes In Docker)](https://kind.sigs.k8s.io/docs/) cluster. The following sections describe the steps to take to accomplish different local testing scenarios.
+The development process for MARIN3R is based on running locally the operator against a local [Kind (Kubernetes In Docker)](https://kind.sigs.k8s.io/docs/) cluster. The following sections describe the steps to take to accomplish different local testing scenarios.
 
 - [Image generation](#image-generation)
 - [Starting a Kind kubernetes cluster](#starting-a-kind-kubernetes-cluster)
@@ -12,11 +12,12 @@ The development process for marin3r is based on running locally the operator aga
 - [Testing envoy configurations locally](#testing-envoy-configurations-locally)
 - [Testing](#testing)
   - [Unit testing](#unit-testing)
+  - [Integration testing](#integration-testing)
   - [e2e testing](#e2e-testing)
 
 ## Image generation
 
-Generate a new image locally by issuing `make docker-build`. Even if the operator can be run locally without building the image, marin3r is a single binary that contains the code for the operator, the discovery service server and the mutating webhook, so you need to generate the image at least for the former two.
+Generate a new image locally by issuing `make docker-build`. Even if the operator can be run locally without building the image, MARIN3R is a single binary that contains the code for the operator, the discovery service server and the mutating webhook, so you need to generate the image at least for the former two.
 
 ## Starting a Kind kubernetes cluster
 
@@ -34,7 +35,7 @@ Once the Kind cluster is up and running export the kubeconfig file into your she
 export KUBECONFIG=${PWD}/kubeconfig
 ```
 
-**NOTE**: remember to export the `KUBECONFIG` variable each time you open a new shell and want to interact with the Kind cluster. This variable is already exported in the makefile so any make target that makes use of `kubectl` will use the proper kubeconfig file to talk to the cluster.
+**NOTE**: remember to export the `KUBECONFIG` variable each time you open a new shell and want to interact with the Kind cluster.
 
 ## Deleting a Kind kubernetes cluster
 
@@ -57,7 +58,7 @@ make run
 Deploy a DiscoveryService instance. There are several samples in the `examples` directory of the repo.
 
 ```bash
-kubectl apply -f examples/e2e/discoveryservice/instance.yaml
+kubectl apply -f examples/e2e/deployment/discoveryservice.yaml
 ```
 
 ## Running the operator in-cluster
@@ -74,7 +75,7 @@ The operator will be deployed in the `marin3r-system` namespace and will run wit
 
 In the case that you are developing functionality specific to the discovery service you can locally run the discovery service server and and envoy container running inside your local docker that connects to it.
 
-Start by running the discovery service server. The discovery service server run the EnvoyConfig and EnvoyConfigRevision controllers itself, so you need to have the [local Kind cluster](#starting-a-kind-kubernetes-cluster) up and running beforehand.
+Start by running the discovery service server. The discovery service server run the EnvoyConfig and EnvoyConfigRevision controllers itself, so you need to have the [local Kind cluster](#starting-a-kind-kubernetes-cluster) up and running beforehand. This discovery service will read resources from the `default` namespace.
 
 ```bash
 make run-ds
@@ -104,11 +105,11 @@ urce": "kind source: /, Kind="}
 [...]
 ```
 
-You can now deploy EnvoyConfig resources to the Kind cluster using the `nodeID=envoy1` as it is the one configured for the envoy process running in the docker container.
+You can now deploy EnvoyConfig resources in the `default` namespace using the `nodeID=envoy1` as it is the one configured for the envoy process running in the docker container.
 
 ## Testing envoy configurations locally
 
-The process of developing envoy configurations can be cumbersome. It is faster to first test the configurations locally first to check for syntax errors or deprecation warnings.
+The process of developing envoy configurations can be cumbersome. It is faster to first test the configurations locally to check for syntax errors or deprecation warnings.
 
 First, create a static envoy config file. You can take `examples/local/static-config.yaml` as an example and add your resources under `static_resources`. Then use the following target to run the container with the given config:
 
@@ -145,18 +146,28 @@ make test-envoy-config CONFIG=examples/local/static-config.yaml ARGS="--componen
 
 ## Testing
 
+You can run the whole test suite using `make test`. There are also targets to run each of the test suites.
+
 ### Unit testing
 
 Unit tests can be run with:
 
 ```bash
-make test
+make unit-test
+```
+
+### Integration testing
+
+Integration tests can be run with:
+
+```bash
+make integration-test
 ```
 
 ### e2e testing
 
-End to end tests are implemented using [KUTTL](https://kuttl.dev/docs/). KUTTL uses Kind to run tests defined declaratively using yaml. The e2e tests can be run with:
+The e2e tests can be run with:
 
 ```bash
-make e2e
+make e2e-test
 ```
