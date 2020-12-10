@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name:  marin3r-system
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: marin3r-catalog
+  namespace: marin3r-system
+spec:
+  sourceType: grpc
+  image: quay.io/3scale/marin3r-catalog:latest
+  displayName: MARIN3R Catalog
+  publisher: Red Hat
+---
+apiVersion: operators.coreos.com/v1alpha2
+kind: OperatorGroup
+metadata:
+  name: marin3r-system
+  namespace: marin3r-system
+spec:
+  targetNamespaces: ["default"]
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: marin3r
+  namespace: marin3r-system
+spec:
+  channel: alpha
+  installPlanApproval: Automatic
+  name: marin3r
+  source: marin3r-catalog
+  sourceNamespace: marin3r-system
