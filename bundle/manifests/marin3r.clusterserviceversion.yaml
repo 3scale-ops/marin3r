@@ -103,24 +103,17 @@ metadata:
           "apiVersion": "operator.marin3r.3scale.net/v1alpha1",
           "kind": "DiscoveryService",
           "metadata": {
-            "name": "instance"
+            "name": "example",
+            "namespace": "my-namespace"
           },
-          "spec": {
-            "debug": true,
-            "discoveryServiceNamespace": "default",
-            "enabledNamespaces": [
-              "test1",
-              "test2"
-            ],
-            "image": "quay.io/3scale/marin3r:latest"
-          }
+          "spec": {}
         },
         {
           "apiVersion": "operator.marin3r.3scale.net/v1alpha1",
           "kind": "DiscoveryServiceCertificate",
           "metadata": {
-            "name": "test-cert",
-            "namespace": "default"
+            "name": "example",
+            "namespace": "my-namespace"
           },
           "spec": {
             "commonName": "test-client",
@@ -769,7 +762,6 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  replaces: marin3r.v0.7.0-alpha5
   version: 0.7.0-alpha6
   webhookdefinitions:
   - admissionReviewVersions:
