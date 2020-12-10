@@ -1,11 +1,6 @@
 apiVersion: operator.marin3r.3scale.net/v1alpha1
 kind: DiscoveryService
 metadata:
-  name: instance
-spec:
-  image: quay.io/3scale/marin3r:latest
-  discoveryServiceNamespace: default
-  debug: true
-  enabledNamespaces:
-    - test1
-    - test2
+  name: example
+  namespace: my-namespace
+spec: {}
