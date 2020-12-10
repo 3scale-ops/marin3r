@@ -320,7 +320,7 @@ ENVOY_VERSION ?= v1.14.1
 
 run-ds: ## locally starts marin3r's discovery service
 run-ds: certs
-	WATCH_NAMESPACE="" go run main.go \
+	WATCH_NAMESPACE="default" go run main.go \
 		discovery-service \
 		--server-certificate-path certs/server \
 		--ca-certificate-path certs/ca \
