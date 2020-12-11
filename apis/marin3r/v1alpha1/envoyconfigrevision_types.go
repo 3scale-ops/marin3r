@@ -31,9 +31,9 @@ const (
 	// as the one that should be published in the xds server cache
 	RevisionPublishedCondition status.ConditionType = "RevisionPublished"
 
-	// ResourcesOutOfSyncCondition is a condition that other controllers can use to indicate
+	// ResourcesInSyncCondition is a condition that other controllers can use to indicate
 	// that the respurces need resync
-	ResourcesOutOfSyncCondition status.ConditionType = "ResourcesOutOfSync"
+	ResourcesInSyncCondition status.ConditionType = "ResourcesInSync"
 
 	// RevisionTaintedCondition is a condition type that's used to report that this
 	// problems have been observed with this revision and should not be published

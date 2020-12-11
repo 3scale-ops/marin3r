@@ -18,16 +18,16 @@ func IsStatusReconciled(ecr *marin3rv1alpha1.EnvoyConfigRevision, xdssCache xdss
 
 	ok := true
 
-	ooSyncCond := calculateOutOfSyncCondition(ecr, xdssCache)
-	if ooSyncCond != nil {
-		equal := equality.Semantic.DeepEqual(ecr.Status.Conditions.GetCondition(marin3rv1alpha1.ResourcesOutOfSyncCondition), ooSyncCond)
+	inSyncCond := calculateResourcesInSyncCondition(ecr, xdssCache)
+	if inSyncCond != nil {
+		equal := equality.Semantic.DeepEqual(ecr.Status.Conditions.GetCondition(marin3rv1alpha1.ResourcesInSyncCondition), inSyncCond)
 		if !equal {
-			ecr.Status.Conditions.SetCondition(*ooSyncCond)
+			ecr.Status.Conditions.SetCondition(*inSyncCond)
 			ok = false
 		}
 	} else {
-		if ecr.Status.Conditions.GetCondition(marin3rv1alpha1.ResourcesOutOfSyncCondition) != nil {
-			ecr.Status.Conditions.RemoveCondition(marin3rv1alpha1.ResourcesOutOfSyncCondition)
+		if ecr.Status.Conditions.GetCondition(marin3rv1alpha1.ResourcesInSyncCondition) != nil {
+			ecr.Status.Conditions.RemoveCondition(marin3rv1alpha1.ResourcesInSyncCondition)
 			ok = false
 		}
 	}
@@ -54,7 +54,7 @@ func IsStatusReconciled(ecr *marin3rv1alpha1.EnvoyConfigRevision, xdssCache xdss
 	return ok
 }
 
-func calculateOutOfSyncCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision, xdssCache xdss.Cache) *status.Condition {
+func calculateResourcesInSyncCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision, xdssCache xdss.Cache) *status.Condition {
 
 	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 		// Check what is currently written in the xds server cache
@@ -62,26 +62,26 @@ func calculateOutOfSyncCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision, xdssC
 		// OutOfSync if NodeID not found or resources version different that expected
 		if err != nil {
 			return &status.Condition{
-				Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
+				Type:    marin3rv1alpha1.ResourcesInSyncCondition,
 				Reason:  "SnapshotDoesNotExist",
-				Status:  corev1.ConditionTrue,
+				Status:  corev1.ConditionFalse,
 				Message: fmt.Sprintf("A snapshot for nodeID %q does not yet exist in the xDS server cache", ecr.Spec.NodeID),
 			}
 		}
 
 		if snap.GetVersion(envoy.Cluster) != ecr.Spec.Version {
 			return &status.Condition{
-				Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
+				Type:    marin3rv1alpha1.ResourcesInSyncCondition,
 				Reason:  "SnapshotVersionDiffers",
-				Status:  corev1.ConditionTrue,
+				Status:  corev1.ConditionFalse,
 				Message: fmt.Sprintf("The snapshot for nodeID %q holds resources version %q", ecr.Spec.NodeID, snap.GetVersion(envoy.Cluster)),
 			}
 		}
 
 		return &status.Condition{
-			Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
+			Type:    marin3rv1alpha1.ResourcesInSyncCondition,
 			Reason:  "EnvoyConficRevisionResourcesSynced",
-			Status:  corev1.ConditionFalse,
+			Status:  corev1.ConditionTrue,
 			Message: "EnvoyConfigRevision resources successfully synced with xDS server cache",
 		}
 	}

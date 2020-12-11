@@ -57,7 +57,7 @@ func OnError(cfg *rest.Config) func(nodeID, version, msg string, envoyAPI envoy.
 		// Add the "ResourcesUpdateUnsuccessful" condition to the EnvoyConfigRevision object
 		// unless the condition is already set
 		ecr := &ecrList.Items[0]
-		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
+		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
 			patch := client.MergeFrom(ecr.DeepCopy())
 			ecr.Status.Conditions.SetCondition(status.Condition{
 				Type:    marin3rv1alpha1.RevisionTaintedCondition,

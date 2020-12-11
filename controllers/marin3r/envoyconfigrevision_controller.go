@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	envoyconfigrevision "github.com/3scale/marin3r/controllers/marin3r/envoyconfigrevision"
@@ -116,6 +117,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		if result.Requeue || err != nil {
 			switch err.(type) {
 			case *errors.StatusError:
+				log.Error(err, fmt.Sprintf("%v", err))
 				if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error()); err != nil {
 					return ctrl.Result{}, err
 				}
