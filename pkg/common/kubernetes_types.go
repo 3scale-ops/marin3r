@@ -20,3 +20,10 @@ func ObjectInfo(obj KubernetesObject) string {
 func ObjectKey(obj KubernetesObject) types.NamespacedName {
 	return types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}
 }
+
+func IsBeingDeleted(obj KubernetesObject) bool {
+	if obj.GetDeletionTimestamp() != nil {
+		return true
+	}
+	return false
+}

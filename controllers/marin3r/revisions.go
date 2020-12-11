@@ -100,13 +100,13 @@ func (r *EnvoyConfigReconciler) reconcileRevisionList(ctx context.Context, ec *m
 		if ecrList.Items[i].Status.LastPublishedAt.IsZero() {
 			iTime = ecrList.Items[i].GetCreationTimestamp()
 		} else {
-			iTime = ecrList.Items[i].Status.LastPublishedAt
+			iTime = *ecrList.Items[i].Status.LastPublishedAt
 		}
 
 		if ecrList.Items[j].Status.LastPublishedAt.IsZero() {
 			jTime = ecrList.Items[j].GetCreationTimestamp()
 		} else {
-			jTime = ecrList.Items[j].Status.LastPublishedAt
+			jTime = *ecrList.Items[j].Status.LastPublishedAt
 		}
 		return iTime.Before(&jTime)
 	})

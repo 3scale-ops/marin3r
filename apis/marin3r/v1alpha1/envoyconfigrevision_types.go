@@ -76,15 +76,18 @@ type EnvoyConfigRevisionStatus struct {
 	// Published signals if the EnvoyConfigRevision is the one currently published
 	// in the xds server cache
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	Published bool `json:"published,omitempty"`
+	// +optional
+	Published *bool `json:"published,omitempty"`
 	// LastPublishedAt indicates the last time this config review transitioned to
 	// published
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	LastPublishedAt metav1.Time `json:"lastPublishedAt,omitempty"`
+	// +optional
+	LastPublishedAt *metav1.Time `json:"lastPublishedAt,omitempty"`
 	// Tainted indicates whether the EnvoyConfigRevision is eligible for publishing
 	// or not
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	Tainted bool `json:"tainted,omitempty"`
+	// +optional
+	Tainted *bool `json:"tainted,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Conditions status.Conditions `json:"conditions"`
