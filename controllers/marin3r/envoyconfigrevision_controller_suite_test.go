@@ -520,7 +520,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
 					Expect(err).ToNot(HaveOccurred())
-					if *ecr.Status.Tainted {
+					if ecr.Status.IsTainted() {
 						return true
 					}
 					return false
@@ -542,7 +542,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
 					Expect(err).ToNot(HaveOccurred())
-					if !*ecr.Status.Tainted {
+					if !ecr.Status.IsTainted() {
 						return true
 					}
 					return false

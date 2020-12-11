@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/operator-framework/operator-lib/status"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -33,22 +31,6 @@ func TestIsInitialized(t *testing.T) {
 					Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 						EnvoyAPI:      pointer.StringPtr("v2"),
 						Serialization: pointer.StringPtr("json"),
-					},
-					Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-						Conditions: status.Conditions{
-							{
-								Type:    marin3rv1alpha1.RevisionPublishedCondition,
-								Reason:  "Initialized",
-								Status:  corev1.ConditionFalse,
-								Message: "EnvoyConfigRevision is not marked as the published revision",
-							},
-							{
-								Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
-								Reason:  "Initialized",
-								Status:  corev1.ConditionTrue,
-								Message: "Resources are not in sync with the xDS server cache",
-							},
-						},
 					},
 				}
 			},

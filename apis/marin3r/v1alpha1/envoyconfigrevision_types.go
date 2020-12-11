@@ -93,6 +93,22 @@ type EnvoyConfigRevisionStatus struct {
 	Conditions status.Conditions `json:"conditions"`
 }
 
+// IsPublished returns true if this revision is published, false otherwise
+func (status *EnvoyConfigRevisionStatus) IsPublished() bool {
+	if status.Published == nil {
+		return false
+	}
+	return *status.Published
+}
+
+// IsTainted returns true if this revision is tainted, false otherwise
+func (status *EnvoyConfigRevisionStatus) IsTainted() bool {
+	if status.Tainted == nil {
+		return false
+	}
+	return *status.Tainted
+}
+
 // +kubebuilder:object:root=true
 
 // EnvoyConfigRevision holds an specific version of the EnvoyConfig resources.

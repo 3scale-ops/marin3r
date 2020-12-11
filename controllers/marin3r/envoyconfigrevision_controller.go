@@ -32,7 +32,6 @@ import (
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -75,11 +74,11 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	}
 
 	if ok := envoyconfigrevision.IsInitialized(ecr); !ok {
-		err := r.Client.Update(ctx, ecr)
-		if err != nil {
+		if err := r.Client.Update(ctx, ecr); err != nil {
 			log.Error(err, "unable to update EnvoyConfigRevision")
 			return ctrl.Result{}, err
 		}
+		log.Info("initialized EnvoyConfigRevision resource")
 		return reconcile.Result{}, nil
 	}
 
@@ -91,8 +90,10 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		controllerutil.RemoveFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)
 		if err = r.Client.Update(ctx, ecr); err != nil {
 			log.Error(err, "unable to update EnvoyConfigRevision")
-			return reconcile.Result{}, nil
+			return reconcile.Result{}, err
 		}
+		log.Info("finalized EnvoyConfigRevision resource")
+		return reconcile.Result{}, nil
 	}
 
 	// If this ecr has the RevisionPublishedCondition set to "True" pusblish the resources
@@ -124,59 +125,16 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		}
 	}
 
-	// Update status
-	if err := r.updateStatus(ctx, ecr); err != nil {
-		return ctrl.Result{}, err
+	if ok := envoyconfigrevision.IsStatusReconciled(ecr, r.XdsCache); !ok {
+		if err := r.Client.Status().Update(ctx, ecr); err != nil {
+			log.Error(err, "unable to update EnvoyConfigRevision status")
+			return ctrl.Result{}, err
+		}
+		log.Info("status updated for EnvoyConfigRevision resource")
+		return reconcile.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (r *EnvoyConfigRevisionReconciler) updateStatus(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision) error {
-
-	changed := false
-	patch := client.MergeFrom(ecr.DeepCopy())
-
-	// Clear ResourcesOutOfSyncCondition
-	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
-		ecr.Status.Conditions.SetCondition(status.Condition{
-			Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
-			Reason:  "NodeConficRevisionSynced",
-			Status:  corev1.ConditionFalse,
-			Message: "EnvoyConfigRevision successfully synced",
-		})
-		changed = true
-
-	}
-
-	// Set status.published and status.lastPublishedAt fields
-	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && !*ecr.Status.Published {
-		ecr.Status.Published = pointer.BoolPtr(true)
-		ecr.Status.LastPublishedAt = func(t metav1.Time) *metav1.Time { return &t }(metav1.Now())
-		// We also initialise the "tainted" status property to false
-		ecr.Status.Tainted = pointer.BoolPtr(false)
-		changed = true
-	} else if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && *ecr.Status.Published {
-		ecr.Status.Published = pointer.BoolPtr(false)
-		changed = true
-	}
-
-	// Set status.failed field
-	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && !*ecr.Status.Tainted {
-		ecr.Status.Tainted = pointer.BoolPtr(true)
-		changed = true
-	} else if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && *ecr.Status.Tainted {
-		ecr.Status.Tainted = pointer.BoolPtr(false)
-		changed = true
-	}
-
-	if changed {
-		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision, reason, msg string) error {
