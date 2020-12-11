@@ -33,7 +33,7 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 			XdsCache: xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 			Log:      ctrl.Log.WithName("test"),
 		}
-		if err := r.taintSelf(context.TODO(), ecr, "test", "test"); err != nil {
+		if err := r.taintSelf(context.TODO(), ecr, "test", "test", r.Log); err != nil {
 			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() error = %v", err)
 		}
 		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)

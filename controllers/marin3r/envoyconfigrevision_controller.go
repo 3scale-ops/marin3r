@@ -117,7 +117,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			switch err.(type) {
 			case *errors.StatusError:
 				log.Error(err, fmt.Sprintf("%v", err))
-				if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error()); err != nil {
+				if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error(), log); err != nil {
 					return ctrl.Result{}, err
 				}
 			default:
@@ -138,7 +138,9 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	return ctrl.Result{}, nil
 }
 
-func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision, reason, msg string) error {
+func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision,
+	reason, msg string, log logr.Logger) error {
+
 	if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
 		patch := client.MergeFrom(ecr.DeepCopy())
 		ecr.Status.Conditions.SetCondition(status.Condition{
@@ -152,6 +154,8 @@ func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *mari
 		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
 			return err
 		}
+
+		log.Info(fmt.Sprintf("Tainted revision: %q", msg))
 	}
 	return nil
 }
