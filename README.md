@@ -64,7 +64,7 @@ kubectl apply -f examples/quickstart/olm-install.yaml
 Wait until you see the following Pods running:
 
 ```bash
-▶ k -n marin3r-system get pods | grep Running
+▶ kubectl -n marin3r-system get pods | grep Running
 marin3r-catalog-qsx9t                                             1/1     Running     0          103s
 marin3r-controller-manager-5f97f86fc5-qbp6d                       2/2     Running     0          42s
 marin3r-controller-webhook-5d4d855859-67zr6                       1/1     Running     0          42s
@@ -92,7 +92,7 @@ kustomize build config/default | kubectl apply -f -
 After a while you should see the following Pods running:
 
 ```bash
-▶ k -n marin3r-system get pods
+▶ kubectl -n marin3r-system get pods
 NAME                                          READY   STATUS    RESTARTS   AGE
 marin3r-controller-manager-6c45f7675f-cs6dq   2/2     Running   0          31s
 marin3r-controller-webhook-684bf5bbfd-cp2x4   1/1     Running   0          31s

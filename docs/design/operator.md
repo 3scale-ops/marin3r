@@ -8,7 +8,7 @@ The operator part of MARIN3R is a group of controllers that manage the deploymen
 
 ## DiscoveryService controller
 
-The DiscoveryService controller watches for DiscoveryService resources. The DiscoveryService resource is a namespace scoped resource and and only watches for resources in its same namespace.
+The DiscoveryService controller watches for DiscoveryService resources. The DiscoveryService resource is a namespace scoped resource and only watches for resources in its same namespace.
 
 The DiscoveryService controller deploys the discovery service and sets up all the requirements for sidecar injection to work in a given namespace. It is also in charge of creating the certificates required for all components.
 
