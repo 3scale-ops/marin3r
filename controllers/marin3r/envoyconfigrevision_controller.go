@@ -51,10 +51,10 @@ type EnvoyConfigRevisionReconciler struct {
 	APIVersion envoy.APIVersion
 }
 
+// Reconcile progresses EnvoyConfigRevision resources to its desired state
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch
-
 func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
@@ -185,6 +185,7 @@ func filterByAPIVersionPredicate(version envoy.APIVersion,
 	}
 }
 
+// SetupWithManager adds the controller to the manager
 func (r *EnvoyConfigRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&marin3rv1alpha1.EnvoyConfigRevision{}).
