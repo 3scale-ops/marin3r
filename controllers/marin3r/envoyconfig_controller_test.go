@@ -12,36 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func Test_contains(t *testing.T) {
-	type args struct {
-		list []string
-		s    string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "True -> key in slice",
-			args: args{list: []string{"a", "b", "c"}, s: "a"},
-			want: true,
-		},
-		{
-			name: "False -> key not in slice",
-			args: args{list: []string{"a", "b", "c"}, s: "z"},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := contains(tt.args.list, tt.args.s); got != tt.want {
-				t.Errorf("contains() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestEnvoyConfigReconciler_getVersionToPublish(t *testing.T) {
 
 	tests := []struct {

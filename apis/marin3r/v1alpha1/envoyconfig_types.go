@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	"github.com/operator-framework/operator-lib/status"
@@ -204,6 +205,12 @@ func (ec *EnvoyConfig) GetSerialization() envoy_serializer.Serialization {
 		return envoy_serializer.JSON
 	}
 	return envoy_serializer.Serialization(*ec.Spec.Serialization)
+}
+
+// GetEnvoyResourcesVersion returns the hash of the resources in the spec which
+// univoquely identifies the version of the resources.
+func (ec *EnvoyConfig) GetEnvoyResourcesVersion() string {
+	return common.Hash(ec.Spec.EnvoyResources)
 }
 
 // +kubebuilder:object:root=true
