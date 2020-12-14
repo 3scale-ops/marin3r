@@ -7,6 +7,7 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,7 +29,7 @@ func init() {
 }
 
 func testRevisionReconcilerBuilder(s *runtime.Scheme, instance *marin3rv1alpha1.EnvoyConfig, objs ...runtime.Object) RevisionReconciler {
-	return RevisionReconciler{context.TODO(), ctrl.Log.WithName("test"), fake.NewFakeClientWithScheme(s, objs...), s, instance}
+	return RevisionReconciler{context.TODO(), ctrl.Log.WithName("test"), fake.NewFakeClientWithScheme(s, objs...), s, instance, nil}
 }
 
 func TestNewRevisionReconciler(t *testing.T) {
@@ -47,7 +48,7 @@ func TestNewRevisionReconciler(t *testing.T) {
 		{
 			name: "Returns a RevisionReconciler",
 			args: args{context.TODO(), nil, fake.NewFakeClient(), s, nil},
-			want: RevisionReconciler{context.TODO(), nil, fake.NewFakeClient(), s, nil},
+			want: RevisionReconciler{context.TODO(), nil, fake.NewFakeClient(), s, nil, nil},
 		},
 	}
 	for _, tt := range tests {
@@ -177,7 +178,7 @@ func TestRevisionReconciler_ListRevisions(t *testing.T) {
 	tests := []struct {
 		name      string
 		r         RevisionReconciler
-		filters   []RevisionFilter
+		filters   []filters.RevisionFilter
 		wantCount int
 		wantErr   bool
 	}{
@@ -188,20 +189,20 @@ func TestRevisionReconciler_ListRevisions(t *testing.T) {
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test"},
+					Labels:    map[string]string{filters.NodeIDTag: "test"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr2",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test"},
+					Labels:    map[string]string{filters.NodeIDTag: "test"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr3",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "other"},
+					Labels:    map[string]string{filters.NodeIDTag: "other"},
 				}},
 			),
-			[]RevisionFilter{FilterByNodeID("test")},
+			[]filters.RevisionFilter{filters.ByNodeID("test")},
 			2,
 			false,
 		},
@@ -212,20 +213,20 @@ func TestRevisionReconciler_ListRevisions(t *testing.T) {
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "1"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "1"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr2",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "2"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "2"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr3",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "3"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "3"},
 				}},
 			),
-			[]RevisionFilter{FilterByNodeID("test"), FilterByVersion("1")},
+			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			1,
 			false,
 		},
@@ -236,17 +237,26 @@ func TestRevisionReconciler_ListRevisions(t *testing.T) {
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test"},
+					Labels:    map[string]string{filters.NodeIDTag: "test"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr",
 					Namespace: "other",
-					Labels:    map[string]string{nodeIDTag: "test"},
+					Labels:    map[string]string{filters.NodeIDTag: "test"},
 				}},
 			),
-			[]RevisionFilter{FilterByNodeID("test")},
+			[]filters.RevisionFilter{filters.ByNodeID("test")},
 			1,
 			false,
+		},
+		{
+			"Returns an error if no revisions are found that match the provided filters",
+			testRevisionReconcilerBuilder(s,
+				&marin3rv1alpha1.EnvoyConfig{ObjectMeta: metav1.ObjectMeta{Namespace: "test"}},
+			),
+			[]filters.RevisionFilter{filters.ByNodeID("test")},
+			0,
+			true,
 		},
 	}
 	for _, tt := range tests {
@@ -256,7 +266,7 @@ func TestRevisionReconciler_ListRevisions(t *testing.T) {
 				t.Errorf("RevisionReconciler.ListRevisions() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if len(got.Items) != tt.wantCount {
+			if !tt.wantErr && len(got.Items) != tt.wantCount {
 				t.Errorf("RevisionReconciler.ListRevisions() = %v, want %v", len(got.Items), tt.wantCount)
 			}
 		})
@@ -267,7 +277,7 @@ func TestRevisionReconciler_GetRevision(t *testing.T) {
 	tests := []struct {
 		name    string
 		r       RevisionReconciler
-		filters []RevisionFilter
+		filters []filters.RevisionFilter
 		want    *marin3rv1alpha1.EnvoyConfigRevision
 		wantErr bool
 	}{
@@ -278,24 +288,24 @@ func TestRevisionReconciler_GetRevision(t *testing.T) {
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "1"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "1"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr2",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "2"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "2"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr3",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "3"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "3"},
 				}},
 			),
-			[]RevisionFilter{FilterByNodeID("test"), FilterByVersion("1")},
+			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 				Name:      "ecr1",
 				Namespace: "test",
-				Labels:    map[string]string{nodeIDTag: "test", versionTag: "1"},
+				Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "1"},
 			}},
 			false,
 		},
@@ -306,20 +316,20 @@ func TestRevisionReconciler_GetRevision(t *testing.T) {
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "1"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "1"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr2",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "1"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "1"},
 				}},
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr3",
 					Namespace: "test",
-					Labels:    map[string]string{nodeIDTag: "test", versionTag: "3"},
+					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "3"},
 				}},
 			),
-			[]RevisionFilter{FilterByNodeID("test"), FilterByVersion("1")},
+			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			nil,
 			true,
 		},
@@ -328,7 +338,7 @@ func TestRevisionReconciler_GetRevision(t *testing.T) {
 			testRevisionReconcilerBuilder(s,
 				&marin3rv1alpha1.EnvoyConfig{ObjectMeta: metav1.ObjectMeta{Namespace: "test"}},
 			),
-			[]RevisionFilter{FilterByNodeID("test"), FilterByVersion("1")},
+			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			nil,
 			true,
 		},
@@ -398,9 +408,9 @@ func TestRevisionReconciler_AreRevisionLabelsOk(t *testing.T) {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								nodeIDTag:   "test",
-								versionTag:  "1",
-								envoyAPITag: "v3",
+								filters.NodeIDTag:   "test",
+								filters.VersionTag:  "1",
+								filters.EnvoyAPITag: "v3",
 							}},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 							NodeID:   "test",
@@ -420,9 +430,9 @@ func TestRevisionReconciler_AreRevisionLabelsOk(t *testing.T) {
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{
-								nodeIDTag:   "test",
-								versionTag:  "1",
-								envoyAPITag: "v3",
+								filters.NodeIDTag:   "test",
+								filters.VersionTag:  "1",
+								filters.EnvoyAPITag: "v3",
 							}},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 							NodeID:   "test",

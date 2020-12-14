@@ -1,4 +1,4 @@
-package reconcilers
+package filters
 
 import (
 	"reflect"
@@ -19,7 +19,7 @@ func TestVersionFilter_ApplyToLabelSelector(t *testing.T) {
 			name:     "Applies VersionFilter to selector",
 			filter:   &VersionFilter{Value: "xxxx"},
 			selector: client.MatchingLabels{},
-			want:     client.MatchingLabels{versionTag: "xxxx"},
+			want:     client.MatchingLabels{VersionTag: "xxxx"},
 		},
 	}
 	for _, tt := range tests {
@@ -32,7 +32,7 @@ func TestVersionFilter_ApplyToLabelSelector(t *testing.T) {
 	}
 }
 
-func TestFilterByVersion(t *testing.T) {
+func TestByVersion(t *testing.T) {
 	type args struct {
 		version string
 	}
@@ -49,8 +49,8 @@ func TestFilterByVersion(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FilterByVersion(tt.args.version); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FilterByVersion() = %v, want %v", got, tt.want)
+			if got := ByVersion(tt.args.version); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ByVersion() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -68,7 +68,7 @@ func TestNodeIDFilter_ApplyToLabelSelector(t *testing.T) {
 			name:     "Applies NodeIDFilter to selector",
 			filter:   &NodeIDFilter{Value: "xxxx"},
 			selector: client.MatchingLabels{},
-			want:     client.MatchingLabels{nodeIDTag: "xxxx"},
+			want:     client.MatchingLabels{NodeIDTag: "xxxx"},
 		},
 	}
 	for _, tt := range tests {
@@ -81,7 +81,7 @@ func TestNodeIDFilter_ApplyToLabelSelector(t *testing.T) {
 	}
 }
 
-func TestFilterByNodeID(t *testing.T) {
+func TestByNodeID(t *testing.T) {
 	type args struct {
 		nodeID string
 	}
@@ -98,8 +98,8 @@ func TestFilterByNodeID(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FilterByNodeID(tt.args.nodeID); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FilterByNodeID() = %v, want %v", got, tt.want)
+			if got := ByNodeID(tt.args.nodeID); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ByNodeID() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -116,7 +116,7 @@ func TestEnvoyAPIFilter_ApplyToLabelSelector(t *testing.T) {
 			name:     "Applies VersionFilter to selector",
 			filter:   &EnvoyAPIFilter{Value: "v3"},
 			selector: client.MatchingLabels{},
-			want:     client.MatchingLabels{envoyAPITag: "v3"},
+			want:     client.MatchingLabels{EnvoyAPITag: "v3"},
 		},
 	}
 	for _, tt := range tests {
@@ -129,7 +129,7 @@ func TestEnvoyAPIFilter_ApplyToLabelSelector(t *testing.T) {
 	}
 }
 
-func TestFilterByEnvoyAPI(t *testing.T) {
+func TestByEnvoyAPI(t *testing.T) {
 	type args struct {
 		envoyAPI envoy.APIVersion
 	}
@@ -146,8 +146,8 @@ func TestFilterByEnvoyAPI(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := FilterByEnvoyAPI(tt.args.envoyAPI); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FilterByEnvoyAPI() = %v, want %v", got, tt.want)
+			if got := ByEnvoyAPI(tt.args.envoyAPI); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ByEnvoyAPI() = %v, want %v", got, tt.want)
 			}
 		})
 	}

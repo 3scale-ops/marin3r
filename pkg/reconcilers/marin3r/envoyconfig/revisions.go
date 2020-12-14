@@ -6,10 +6,15 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/errors"
+	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/go-logr/logr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const (
@@ -18,18 +23,19 @@ const (
 
 // RevisionReconciler is a struct with methods to reconcile EnvoyConfig revisions
 type RevisionReconciler struct {
-	ctx    context.Context
-	logger logr.Logger
-	client client.Client
-	scheme *runtime.Scheme
-	ec     *marin3rv1alpha1.EnvoyConfig
+	ctx     context.Context
+	logger  logr.Logger
+	client  client.Client
+	scheme  *runtime.Scheme
+	ec      *marin3rv1alpha1.EnvoyConfig
+	version *string
 }
 
 // NewRevisionReconciler returns a new RevisionReconciler
 func NewRevisionReconciler(ctx context.Context, logger logr.Logger, client client.Client,
 	s *runtime.Scheme, ec *marin3rv1alpha1.EnvoyConfig) RevisionReconciler {
 
-	return RevisionReconciler{ctx, logger, client, s, ec}
+	return RevisionReconciler{ctx, logger, client, s, ec, nil}
 }
 
 // Instance returns the EnvoyConfig the reconciler has been instantiated with
@@ -52,7 +58,11 @@ func (r *RevisionReconciler) NodeID() string {
 // Version returns the version of the EnvoyConfig the reconciler
 // has been instantiated with
 func (r *RevisionReconciler) Version() string {
-	return r.Instance().GetEnvoyResourcesVersion()
+	if r.version == nil {
+		// Store the version to avoid further computation of the same value
+		r.version = pointer.StringPtr(r.Instance().GetEnvoyResourcesVersion())
+	}
+	return *r.version
 }
 
 // EnvoyAPI returns the envoy API version of the EnvoyConfig the reconciler
@@ -63,7 +73,7 @@ func (r *RevisionReconciler) EnvoyAPI() envoy.APIVersion {
 
 // ListRevisions returns the list of EnvoyConfigRevisions owned by the EnvoyConfig
 // the reconciler has been instantiated with
-func (r *RevisionReconciler) ListRevisions(filters ...RevisionFilter) (*marin3rv1alpha1.EnvoyConfigRevisionList, error) {
+func (r *RevisionReconciler) ListRevisions(filters ...filters.RevisionFilter) (*marin3rv1alpha1.EnvoyConfigRevisionList, error) {
 
 	list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 
@@ -76,12 +86,15 @@ func (r *RevisionReconciler) ListRevisions(filters ...RevisionFilter) (*marin3rv
 		return nil, err
 	}
 
+	if len(list.Items) == 0 {
+		return nil, errors.New(errors.NoMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
+	}
 	return list, nil
 }
 
 // GetRevision returns the EnvoyConfigRevision that matches the provided filters. If no EnvoyConfigRevisions are returned
 // by the API an error is returned. If more than one EnvoyConfigRevision are returned by the API an error is returned.
-func (r *RevisionReconciler) GetRevision(filters ...RevisionFilter) (*marin3rv1alpha1.EnvoyConfigRevision, error) {
+func (r *RevisionReconciler) GetRevision(filters ...filters.RevisionFilter) (*marin3rv1alpha1.EnvoyConfigRevision, error) {
 
 	list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 
@@ -94,8 +107,10 @@ func (r *RevisionReconciler) GetRevision(filters ...RevisionFilter) (*marin3rv1a
 		return nil, err
 	}
 
-	if len(list.Items) != 1 {
-		return nil, fmt.Errorf("api returned %d EnvoyConfigRevisions", len(list.Items))
+	if len(list.Items) == 0 {
+		return nil, errors.New(errors.NoMatchesForFilterError, "GetRevision", "no EnvoyConfigRevisions found")
+	} else if len(list.Items) > 1 {
+		return nil, errors.New(errors.MultipleMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
 	}
 
 	return &list.Items[0], nil
@@ -106,8 +121,9 @@ func (r *RevisionReconciler) GetRevision(filters ...RevisionFilter) (*marin3rv1a
 func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	log := r.logger
 
-	list, err := r.ListRevisions(FilterByNodeID(r.NodeID()))
-	if err != nil {
+	list, err := r.ListRevisions(filters.ByNodeID(r.NodeID()))
+	// At this point there might be no revisions yet
+	if err != nil && !errors.IsNoMatchesForFilter(err) {
 		log.Error(err, "unable to list revisions", "Phase", "ReconcileRevisionLabels")
 		return ctrl.Result{}, err
 	}
@@ -119,9 +135,34 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 			log.Error(err, "unable to update revisions", "Phase", "ReconcileRevisionLabels")
 			return ctrl.Result{}, err
 		}
-		// Revisions labels updated, trigger a new reconcile loop
+		// Revision labels updated, trigger a new reconcile loop
 		return ctrl.Result{Requeue: true}, nil
 	}
+
+	_, err = r.GetRevision(filters.ByNodeID(r.NodeID()), filters.ByVersion(r.Version()), filters.ByEnvoyAPI(r.EnvoyAPI()))
+	if err != nil {
+		if errors.IsNoMatchesForFilter(err) {
+			ecr := r.NewRevisionForCurrentResources()
+			if err := controllerutil.SetControllerReference(r.Instance(), ecr, r.scheme); err != nil {
+				log.Error(err, "unable to SetControllerReference for new EnvoyConfigRevision resource", "Phase", "ReconcileRevisionForCurrentResources")
+				return ctrl.Result{}, err
+			}
+			if err := r.client.Create(r.ctx, ecr); err != nil {
+				log.Error(err, "unable to create EnvoyConfigRevision resource", "Phase", "ReconcileRevisionForCurrentResources")
+				return ctrl.Result{}, err
+			}
+			// New EnvoyConfigRevision created, trigger a new reconcile loop
+			return ctrl.Result{Requeue: true}, nil
+		}
+		if errors.IsMultipleMatchesForFilter(err) {
+			log.Error(err, "found more than one revision that matches current resources", "Phase", "ReconcileRevisionForCurrentResources")
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{}, err
+	}
+
+	// list, err = r.ListRevisions()
 
 	return ctrl.Result{}, nil
 }
@@ -133,19 +174,47 @@ func (r *RevisionReconciler) AreRevisionLabelsOk(list *marin3rv1alpha1.EnvoyConf
 	ok := true
 
 	for _, ecr := range list.Items {
-		_, okVersionTag := ecr.GetLabels()[versionTag]
-		_, okEnvoyAPITag := ecr.GetLabels()[envoyAPITag]
-		_, okNodeIDTag := ecr.GetLabels()[nodeIDTag]
+		_, okVersionTag := ecr.GetLabels()[filters.VersionTag]
+		_, okEnvoyAPITag := ecr.GetLabels()[filters.EnvoyAPITag]
+		_, okNodeIDTag := ecr.GetLabels()[filters.NodeIDTag]
 		if !okVersionTag || !okEnvoyAPITag || !okNodeIDTag {
 
 			ecr.SetLabels(map[string]string{
-				versionTag:  ecr.Spec.Version,
-				envoyAPITag: ecr.GetEnvoyAPIVersion().String(),
-				nodeIDTag:   ecr.Spec.NodeID,
+				filters.VersionTag:  ecr.Spec.Version,
+				filters.EnvoyAPITag: ecr.GetEnvoyAPIVersion().String(),
+				filters.NodeIDTag:   ecr.Spec.NodeID,
 			})
 			ok = false
 		}
 	}
 
 	return ok
+}
+
+// NewRevisionForCurrentResources generates an EnvoyConfigRevision resource for the current
+// resources in the spec.EnvoyResources field of the EnvoyConfig resource
+func (r *RevisionReconciler) NewRevisionForCurrentResources() *marin3rv1alpha1.EnvoyConfigRevision {
+	return &marin3rv1alpha1.EnvoyConfigRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: func() string {
+				if r.EnvoyAPI() == envoy.APIv2 {
+					return fmt.Sprintf("%s-%s", r.NodeID(), r.Version())
+				}
+				return fmt.Sprintf("%s-%s-%s", r.NodeID(), r.EnvoyAPI(), r.Version())
+			}(),
+			Namespace: r.Namespace(),
+			Labels: map[string]string{
+				filters.NodeIDTag:   r.NodeID(),
+				filters.VersionTag:  r.Version(),
+				filters.EnvoyAPITag: r.EnvoyAPI().String(),
+			},
+		},
+		Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
+			NodeID:         r.NodeID(),
+			EnvoyAPI:       pointer.StringPtr(r.EnvoyAPI().String()),
+			Version:        r.Version(),
+			Serialization:  r.Instance().Spec.Serialization,
+			EnvoyResources: r.Instance().Spec.EnvoyResources,
+		},
+	}
 }

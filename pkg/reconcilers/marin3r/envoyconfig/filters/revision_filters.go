@@ -1,4 +1,4 @@
-package reconcilers
+package filters
 
 import (
 	"github.com/3scale/marin3r/pkg/envoy"
@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	nodeIDTag   = "marin3r.3scale.net/node-id"
-	versionTag  = "marin3r.3scale.net/config-version"
-	envoyAPITag = "marin3r.3scale.net/envoy-api"
+	NodeIDTag   = "marin3r.3scale.net/node-id"
+	VersionTag  = "marin3r.3scale.net/config-version"
+	EnvoyAPITag = "marin3r.3scale.net/envoy-api"
 )
 
 // RevisionFilter is an interface that revision label selectors
@@ -26,11 +26,11 @@ type VersionFilter struct {
 // ApplyToLabelSelector applies the VersionFilter to the given
 // MatchingLabels selector
 func (vf *VersionFilter) ApplyToLabelSelector(selector client.MatchingLabels) {
-	selector[versionTag] = vf.Value
+	selector[VersionTag] = vf.Value
 }
 
-// FilterByVersion returns a VersionFilter
-func FilterByVersion(version string) RevisionFilter {
+// ByVersion returns a VersionFilter
+func ByVersion(version string) RevisionFilter {
 	return &VersionFilter{Value: version}
 }
 
@@ -43,11 +43,11 @@ type NodeIDFilter struct {
 // ApplyToLabelSelector applies the VersionFilter to the given
 // MatchingLabels selector
 func (nf *NodeIDFilter) ApplyToLabelSelector(selector client.MatchingLabels) {
-	selector[nodeIDTag] = nf.Value
+	selector[NodeIDTag] = nf.Value
 }
 
-// FilterByNodeID returns a NodeIDFilter
-func FilterByNodeID(nodeID string) RevisionFilter {
+// ByNodeID returns a NodeIDFilter
+func ByNodeID(nodeID string) RevisionFilter {
 	return &NodeIDFilter{Value: nodeID}
 }
 
@@ -60,10 +60,10 @@ type EnvoyAPIFilter struct {
 // ApplyToLabelSelector applies the VersionFilter to the given
 // MatchingLabels selector
 func (ef *EnvoyAPIFilter) ApplyToLabelSelector(selector client.MatchingLabels) {
-	selector[envoyAPITag] = ef.Value
+	selector[EnvoyAPITag] = ef.Value
 }
 
-// FilterByEnvoyAPI returns a NodeIDFilter
-func FilterByEnvoyAPI(envoyAPI envoy.APIVersion) RevisionFilter {
+// ByEnvoyAPI returns a NodeIDFilter
+func ByEnvoyAPI(envoyAPI envoy.APIVersion) RevisionFilter {
 	return &EnvoyAPIFilter{Value: envoyAPI.String()}
 }
