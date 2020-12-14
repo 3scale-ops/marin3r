@@ -28,7 +28,7 @@ import (
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
-	reconcilers_marin3r "github.com/3scale/marin3r/pkg/reconcilers/marin3r"
+	envoybootstrap "github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoybootstrap"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -62,13 +62,13 @@ func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return ctrl.Result{}, err
 	}
 
-	certificateReconciler := reconcilers_marin3r.NewClientCertificateReconciler(ctx, log, r.Client, r.Scheme, eb)
+	certificateReconciler := envoybootstrap.NewClientCertificateReconciler(ctx, log, r.Client, r.Scheme, eb)
 	result, err := certificateReconciler.Reconcile()
 	if result.Requeue || err != nil {
 		return result, err
 	}
 
-	configReconciler := reconcilers_marin3r.NewBootstrapConfigReconciler(ctx, log, r.Client, r.Scheme, eb)
+	configReconciler := envoybootstrap.NewBootstrapConfigReconciler(ctx, log, r.Client, r.Scheme, eb)
 
 	// Reconcile the v2 config
 	result, err = configReconciler.Reconcile(envoy.APIv2)
