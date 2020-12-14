@@ -21,13 +21,12 @@ import (
 	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	envoyconfigrevision "github.com/3scale/marin3r/controllers/marin3r/envoyconfigrevision"
 	"github.com/3scale/marin3r/pkg/common"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
-	reconcilers_marin3r "github.com/3scale/marin3r/pkg/reconcilers/marin3r"
+	envoyconfigrevision "github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
@@ -102,7 +101,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), r.APIVersion)
 
-		cacheReconciler := reconcilers_marin3r.NewCacheReconciler(
+		cacheReconciler := envoyconfigrevision.NewCacheReconciler(
 			ctx, r.Log, r.Client, r.XdsCache,
 			decoder,
 			envoy_resources.NewGenerator(r.APIVersion),
