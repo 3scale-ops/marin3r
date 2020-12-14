@@ -231,7 +231,7 @@ unit-test: fmt vet
 
 # Run integration tests
 ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
-OPERATOR_COVERPROFILE = operator.marin3r.coverprofile
+OPERATOR_COVERPROFILE = operator.coverprofile
 MARIN3R_COVERPROFILE = marin3r.coverprofile
 integration-test: generate fmt vet manifests ginkgo
 	mkdir -p $(ENVTEST_ASSETS_DIR)
