@@ -8,6 +8,7 @@ import (
 	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/errors"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
+	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,57 +72,12 @@ func (r *RevisionReconciler) EnvoyAPI() envoy.APIVersion {
 	return r.Instance().GetEnvoyAPIVersion()
 }
 
-// ListRevisions returns the list of EnvoyConfigRevisions owned by the EnvoyConfig
-// the reconciler has been instantiated with
-func (r *RevisionReconciler) ListRevisions(filters ...filters.RevisionFilter) (*marin3rv1alpha1.EnvoyConfigRevisionList, error) {
-
-	list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
-
-	labelSelector := client.MatchingLabels{}
-	for _, filter := range filters {
-		filter.ApplyToLabelSelector(labelSelector)
-	}
-
-	if err := r.client.List(r.ctx, list, labelSelector, client.InNamespace(r.Instance().GetNamespace())); err != nil {
-		return nil, err
-	}
-
-	if len(list.Items) == 0 {
-		return nil, errors.New(errors.NoMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
-	}
-	return list, nil
-}
-
-// GetRevision returns the EnvoyConfigRevision that matches the provided filters. If no EnvoyConfigRevisions are returned
-// by the API an error is returned. If more than one EnvoyConfigRevision are returned by the API an error is returned.
-func (r *RevisionReconciler) GetRevision(filters ...filters.RevisionFilter) (*marin3rv1alpha1.EnvoyConfigRevision, error) {
-
-	list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
-
-	labelSelector := client.MatchingLabels{}
-	for _, filter := range filters {
-		filter.ApplyToLabelSelector(labelSelector)
-	}
-
-	if err := r.client.List(r.ctx, list, labelSelector, client.InNamespace(r.Instance().GetNamespace())); err != nil {
-		return nil, err
-	}
-
-	if len(list.Items) == 0 {
-		return nil, errors.New(errors.NoMatchesForFilterError, "GetRevision", "no EnvoyConfigRevisions found")
-	} else if len(list.Items) > 1 {
-		return nil, errors.New(errors.MultipleMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
-	}
-
-	return &list.Items[0], nil
-}
-
 // Reconcile progresses EnvoyConfig revisions to match the desired state. It does so
 // by creating/updating/deleting EnvoyConfigRevision API resources.
 func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	log := r.logger
 
-	list, err := r.ListRevisions(filters.ByNodeID(r.NodeID()))
+	list, err := revisions.List(r.ctx, r.client, r.Namespace(), filters.ByNodeID(r.NodeID()))
 	// At this point there might be no revisions yet
 	if err != nil && !errors.IsNoMatchesForFilter(err) {
 		log.Error(err, "unable to list revisions", "Phase", "ReconcileRevisionLabels")
@@ -139,7 +95,8 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	_, err = r.GetRevision(filters.ByNodeID(r.NodeID()), filters.ByVersion(r.Version()), filters.ByEnvoyAPI(r.EnvoyAPI()))
+	_, err = revisions.Get(r.ctx, r.client, r.Namespace(),
+		filters.ByNodeID(r.NodeID()), filters.ByVersion(r.Version()), filters.ByEnvoyAPI(r.EnvoyAPI()))
 	if err != nil {
 		if errors.IsNoMatchesForFilter(err) {
 			ecr := r.NewRevisionForCurrentResources()
@@ -162,7 +119,11 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	// list, err = r.ListRevisions()
+	list, err = revisions.List(r.ctx, r.client, r.Namespace(), filters.ByNodeID(r.NodeID()), filters.ByEnvoyAPI(r.EnvoyAPI()))
+	if err != nil {
+		log.Error(err, "unable to list revisions", "Phase", "ReconcileRevisionList")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
