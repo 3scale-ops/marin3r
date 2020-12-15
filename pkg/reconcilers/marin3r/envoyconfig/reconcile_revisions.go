@@ -7,7 +7,6 @@ import (
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/envoy"
-	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/errors"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
 	"github.com/go-logr/logr"
@@ -27,21 +26,25 @@ const (
 
 // RevisionReconciler is a struct with methods to reconcile EnvoyConfig revisions
 type RevisionReconciler struct {
-	ctx            context.Context
-	logger         logr.Logger
-	client         client.Client
-	scheme         *runtime.Scheme
-	ec             *marin3rv1alpha1.EnvoyConfig
-	version        *string
-	desiredVersion *string
-	revisionList   *marin3rv1alpha1.EnvoyConfigRevisionList
+	ctx    context.Context
+	logger logr.Logger
+	client client.Client
+	scheme *runtime.Scheme
+	ec     *marin3rv1alpha1.EnvoyConfig
+
+	// This fields are only available once Reconcile()
+	// has been succesfully run
+	desiredVersion   *string
+	publishedVersion *string
+	cacheState       *string
+	revisionList     *marin3rv1alpha1.EnvoyConfigRevisionList
 }
 
 // NewRevisionReconciler returns a new RevisionReconciler
 func NewRevisionReconciler(ctx context.Context, logger logr.Logger, client client.Client,
 	s *runtime.Scheme, ec *marin3rv1alpha1.EnvoyConfig) RevisionReconciler {
 
-	return RevisionReconciler{ctx, logger, client, s, ec, nil, nil, nil}
+	return RevisionReconciler{ctx, logger, client, s, ec, nil, nil, nil, nil}
 }
 
 // Instance returns the EnvoyConfig the reconciler has been instantiated with
@@ -61,14 +64,14 @@ func (r *RevisionReconciler) NodeID() string {
 	return r.Instance().Spec.NodeID
 }
 
-// Version returns the version of the EnvoyConfig the reconciler
+// DesiredVersion returns the version of the EnvoyConfig the reconciler
 // has been instantiated with
-func (r *RevisionReconciler) Version() string {
-	if r.version == nil {
+func (r *RevisionReconciler) DesiredVersion() string {
+	if r.desiredVersion == nil {
 		// Store the version to avoid further computation of the same value
-		r.version = pointer.StringPtr(r.Instance().GetEnvoyResourcesVersion())
+		r.desiredVersion = pointer.StringPtr(r.Instance().GetEnvoyResourcesVersion())
 	}
-	return *r.version
+	return *r.desiredVersion
 }
 
 // EnvoyAPI returns the envoy API version of the EnvoyConfig the reconciler
@@ -82,6 +85,19 @@ func (r *RevisionReconciler) EnvoyAPI() envoy.APIVersion {
 // invoked it will return nil.
 func (r *RevisionReconciler) GetRevisionList() *marin3rv1alpha1.EnvoyConfigRevisionList {
 	return r.revisionList
+}
+
+// PublishedVersion returns the version of the published revision.
+// If Reconcile has not been successfully invoked it will return nil.
+func (r *RevisionReconciler) PublishedVersion() string {
+	return *r.publishedVersion
+}
+
+// GetCacheState returns the status of the EnvoyConfig the reconciler
+// has been instantiated with. If Reconcile has not been successfully
+// invoked it will return nil.
+func (r *RevisionReconciler) GetCacheState() string {
+	return *r.cacheState
 }
 
 // Reconcile progresses EnvoyConfig revisions to match the desired state. It does so
@@ -109,7 +125,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	}
 
 	_, err = revisions.Get(r.ctx, r.client, r.Namespace(),
-		filters.ByNodeID(r.NodeID()), filters.ByVersion(r.Version()), filters.ByEnvoyAPI(r.EnvoyAPI()))
+		filters.ByNodeID(r.NodeID()), filters.ByVersion(r.DesiredVersion()), filters.ByEnvoyAPI(r.EnvoyAPI()))
 	if err != nil {
 		if revisions.ErrorIsNoMatchesForFilter(err) {
 			ecr := r.newRevisionForCurrentResources()
@@ -122,7 +138,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 				return ctrl.Result{}, err
 			}
 			// New EnvoyConfigRevision created, trigger a new reconcile loop
-			log.Info("created EnvoyConfigRevision for current resources", "version", r.Version())
+			log.Info("created EnvoyConfigRevision for current resources", "version", r.DesiredVersion())
 			return ctrl.Result{Requeue: true}, nil
 		}
 		if revisions.ErrorIsMultipleMatchesForFilter(err) {
@@ -138,14 +154,12 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 		log.Error(err, "unable to list revisions", "Phase", "BuildRevisionList")
 		return ctrl.Result{}, err
 	}
-	r.revisionList = revisions.SortByPublication(r.Version(), list)
-	versionToPublish, err := r.getVersionToPublish()
-	if err != nil {
-		log.Error(err, "unable to reconcile revisions, all tainted", "Phase", "CalculateRevisionToPublish")
-		return ctrl.Result{}, err
-	}
+	r.revisionList = revisions.SortByPublication(r.DesiredVersion(), list)
+	publishedVersion, cacheState := r.getVersionToPublish()
+	r.cacheState = &cacheState
+	r.publishedVersion = &publishedVersion
 
-	shouldBeTrue, shouldBeFalse := r.isRevisionPublishedConditionReconciled(versionToPublish)
+	shouldBeTrue, shouldBeFalse := r.isRevisionPublishedConditionReconciled(r.PublishedVersion())
 
 	if shouldBeFalse != nil {
 		for _, ecr := range shouldBeFalse {
@@ -190,50 +204,34 @@ func (r *RevisionReconciler) areRevisionLabelsOk(list *marin3rv1alpha1.EnvoyConf
 	return ok
 }
 
-// newRevisionForCurrentResources generates an EnvoyConfigRevision resource for the current
-// resources in the spec.EnvoyResources field of the EnvoyConfig resource
-func (r *RevisionReconciler) newRevisionForCurrentResources() *marin3rv1alpha1.EnvoyConfigRevision {
-	return &marin3rv1alpha1.EnvoyConfigRevision{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: func() string {
-				if r.EnvoyAPI() == envoy.APIv2 {
-					return fmt.Sprintf("%s-%s", r.NodeID(), r.Version())
-				}
-				return fmt.Sprintf("%s-%s-%s", r.NodeID(), r.EnvoyAPI(), r.Version())
-			}(),
-			Namespace: r.Namespace(),
-			Labels: map[string]string{
-				filters.NodeIDTag:   r.NodeID(),
-				filters.VersionTag:  r.Version(),
-				filters.EnvoyAPITag: r.EnvoyAPI().String(),
-			},
-		},
-		Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-			NodeID:         r.NodeID(),
-			EnvoyAPI:       pointer.StringPtr(r.EnvoyAPI().String()),
-			Version:        r.Version(),
-			Serialization:  r.Instance().Spec.Serialization,
-			EnvoyResources: r.Instance().Spec.EnvoyResources,
-		},
-	}
-}
-
 // getVersionToPublish takes an EnvoyConfigRevisionList and returns the revision that should be
-// published
-func (r *RevisionReconciler) getVersionToPublish() (string, error) {
+// published. If the returned revision is not the one in the top position it returns the
+// RollbackOccurredError error. If all of the revisions are tainted it returns the AllRevisionsTaintedError
+// error.
+func (r *RevisionReconciler) getVersionToPublish() (string, string) {
+	var versionToPublish string
+
+	topIdx := len(r.revisionList.Items) - 1
 
 	// Starting from the highest index in the list and going
-	// down, return the first version found that is not tainted
-	for i := len(r.revisionList.Items) - 1; i >= 0; i-- {
-		ecr := r.revisionList.Items[i]
+	// down, take the first version found that is not tainted
+	for idx := topIdx; idx >= 0; idx-- {
+		ecr := r.revisionList.Items[idx]
 		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
-			return ecr.Spec.Version, nil
+			versionToPublish = ecr.Spec.Version
+			break
 		}
 	}
 
-	// If we get here it means that there is not untainted revision. Return a specific
-	// error to the controller loop so it gets handled appropriately
-	return "", errors.New(errors.AllRevisionsTaintedError, "GetVersionToPublish", "All available revisions are tainted")
+	if versionToPublish != r.revisionList.Items[topIdx].Spec.Version {
+		return versionToPublish, marin3rv1alpha1.RollbackState
+
+	} else if versionToPublish == "" {
+		return "", marin3rv1alpha1.RollbackFailedState
+	}
+
+	return versionToPublish, marin3rv1alpha1.InSyncState
+
 }
 
 // isRevisionPublishedConditionReconciled returns the revisions that need the RevisionPublished condition reconciled.
@@ -267,4 +265,32 @@ func (r *RevisionReconciler) isRevisionPublishedConditionReconciled(versionToPub
 		shouldBeFalse = nil
 	}
 	return shouldBeTrue, shouldBeFalse
+}
+
+// newRevisionForCurrentResources generates an EnvoyConfigRevision resource for the current
+// resources in the spec.EnvoyResources field of the EnvoyConfig resource
+func (r *RevisionReconciler) newRevisionForCurrentResources() *marin3rv1alpha1.EnvoyConfigRevision {
+	return &marin3rv1alpha1.EnvoyConfigRevision{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: func() string {
+				if r.EnvoyAPI() == envoy.APIv2 {
+					return fmt.Sprintf("%s-%s", r.NodeID(), r.DesiredVersion())
+				}
+				return fmt.Sprintf("%s-%s-%s", r.NodeID(), r.EnvoyAPI(), r.DesiredVersion())
+			}(),
+			Namespace: r.Namespace(),
+			Labels: map[string]string{
+				filters.NodeIDTag:   r.NodeID(),
+				filters.VersionTag:  r.DesiredVersion(),
+				filters.EnvoyAPITag: r.EnvoyAPI().String(),
+			},
+		},
+		Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
+			NodeID:         r.NodeID(),
+			EnvoyAPI:       pointer.StringPtr(r.EnvoyAPI().String()),
+			Version:        r.DesiredVersion(),
+			Serialization:  r.Instance().Spec.Serialization,
+			EnvoyResources: r.Instance().Spec.EnvoyResources,
+		},
+	}
 }

@@ -32,7 +32,7 @@ func init() {
 }
 
 func testRevisionReconcilerBuilder(s *runtime.Scheme, instance *marin3rv1alpha1.EnvoyConfig, objs ...runtime.Object) RevisionReconciler {
-	return RevisionReconciler{context.TODO(), ctrl.Log.WithName("test"), fake.NewFakeClientWithScheme(s, objs...), s, instance, nil, nil, nil}
+	return RevisionReconciler{context.TODO(), ctrl.Log.WithName("test"), fake.NewFakeClientWithScheme(s, objs...), s, instance, nil, nil, nil, nil}
 }
 
 func TestNewRevisionReconciler(t *testing.T) {
@@ -51,7 +51,7 @@ func TestNewRevisionReconciler(t *testing.T) {
 		{
 			name: "Returns a RevisionReconciler",
 			args: args{context.TODO(), nil, fake.NewFakeClient(), s, nil},
-			want: RevisionReconciler{context.TODO(), nil, fake.NewFakeClient(), s, nil, nil, nil, nil},
+			want: RevisionReconciler{context.TODO(), nil, fake.NewFakeClient(), s, nil, nil, nil, nil, nil},
 		},
 	}
 	for _, tt := range tests {
@@ -149,7 +149,7 @@ func TestRevisionReconciler_Version(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.r.Version(); got != tt.want {
+			if got := tt.r.DesiredVersion(); got != tt.want {
 				t.Errorf("RevisionReconciler.Version() = %v, want %v", got, tt.want)
 			}
 		})

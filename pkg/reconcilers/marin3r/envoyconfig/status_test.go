@@ -9,6 +9,7 @@ import (
 func TestIsStatusReconciled(t *testing.T) {
 	type args struct {
 		ec               *marin3rv1alpha1.EnvoyConfig
+		reconcileStatus  string
 		publishedVersion string
 		list             *marin3rv1alpha1.EnvoyConfigRevisionList
 	}
@@ -21,7 +22,7 @@ func TestIsStatusReconciled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsStatusReconciled(tt.args.ec, tt.args.publishedVersion, tt.args.list); got != tt.want {
+			if got := IsStatusReconciled(tt.args.ec, tt.args.reconcileStatus, tt.args.publishedVersion, tt.args.list); got != tt.want {
 				t.Errorf("IsStatusReconciled() = %v, want %v", got, tt.want)
 			}
 		})
