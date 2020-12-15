@@ -7,16 +7,14 @@ const (
 	// require special treatment or are yet unknown
 	UnknownError ErrorReason = "Unknown"
 
-	// MultipleMatchesForFilterError means that several revisions
-	// match the provided filters when only one should
-	MultipleMatchesForFilterError ErrorReason = "MultipleMatchesForFilter"
-
-	// NoMatchesForFilterError means that no revision matches the provided filters
-	NoMatchesForFilterError ErrorReason = "NoMatchesForFilter"
-
 	// AllRevisionsTaintedError indicates that there are no
 	// revisisions suitable for publishing as they are all tainted
 	AllRevisionsTaintedError ErrorReason = "AllRevisionsTainted"
+
+	// RollbackOccurredError indicates that the version that was
+	// suposed to be published is tainted and a differente previous
+	// version has been published.
+	RollbackOccurredError ErrorReason = "RollbackOccurred"
 )
 
 // ErrorReason is an enum of possible errors for the reconciler
@@ -47,19 +45,19 @@ func ReasonForError(err error) ErrorReason {
 	return UnknownError
 }
 
-// IsNoMatchesForFilter returns true if the Reason field
-// of an Error is a NoMatchesForFilterError. Returns false otherwise.
-func IsNoMatchesForFilter(err error) bool {
-	if ReasonForError(err) == NoMatchesForFilterError {
+// IsAllRevisionsTainted returns true if the Reason field
+// of an Error is a AllRevisionsTaintedError. Returns false otherwise.
+func IsAllRevisionsTainted(err error) bool {
+	if ReasonForError(err) == AllRevisionsTaintedError {
 		return true
 	}
 	return false
 }
 
-// IsMultipleMatchesForFilter returns true if the Reason field of
-// an Error is a MultipleRevisionsForFilterError. Returns false otherwise
-func IsMultipleMatchesForFilter(err error) bool {
-	if ReasonForError(err) == MultipleMatchesForFilterError {
+// IsRollbackOccurred returns true if the Reason field
+// of an Error is a RollbackOccurredError. Returns false otherwise.
+func IsRollbackOccurred(err error) bool {
+	if ReasonForError(err) == RollbackOccurredError {
 		return true
 	}
 	return false

@@ -102,7 +102,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 	} else {
-		if !errors.IsNoMatchesForFilter(err) {
+		if !revisions.ErrorIsNoMatchesForFilter(err) {
 			log.Error(err, "unable to list revisions", "Phase", "ReconcileRevisionLabels")
 			return ctrl.Result{}, err
 		}
@@ -111,7 +111,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	_, err = revisions.Get(r.ctx, r.client, r.Namespace(),
 		filters.ByNodeID(r.NodeID()), filters.ByVersion(r.Version()), filters.ByEnvoyAPI(r.EnvoyAPI()))
 	if err != nil {
-		if errors.IsNoMatchesForFilter(err) {
+		if revisions.ErrorIsNoMatchesForFilter(err) {
 			ecr := r.newRevisionForCurrentResources()
 			if err := controllerutil.SetControllerReference(r.Instance(), ecr, r.scheme); err != nil {
 				log.Error(err, "unable to SetControllerReference for new EnvoyConfigRevision resource", "Phase", "ReconcileRevisionForCurrentResources")
@@ -125,7 +125,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 			log.Info("created EnvoyConfigRevision for current resources", "version", r.Version())
 			return ctrl.Result{Requeue: true}, nil
 		}
-		if errors.IsMultipleMatchesForFilter(err) {
+		if revisions.ErrorIsMultipleMatchesForFilter(err) {
 			log.Error(err, "found more than one revision that matches current resources", "Phase", "ReconcileRevisionForCurrentResources")
 			return ctrl.Result{}, err
 		}

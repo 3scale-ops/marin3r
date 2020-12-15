@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/errors"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -27,7 +26,7 @@ func List(ctx context.Context, k8sClient client.Client, namespace string,
 	}
 
 	if len(list.Items) == 0 {
-		return nil, errors.New(errors.NoMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
+		return nil, NewError(NoMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
 	}
 	return list, nil
 }
@@ -49,9 +48,9 @@ func Get(ctx context.Context, k8sClient client.Client, namespace string,
 	}
 
 	if len(list.Items) == 0 {
-		return nil, errors.New(errors.NoMatchesForFilterError, "GetRevision", "no EnvoyConfigRevisions found")
+		return nil, NewError(NoMatchesForFilterError, "GetRevision", "no EnvoyConfigRevisions found")
 	} else if len(list.Items) > 1 {
-		return nil, errors.New(errors.MultipleMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
+		return nil, NewError(MultipleMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
 	}
 
 	return &list.Items[0], nil

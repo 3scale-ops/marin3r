@@ -1,4 +1,4 @@
-package errors
+package revisions
 
 import (
 	"fmt"
@@ -25,7 +25,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.t, tt.args.method, tt.args.msg); !reflect.DeepEqual(got, tt.want) {
+			if got := NewError(tt.args.t, tt.args.method, tt.args.msg); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
@@ -82,7 +82,7 @@ func TestReasonForError(t *testing.T) {
 	}
 }
 
-func TestIsAllRevisionsTainted(t *testing.T) {
+func TestIsNoMatchesForFilter(t *testing.T) {
 	type args struct {
 		err error
 	}
@@ -98,20 +98,20 @@ func TestIsAllRevisionsTainted(t *testing.T) {
 		},
 		{
 			"Returns true",
-			args{Error{AllRevisionsTaintedError, "SomeMethod", "SomeMsg"}},
+			args{Error{NoMatchesForFilterError, "SomeMethod", "SomeMsg"}},
 			true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsAllRevisionsTainted(tt.args.err); got != tt.want {
-				t.Errorf("IsAllRevisionsTainted() = %v, want %v", got, tt.want)
+			if got := ErrorIsNoMatchesForFilter(tt.args.err); got != tt.want {
+				t.Errorf("IsNoMatchesForFilter() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestIsRollbackOccurred(t *testing.T) {
+func TestIsMultipleMatchesForFilter(t *testing.T) {
 	type args struct {
 		err error
 	}
@@ -127,14 +127,13 @@ func TestIsRollbackOccurred(t *testing.T) {
 		},
 		{
 			"Returns true",
-			args{Error{RollbackOccurredError, "SomeMethod", "SomeMsg"}},
+			args{Error{MultipleMatchesForFilterError, "SomeMethod", "SomeMsg"}},
 			true,
-		},
-	}
+		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsRollbackOccurred(tt.args.err); got != tt.want {
-				t.Errorf("IsRollbackOccurred() = %v, want %v", got, tt.want)
+			if got := ErrorIsMultipleMatchesForFilter(tt.args.err); got != tt.want {
+				t.Errorf("IsMultipleMatchesForFilter() = %v, want %v", got, tt.want)
 			}
 		})
 	}
