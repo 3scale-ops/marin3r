@@ -110,7 +110,7 @@ func TestListRevisions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ListRevisions(context.TODO(), tt.k8sClient, tt.namespace, tt.filters...)
+			got, err := List(context.TODO(), tt.k8sClient, tt.namespace, tt.filters...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ListRevisions() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -195,7 +195,7 @@ func TestGetRevision(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			got, err := GetRevision(context.TODO(), tt.k8sClient, tt.namespace, tt.filters...)
+			got, err := Get(context.TODO(), tt.k8sClient, tt.namespace, tt.filters...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetRevision() error = %v, wantErr %v", err, tt.wantErr)
 				return

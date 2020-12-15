@@ -8,20 +8,20 @@ import (
 
 func TestIsStatusReconciled(t *testing.T) {
 	type args struct {
-		publishedVersion   string
-		envoyConfigFactory func() *marin3rv1alpha1.EnvoyConfig
+		ec               *marin3rv1alpha1.EnvoyConfig
+		publishedVersion string
+		list             *marin3rv1alpha1.EnvoyConfigRevisionList
 	}
 	tests := []struct {
 		name string
 		args args
 		want bool
 	}{
-		// TODO
+		// TODO: Add test cases.
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsStatusReconciled(tt.args.envoyConfigFactory(), tt.args.publishedVersion); got != tt.want {
+			if got := IsStatusReconciled(tt.args.ec, tt.args.publishedVersion, tt.args.list); got != tt.want {
 				t.Errorf("IsStatusReconciled() = %v, want %v", got, tt.want)
 			}
 		})

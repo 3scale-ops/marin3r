@@ -13,6 +13,10 @@ const (
 
 	// NoMatchesForFilterError means that no revision matches the provided filters
 	NoMatchesForFilterError ErrorReason = "NoMatchesForFilter"
+
+	// AllRevisionsTaintedError indicates that there are no
+	// revisisions suitable for publishing as they are all tainted
+	AllRevisionsTaintedError ErrorReason = "AllRevisionsTainted"
 )
 
 // ErrorReason is an enum of possible errors for the reconciler
