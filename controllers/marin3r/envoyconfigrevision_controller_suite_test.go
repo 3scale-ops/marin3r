@@ -549,6 +549,72 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
+
+		When("resources cannot be loaded", func() {
+			Specify("the EnvoyConfigRevision taints itself", func() {
+
+				By("updating the EnvoyConfigRevision with an incorrect resource")
+				ecr = &marin3rv1alpha1.EnvoyConfigRevision{}
+				key := types.NamespacedName{Name: "ecr", Namespace: namespace}
+				err := k8sClient.Get(context.Background(), key, ecr)
+				Expect(err).ToNot(HaveOccurred())
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Spec.EnvoyResources.Clusters = []marin3rv1alpha1.EnvoyResource{
+					{Name: "cluster", Value: "{\"wrong_key\": \"wrong_value\"}"},
+				}
+				err = k8sClient.Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("publishing the EnvoyConfigRevision to force it to load the resources")
+				patch = client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   marin3rv1alpha1.RevisionPublishedCondition,
+					Status: corev1.ConditionTrue,
+				})
+				err = k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), key, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					return ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition)
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			})
+
+			Specify("the EnvoyConfigRevision does not taint itself if the resource that failed was a Secret", func() {
+
+				By("updating the EnvoyConfigRevision with an non-existent Secret")
+				ecr = &marin3rv1alpha1.EnvoyConfigRevision{}
+				key := types.NamespacedName{Name: "ecr", Namespace: namespace}
+				err := k8sClient.Get(context.Background(), key, ecr)
+				Expect(err).ToNot(HaveOccurred())
+				patch := client.MergeFrom(ecr.DeepCopy())
+				ecr.Spec.EnvoyResources.Secrets = []marin3rv1alpha1.EnvoySecretResource{{
+					Name: "secret",
+					Ref:  corev1.SecretReference{Name: "some-secret", Namespace: namespace},
+				}}
+				err = k8sClient.Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("publishing the EnvoyConfigRevision to force it to load the resources")
+				patch = client.MergeFrom(ecr.DeepCopy())
+				ecr.Status.Conditions.SetCondition(status.Condition{
+					Type:   marin3rv1alpha1.RevisionPublishedCondition,
+					Status: corev1.ConditionTrue,
+				})
+				err = k8sClient.Status().Patch(context.Background(), ecr, patch)
+				Expect(err).ToNot(HaveOccurred())
+
+				Eventually(func() bool {
+					err := k8sClient.Get(context.Background(), key, ecr)
+					Expect(err).ToNot(HaveOccurred())
+					return ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)
+				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+
+				Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesInSyncCondition)).ToNot(BeTrue())
+				Expect(ecr.Status.IsPublished()).ToNot(BeTrue())
+			})
+		})
 	})
 
 })

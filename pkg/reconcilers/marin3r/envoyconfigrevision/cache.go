@@ -138,7 +138,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			Namespace: secret.Ref.Namespace,
 		}
 		if err := r.client.Get(r.ctx, key, s); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s", err.Error())
 		}
 
 		// Validate secret holds a certificate
@@ -146,11 +146,11 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 			res := r.generator.NewSecret(secret.Name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
 			snap.SetResource(secret.Name, res)
 		} else {
-			return nil,
-				resourceLoaderError(
-					req, secret.Ref, field.NewPath("spec", "resources").Child("secrets").Index(idx).Child("ref"),
-					"Only 'kubernetes.io/tls' type secrets allowed",
-				)
+			err := resourceLoaderError(
+				req, secret.Ref, field.NewPath("spec", "resources").Child("secrets").Index(idx).Child("ref"),
+				"Only 'kubernetes.io/tls' type secrets allowed",
+			)
+			return nil, fmt.Errorf("%s", err.Error())
 
 		}
 	}
