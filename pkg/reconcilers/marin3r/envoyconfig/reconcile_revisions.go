@@ -164,7 +164,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	if shouldBeFalse != nil {
 		for _, ecr := range shouldBeFalse {
 			if err := r.client.Status().Update(r.ctx, &ecr); err != nil {
-				log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "ObjectKey", common.ObjectKey(&ecr))
+				log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "Name/Namespace", common.ObjectKey(&ecr))
 				return ctrl.Result{}, err
 			}
 			log.Info("updated the published EnvoyConfigRevision", "Namespace/Name", common.ObjectKey(&ecr))
@@ -173,8 +173,19 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 
 	if shouldBeTrue != nil {
 		if err := r.client.Status().Update(r.ctx, shouldBeTrue); err != nil {
-			log.Error(err, "unable to update revision", "Phase", "PublishNewRevision", "ObjectKey", common.ObjectKey(shouldBeTrue))
+			log.Error(err, "unable to update revision", "Phase", "PublishNewRevision", "Name/Namespace", common.ObjectKey(shouldBeTrue))
 			return ctrl.Result{}, err
+		}
+	}
+
+	shouldBeDeleted := r.isRevisionRetentionReconciled(maxRevisions)
+	if shouldBeDeleted != nil {
+		for _, ecr := range shouldBeDeleted {
+			if err := r.client.Delete(r.ctx, &ecr); err != nil {
+				log.Error(err, "unable to delete revision", "Phase", "ApplyRevisionRetention", "Name/Namespace", common.ObjectKey(&ecr))
+				return ctrl.Result{}, err
+			}
+			log.Info("deleted old EnvoyConfigRevision", "Namespace/Name", common.ObjectKey(&ecr))
 		}
 	}
 
@@ -267,6 +278,29 @@ func (r *RevisionReconciler) isRevisionPublishedConditionReconciled(versionToPub
 		shouldBeFalse = nil
 	}
 	return shouldBeTrue, shouldBeFalse
+}
+
+// isRevisionRetentionReconciled removes items from the revisionList until the list holds the number of items
+// determined by the 'retention' parameter
+func (r *RevisionReconciler) isRevisionRetentionReconciled(retention int) []marin3rv1alpha1.EnvoyConfigRevision {
+
+	var toBeDeleted []marin3rv1alpha1.EnvoyConfigRevision = []marin3rv1alpha1.EnvoyConfigRevision{}
+	var revisionList *[]marin3rv1alpha1.EnvoyConfigRevision = &(r.GetRevisionList().Items)
+
+	for len(*revisionList) > retention {
+		toBeDeleted = append(toBeDeleted, popRevision(revisionList))
+	}
+
+	return toBeDeleted
+}
+
+// popRevision removes an EnvoyConfigRevision from a list of EnvoyConfigRevision, starting from
+// the lowst index in the slice. The removed element is returned a return value and the list is
+// modified "in place".
+func popRevision(list *[]marin3rv1alpha1.EnvoyConfigRevision) marin3rv1alpha1.EnvoyConfigRevision {
+	item := (*list)[0]
+	*list = (*list)[1:]
+	return item
 }
 
 // newRevisionForCurrentResources generates an EnvoyConfigRevision resource for the current

@@ -900,3 +900,124 @@ func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
 		})
 	}
 }
+
+func TestRevisionReconciler_isRevisionRetentionReconciled(t *testing.T) {
+	type fields struct {
+		ctx              context.Context
+		logger           logr.Logger
+		client           client.Client
+		scheme           *runtime.Scheme
+		ec               *marin3rv1alpha1.EnvoyConfig
+		desiredVersion   *string
+		publishedVersion *string
+		cacheState       *string
+		revisionList     *marin3rv1alpha1.EnvoyConfigRevisionList
+	}
+	type args struct {
+		retention int
+	}
+	tests := []struct {
+		name        string
+		fields      fields
+		args        args
+		wantTrimmed []marin3rv1alpha1.EnvoyConfigRevision
+		wantList    *marin3rv1alpha1.EnvoyConfigRevisionList
+	}{
+		{
+			name: "Resulting list has 'retention' elements and returns trimmed elements",
+			fields: fields{nil, nil, nil, nil, nil, nil, nil, nil,
+				&marin3rv1alpha1.EnvoyConfigRevisionList{
+					Items: []marin3rv1alpha1.EnvoyConfigRevision{
+						{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "ecr2"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "ecr3"}},
+					},
+				},
+			},
+			args: args{retention: 1},
+			wantTrimmed: []marin3rv1alpha1.EnvoyConfigRevision{
+				{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "ecr2"}},
+			},
+			wantList: &marin3rv1alpha1.EnvoyConfigRevisionList{
+				Items: []marin3rv1alpha1.EnvoyConfigRevision{
+					{ObjectMeta: metav1.ObjectMeta{Name: "ecr3"}},
+				},
+			},
+		},
+		{
+			name: "List is not modified if elements within 'retention' parameter",
+			fields: fields{nil, nil, nil, nil, nil, nil, nil, nil,
+				&marin3rv1alpha1.EnvoyConfigRevisionList{
+					Items: []marin3rv1alpha1.EnvoyConfigRevision{
+						{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},
+					},
+				},
+			},
+			args:        args{retention: 1},
+			wantTrimmed: []marin3rv1alpha1.EnvoyConfigRevision{},
+			wantList: &marin3rv1alpha1.EnvoyConfigRevisionList{
+				Items: []marin3rv1alpha1.EnvoyConfigRevision{
+					{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RevisionReconciler{
+				ctx:              tt.fields.ctx,
+				logger:           tt.fields.logger,
+				client:           tt.fields.client,
+				scheme:           tt.fields.scheme,
+				ec:               tt.fields.ec,
+				desiredVersion:   tt.fields.desiredVersion,
+				publishedVersion: tt.fields.publishedVersion,
+				cacheState:       tt.fields.cacheState,
+				revisionList:     tt.fields.revisionList,
+			}
+			if got := r.isRevisionRetentionReconciled(tt.args.retention); !reflect.DeepEqual(got, tt.wantTrimmed) {
+				t.Errorf("RevisionReconciler.isRevisionRetentionReconciled() = %v, want %v", got, tt.wantTrimmed)
+			}
+			if !reflect.DeepEqual(r.GetRevisionList(), tt.wantList) {
+				t.Errorf("RevisionReconciler.isRevisionRetentionReconciled() = %v, want %v", tt.fields.revisionList, tt.wantList)
+			}
+		})
+	}
+}
+
+func Test_popRevision(t *testing.T) {
+	type args struct {
+		list *[]marin3rv1alpha1.EnvoyConfigRevision
+	}
+	tests := []struct {
+		name     string
+		list     []marin3rv1alpha1.EnvoyConfigRevision
+		wantItem marin3rv1alpha1.EnvoyConfigRevision
+		wantList []marin3rv1alpha1.EnvoyConfigRevision
+	}{
+		{
+			name: "Pops an element from the list",
+			list: []marin3rv1alpha1.EnvoyConfigRevision{
+				{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "ecr2"}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "ecr3"}},
+			},
+			wantItem: marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},
+			wantList: []marin3rv1alpha1.EnvoyConfigRevision{
+				{ObjectMeta: metav1.ObjectMeta{Name: "ecr2"}},
+				{ObjectMeta: metav1.ObjectMeta{Name: "ecr3"}},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := popRevision(&tt.list); !reflect.DeepEqual(got, tt.wantItem) {
+				t.Errorf("popRevision() = %v, want %v", got, tt.wantItem)
+			}
+			if !reflect.DeepEqual(tt.list, tt.wantList) {
+				t.Errorf("popRevision() = %v, want %v", tt.list, tt.wantList)
+			}
+		})
+	}
+}
