@@ -728,7 +728,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 		When("OnError is called", func() {
 
 			BeforeEach(func() {
-				OnErrorFn := rollback.OnError(cfg)
+				OnErrorFn := rollback.OnError(k8sClient)
 				version := common.Hash(ec.Spec.EnvoyResources)
 				err := OnErrorFn(nodeID, version, "msg", envoy.APIv2)
 				Expect(err).ToNot(HaveOccurred())

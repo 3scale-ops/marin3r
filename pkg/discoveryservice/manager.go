@@ -91,7 +91,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    loadCA(dsm.CACertificatePath, setupLog),
 		},
-		rollback.OnError(dsm.Cfg),
+		rollback.OnError(mgr.GetClient()),
 		setupLog,
 	)
 
