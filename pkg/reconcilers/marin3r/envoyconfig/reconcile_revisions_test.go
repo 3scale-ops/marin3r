@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	"github.com/3scale/marin3r/pkg/common"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
@@ -178,11 +179,184 @@ func TestRevisionReconciler_EnvoyAPI(t *testing.T) {
 	}
 }
 
+func TestRevisionReconciler_DesiredVersion(t *testing.T) {
+	type fields struct {
+		ctx              context.Context
+		logger           logr.Logger
+		client           client.Client
+		scheme           *runtime.Scheme
+		ec               *marin3rv1alpha1.EnvoyConfig
+		desiredVersion   *string
+		publishedVersion *string
+		cacheState       *string
+		revisionList     *marin3rv1alpha1.EnvoyConfigRevisionList
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			"Returns the DesiredVersion",
+			fields{context.TODO(), nil, nil, nil, nil, pointer.StringPtr("xxxx"), nil, nil, nil},
+			"xxxx",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RevisionReconciler{
+				ctx:              tt.fields.ctx,
+				logger:           tt.fields.logger,
+				client:           tt.fields.client,
+				scheme:           tt.fields.scheme,
+				ec:               tt.fields.ec,
+				desiredVersion:   tt.fields.desiredVersion,
+				publishedVersion: tt.fields.publishedVersion,
+				cacheState:       tt.fields.cacheState,
+				revisionList:     tt.fields.revisionList,
+			}
+			if got := r.DesiredVersion(); got != tt.want {
+				t.Errorf("RevisionReconciler.DesiredVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRevisionReconciler_GetRevisionList(t *testing.T) {
+	type fields struct {
+		ctx              context.Context
+		logger           logr.Logger
+		client           client.Client
+		scheme           *runtime.Scheme
+		ec               *marin3rv1alpha1.EnvoyConfig
+		desiredVersion   *string
+		publishedVersion *string
+		cacheState       *string
+		revisionList     *marin3rv1alpha1.EnvoyConfigRevisionList
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   *marin3rv1alpha1.EnvoyConfigRevisionList
+	}{
+		{
+			"Returns the revision list",
+			fields{context.TODO(), nil, nil, nil, nil, nil, nil, nil, &marin3rv1alpha1.EnvoyConfigRevisionList{}},
+			&marin3rv1alpha1.EnvoyConfigRevisionList{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RevisionReconciler{
+				ctx:              tt.fields.ctx,
+				logger:           tt.fields.logger,
+				client:           tt.fields.client,
+				scheme:           tt.fields.scheme,
+				ec:               tt.fields.ec,
+				desiredVersion:   tt.fields.desiredVersion,
+				publishedVersion: tt.fields.publishedVersion,
+				cacheState:       tt.fields.cacheState,
+				revisionList:     tt.fields.revisionList,
+			}
+			if got := r.GetRevisionList(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("RevisionReconciler.GetRevisionList() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRevisionReconciler_PublishedVersion(t *testing.T) {
+	type fields struct {
+		ctx              context.Context
+		logger           logr.Logger
+		client           client.Client
+		scheme           *runtime.Scheme
+		ec               *marin3rv1alpha1.EnvoyConfig
+		desiredVersion   *string
+		publishedVersion *string
+		cacheState       *string
+		revisionList     *marin3rv1alpha1.EnvoyConfigRevisionList
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			"Returns the PublishedVersion",
+			fields{context.TODO(), nil, nil, nil, nil, nil, pointer.StringPtr("xxxx"), nil, nil},
+			"xxxx",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RevisionReconciler{
+				ctx:              tt.fields.ctx,
+				logger:           tt.fields.logger,
+				client:           tt.fields.client,
+				scheme:           tt.fields.scheme,
+				ec:               tt.fields.ec,
+				desiredVersion:   tt.fields.desiredVersion,
+				publishedVersion: tt.fields.publishedVersion,
+				cacheState:       tt.fields.cacheState,
+				revisionList:     tt.fields.revisionList,
+			}
+			if got := r.PublishedVersion(); got != tt.want {
+				t.Errorf("RevisionReconciler.PublishedVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRevisionReconciler_GetCacheState(t *testing.T) {
+	type fields struct {
+		ctx              context.Context
+		logger           logr.Logger
+		client           client.Client
+		scheme           *runtime.Scheme
+		ec               *marin3rv1alpha1.EnvoyConfig
+		desiredVersion   *string
+		publishedVersion *string
+		cacheState       *string
+		revisionList     *marin3rv1alpha1.EnvoyConfigRevisionList
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			"Returns the CacheState",
+			fields{context.TODO(), nil, nil, nil, nil, nil, nil, pointer.StringPtr(marin3rv1alpha1.InSyncState), nil},
+			marin3rv1alpha1.InSyncState,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &RevisionReconciler{
+				ctx:              tt.fields.ctx,
+				logger:           tt.fields.logger,
+				client:           tt.fields.client,
+				scheme:           tt.fields.scheme,
+				ec:               tt.fields.ec,
+				desiredVersion:   tt.fields.desiredVersion,
+				publishedVersion: tt.fields.publishedVersion,
+				cacheState:       tt.fields.cacheState,
+				revisionList:     tt.fields.revisionList,
+			}
+			if got := r.GetCacheState(); got != tt.want {
+				t.Errorf("RevisionReconciler.GetCacheState() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestRevisionReconciler_Reconcile(t *testing.T) {
 	type fields struct {
 		ctx    context.Context
 		logger logr.Logger
 		client client.Client
+		scheme *runtime.Scheme
 		ec     *marin3rv1alpha1.EnvoyConfig
 	}
 	tests := []struct {
@@ -191,7 +365,103 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 		want    ctrl.Result
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "Creates a new EnvoyConfigRevision, no error and requeue",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewFakeClientWithScheme(s),
+				scheme: s,
+				ec: &marin3rv1alpha1.EnvoyConfig{
+					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
+					Spec: marin3rv1alpha1.EnvoyConfigSpec{
+						NodeID:         "node",
+						EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
+					},
+				},
+			},
+			want:    ctrl.Result{Requeue: true},
+			wantErr: false,
+		},
+		{
+			name: "Multiple EnvoyConfigRevision for current version, error and requeue",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewFakeClientWithScheme(s,
+					&marin3rv1alpha1.EnvoyConfigRevision{
+						TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "ecr1", Namespace: "test",
+							Labels: map[string]string{
+								filters.NodeIDTag:   "node",
+								filters.EnvoyAPITag: envoy.APIv3.String(),
+								filters.VersionTag:  common.Hash(&marin3rv1alpha1.EnvoyResources{}),
+							},
+						},
+						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
+					},
+					&marin3rv1alpha1.EnvoyConfigRevision{
+						TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "ecr2", Namespace: "test",
+							Labels: map[string]string{
+								filters.NodeIDTag:   "node",
+								filters.EnvoyAPITag: envoy.APIv3.String(),
+								filters.VersionTag:  common.Hash(&marin3rv1alpha1.EnvoyResources{}),
+							},
+						},
+						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
+					},
+				),
+				scheme: s,
+				ec: &marin3rv1alpha1.EnvoyConfig{
+					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
+					Spec: marin3rv1alpha1.EnvoyConfigSpec{
+						NodeID:         "node",
+						EnvoyAPI:       pointer.StringPtr(envoy.APIv3.String()),
+						EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
+					},
+				},
+			},
+			want:    ctrl.Result{},
+			wantErr: true,
+		},
+		{
+			name: "EnvoyConfigRevision exists for current version, reconcile withiout error or requeue",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewFakeClientWithScheme(s,
+					&marin3rv1alpha1.EnvoyConfigRevision{
+						TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "ecr1", Namespace: "test",
+							Labels: map[string]string{
+								filters.NodeIDTag:   "node",
+								filters.EnvoyAPITag: envoy.APIv3.String(),
+								filters.VersionTag:  common.Hash(&marin3rv1alpha1.EnvoyResources{}),
+							},
+						},
+						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
+					},
+				),
+				scheme: s,
+				ec: &marin3rv1alpha1.EnvoyConfig{
+					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
+					Spec: marin3rv1alpha1.EnvoyConfigSpec{
+						NodeID:         "node",
+						EnvoyAPI:       pointer.StringPtr(envoy.APIv3.String()),
+						EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
+					},
+				},
+			},
+			want:    ctrl.Result{},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -199,6 +469,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 				ctx:    tt.fields.ctx,
 				logger: tt.fields.logger,
 				client: tt.fields.client,
+				scheme: tt.fields.scheme,
 				ec:     tt.fields.ec,
 			}
 			got, err := r.Reconcile()
