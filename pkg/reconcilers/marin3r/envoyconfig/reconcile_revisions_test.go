@@ -307,6 +307,77 @@ func TestRevisionReconciler_areRevisionLabelsOk(t *testing.T) {
 	}
 }
 
+func TestRevisionReconciler_getVersionToPublish(t *testing.T) {
+	tests := []struct {
+		name           string
+		revisionList   *marin3rv1alpha1.EnvoyConfigRevisionList
+		wantVersion    string
+		wantCacheState string
+	}{
+		{
+			name: "Returns expected version and InSync state",
+			revisionList: &marin3rv1alpha1.EnvoyConfigRevisionList{
+				Items: []marin3rv1alpha1.EnvoyConfigRevision{
+					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "aaaa"}},
+					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "xxxx"}},
+				},
+			},
+			wantVersion:    "xxxx",
+			wantCacheState: marin3rv1alpha1.InSyncState,
+		},
+		{
+			name: "Returns expected version and Rollback state",
+			revisionList: &marin3rv1alpha1.EnvoyConfigRevisionList{
+				Items: []marin3rv1alpha1.EnvoyConfigRevision{
+					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "aaaa"}},
+					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "xxxx"},
+						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+							Conditions: []status.Condition{{
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							}}}},
+				},
+			},
+			wantVersion:    "aaaa",
+			wantCacheState: marin3rv1alpha1.RollbackState,
+		},
+		{
+			name: "Returns no version and and RollbackFailed state",
+			revisionList: &marin3rv1alpha1.EnvoyConfigRevisionList{
+				Items: []marin3rv1alpha1.EnvoyConfigRevision{
+					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "aaaa"},
+						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+							Conditions: []status.Condition{{
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							}}}},
+					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "xxxx"},
+						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+							Conditions: []status.Condition{{
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							}}}},
+				},
+			},
+			wantVersion:    "",
+			wantCacheState: marin3rv1alpha1.RollbackFailedState,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := testRevisionReconcilerBuilder(s, &marin3rv1alpha1.EnvoyConfig{})
+			r.revisionList = tt.revisionList
+			gotVersion, gotCacheState := r.getVersionToPublish()
+			if gotVersion != tt.wantVersion {
+				t.Errorf("RevisionReconciler.getVersionToPublish() got = %v, want %v", gotVersion, tt.wantVersion)
+			}
+			if gotCacheState != tt.wantCacheState {
+				t.Errorf("RevisionReconciler.getVersionToPublish() got1 = %v, want %v", gotCacheState, tt.wantCacheState)
+			}
+		})
+	}
+}
+
 func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T) {
 	tests := []struct {
 		name             string

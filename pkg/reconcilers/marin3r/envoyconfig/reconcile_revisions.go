@@ -167,6 +167,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 				log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "ObjectKey", common.ObjectKey(&ecr))
 				return ctrl.Result{}, err
 			}
+			log.Info("updated the published EnvoyConfigRevision", "Namespace/Name", common.ObjectKey(&ecr))
 		}
 	}
 
@@ -177,6 +178,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 		}
 	}
 
+	log.Info(fmt.Sprintf("CacheState is %s after revision reconcile", cacheState))
 	return ctrl.Result{}, nil
 }
 
@@ -223,11 +225,11 @@ func (r *RevisionReconciler) getVersionToPublish() (string, string) {
 		}
 	}
 
-	if versionToPublish != r.revisionList.Items[topIdx].Spec.Version {
-		return versionToPublish, marin3rv1alpha1.RollbackState
-
-	} else if versionToPublish == "" {
+	if versionToPublish == "" {
 		return "", marin3rv1alpha1.RollbackFailedState
+
+	} else if versionToPublish != r.revisionList.Items[topIdx].Spec.Version {
+		return versionToPublish, marin3rv1alpha1.RollbackState
 	}
 
 	return versionToPublish, marin3rv1alpha1.InSyncState
