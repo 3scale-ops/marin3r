@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/envoy"
+	envoy "github.com/3scale/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
@@ -524,6 +525,106 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 						t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotUnpublished '%v', wantUnpublished %v", ecr, (*tt.wantUnpublished)[idx])
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
+	tests := []struct {
+		name string
+		r    RevisionReconciler
+		want *marin3rv1alpha1.EnvoyConfigRevision
+	}{
+		{
+			name: "Generates a new EnvoyConfigRevision v2 for current EnvoyConfig resources",
+			r: testRevisionReconcilerBuilder(s,
+				&marin3rv1alpha1.EnvoyConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ec",
+						Namespace: "test",
+					},
+					Spec: marin3rv1alpha1.EnvoyConfigSpec{
+						NodeID: "node",
+						EnvoyResources: &marin3rv1alpha1.EnvoyResources{
+							Endpoints: []marin3rv1alpha1.EnvoyResource{
+								{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+							},
+						},
+					},
+				},
+			),
+			want: &marin3rv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "node-65864ccd8",
+					Namespace: "test",
+					Labels: map[string]string{
+						filters.EnvoyAPITag: envoy.APIv2.String(),
+						filters.NodeIDTag:   "node",
+						filters.VersionTag:  "65864ccd8",
+					},
+				},
+				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
+					NodeID:        "node",
+					EnvoyAPI:      pointer.StringPtr(envoy.APIv2.String()),
+					Version:       "65864ccd8",
+					Serialization: pointer.StringPtr(string(envoy_serializer.JSON)),
+					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
+						Endpoints: []marin3rv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "Generates a new EnvoyConfigRevision v3 for current EnvoyConfig resources",
+			r: testRevisionReconcilerBuilder(s,
+				&marin3rv1alpha1.EnvoyConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ec",
+						Namespace: "test",
+					},
+					Spec: marin3rv1alpha1.EnvoyConfigSpec{
+						EnvoyAPI:      pointer.StringPtr(envoy.APIv3.String()),
+						NodeID:        "node",
+						Serialization: pointer.StringPtr(string(envoy_serializer.JSON)),
+						EnvoyResources: &marin3rv1alpha1.EnvoyResources{
+							Endpoints: []marin3rv1alpha1.EnvoyResource{
+								{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+							},
+						},
+					},
+				},
+			),
+			want: &marin3rv1alpha1.EnvoyConfigRevision{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "node-v3-65864ccd8",
+					Namespace: "test",
+					Labels: map[string]string{
+						filters.EnvoyAPITag: envoy.APIv3.String(),
+						filters.NodeIDTag:   "node",
+						filters.VersionTag:  "65864ccd8",
+					},
+				},
+				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
+					EnvoyAPI:      pointer.StringPtr(envoy.APIv3.String()),
+					NodeID:        "node",
+					Serialization: pointer.StringPtr(string(envoy_serializer.JSON)),
+					Version:       "65864ccd8",
+					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
+						Endpoints: []marin3rv1alpha1.EnvoyResource{
+							{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.r.newRevisionForCurrentResources(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("RevisionReconciler.newRevisionForCurrentResources() = %v, want %v", got, tt.want)
 			}
 		})
 	}

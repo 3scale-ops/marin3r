@@ -291,7 +291,7 @@ func (r *RevisionReconciler) newRevisionForCurrentResources() *marin3rv1alpha1.E
 			NodeID:         r.NodeID(),
 			EnvoyAPI:       pointer.StringPtr(r.EnvoyAPI().String()),
 			Version:        r.DesiredVersion(),
-			Serialization:  r.Instance().Spec.Serialization,
+			Serialization:  pointer.StringPtr(string(r.Instance().GetSerialization())),
 			EnvoyResources: r.Instance().Spec.EnvoyResources,
 		},
 	}
