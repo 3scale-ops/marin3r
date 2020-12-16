@@ -6,6 +6,7 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 
 	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,9 +39,9 @@ func OnError(cfg *rest.Config) func(nodeID, version, msg string, envoyAPI envoy.
 		ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
 		selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 			MatchLabels: map[string]string{
-				nodeIDTag:   nodeID,
-				versionTag:  version,
-				envoyAPITag: string(envoyAPI),
+				filters.NodeIDTag:   nodeID,
+				filters.VersionTag:  version,
+				filters.EnvoyAPITag: string(envoyAPI),
 			},
 		})
 		if err != nil {
