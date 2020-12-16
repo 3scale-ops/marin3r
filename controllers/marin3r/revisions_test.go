@@ -152,7 +152,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-				LastPublishedAt: metav1.NewTime(time.Now().Add(-4 * time.Second)),
+				LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.NewTime(time.Now().Add(-4 * time.Second))),
 			},
 		}
 		ecr2 := &marin3rv1alpha1.EnvoyConfigRevision{
@@ -167,7 +167,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-				LastPublishedAt: metav1.NewTime(time.Now().Add(-2 * time.Second)),
+				LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.NewTime(time.Now().Add(-2 * time.Second))),
 			},
 		}
 		ecr3 := &marin3rv1alpha1.EnvoyConfigRevision{
@@ -182,7 +182,7 @@ func TestEnvoyConfigReconciler_consolidateRevisionList(t *testing.T) {
 				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-				LastPublishedAt: metav1.NewTime(time.Now().Add(-1 * time.Second)),
+				LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.NewTime(time.Now().Add(-1 * time.Second))),
 			},
 		}
 		ecr4 := &marin3rv1alpha1.EnvoyConfigRevision{

@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
@@ -36,6 +37,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 	BeforeEach(func() {
 		// Create a namespace for each block
 		namespace = "test-ns-" + nameGenerator.Generate()
+		By(fmt.Sprintf("creating a new ns %q", namespace))
 		// Create a nodeID for each block
 		nodeID = nameGenerator.Generate()
 		// Add any setup steps that needs to be executed before each test
@@ -518,7 +520,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
 					Expect(err).ToNot(HaveOccurred())
-					if ecr.Status.Tainted {
+					if ecr.Status.IsTainted() {
 						return true
 					}
 					return false
@@ -540,14 +542,13 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
 					Expect(err).ToNot(HaveOccurred())
-					if !ecr.Status.Tainted {
+					if !ecr.Status.IsTainted() {
 						return true
 					}
 					return false
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
-
 	})
 
 })

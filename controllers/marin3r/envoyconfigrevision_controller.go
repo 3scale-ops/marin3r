@@ -18,19 +18,20 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	"github.com/3scale/marin3r/pkg/common"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
-	reconcilers_marin3r "github.com/3scale/marin3r/pkg/reconcilers/marin3r"
+	envoyconfigrevision "github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -38,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // EnvoyConfigRevisionReconciler reconciles a EnvoyConfigRevision object
@@ -49,10 +51,10 @@ type EnvoyConfigRevisionReconciler struct {
 	APIVersion envoy.APIVersion
 }
 
+// Reconcile progresses EnvoyConfigRevision resources to its desired state
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch
-
 func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
@@ -71,39 +73,27 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		return ctrl.Result{}, err
 	}
 
-	// Set defaults.
-	// TODO: remove this when wwe migrate to CRD v1 api as we will
-	// be able to set defaults directly in the CRD definition.
-	if err := r.reconcileSpecDefaults(ctx, ecr, log); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Add finalizer for this CR
-	if !contains(ecr.GetFinalizers(), marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
-		log.V(1).Info("Adding Finalizer for the EnvoyConfigRevision")
-		if err := r.addFinalizer(ctx, ecr); err != nil {
-			log.Error(err, "Failed adding finalizer for EnvoyConfigRevision")
+	if ok := envoyconfigrevision.IsInitialized(ecr); !ok {
+		if err := r.Client.Update(ctx, ecr); err != nil {
+			log.Error(err, "unable to update EnvoyConfigRevision")
 			return ctrl.Result{}, err
 		}
+		log.Info("initialized EnvoyConfigRevision resource")
+		return reconcile.Result{}, nil
 	}
 
-	// Check if the EnvoyConfigRevision instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set.
-	if ecr.GetDeletionTimestamp() != nil {
-		if contains(ecr.GetFinalizers(), marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
-			// Only the published version deletes the nodeID from the cache
-			if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
-				r.finalizeEnvoyConfigRevision(ecr.Spec.NodeID)
-				log.Info("Successfully cleared xDS server cache", "XDSS", string(ecr.GetEnvoyAPIVersion()), "NodeID", ecr.Spec.NodeID)
-			}
-			// Remove EnvoyConfigFinalizer. Once all finalizers have been
-			// removed, the object will be deleted.
-			controllerutil.RemoveFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)
-			if err := r.Client.Update(ctx, ecr); err != nil {
-				return ctrl.Result{}, err
-			}
+	if common.IsBeingDeleted(ecr) {
+		if !controllerutil.ContainsFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
+			return reconcile.Result{}, nil
 		}
-		return ctrl.Result{}, nil
+		envoyconfigrevision.CleanupLogic(ecr, r.XdsCache, log)
+		controllerutil.RemoveFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)
+		if err = r.Client.Update(ctx, ecr); err != nil {
+			log.Error(err, "unable to update EnvoyConfigRevision")
+			return reconcile.Result{}, err
+		}
+		log.Info("finalized EnvoyConfigRevision resource")
+		return reconcile.Result{}, nil
 	}
 
 	// If this ecr has the RevisionPublishedCondition set to "True" pusblish the resources
@@ -111,7 +101,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), r.APIVersion)
 
-		cacheReconciler := reconcilers_marin3r.NewCacheReconciler(
+		cacheReconciler := envoyconfigrevision.NewCacheReconciler(
 			ctx, r.Log, r.Client, r.XdsCache,
 			decoder,
 			envoy_resources.NewGenerator(r.APIVersion),
@@ -126,6 +116,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		if result.Requeue || err != nil {
 			switch err.(type) {
 			case *errors.StatusError:
+				log.Error(err, fmt.Sprintf("%v", err))
 				if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error()); err != nil {
 					return ctrl.Result{}, err
 				}
@@ -135,73 +126,16 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		}
 	}
 
-	// Update status
-	if err := r.updateStatus(ctx, ecr); err != nil {
-		return ctrl.Result{}, err
+	if ok := envoyconfigrevision.IsStatusReconciled(ecr, r.XdsCache); !ok {
+		if err := r.Client.Status().Update(ctx, ecr); err != nil {
+			log.Error(err, "unable to update EnvoyConfigRevision status")
+			return ctrl.Result{}, err
+		}
+		log.Info("status updated for EnvoyConfigRevision resource")
+		return reconcile.Result{}, nil
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (r *EnvoyConfigRevisionReconciler) updateStatus(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision) error {
-
-	changed := false
-	patch := client.MergeFrom(ecr.DeepCopy())
-
-	// Clear ResourcesOutOfSyncCondition
-	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
-		ecr.Status.Conditions.SetCondition(status.Condition{
-			Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
-			Reason:  "NodeConficRevisionSynced",
-			Status:  corev1.ConditionFalse,
-			Message: "EnvoyConfigRevision successfully synced",
-		})
-		changed = true
-
-	}
-
-	// Set status.published and status.lastPublishedAt fields
-	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && !ecr.Status.Published {
-		ecr.Status.Published = true
-		ecr.Status.LastPublishedAt = metav1.Now()
-		// We also initialise the "tainted" status property to false
-		ecr.Status.Tainted = false
-		changed = true
-	} else if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) && ecr.Status.Published {
-		ecr.Status.Published = false
-		changed = true
-	}
-
-	// Set status.failed field
-	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && !ecr.Status.Tainted {
-		ecr.Status.Tainted = true
-		changed = true
-	} else if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) && ecr.Status.Tainted {
-		ecr.Status.Tainted = false
-		changed = true
-	}
-
-	if changed {
-		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *EnvoyConfigRevisionReconciler) addFinalizer(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision) error {
-	controllerutil.AddFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)
-
-	// Update CR
-	if err := r.Client.Update(ctx, ecr); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *EnvoyConfigRevisionReconciler) finalizeEnvoyConfigRevision(nodeID string) {
-	r.XdsCache.ClearSnapshot(nodeID)
 }
 
 func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision, reason, msg string) error {
@@ -213,34 +147,11 @@ func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *mari
 			Reason:  status.ConditionReason(reason),
 			Message: msg,
 		})
-		ecr.Status.Tainted = true
+		ecr.Status.Tainted = pointer.BoolPtr(true)
 
 		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-func (r *EnvoyConfigRevisionReconciler) reconcileSpecDefaults(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision, log logr.Logger) error {
-	changed := false
-
-	if ecr.Spec.EnvoyAPI == nil {
-		ecr.Spec.EnvoyAPI = pointer.StringPtr(string(ecr.GetEnvoyAPIVersion()))
-		changed = true
-	}
-
-	if ecr.Spec.Serialization == nil {
-		ecr.Spec.Serialization = pointer.StringPtr(string(ecr.GetSerialization()))
-		changed = true
-	}
-
-	if changed {
-		log.V(1).Info("setting EnvoyConfigRevision defaults")
-		if err := r.Client.Update(ctx, ecr); err != nil {
-			return err
-		}
-
 	}
 	return nil
 }
@@ -275,6 +186,7 @@ func filterByAPIVersionPredicate(version envoy.APIVersion,
 	}
 }
 
+// SetupWithManager adds the controller to the manager
 func (r *EnvoyConfigRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&marin3rv1alpha1.EnvoyConfigRevision{}).

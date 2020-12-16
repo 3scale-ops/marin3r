@@ -24,7 +24,7 @@ func init() {
 }
 
 func TestReconcileSecret_Reconcile(t *testing.T) {
-	t.Run("Adds ResourcesOutOfSyncCondition to NCR when a referred secret changes", func(t *testing.T) {
+	t.Run("Sets ResourcesInSyncCondition to false in EnvoyConfigRevision resource when a referred secret changes", func(t *testing.T) {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "secret",
@@ -73,8 +73,8 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 		}
 
 		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
-		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
-			t.Errorf("TestReconcileSecret_Reconcile() condition 'ResourcesOutOfSyncCondition' was not set in NodeCacheRevision")
+		if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesInSyncCondition) {
+			t.Errorf("TestReconcileSecret_Reconcile() condition 'ResourcesInSyncCondition' was not set to false in EnvoyConfigRevision")
 		}
 	})
 }

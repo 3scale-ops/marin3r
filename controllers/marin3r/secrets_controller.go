@@ -82,14 +82,13 @@ func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 						return reconcile.Result{}, err
 					}
 
-					if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesOutOfSyncCondition) {
-						// patch operation to update Spec.Version in the cache
+					if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesInSyncCondition) {
 						patch := client.MergeFrom(ecr.DeepCopy())
 						ecr.Status.Conditions.SetCondition(status.Condition{
-							Type:    marin3rv1alpha1.ResourcesOutOfSyncCondition,
+							Type:    marin3rv1alpha1.ResourcesInSyncCondition,
 							Reason:  "SecretChanged",
 							Message: "A secret relevant to this envoyconfigrevision changed",
-							Status:  corev1.ConditionTrue,
+							Status:  corev1.ConditionFalse,
 						})
 						if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
 							return reconcile.Result{}, err

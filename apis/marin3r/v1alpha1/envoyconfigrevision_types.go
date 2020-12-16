@@ -31,9 +31,9 @@ const (
 	// as the one that should be published in the xds server cache
 	RevisionPublishedCondition status.ConditionType = "RevisionPublished"
 
-	// ResourcesOutOfSyncCondition is a condition that other controllers can use to indicate
+	// ResourcesInSyncCondition is a condition that other controllers can use to indicate
 	// that the respurces need resync
-	ResourcesOutOfSyncCondition status.ConditionType = "ResourcesOutOfSync"
+	ResourcesInSyncCondition status.ConditionType = "ResourcesInSync"
 
 	// RevisionTaintedCondition is a condition type that's used to report that this
 	// problems have been observed with this revision and should not be published
@@ -76,18 +76,37 @@ type EnvoyConfigRevisionStatus struct {
 	// Published signals if the EnvoyConfigRevision is the one currently published
 	// in the xds server cache
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	Published bool `json:"published,omitempty"`
+	// +optional
+	Published *bool `json:"published,omitempty"`
 	// LastPublishedAt indicates the last time this config review transitioned to
 	// published
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	LastPublishedAt metav1.Time `json:"lastPublishedAt,omitempty"`
+	// +optional
+	LastPublishedAt *metav1.Time `json:"lastPublishedAt,omitempty"`
 	// Tainted indicates whether the EnvoyConfigRevision is eligible for publishing
 	// or not
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	Tainted bool `json:"tainted,omitempty"`
+	// +optional
+	Tainted *bool `json:"tainted,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Conditions status.Conditions `json:"conditions"`
+}
+
+// IsPublished returns true if this revision is published, false otherwise
+func (status *EnvoyConfigRevisionStatus) IsPublished() bool {
+	if status.Published == nil {
+		return false
+	}
+	return *status.Published
+}
+
+// IsTainted returns true if this revision is tainted, false otherwise
+func (status *EnvoyConfigRevisionStatus) IsTainted() bool {
+	if status.Tainted == nil {
+		return false
+	}
+	return *status.Tainted
 }
 
 // +kubebuilder:object:root=true
