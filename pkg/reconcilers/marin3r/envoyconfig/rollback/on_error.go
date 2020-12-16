@@ -1,4 +1,4 @@
-package controllers
+package rollback
 
 import (
 	"context"

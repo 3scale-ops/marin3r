@@ -13,6 +13,7 @@ import (
 	"github.com/3scale/marin3r/pkg/envoy"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
+	rollback "github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/rollback"
 	testutil "github.com/3scale/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -727,7 +728,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 		When("OnError is called", func() {
 
 			BeforeEach(func() {
-				OnErrorFn := OnError(cfg)
+				OnErrorFn := rollback.OnError(cfg)
 				version := common.Hash(ec.Spec.EnvoyResources)
 				err := OnErrorFn(nodeID, version, "msg", envoy.APIv2)
 				Expect(err).ToNot(HaveOccurred())
