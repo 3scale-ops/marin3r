@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	// cert-manager
@@ -60,7 +61,7 @@ func (r *DiscoveryServiceReconciler) genCACertObject() *operatorv1alpha1.Discove
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName: getCACertCommonName(r.ds),
-			IsCA:       true,
+			IsCA:       pointer.BoolPtr(true),
 			ValidFor:   int64(r.ds.GetRootCertificateAuthorityOptions().Duration.Seconds()),
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				SelfSigned: &operatorv1alpha1.SelfSignedConfig{},

@@ -96,8 +96,8 @@ func genSelfSignedCertificateObject(cfg operatorv1alpha1.DiscoveryServiceCertifi
 		nil,
 		cfg.CommonName,
 		time.Duration(cfg.ValidFor)*time.Second,
-		cfg.IsServerCertificate,
-		cfg.IsCA,
+		*cfg.IsServerCertificate,
+		*cfg.IsCA,
 		cfg.Hosts...,
 	)
 	if err != nil {
