@@ -24,7 +24,7 @@ func LoadX509Certificate(cert []byte) (*x509.Certificate, error) {
 }
 
 // DecodePrivateKeyBytes will decode a PEM encoded private key into a crypto.Signer.
-// It supports ECDSA private keys only. All other types will return err.
+// It supports RSA private keys only. All other types will return err.
 func DecodePrivateKeyBytes(keyBytes []byte) (crypto.Signer, error) {
 	// decode the private key pem
 	block, _ := pem.Decode(keyBytes)
