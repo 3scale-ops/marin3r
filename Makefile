@@ -119,7 +119,7 @@ endif
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests
+bundle: manifests kustomize
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
 	cd config/webhook && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
