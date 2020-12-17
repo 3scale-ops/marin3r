@@ -26,7 +26,7 @@ func List(ctx context.Context, k8sClient client.Client, namespace string,
 	}
 
 	if len(list.Items) == 0 {
-		return nil, NewError(NoMatchesForFilterError, "GetRevision", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
+		return nil, NewError(NoMatchesForFilterError, "ListRevisions", fmt.Sprintf("api returned %d EnvoyConfigRevisions", len(list.Items)))
 	}
 	return list, nil
 }
