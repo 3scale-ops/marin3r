@@ -167,7 +167,6 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 				log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "Name/Namespace", common.ObjectKey(&ecr))
 				return ctrl.Result{}, err
 			}
-			log.Info("updated the published EnvoyConfigRevision", "Namespace/Name", common.ObjectKey(&ecr))
 		}
 	}
 
@@ -176,6 +175,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 			log.Error(err, "unable to update revision", "Phase", "PublishNewRevision", "Name/Namespace", common.ObjectKey(shouldBeTrue))
 			return ctrl.Result{}, err
 		}
+		log.Info("updated the published EnvoyConfigRevision", "Namespace/Name", common.ObjectKey(shouldBeTrue))
 	}
 
 	shouldBeDeleted := r.isRevisionRetentionReconciled(maxRevisions)
