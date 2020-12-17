@@ -32,7 +32,7 @@ func List(ctx context.Context, k8sClient client.Client, namespace string,
 }
 
 // Get returns the EnvoyConfigRevision that matches the provided filters. If no EnvoyConfigRevisions are returned
-// by the API an error is returned. If more than one EnvoyConfigRevision are returned by the API an error is returned.
+// by the API an error is returned. If more than one EnvoyConfigRevision is returned by the API an error is returned.
 func Get(ctx context.Context, k8sClient client.Client, namespace string,
 	filters ...filters.RevisionFilter) (*marin3rv1alpha1.EnvoyConfigRevision, error) {
 

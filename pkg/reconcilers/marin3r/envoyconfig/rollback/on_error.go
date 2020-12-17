@@ -17,7 +17,7 @@ const (
 	previousVersionPrefix string = "ReceivedPreviousVersion_"
 )
 
-// OnError returns a function that should be called when the envoy control plane receives
+// OnError returns a function that should be called when the envoy xDS server receives
 // a NACK to a discovery response from any of the gateways
 func OnError(cl client.Client) func(nodeID, version, msg string, envoyAPI envoy.APIVersion) error {
 

@@ -217,10 +217,9 @@ func (r *RevisionReconciler) areRevisionLabelsOk(list *marin3rv1alpha1.EnvoyConf
 	return ok
 }
 
-// getVersionToPublish takes an EnvoyConfigRevisionList and returns the revision that should be
-// published. If the returned revision is not the one in the top position it returns the
-// RollbackOccurredError error. If all of the revisions are tainted it returns the AllRevisionsTaintedError
-// error.
+// getVersionToPublish takes an EnvoyConfigRevisionList and returns the version that should be
+// published. It also returns the state of the cache based on the position of the revision
+// with the returned version in the list of revisions.
 func (r *RevisionReconciler) getVersionToPublish() (string, string) {
 	var versionToPublish string
 
@@ -294,8 +293,8 @@ func (r *RevisionReconciler) isRevisionRetentionReconciled(retention int) []mari
 	return toBeDeleted
 }
 
-// popRevision removes an EnvoyConfigRevision from a list of EnvoyConfigRevision, starting from
-// the lowst index in the slice. The removed element is returned a return value and the list is
+// popRevision removes an EnvoyConfigRevision from a list of EnvoyConfigRevision resources, starting from
+// the lowest index in the slice. The removed element is returned as a return value and the list is
 // modified "in place".
 func popRevision(list *[]marin3rv1alpha1.EnvoyConfigRevision) marin3rv1alpha1.EnvoyConfigRevision {
 	item := (*list)[0]
