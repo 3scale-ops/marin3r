@@ -5,10 +5,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
-	"os"
-
-	"github.com/go-logr/logr"
 )
 
 // LoadX509Certificate loads a x509.Certificate object from the given bytes
@@ -59,20 +55,4 @@ func DecodePrivateKeyBytes(keyBytes []byte) (crypto.Signer, error) {
 	default:
 		return nil, fmt.Errorf("unknown private key type: %s", block.Type)
 	}
-}
-
-// LoadCA reads a CA certificate and loads it into a CertPool object
-func LoadCA(caPath string, logger logr.Logger) *x509.CertPool {
-	certPool := x509.NewCertPool()
-	if bs, err := ioutil.ReadFile(caPath); err != nil {
-		logger.Error(err, "Failed to read client ca cert")
-		os.Exit(1)
-	} else {
-		ok := certPool.AppendCertsFromPEM(bs)
-		if !ok {
-			logger.Error(err, "Failed to append client certs")
-			os.Exit(1)
-		}
-	}
-	return certPool
 }
