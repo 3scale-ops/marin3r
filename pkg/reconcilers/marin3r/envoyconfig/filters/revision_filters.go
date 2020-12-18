@@ -18,7 +18,7 @@ type RevisionFilter interface {
 }
 
 // VersionFilter is a struct used to filter revisions
-// by theis version
+// by their version
 type VersionFilter struct {
 	Value string
 }
