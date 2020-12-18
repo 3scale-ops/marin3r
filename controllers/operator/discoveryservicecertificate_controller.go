@@ -20,6 +20,7 @@ import (
 	"context"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	discoveryservicecertificate "github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/client-go/discovery"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // DiscoveryServiceCertificateReconciler reconciles a DiscoveryServiceCertificate object
@@ -53,37 +55,42 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) 
 	err := r.Client.Get(context.TODO(), request.NamespacedName, dsc)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	// DiscoveryService certificate is a namespaced resource that can only own other namespaced
-	// resources in the same namespace. It is an error to try to create the Secret in a different
-	// namespace. The controller checks this and fixes it for the user, showing a log line indicating
-	// so. In the future, usage of 'corev1.SecretReference' should be dropped.
-	if dsc.GetNamespace() != dsc.Spec.SecretRef.Namespace {
-		dsc.Spec.SecretRef.Namespace = dsc.GetNamespace()
-	}
-
-	if dsc.Spec.Signer.CASigned != nil {
-		log.Info("Reconciling ca-signed certificate")
-		if err := r.reconcileCASignedCertificate(ctx, dsc, log); err != nil {
+	if ok := discoveryservicecertificate.IsInitialized(dsc); !ok {
+		if err := r.Client.Update(ctx, dsc); err != nil {
+			log.Error(err, "unable to update DiscoveryServiceCertificate")
 			return ctrl.Result{}, err
 		}
-	} else {
-		log.Info("Reconciling self-signed certificate")
-		if err := r.reconcileSelfSignedCertificate(ctx, dsc, log); err != nil {
-			return ctrl.Result{}, err
-		}
+		log.Info("initialized DiscoveryServiceCertificate resource")
+		return reconcile.Result{}, nil
 	}
 
-	// TODO: set status Ready/NotReady
+	certificateReconciler := discoveryservicecertificate.NewCertificateReconciler(ctx, log, r.Client, r.Scheme, dsc)
+	result, err := certificateReconciler.Reconcile()
+	if result.Requeue || err != nil {
+		return result, err
+	}
+
+	if ok := discoveryservicecertificate.IsStatusReconciled(dsc, certificateReconciler.GetCertificateHash(), certificateReconciler.IsReady()); !ok {
+		if err := r.Client.Status().Update(ctx, dsc); err != nil {
+			log.Error(err, "unable to update DiscoveryServiceCertificate status")
+			return ctrl.Result{}, err
+		}
+		log.Info("status updated for DiscoveryServiceCertificate resource")
+		return reconcile.Result{}, nil
+	}
 
 	return ctrl.Result{}, nil
 }
 
+// SetupWithManager adds the controller to the manager
 func (r *DiscoveryServiceCertificateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&operatorv1alpha1.DiscoveryServiceCertificate{}).

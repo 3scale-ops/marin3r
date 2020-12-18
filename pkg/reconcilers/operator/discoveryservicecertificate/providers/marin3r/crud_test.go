@@ -1,4 +1,4 @@
-package internal
+package providers
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/3scale/marin3r/pkg/util/pki"
+	"github.com/3scale/marin3r/pkg/util/test"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -25,83 +26,6 @@ func init() {
 	s.AddKnownTypes(operatorv1alpha1.GroupVersion,
 		&operatorv1alpha1.DiscoveryServiceCertificate{},
 	)
-}
-
-func testIssuerCertificate() []byte {
-
-	return []byte(`
------BEGIN CERTIFICATE-----
-MIICHzCCAYGgAwIBAgIRAKXy2t/M5W24DvEZdsOhcl0wCgYIKoZIzj0EAwQwOzEb
-MBkGA1UEChMSbWFyaW4zci4zc2NhbGUubmV0MRwwGgYDVQQDExNtYXJpbjNyLWNh
-LWluc3RhbmNlMB4XDTIwMDcxMjEwMzIwN1oXDTIzMDcxMjExMDUyN1owOzEbMBkG
-A1UEChMSbWFyaW4zci4zc2NhbGUubmV0MRwwGgYDVQQDExNtYXJpbjNyLWNhLWlu
-c3RhbmNlMIGbMBAGByqGSM49AgEGBSuBBAAjA4GGAAQAJ6DsosdBysFh+URxre84
-WfZAyYUsGvzK5nGXO/tSUY9V59xkOOAJ4Wu+Ep1lwFdxd9PwSlkZL+UDjMJlxutW
-u6EBnQd3ZOB5x6dnrzjvlFgEPXnUDSO50dM0f46mpVT+PaGghYHzCGxivBF52kSn
-Z4lEB075cJ5ApeWU5IwqPKKQmhSjIzAhMA4GA1UdDwEB/wQEAwICBDAPBgNVHRMB
-Af8EBTADAQH/MAoGCCqGSM49BAMEA4GLADCBhwJCAOeRa7SgEDOlzEO2l0RPz0Tp
-0AqfXVZOKBHSG6F9KXz4nmiP+9mWh6G/gYa2t+MoooT4xW/EWOdWcAlGnS5Z9Nex
-AkEVtLQCSnCDb03gj9v4CLRDcF4TqJiRw8Vt2w7PAVa5QA89MiFhb6w1bY9ANM8x
-CeKs2l0JkInwUB+SwpmKdQEGcQ==
------END CERTIFICATE-----
-`)
-}
-
-func testIssuerKey() []byte {
-	return []byte(`
------BEGIN PRIVATE KEY-----
-MIHuAgEAMBAGByqGSM49AgEGBSuBBAAjBIHWMIHTAgEBBEIAiCfLMXyPHO4ZWXZ3
-jbQUvfxfm9vmktnDE+yZvnNs1p/LCy2mdiS0dMC5S8QWABVOQudPJtkotL6ABXFm
-AaDTUDOhgYkDgYYABAAnoOyix0HKwWH5RHGt7zhZ9kDJhSwa/MrmcZc7+1JRj1Xn
-3GQ44Anha74SnWXAV3F30/BKWRkv5QOMwmXG61a7oQGdB3dk4HnHp2evOO+UWAQ9
-edQNI7nR0zR/jqalVP49oaCFgfMIbGK8EXnaRKdniUQHTvlwnkCl5ZTkjCo8opCa
-FA==
------END PRIVATE KEY-----
-`)
-}
-
-func testValidCertificate() []byte {
-	return []byte(`
------BEGIN CERTIFICATE-----
-MIICwjCCAiSgAwIBAgIQGdGZ18q7NFDRpp9L9S40bzAKBggqhkjOPQQDBDA7MRsw
-GQYDVQQKExJtYXJpbjNyLjNzY2FsZS5uZXQxHDAaBgNVBAMTE21hcmluM3ItY2Et
-aW5zdGFuY2UwHhcNMjAxMjE4MTIzNjI0WhcNMzAxMjE4MjI0ODI0WjAsMRswGQYD
-VQQKExJtYXJpbjNyLjNzY2FsZS5uZXQxDTALBgNVBAMTBHRlc3QwggEiMA0GCSqG
-SIb3DQEBAQUAA4IBDwAwggEKAoIBAQCvHkAScfh7EQ3qTDq252uZLeaXTcsf7hfN
-dQwcAnCUJhQONA27j91vOWEiKOjp2/ZPbShS5xxXt1Grrc+DJ2DJfL8odJ/XdN5Q
-/W84l7UxnpcxlPUofoXIjccssWAEQDGGFwdxJ0WbGw+8KGsZkE9oYdLKp3gXmKPk
-1knxdonEUqJy1bRAmJLaI5BR50bWrTQbfgtASRjxx59X7StLJLPBtG6YQCDY+qdh
-JnDqNRX3C0O9pH8ujb1J2A7T2sGMZ2H7kt4C15vcIwzUwZ3ASKGQah1YIxC8P+1P
-xRh6wsptXLpOHafkkBIecY4xdljfgJG8ujbsOV4efyL1fVqBsejLAgMBAAGjTjBM
-MA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATAMBgNVHRMBAf8E
-AjAAMBcGA1UdEQQQMA6CDGV4YW1wbGUudGVzdDAKBggqhkjOPQQDBAOBiwAwgYcC
-QgFVnME3LBIOwOCU1Pz0XRMdSMjtaIHxtSzCqlLixIJs64m5hNxmelcjWFlUayaC
-hFNB+Cmsg4iE/1ttdggIh0AD7wJBSYUrlaIDPzq82PeQLvRkAPlAJlm21MCqV/kI
-sgFV8+UDXCmXKZCOucPi7yD4qOsoqUHENDJ3nqOiQoIVOeC0nc8=
------END CERTIFICATE-----
-`)
-}
-
-func testExpiredCertificate() []byte {
-	return []byte(`
------BEGIN CERTIFICATE-----
-MIICwjCCAiSgAwIBAgIQIOyQL+7YxHIda+FqkHjYqTAKBggqhkjOPQQDBDA7MRsw
-GQYDVQQKExJtYXJpbjNyLjNzY2FsZS5uZXQxHDAaBgNVBAMTE21hcmluM3ItY2Et
-aW5zdGFuY2UwHhcNMjAxMjE4MTMwMTQ2WhcNMjAxMjE4MTMwMTQ3WjAsMRswGQYD
-VQQKExJtYXJpbjNyLjNzY2FsZS5uZXQxDTALBgNVBAMTBHRlc3QwggEiMA0GCSqG
-SIb3DQEBAQUAA4IBDwAwggEKAoIBAQC6Lq1+onmVDTc9kbuXS5BgTy98aadxDly8
-wpmcssRV0OBvIpUYhh17vcYd5t/a52XJQ3P1vT25hMv62Bhw0gokMjNAM76mBILG
-BN7uK443+ob0E7Z5ZVxdzqlyUBpHMdb5XCiIbcf4U0XP5iZLF/njvZZjgDa6halh
-c5whh0g7ekkhGtyQZYOI+pfdsQCVs7c0HjilIMi4CZfIwkefs1R/PQ6KZnABGUBs
-k817R4aNLw54pCinYTQ4FvlxLR2A2cstR/f+CBHhcjDSUDdE25omHmRRaiIAigfl
-UiKPoFYKA+kU4i69I2w4mjWTWZ7Y1qoURCXHDd34vIJyUXzx5iFLAgMBAAGjTjBM
-MA4GA1UdDwEB/wQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATAMBgNVHRMBAf8E
-AjAAMBcGA1UdEQQQMA6CDGV4YW1wbGUudGVzdDAKBggqhkjOPQQDBAOBiwAwgYcC
-QXvi1o7Tk/Co7aLyQfyjxWTTmFIRbso5E+vp/v70U+RzQzJjMU9LHjLHPpaJT6hv
-wC4IQVoqTFV9o0LMfmrY9tu0AkIBkSPte09kukRVH682WPLoSgMAfou9DxiwcilT
-osel1VN6TUilTRCHM7UU5UItRDaEhFwxnGr9ErAmvkQIVTGSURM=
------END CERTIFICATE-----
-`)
 }
 
 func TestNewCertificateProvider(t *testing.T) {
@@ -404,13 +328,13 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
 						Data: map[string][]byte{
-							tlsCertificateKey: testIssuerCertificate(),
-							tlsPrivateKeyKey:  testIssuerKey(),
+							tlsCertificateKey: test.TestIssuerCertificate(),
+							tlsPrivateKeyKey:  test.TestIssuerKey(),
 						}},
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
 						Data: map[string][]byte{
-							tlsCertificateKey: testValidCertificate(),
+							tlsCertificateKey: test.TestValidCertificate(),
 							tlsPrivateKeyKey:  []byte("xxxx"),
 						}},
 				),
@@ -436,13 +360,13 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
 						Data: map[string][]byte{
-							tlsCertificateKey: testIssuerCertificate(),
-							tlsPrivateKeyKey:  testIssuerKey(),
+							tlsCertificateKey: test.TestIssuerCertificate(),
+							tlsPrivateKeyKey:  test.TestIssuerKey(),
 						}},
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
 						Data: map[string][]byte{
-							tlsCertificateKey: testExpiredCertificate(),
+							tlsCertificateKey: test.TestExpiredCertificate(),
 							tlsPrivateKeyKey:  []byte("xxxx"),
 						}},
 				),
@@ -468,8 +392,8 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
 						Data: map[string][]byte{
-							tlsCertificateKey: testIssuerCertificate(),
-							tlsPrivateKeyKey:  testIssuerKey(),
+							tlsCertificateKey: test.TestIssuerCertificate(),
+							tlsPrivateKeyKey:  test.TestIssuerKey(),
 						}},
 				),
 				scheme: s,
@@ -494,7 +418,7 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
 						Data: map[string][]byte{
-							tlsCertificateKey: testExpiredCertificate(),
+							tlsCertificateKey: test.TestExpiredCertificate(),
 							tlsPrivateKeyKey:  []byte("xxxx"),
 						}},
 				),
@@ -553,8 +477,8 @@ func TestCertificateProvider_getIssuerCertificate(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
 					Type:       corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						tlsCertificateKey: testIssuerCertificate(),
-						tlsPrivateKeyKey:  testIssuerKey(),
+						tlsCertificateKey: test.TestIssuerCertificate(),
+						tlsPrivateKeyKey:  test.TestIssuerKey(),
 					},
 				}),
 				scheme: s,
@@ -572,11 +496,11 @@ func TestCertificateProvider_getIssuerCertificate(t *testing.T) {
 						SecretRef: corev1.SecretReference{Name: "secret"},
 					}}},
 			want: func() *x509.Certificate {
-				cert, _ := pki.LoadX509Certificate(testIssuerCertificate())
+				cert, _ := pki.LoadX509Certificate(test.TestIssuerCertificate())
 				return cert
 			}(),
 			want1: func() interface{} {
-				signer, _ := pki.DecodePrivateKeyBytes(testIssuerKey())
+				signer, _ := pki.DecodePrivateKeyBytes(test.TestIssuerKey())
 				return signer
 			}(),
 			wantErr: false,

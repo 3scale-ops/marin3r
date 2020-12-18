@@ -192,3 +192,36 @@ func TestDiscoveryServiceCertificateStatus_IsReady(t *testing.T) {
 		})
 	}
 }
+
+func TestDiscoveryServiceCertificateStatus_GetCertificateHash(t *testing.T) {
+	cases := []struct {
+		testName                           string
+		discoveryServiceCertificateFactory func() *DiscoveryServiceCertificate
+		expectedResult                     string
+	}{
+		{"Returns emty string if unset",
+			func() *DiscoveryServiceCertificate {
+				return &DiscoveryServiceCertificate{}
+			},
+			"",
+		},
+		{"Returns value in status if set",
+			func() *DiscoveryServiceCertificate {
+				return &DiscoveryServiceCertificate{
+					Status: DiscoveryServiceCertificateStatus{
+						CertificateHash: pointer.StringPtr("xxxx"),
+					},
+				}
+			},
+			"xxxx",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.testName, func(subT *testing.T) {
+			receivedResult := tc.discoveryServiceCertificateFactory().Status.GetCertificateHash()
+			if !equality.Semantic.DeepEqual(tc.expectedResult, receivedResult) {
+				subT.Errorf("DiscoveryServiceCertificateStatus.GetCertificateHash() = %v, want %v", tc.expectedResult, receivedResult)
+			}
+		})
+	}
+}

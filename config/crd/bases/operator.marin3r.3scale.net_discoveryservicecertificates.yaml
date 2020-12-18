@@ -126,6 +126,11 @@ spec:
           description: DiscoveryServiceCertificateStatus defines the observed state
             of DiscoveryServiceCertificate
           properties:
+            certificateHash:
+              description: CertificateHash stores the current hash of the certificate.
+                It is used for other controllers to validate if a certificate has
+                been re-issued.
+              type: string
             conditions:
               description: Conditions represent the latest available observations
                 of an object's state
@@ -167,6 +172,10 @@ spec:
                 - type
                 type: object
               type: array
+            ready:
+              description: Ready is a boolean that specifies if the certificate is
+                ready to be used
+              type: boolean
           required:
           - conditions
           type: object

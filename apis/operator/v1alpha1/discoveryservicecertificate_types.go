@@ -149,6 +149,10 @@ type DiscoveryServiceCertificateStatus struct {
 	// Ready is a boolean that specifies if the certificate is ready to be used
 	// +optional
 	Ready *bool `json:"ready,omitempty"`
+	// CertificateHash stores the current hash of the certificate. It is used
+	// for other controllers to validate if a certificate has been re-issued.
+	// +optional
+	CertificateHash *string `json:"certificateHash,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Conditions status.Conditions `json:"conditions"`
@@ -160,6 +164,16 @@ func (status *DiscoveryServiceCertificateStatus) IsReady() bool {
 		return false
 	}
 	return *status.Ready
+}
+
+// GetCertificateHash returns the hash of the certificate associated
+// with the DiscoveryServiceCertificate resource. Returns an empty
+// string if not set.
+func (status *DiscoveryServiceCertificateStatus) GetCertificateHash() string {
+	if status.CertificateHash == nil {
+		return ""
+	}
+	return *status.CertificateHash
 }
 
 // +kubebuilder:object:root=true
