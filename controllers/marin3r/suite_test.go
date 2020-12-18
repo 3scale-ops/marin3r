@@ -100,7 +100,7 @@ var _ = BeforeSuite(func(done Done) {
 	// Add the EnvoyConfig controller
 	err = (&EnvoyConfigReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v2"),
+		Log:    ctrl.Log.WithName("controllers").WithName("envoyconfig"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())

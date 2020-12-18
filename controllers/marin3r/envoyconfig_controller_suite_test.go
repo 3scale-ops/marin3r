@@ -11,6 +11,9 @@ import (
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
+	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
+	rollback "github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/rollback"
 	testutil "github.com/3scale/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -586,12 +589,11 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				By("waiting for a v3 EnvoyConfigRevision to be created and published")
 				Eventually(func() bool {
-					ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
-					_ = k8sClient.List(context.Background(), ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, pointer.StringPtr("v3"))...)
-					if len(ecrList.Items) != 1 {
+					ecr, err := revisions.Get(context.Background(), k8sClient, namespace, filters.ByNodeID(nodeID), filters.ByEnvoyAPI(envoy.APIv3))
+					if err != nil {
 						return false
 					}
-					if ecrList.Items[0].Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+					if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 						return true
 					}
 					return false
@@ -602,8 +604,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 			Specify("v2 EnvoyConfigRevision should not be deleted, but status.revisions should only contain references to v3 EnvoyConfigRevision resources", func() {
 
 				By("getting the list of v2 EnvoyConfigRevisions from the API")
-				ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
-				err := k8sClient.List(context.Background(), ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, pointer.StringPtr("v2"))...)
+				ecrList, err := revisions.List(context.Background(), k8sClient, namespace, filters.ByNodeID(ec.Spec.NodeID), filters.ByEnvoyAPI(envoy.APIv2))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(ecrList.Items)).To(Equal(1))
 
@@ -673,8 +674,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Specify("v3 EnvoyConfigRevision should not be deleted, but status.revisions should only contain references to v2 EnvoyConfigRevision resources", func() {
 
 					By("getting the list of v3 EnvoyConfigRevisions from the API")
-					ecrList := &marin3rv1alpha1.EnvoyConfigRevisionList{}
-					err := k8sClient.List(context.Background(), ecrList, getRevisionListOptions(ec.Namespace, &ec.Spec.NodeID, nil, pointer.StringPtr("v3"))...)
+					ecrList, err := revisions.List(context.Background(), k8sClient, namespace, filters.ByNodeID(ec.Spec.NodeID), filters.ByEnvoyAPI(envoy.APIv3))
 					Expect(err).ToNot(HaveOccurred())
 					Expect(len(ecrList.Items)).To(Equal(1))
 
@@ -728,7 +728,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 		When("OnError is called", func() {
 
 			BeforeEach(func() {
-				OnErrorFn := OnError(cfg)
+				OnErrorFn := rollback.OnError(k8sClient)
 				version := common.Hash(ec.Spec.EnvoyResources)
 				err := OnErrorFn(nodeID, version, "msg", envoy.APIv2)
 				Expect(err).ToNot(HaveOccurred())
