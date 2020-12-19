@@ -113,7 +113,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 		})
 
-		It("creates a valid certificate within a Secret, signed by the ca", func() {
+		FIt("creates a valid certificate within a Secret, signed by the ca", func() {
 
 			By("creating a DiscoveryServiceCertificate instance for the certificate")
 			dsc = &operatorv1alpha1.DiscoveryServiceCertificate{

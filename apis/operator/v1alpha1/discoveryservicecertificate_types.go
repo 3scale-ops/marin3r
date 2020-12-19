@@ -71,7 +71,7 @@ type DiscoveryServiceCertificateSpec struct {
 	// behavior is to renew the certificate but not notify of renewals.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	CertificateRenewalConfig *CertificateRenewalConfig `json:"certificateRenewalNotification,omitempty"`
+	CertificateRenewalConfig *CertificateRenewalConfig `json:"certificateRenewal,omitempty"`
 }
 
 // IsServerCertificate returns true if the certificate is issued for server
@@ -147,10 +147,21 @@ type CASignedConfig struct {
 // DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
 type DiscoveryServiceCertificateStatus struct {
 	// Ready is a boolean that specifies if the certificate is ready to be used
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
 	Ready *bool `json:"ready,omitempty"`
+	// NotBefore is the time at which the certificate starts
+	// being valid
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	NotBefore *metav1.Time `json:"notBefore,omitempty"`
+	// NotAfter is the time at which the certificate expires
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	NotAfter *metav1.Time `json:"notAfter,omitempty"`
 	// CertificateHash stores the current hash of the certificate. It is used
 	// for other controllers to validate if a certificate has been re-issued.
+	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
 	CertificateHash *string `json:"certificateHash,omitempty"`
 	// Conditions represent the latest available observations of an object's state
@@ -183,7 +194,10 @@ func (status *DiscoveryServiceCertificateStatus) GetCertificateHash() string {
 // controller to create the required certificates for the different components of the
 // discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced
+// +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced,shortName=dsc
+// +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=boolean
+// +kubebuilder:printcolumn:JSONPath=".status.notBefore",name=Not Before,type=string,format=date-time
+// +kubebuilder:printcolumn:JSONPath=".status.notAfter",name=Not After,type=string,format=date-time
 // +operator-sdk:csv:customresourcedefinitions:displayName="DiscoveryServiceCertificate"
 // +operator-sdk:gen-csv:customresourcedefinitions:resources={{Secret,v1}}
 type DiscoveryServiceCertificate struct {

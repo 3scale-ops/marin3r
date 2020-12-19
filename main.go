@@ -205,15 +205,6 @@ func runOperator(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if err := (&operatorcontroller.DiscoveryServiceCertificateWatcher{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificatewatcher"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificatewatcher")
-		os.Exit(1)
-	}
-
 	if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),

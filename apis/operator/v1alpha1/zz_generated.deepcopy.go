@@ -229,6 +229,14 @@ func (in *DiscoveryServiceCertificateStatus) DeepCopyInto(out *DiscoveryServiceC
 		*out = new(bool)
 		**out = **in
 	}
+	if in.NotBefore != nil {
+		in, out := &in.NotBefore, &out.NotBefore
+		*out = (*in).DeepCopy()
+	}
+	if in.NotAfter != nil {
+		in, out := &in.NotAfter, &out.NotAfter
+		*out = (*in).DeepCopy()
+	}
 	if in.CertificateHash != nil {
 		in, out := &in.CertificateHash, &out.CertificateHash
 		*out = new(string)

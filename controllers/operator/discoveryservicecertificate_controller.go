@@ -78,16 +78,19 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) 
 		return result, err
 	}
 
-	if ok := discoveryservicecertificate.IsStatusReconciled(dsc, certificateReconciler.GetCertificateHash(), certificateReconciler.IsReady()); !ok {
+	if ok := discoveryservicecertificate.IsStatusReconciled(dsc, certificateReconciler.GetCertificateHash(),
+		certificateReconciler.IsReady(), certificateReconciler.NotBefore(), certificateReconciler.NotAfter()); !ok {
 		if err := r.Client.Status().Update(ctx, dsc); err != nil {
 			log.Error(err, "unable to update DiscoveryServiceCertificate status")
 			return ctrl.Result{}, err
 		}
 		log.Info("status updated for DiscoveryServiceCertificate resource")
-		return reconcile.Result{}, nil
 	}
 
-	return ctrl.Result{}, nil
+	if certificateReconciler.GetSchedule() == nil {
+		return ctrl.Result{}, nil
+	}
+	return ctrl.Result{RequeueAfter: *certificateReconciler.GetSchedule()}, nil
 }
 
 // SetupWithManager adds the controller to the manager

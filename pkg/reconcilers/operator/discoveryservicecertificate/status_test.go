@@ -2,18 +2,30 @@ package reconcilers
 
 import (
 	"testing"
+	"time"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
+
+var t1, t2 time.Time
+
+func init() {
+	t1, _ = time.Parse(time.RFC3339, "2020-12-19T00:00:00Z")
+	t2, _ = time.Parse(time.RFC3339, "2020-12-20T00:00:00Z")
+
+}
 
 func TestIsStatusReconciled(t *testing.T) {
 	type args struct {
 		dsc             *operatorv1alpha1.DiscoveryServiceCertificate
 		certificateHash string
 		ready           bool
+		notBefore       time.Time
+		notAfter        time.Time
 	}
 	tests := []struct {
 		name string
@@ -28,10 +40,14 @@ func TestIsStatusReconciled(t *testing.T) {
 						Ready:           pointer.BoolPtr(true),
 						CertificateHash: pointer.StringPtr("xxxx"),
 						Conditions:      status.Conditions{},
+						NotBefore:       &metav1.Time{Time: t1},
+						NotAfter:        &metav1.Time{Time: t2},
 					},
 				},
 				certificateHash: "xxxx",
 				ready:           true,
+				notBefore:       t1,
+				notAfter:        t2,
 			},
 			want: true,
 		},
@@ -43,10 +59,14 @@ func TestIsStatusReconciled(t *testing.T) {
 						Ready:           pointer.BoolPtr(false),
 						CertificateHash: pointer.StringPtr("xxxx"),
 						Conditions:      status.Conditions{},
+						NotBefore:       &metav1.Time{Time: t1},
+						NotAfter:        &metav1.Time{Time: t2},
 					},
 				},
 				certificateHash: "xxxx",
 				ready:           true,
+				notBefore:       t1,
+				notAfter:        t2,
 			},
 			want: false,
 		},
@@ -58,10 +78,14 @@ func TestIsStatusReconciled(t *testing.T) {
 						Ready:           pointer.BoolPtr(true),
 						CertificateHash: pointer.StringPtr("xxxx"),
 						Conditions:      status.Conditions{},
+						NotBefore:       &metav1.Time{Time: t1},
+						NotAfter:        &metav1.Time{Time: t2},
 					},
 				},
 				certificateHash: "zzzz",
 				ready:           true,
+				notBefore:       t1,
+				notAfter:        t2,
 			},
 			want: false,
 		},
@@ -76,17 +100,22 @@ func TestIsStatusReconciled(t *testing.T) {
 							Type:   operatorv1alpha1.CertificateNeedsRenewalCondition,
 							Status: corev1.ConditionTrue,
 						}},
+						NotBefore: &metav1.Time{Time: t1},
+						NotAfter:  &metav1.Time{Time: t2},
 					},
 				},
 				certificateHash: "xxxx",
 				ready:           true,
+				notBefore:       t1,
+				notAfter:        t2,
 			},
 			want: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IsStatusReconciled(tt.args.dsc, tt.args.certificateHash, tt.args.ready); got != tt.want {
+			if got := IsStatusReconciled(tt.args.dsc, tt.args.certificateHash,
+				tt.args.ready, tt.args.notBefore, tt.args.notAfter); got != tt.want {
 				t.Errorf("IsStatusReconciled() = %v, want %v", got, tt.want)
 			}
 		})
