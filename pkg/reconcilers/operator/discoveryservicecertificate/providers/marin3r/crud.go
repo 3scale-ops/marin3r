@@ -88,7 +88,7 @@ func (cp *CertificateProvider) CreateCertificate() ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	logger.Info("created certificate")
+	logger.V(1).Info("created certificate")
 	return secret.Data[tlsCertificateKey], secret.Data[tlsPrivateKeyKey], nil
 }
 
@@ -146,7 +146,7 @@ func (cp *CertificateProvider) UpdateCertificate() ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 
-	logger.Info("updated certificate")
+	logger.V(1).Info("updated certificate")
 	return secret.Data[tlsCertificateKey], secret.Data[tlsPrivateKeyKey], nil
 }
 
