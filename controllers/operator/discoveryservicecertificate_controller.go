@@ -21,6 +21,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	discoveryservicecertificate "github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate"
+	marin3r_provider "github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers/marin3r"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -72,7 +73,10 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(request ctrl.Request) 
 		return reconcile.Result{}, nil
 	}
 
-	certificateReconciler := discoveryservicecertificate.NewCertificateReconciler(ctx, log, r.Client, r.Scheme, dsc)
+	// Only the internal certificate provider is currently supported
+	provider := marin3r_provider.NewCertificateProvider(ctx, log, r.Client, r.Scheme, dsc)
+
+	certificateReconciler := discoveryservicecertificate.NewCertificateReconciler(ctx, log, r.Client, r.Scheme, dsc, provider)
 	result, err := certificateReconciler.Reconcile()
 	if result.Requeue || err != nil {
 		return result, err

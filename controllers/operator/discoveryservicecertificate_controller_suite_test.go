@@ -54,7 +54,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 				},
 				Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 					CommonName: "test",
-					ValidFor:   3600,
+					ValidFor:   10,
 					Hosts:      []string{"example.test"},
 					Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 						SelfSigned: &operatorv1alpha1.SelfSignedConfig{},
@@ -67,19 +67,33 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 			Eventually(func() error {
 				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "dsc", Namespace: namespace}, dsc)
 			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "dsc", Namespace: namespace}, dsc)
+				Expect(err).ToNot(HaveOccurred())
+				return dsc.Status.IsReady()
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		It("creates a valid certificate within a Secret", func() {
 
 			secret := &corev1.Secret{}
-			Eventually(func() error {
-				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "secret", Namespace: namespace}, secret)
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "secret", Namespace: namespace}, secret)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(secret.Type).To(Equal(corev1.SecretTypeTLS))
 			cert, err := pki.LoadX509Certificate(secret.Data["tls.crt"])
 			Expect(err).ToNot(HaveOccurred())
 			err = pki.Verify(cert, cert)
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("renews the certificate", func() {
+			hash := dsc.Status.GetCertificateHash()
+			Eventually(func() string {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "dsc", Namespace: namespace}, dsc)
+				Expect(err).ToNot(HaveOccurred())
+				return dsc.Status.GetCertificateHash()
+			}, 30*time.Second, 5*time.Second).ShouldNot(Equal(hash))
 		})
 
 	})
@@ -113,7 +127,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 		})
 
-		FIt("creates a valid certificate within a Secret, signed by the ca", func() {
+		It("creates a valid certificate within a Secret, signed by the ca", func() {
 
 			By("creating a DiscoveryServiceCertificate instance for the certificate")
 			dsc = &operatorv1alpha1.DiscoveryServiceCertificate{

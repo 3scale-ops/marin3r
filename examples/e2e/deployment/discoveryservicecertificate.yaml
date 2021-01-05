@@ -6,7 +6,7 @@ metadata:
   namespace: default
 spec:
   commonName: kuard.test1.svc
-  validFor: 3600
+  validFor: 30
   signer:
     selfSigned: {}
   secretRef:

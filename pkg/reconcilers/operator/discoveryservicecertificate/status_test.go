@@ -6,7 +6,6 @@ import (
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 	"github.com/operator-framework/operator-lib/status"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -39,9 +38,9 @@ func TestIsStatusReconciled(t *testing.T) {
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
 						Ready:           pointer.BoolPtr(true),
 						CertificateHash: pointer.StringPtr("xxxx"),
-						Conditions:      status.Conditions{},
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
+						Conditions:      status.Conditions{},
 					},
 				},
 				certificateHash: "xxxx",
@@ -58,9 +57,9 @@ func TestIsStatusReconciled(t *testing.T) {
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
 						Ready:           pointer.BoolPtr(false),
 						CertificateHash: pointer.StringPtr("xxxx"),
-						Conditions:      status.Conditions{},
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
+						Conditions:      status.Conditions{},
 					},
 				},
 				certificateHash: "xxxx",
@@ -77,9 +76,9 @@ func TestIsStatusReconciled(t *testing.T) {
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
 						Ready:           pointer.BoolPtr(true),
 						CertificateHash: pointer.StringPtr("xxxx"),
-						Conditions:      status.Conditions{},
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
+						Conditions:      status.Conditions{},
 					},
 				},
 				certificateHash: "zzzz",
@@ -90,21 +89,55 @@ func TestIsStatusReconciled(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "Returns false, condition needs removal",
+			name: "Returns false, NotBefore needs update",
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
 						Ready:           pointer.BoolPtr(true),
 						CertificateHash: pointer.StringPtr("xxxx"),
-						Conditions: status.Conditions{{
-							Type:   operatorv1alpha1.CertificateNeedsRenewalCondition,
-							Status: corev1.ConditionTrue,
-						}},
-						NotBefore: &metav1.Time{Time: t1},
-						NotAfter:  &metav1.Time{Time: t2},
+						NotBefore:       &metav1.Time{},
+						NotAfter:        &metav1.Time{Time: t2},
+						Conditions:      status.Conditions{},
 					},
 				},
-				certificateHash: "xxxx",
+				certificateHash: "zzzz",
+				ready:           true,
+				notBefore:       t1,
+				notAfter:        t2,
+			},
+			want: false,
+		},
+		{
+			name: "Returns false, NotAfter needs update",
+			args: args{
+				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
+					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
+						Ready:           pointer.BoolPtr(true),
+						CertificateHash: pointer.StringPtr("xxxx"),
+						NotBefore:       &metav1.Time{Time: t1},
+						NotAfter:        &metav1.Time{},
+						Conditions:      status.Conditions{},
+					},
+				},
+				certificateHash: "zzzz",
+				ready:           true,
+				notBefore:       t1,
+				notAfter:        t2,
+			},
+			want: false,
+		},
+		{
+			name: "Returns false, conditions need init",
+			args: args{
+				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
+					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
+						Ready:           pointer.BoolPtr(true),
+						CertificateHash: pointer.StringPtr("xxxx"),
+						NotBefore:       &metav1.Time{Time: t1},
+						NotAfter:        &metav1.Time{Time: t1},
+					},
+				},
+				certificateHash: "zzzz",
 				ready:           true,
 				notBefore:       t1,
 				notAfter:        t2,
