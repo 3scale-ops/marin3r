@@ -116,7 +116,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if serverDSC.GetLabels() == nil {
+	if !serverDSC.Status.IsReady() {
 		log.Info("Server certificate still not available, requeue")
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
@@ -124,7 +124,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 	dr := reconcilers.NewDeploymentReconciler(ctx, log, r.Client, r.Scheme, r.ds)
 	result, err = dr.Reconcile(
 		types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)},
-		deploymentGeneratorFn(r.ds, serverDSC.GetLabels()[operatorv1alpha1.CertificateHashLabelKey]),
+		deploymentGeneratorFn(r.ds, *serverDSC.Status.CertificateHash),
 	)
 	if result.Requeue || err != nil {
 		return result, err

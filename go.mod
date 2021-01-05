@@ -3,6 +3,7 @@ module github.com/3scale/marin3r
 go 1.13
 
 require (
+	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/cncf/udpa/go v0.0.0-20201001150855-7e6fe0510fb5 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.9.7
@@ -23,5 +24,5 @@ require (
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v0.18.6
 	k8s.io/utils v0.0.0-20200603063816-c1c6865ac451
-	sigs.k8s.io/controller-runtime v0.6.2
+	sigs.k8s.io/controller-runtime v0.6.3
 )

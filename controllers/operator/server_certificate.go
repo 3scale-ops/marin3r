@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	// cert-manager
@@ -60,7 +61,7 @@ func (r *DiscoveryServiceReconciler) getServerCertObject() *operatorv1alpha1.Dis
 		},
 		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 			CommonName:          getServerCertCommonName(r.ds),
-			IsServerCertificate: true,
+			IsServerCertificate: pointer.BoolPtr(true),
 			ValidFor:            int64(r.ds.GetServerCertificateOptions().Duration.Seconds()),
 			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 				CASigned: &operatorv1alpha1.CASignedConfig{

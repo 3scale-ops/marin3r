@@ -44,10 +44,12 @@ type DiscoveryServiceCertificateSpec struct {
 	// IsServerCertificate is a boolean specifying if the certificate should be
 	// issued with server auth usage enabled
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	IsServerCertificate bool `json:"server,omitempty"`
+	// +optional
+	IsServerCertificate *bool `json:"server,omitempty"`
 	// IsCA is a boolean specifying that the certificate is a CA
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	IsCA bool `json:"isCA,omitempty"`
+	// +optional
+	IsCA *bool `json:"isCA,omitempty"`
 	// ValidFor specifies the validity of the certificate in seconds
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	ValidFor int64 `json:"validFor"`
@@ -55,6 +57,7 @@ type DiscoveryServiceCertificateSpec struct {
 	// use when 'IsServerCertificate' is true. If unset, the CommonName
 	// field will be used to populate the valid hosts of the certificate.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	Hosts []string `json:"hosts,omitempty"`
 	// Signer specifies  the signer to use to create this certificate. Supported
 	// signers are CertManager and SelfSigned.
@@ -67,7 +70,47 @@ type DiscoveryServiceCertificateSpec struct {
 	// CertificateRenewalConfig configures the certificate renewal process. If unset default
 	// behavior is to renew the certificate but not notify of renewals.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	CertificateRenewalConfig *CertificateRenewalConfig `json:"certificateRenewalNotification,omitempty"`
+	// +optional
+	CertificateRenewalConfig *CertificateRenewalConfig `json:"certificateRenewal,omitempty"`
+}
+
+// IsServerCertificate returns true if the certificate is issued for server
+// usage or false if not
+func (d *DiscoveryServiceCertificate) IsServerCertificate() bool {
+	if d.Spec.IsServerCertificate == nil {
+		return false
+	}
+	return *d.Spec.IsServerCertificate
+}
+
+// IsCA returns true if the certificate is issued to function
+// as a certificate authority or not
+func (d *DiscoveryServiceCertificate) IsCA() bool {
+	if d.Spec.IsCA == nil {
+		return false
+	}
+	return *d.Spec.IsCA
+}
+
+// GetHosts returns the list of server names that the certificate
+// is issued for
+func (d *DiscoveryServiceCertificate) GetHosts() []string {
+	if d.Spec.Hosts == nil {
+		return []string{d.Spec.CommonName}
+	}
+	return d.Spec.Hosts
+}
+
+// GetCertificateRenewalConfig returns the renewal configuration for the issued certificate
+func (d *DiscoveryServiceCertificate) GetCertificateRenewalConfig() CertificateRenewalConfig {
+	if d.Spec.CertificateRenewalConfig == nil {
+		return d.defaultCertificateRenewalConfig()
+	}
+	return *d.Spec.CertificateRenewalConfig
+}
+
+func (d *DiscoveryServiceCertificate) defaultCertificateRenewalConfig() CertificateRenewalConfig {
+	return CertificateRenewalConfig{Enabled: true}
 }
 
 // DiscoveryServiceCertificateSigner specifies the signer to use to provision the certificate
@@ -75,10 +118,12 @@ type DiscoveryServiceCertificateSigner struct {
 	// SelfSigned holds specific configuration for the SelfSigned signer
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	SelfSigned *SelfSignedConfig `json:"selfSigned,omitempty"`
 	// CASigned holds specific configuration for the CASigned signer
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	CASigned *CASignedConfig `json:"caSigned,omitempty"`
 }
 
@@ -101,9 +146,45 @@ type CASignedConfig struct {
 
 // DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
 type DiscoveryServiceCertificateStatus struct {
+	// Ready is a boolean that specifies if the certificate is ready to be used
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	Ready *bool `json:"ready,omitempty"`
+	// NotBefore is the time at which the certificate starts
+	// being valid
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	NotBefore *metav1.Time `json:"notBefore,omitempty"`
+	// NotAfter is the time at which the certificate expires
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	NotAfter *metav1.Time `json:"notAfter,omitempty"`
+	// CertificateHash stores the current hash of the certificate. It is used
+	// for other controllers to validate if a certificate has been re-issued.
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	CertificateHash *string `json:"certificateHash,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	Conditions status.Conditions `json:"conditions"`
+}
+
+// IsReady returns true if the certificate is ready to use, false otherwise
+func (status *DiscoveryServiceCertificateStatus) IsReady() bool {
+	if status.Ready == nil {
+		return false
+	}
+	return *status.Ready
+}
+
+// GetCertificateHash returns the hash of the certificate associated
+// with the DiscoveryServiceCertificate resource. Returns an empty
+// string if not set.
+func (status *DiscoveryServiceCertificateStatus) GetCertificateHash() string {
+	if status.CertificateHash == nil {
+		return ""
+	}
+	return *status.CertificateHash
 }
 
 // +kubebuilder:object:root=true
@@ -113,7 +194,10 @@ type DiscoveryServiceCertificateStatus struct {
 // controller to create the required certificates for the different components of the
 // discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced
+// +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced,shortName=dsc
+// +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=boolean
+// +kubebuilder:printcolumn:JSONPath=".status.notBefore",name=Not Before,type=string,format=date-time
+// +kubebuilder:printcolumn:JSONPath=".status.notAfter",name=Not After,type=string,format=date-time
 // +operator-sdk:csv:customresourcedefinitions:displayName="DiscoveryServiceCertificate"
 // +operator-sdk:gen-csv:customresourcedefinitions:resources={{Secret,v1}}
 type DiscoveryServiceCertificate struct {
