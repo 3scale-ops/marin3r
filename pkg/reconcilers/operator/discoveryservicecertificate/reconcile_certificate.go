@@ -25,7 +25,7 @@ type Clock interface {
 
 type realClock struct{}
 
-// Now returns the the current time
+// Now returns the current time
 func (realClock) Now() time.Time { return time.Now() }
 
 // CertificateReconciler is a struct with methods to reconcile DiscoveryServiceCertificates
@@ -81,7 +81,7 @@ func (r *CertificateReconciler) NotAfter() time.Time {
 	return *r.notAfter
 }
 
-// GetSchedule returns a time.Duration value that indiates
+// GetSchedule returns a time.Duration value that indicates
 // when the reconcile needs to be triggered to renew the
 // certificate
 func (r *CertificateReconciler) GetSchedule() *time.Duration {
