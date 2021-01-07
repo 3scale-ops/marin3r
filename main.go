@@ -22,7 +22,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller"
 	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -39,6 +38,7 @@ import (
 	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
+	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale/marin3r/pkg/version"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	// +kubebuilder:scaffold:imports
@@ -168,19 +168,19 @@ func runOperator(cmd *cobra.Command, args []string) {
 		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
 	}
 
-	var clusterScoped bool
+	var isClusterScoped bool
 	if strings.Contains(watchNamespace, ",") {
 		setupLog.Info(fmt.Sprintf("manager in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
 		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
-		clusterScoped = false
+		isClusterScoped = false
 	} else if watchNamespace == "" {
 		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
 		options.Namespace = watchNamespace
-		clusterScoped = true
+		isClusterScoped = true
 	} else {
 		setupLog.Info(fmt.Sprintf("manager in Namespaced mode will be watching namespace %q", watchNamespace))
 		options.Namespace = watchNamespace
-		clusterScoped = false
+		isClusterScoped = false
 	}
 
 	mgr, err := ctrl.NewManager(cfg, options)
@@ -193,8 +193,8 @@ func runOperator(cmd *cobra.Command, args []string) {
 	ctx := signals.SetupSignalHandler()
 
 	if err := (&operatorcontroller.DiscoveryServiceReconciler{
-		EnforcingReconciler: lockedresourcecontroller.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), clusterScoped),
-		Log:                 ctrl.Log.WithName("controllers").WithName("discoveryservice"),
+		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), isClusterScoped),
+		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
 		os.Exit(1)

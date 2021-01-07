@@ -25,17 +25,14 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
-	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedpatch"
-	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedresource"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -57,7 +54,7 @@ var defaultExcludedPaths = []string{".metadata", ".status"}
 
 // DiscoveryServiceReconciler reconciles a DiscoveryService object
 type DiscoveryServiceReconciler struct {
-	lockedresourcecontroller.EnforcingReconciler
+	lockedresources.Reconciler
 	Log logr.Logger
 }
 
@@ -72,29 +69,16 @@ type DiscoveryServiceReconciler struct {
 func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
-	// Fetch the DiscoveryService instance
-	dsList := &operatorv1alpha1.DiscoveryServiceList{}
-	err := r.GetClient().List(ctx, dsList)
+	ds := &operatorv1alpha1.DiscoveryService{}
+	key := types.NamespacedName{Name: request.Name, Namespace: request.Namespace}
+	err := r.GetClient().Get(ctx, key, ds)
 	if err != nil {
-		// Error reading the object - requeue the request.
+		if errors.IsNotFound(err) {
+			// Return and don't requeue
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
 	}
-
-	if len(dsList.Items) == 0 {
-		// Request object not found, could have been deleted after reconcile request.
-		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-		// Return and don't requeue
-		return ctrl.Result{}, nil
-	}
-
-	if len(dsList.Items) > 1 {
-		err := fmt.Errorf("More than one DiscoveryService object in the namespace, refusing to reconcile")
-		log.Error(err, "Only one marin3r installation per namespace is supported")
-		return ctrl.Result{}, err
-	}
-
-	// var result ctrl.Result
-	ds := &dsList.Items[0]
 
 	generate := generators.GeneratorOptions{
 		InstanceName:                      ds.GetName(),
@@ -113,56 +97,19 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		DeploymentResources:               ds.Resources(),
 	}
 
-	rootCert, err := newUnstructured(generate.RootCertificationAuthority, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	serverCert, err := newUnstructured(generate.ServerCertificate, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	serviceAccount, err := newUnstructured(generate.ServiceAccount, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	role, err := newUnstructured(generate.Role, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	roleBinding, err := newUnstructured(generate.RoleBinding, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	service, err := newUnstructured(generate.Service, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	deployment, err := newUnstructured(generate.Deployment, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	envoyBootstrap, err := newUnstructured(generate.EnvoyBootstrap, ds, r.GetScheme(), log)
-	if err != nil {
-		return r.ManageError(ctx, ds, err)
-	}
-
-	resources := []lockedresource.LockedResource{
-		{Unstructured: rootCert, ExcludedPaths: defaultExcludedPaths},
-		{Unstructured: serverCert, ExcludedPaths: defaultExcludedPaths},
-		{Unstructured: serviceAccount, ExcludedPaths: defaultExcludedPaths},
-		{Unstructured: role, ExcludedPaths: defaultExcludedPaths},
-		{Unstructured: roleBinding, ExcludedPaths: defaultExcludedPaths},
-		{Unstructured: service, ExcludedPaths: append(defaultExcludedPaths, ".spec.clusterIP")},
-		{Unstructured: deployment, ExcludedPaths: defaultExcludedPaths},
-		{Unstructured: envoyBootstrap, ExcludedPaths: defaultExcludedPaths},
-	}
+	resources, err := r.NewLockedResources(
+		[]lockedresources.LockedResource{
+			{GeneratorFn: generate.RootCertificationAuthority, ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.ServerCertificate, ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.ServiceAccount, ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.Role, ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.RoleBinding, ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.Service, ExcludePaths: append(defaultExcludedPaths, ".spec.clusterIP")},
+			{GeneratorFn: generate.Deployment, ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.EnvoyBootstrap, ExcludePaths: defaultExcludedPaths},
+		},
+		ds,
+	)
 
 	err = r.UpdateLockedResources(ctx, ds, resources, []lockedpatch.LockedPatch{})
 	if err != nil {
@@ -174,7 +121,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 	// populate the deployment's label.
 	// This will trigger rollouts on server certificate changes.
 	serverDSC := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	key := types.NamespacedName{Name: serverCert.GetName(), Namespace: serverCert.GetNamespace()}
+	key = types.NamespacedName{Name: generate.ServerCertificate().GetName(), Namespace: generate.ServerCertificate().GetNamespace()}
 	err = r.GetClient().Get(ctx, key, serverDSC)
 	if err != nil {
 		return r.ManageError(ctx, ds, err)
@@ -185,7 +132,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 	}
 
 	dep := &appsv1.Deployment{}
-	key = types.NamespacedName{Name: deployment.GetName(), Namespace: deployment.GetNamespace()}
+	key = types.NamespacedName{Name: generate.Deployment().GetName(), Namespace: generate.Deployment().GetNamespace()}
 	if err := r.GetClient().Get(ctx, key, dep); err != nil {
 		log.Error(err, "unable to get deployment resource")
 		return r.ManageError(ctx, ds, err)
@@ -200,22 +147,6 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 	}
 
 	return r.ManageSuccess(ctx, ds)
-}
-
-func newUnstructured(generator func() client.Object, owner client.Object, scheme *runtime.Scheme, log logr.Logger) (unstructured.Unstructured, error) {
-	o := generator()
-	if err := controllerutil.SetControllerReference(owner, o, scheme); err != nil {
-		log.Error(err, "unable to SetControllerReference on resource",
-			"kind", o.GetObjectKind().GroupVersionKind().String(),
-			"namespace/name", client.ObjectKeyFromObject(o),
-		)
-		return unstructured.Unstructured{}, err
-	}
-	u, err := runtime.DefaultUnstructuredConverter.ToUnstructured(o)
-	if err != nil {
-		return unstructured.Unstructured{}, err
-	}
-	return unstructured.Unstructured{Object: u}, nil
 }
 
 // SetupWithManager adds the controller to the manager
