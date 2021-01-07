@@ -29,8 +29,8 @@ import (
 const (
 	// DiscoveryServiceKind is Kind of the DiscoveryService resources
 	DiscoveryServiceKind string = "DiscoveryService"
-	// DiscoveryServiceListind is the Kind of the DiscoveryServiceList resources
-	DiscoveryServiceListind string = "DiscoveryServiceList"
+	// DiscoveryServiceListKind is the Kind of the DiscoveryServiceList resources
+	DiscoveryServiceListKind string = "DiscoveryServiceList"
 	// DiscoveryServiceEnabledKey is the label key that the mutating webhook uses
 	// to determine if mutation is enabled for a Pod
 	DiscoveryServiceEnabledKey string = "marin3r.3scale.net/status"

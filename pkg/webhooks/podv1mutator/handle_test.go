@@ -6,11 +6,11 @@ import (
 	"sort"
 	"testing"
 
-	admissionv1beta1 "k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/deprecated/scheme"
+	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -43,12 +43,12 @@ func TestPodMutator_Handle(t *testing.T) {
 			args: args{
 				ctx: context.TODO(),
 				req: admission.Request{
-					AdmissionRequest: admissionv1beta1.AdmissionRequest{
+					AdmissionRequest: admissionv1.AdmissionRequest{
 						UID:       "xxxx",
 						Kind:      metav1.GroupVersionKind{Group: "", Version: "v1", Kind: "Pod"},
 						Resource:  metav1.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"},
 						Namespace: "default",
-						Operation: admissionv1beta1.Create,
+						Operation: admissionv1.Create,
 						UserInfo:  authenticationv1.UserInfo{Username: "xxxx", UID: "xxxx"},
 						Object: runtime.RawExtension{
 							Raw: []byte(`

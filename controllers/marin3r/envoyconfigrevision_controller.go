@@ -55,8 +55,7 @@ type EnvoyConfigRevisionReconciler struct {
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch
-func (r *EnvoyConfigRevisionReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyConfigRevision instance

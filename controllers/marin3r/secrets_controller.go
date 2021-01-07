@@ -42,8 +42,7 @@ type SecretReconciler struct {
 // +kubebuilder:rbac:groups=core,namespace=placeholder,resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigs,verbs=get;list;watch;patch
 
-func (r *SecretReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	// Fetch the Secret instance
 	secret := &corev1.Secret{}

@@ -75,7 +75,7 @@ var _ = Describe("DiscoveryService controller", func() {
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: getCACertName(ds), Namespace: namespace},
+						types.NamespacedName{Name: "marin3r-ca-cert-instance", Namespace: namespace},
 						dsc,
 					); err != nil {
 						return false
@@ -87,13 +87,13 @@ var _ = Describe("DiscoveryService controller", func() {
 				Expect(dsc.Spec.ValidFor).To(Equal(int64(ds.GetRootCertificateAuthorityOptions().Duration.Seconds())))
 			}
 
-			By("waiting for the root CA DiscoveryServiceCertificate to be created")
+			By("waiting for the server DiscoveryServiceCertificate to be created")
 			{
 				dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: getServerCertName(ds), Namespace: namespace},
+						types.NamespacedName{Name: "marin3r-server-cert-instance", Namespace: namespace},
 						dsc,
 					); err != nil {
 						return false
@@ -112,7 +112,7 @@ var _ = Describe("DiscoveryService controller", func() {
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
+						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						sa,
 					); err != nil {
 						return false
@@ -128,7 +128,7 @@ var _ = Describe("DiscoveryService controller", func() {
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
+						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						cr,
 					); err != nil {
 						return false
@@ -144,7 +144,7 @@ var _ = Describe("DiscoveryService controller", func() {
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
+						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						crb,
 					); err != nil {
 						return false
@@ -160,7 +160,7 @@ var _ = Describe("DiscoveryService controller", func() {
 				Eventually(func() bool {
 					if err := k8sClient.Get(
 						context.Background(),
-						types.NamespacedName{Name: OwnedObjectName(ds), Namespace: namespace},
+						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						dep,
 					); err != nil {
 						return false
@@ -185,12 +185,16 @@ var _ = Describe("DiscoveryService controller", func() {
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
-			By("checking the namespaces in 'spec.enabledNamespaces' have an EnvoyBootstrap resource each")
+			By("waiting for the EnvoyBootstrap resource to be created")
 
 			{
 				eb := &marin3rv1alpha1.EnvoyBootstrap{}
 				Eventually(func() bool {
-					if err := k8sClient.Get(context.Background(), types.NamespacedName{Name: ds.GetName(), Namespace: namespace}, eb); err != nil {
+					if err := k8sClient.Get(
+						context.Background(),
+						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
+						eb,
+					); err != nil {
 						return false
 					}
 					return true

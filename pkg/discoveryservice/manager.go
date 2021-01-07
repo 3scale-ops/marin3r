@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
@@ -19,7 +21,6 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 const (
@@ -70,7 +71,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 	}
 
 	// watch for syscalls
-	stopCh := signals.SetupSignalHandler()
+	stopCh := setupSignalHandler()
 
 	var wait sync.WaitGroup
 
@@ -149,7 +150,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		if err := mgr.Start(stopCh); err != nil {
+		if err := mgr.Start(ctx); err != nil {
 			setupLog.Error(err, "Controller manager exited non-zero")
 			os.Exit(1)
 		}
@@ -185,4 +186,30 @@ func loadCA(directory string, logger logr.Logger) *x509.CertPool {
 		}
 	}
 	return certPool
+}
+
+var onlyOneSignalHandler = make(chan struct{})
+
+// SetupSignalHandler registers for SIGTERM and SIGINT. A stop channel is returned
+// which is closed on one of these signals. If a second signal is caught, the program
+// is terminated with exit code 1.
+func setupSignalHandler() (stopCh <-chan struct{}) {
+	close(onlyOneSignalHandler) // panics when called twice
+
+	stop := make(chan struct{})
+	c := make(chan os.Signal, 2)
+	signal.Notify(c,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	go func() {
+		<-c
+		close(stop)
+		<-c
+		os.Exit(1) // second signal. Exit directly.
+	}()
+
+	return stop
 }

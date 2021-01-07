@@ -44,8 +44,7 @@ type EnvoyBootstrapReconciler struct {
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=configmaps,verbs=get;list;watch;create;update;patch
 
-func (r *EnvoyBootstrapReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *EnvoyBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
 	// Fetch the EnvoyBootstrap instance
