@@ -44,6 +44,9 @@ const (
 	// stores the hash of the current server certificate
 	DiscoveryServiceCertificateHashLabelKey string = "marin3r.3scale.net/server-certificate-hash"
 
+	// DiscoveryServiceFinalizer is the finalizer for DiscoveryService objects
+	DiscoveryServiceFinalizer string = "finalizer.operator.marin3r.3scale.net"
+
 	/* Default values */
 
 	// DefaultMetricsPort is the default port where the discovery service metrics server listens

@@ -21,12 +21,11 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-
-	"github.com/go-logr/logr"
-
 	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
+	"github.com/go-logr/logr"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedpatch"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -76,6 +75,33 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
+	}
+
+	if ok := r.IsInitialized(ds, operatorv1alpha1.DiscoveryServiceFinalizer); !ok {
+		err := r.GetClient().Update(ctx, ds)
+		if err != nil {
+			log.Error(err, "unable to initialize instance")
+			return r.ManageError(ctx, ds, err)
+		}
+		return ctrl.Result{}, nil
+	}
+
+	if util.IsBeingDeleted(ds) {
+		if !util.HasFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer) {
+			return ctrl.Result{}, nil
+		}
+		err := r.ManageCleanUpLogic(ds, log)
+		if err != nil {
+			log.Error(err, "unable to delete instance")
+			return r.ManageError(ctx, ds, err)
+		}
+		util.RemoveFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer)
+		err = r.GetClient().Update(ctx, ds)
+		if err != nil {
+			log.Error(err, "unable to update instance")
+			return r.ManageError(ctx, ds, err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	generate := generators.GeneratorOptions{

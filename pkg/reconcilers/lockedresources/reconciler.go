@@ -1,6 +1,8 @@
 package lockedresources
 
 import (
+	"github.com/go-logr/logr"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedresource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -31,6 +33,27 @@ type GeneratorFunction func() client.Object
 type LockedResource struct {
 	GeneratorFn  GeneratorFunction
 	ExcludePaths []string
+}
+
+// IsInitialized can be used to check if instance is correctly initialized.
+// Returns false if it isn't.
+func (r *Reconciler) IsInitialized(instance client.Object, finalizer string) bool {
+	ok := true
+	if !util.HasFinalizer(instance, finalizer) {
+		util.AddFinalizer(instance, finalizer)
+		ok = false
+	}
+	return ok
+}
+
+// ManageCleanUpLogic contains finalization logic for the LockedResourcesReconciler
+func (r *Reconciler) ManageCleanUpLogic(instance client.Object, log logr.Logger) error {
+	err := r.Terminate(instance, true)
+	if err != nil {
+		log.Error(err, "unable to terminate locked resources reconciler")
+		return err
+	}
+	return nil
 }
 
 // NewLockedResources returns the list of lockedresource.LockedResource that the reconciler needs to enforce
