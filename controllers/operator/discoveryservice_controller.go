@@ -18,21 +18,19 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
 
 	"github.com/go-logr/logr"
 
+	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedpatch"
-	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -97,16 +95,21 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		DeploymentResources:               ds.Resources(),
 	}
 
+	hash, err := r.calculateServerCertificateHash(ctx, common.ObjectKey(generate.ServerCertificate()()))
+	if err != nil {
+		return r.ManageError(ctx, ds, err)
+	}
+
 	resources, err := r.NewLockedResources(
 		[]lockedresources.LockedResource{
-			{GeneratorFn: generate.RootCertificationAuthority, ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.ServerCertificate, ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.ServiceAccount, ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.Role, ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.RoleBinding, ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.Service, ExcludePaths: append(defaultExcludedPaths, ".spec.clusterIP")},
-			{GeneratorFn: generate.Deployment, ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.EnvoyBootstrap, ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.RootCertificationAuthority(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.ServerCertificate(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.ServiceAccount(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.Role(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.RoleBinding(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.Service(), ExcludePaths: append(defaultExcludedPaths, ".spec.clusterIP")},
+			{GeneratorFn: generate.Deployment(hash), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.EnvoyBootstrap(), ExcludePaths: defaultExcludedPaths},
 		},
 		ds,
 	)
@@ -117,44 +120,29 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		return r.ManageError(ctx, ds, err)
 	}
 
+	return r.ManageSuccess(ctx, ds)
+}
+
+func (r *DiscoveryServiceReconciler) calculateServerCertificateHash(ctx context.Context, key types.NamespacedName) (string, error) {
 	// Fetch the server certificate to calculate the hash and
 	// populate the deployment's label.
 	// This will trigger rollouts on server certificate changes.
 	serverDSC := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	key = types.NamespacedName{Name: generate.ServerCertificate().GetName(), Namespace: generate.ServerCertificate().GetNamespace()}
-	err = r.GetClient().Get(ctx, key, serverDSC)
+	err := r.GetClient().Get(ctx, key, serverDSC)
 	if err != nil {
-		return r.ManageError(ctx, ds, err)
+		if errors.IsNotFound(err) {
+			// The server certificate hasn't been created yet
+			return "", nil
+		}
+		return "", err
 	}
-	if !serverDSC.Status.IsReady() {
-		log.Info("Server certificate still not available, requeue")
-		return r.ManageErrorWithRequeue(ctx, ds, fmt.Errorf("Server certificate not ready"), 5*time.Second)
-	}
-
-	dep := &appsv1.Deployment{}
-	key = types.NamespacedName{Name: generate.Deployment().GetName(), Namespace: generate.Deployment().GetNamespace()}
-	if err := r.GetClient().Get(ctx, key, dep); err != nil {
-		log.Error(err, "unable to get deployment resource")
-		return r.ManageError(ctx, ds, err)
-	}
-
-	// TODO: do not patch de label on each reconcile, just when needed
-	patch := client.MergeFrom(dep.DeepCopy())
-	dep.Spec.Template.ObjectMeta.Labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey] = serverDSC.Status.GetCertificateHash()
-	if err := r.GetClient().Patch(ctx, dep, patch); err != nil {
-		log.Error(err, "unable to patch deployment resource")
-		return r.ManageError(ctx, ds, err)
-	}
-
-	return r.ManageSuccess(ctx, ds)
+	return serverDSC.Status.GetCertificateHash(), nil
 }
 
 // SetupWithManager adds the controller to the manager
 func (r *DiscoveryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).For(&operatorv1alpha1.DiscoveryService{}).
-		Owns(&operatorv1alpha1.DiscoveryServiceCertificate{}).
-		Owns(&appsv1.Deployment{}).
 		Watches(&source.Channel{Source: r.GetStatusChangeChannel()}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }
