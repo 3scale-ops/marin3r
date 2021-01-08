@@ -30,12 +30,12 @@ func (cfg *GeneratorOptions) Service() lockedresources.GeneratorFunction {
 					}
 					return corev1.ServiceTypeClusterIP
 				}(),
-				// ClusterIP: func() string {
-				// 	if cfg.ServiceType == operatorv1alpha1.HeadlessType {
-				// 		return "None"
-				// 	}
-				// 	return ""
-				// }(),
+				ClusterIP: func() string {
+					if cfg.ServiceType == operatorv1alpha1.HeadlessType {
+						return "None"
+					}
+					return ""
+				}(),
 				Selector:        cfg.labels(),
 				SessionAffinity: corev1.ServiceAffinityNone,
 				Ports: []corev1.ServicePort{

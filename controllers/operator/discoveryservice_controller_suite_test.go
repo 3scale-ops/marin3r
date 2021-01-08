@@ -59,6 +59,18 @@ var _ = Describe("DiscoveryService controller", func() {
 
 	Context("DiscoveryService", func() {
 
+		It("adds a finalizer to the resource", func() {
+
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ds)
+				Expect(err).ToNot(HaveOccurred())
+				if len(ds.GetFinalizers()) > 0 {
+					return true
+				}
+				return false
+			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		})
+
 		It("creates the required resources", func() {
 
 			By("waiting for the root CA DiscoveryServiceCertificate to be created")
@@ -135,7 +147,7 @@ var _ = Describe("DiscoveryService controller", func() {
 					if err := k8sClient.Get(context.Background(), key, dep); err != nil {
 						return false
 					}
-					hash, ok := dep.GetAnnotations()[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey]
+					hash, ok := dep.Spec.Template.Labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey]
 					if !ok || hash == "" {
 						return false
 					}
