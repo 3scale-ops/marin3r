@@ -106,7 +106,7 @@ type DiscoveryServiceSpec struct {
 	// XdsServerPort is the port where the xDS server listens. Defaults to 18000.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	XdsServerPort *uint32 `json:"xdsPort,omitempty"`
+	XdsServerPort *uint32 `json:"xdsServerPort,omitempty"`
 	// MetricsPort is the port where metrics are served. Defaults to 8383.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
@@ -114,7 +114,7 @@ type DiscoveryServiceSpec struct {
 	// ServiceConfig configures the way the DiscoveryService endpoints are exposed
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	ServiceConfig *ServiceConfig `json:"ServiceConfig,omitempty"`
+	ServiceConfig *ServiceConfig `json:"serviceConfig,omitempty"`
 }
 
 // DiscoveryServiceStatus defines the observed state of DiscoveryService
