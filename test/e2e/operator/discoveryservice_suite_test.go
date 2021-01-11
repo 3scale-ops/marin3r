@@ -108,11 +108,12 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 					Namespace: testNamespace,
 				},
 			}
+			generation := ds.GetGeneration()
 			err := k8sClient.Delete(context.Background(), serverCert)
 			Expect(err).ToNot(HaveOccurred())
 
 			By("waiting for the Deployment generation to increase")
-			Eventually(func() int {
+			Eventually(func() bool {
 				dep := &appsv1.Deployment{}
 				key := types.NamespacedName{
 					Name:      "marin3r-instance",
@@ -120,8 +121,8 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				}
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
-				return int(dep.Status.ObservedGeneration)
-			}, 60*time.Second, 5*time.Second).Should(Equal(2))
+				return dep.GetGeneration() > generation
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 			By("waiting for the ready replicas to be 1")
 			Eventually(func() int {
@@ -140,12 +141,14 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 
 		It("reconciles the discovery service deployment", func() {
 
+			patch := client.MergeFrom(ds.DeepCopy())
 			ds.Spec.Debug = pointer.BoolPtr(true)
-			err := k8sClient.Update(context.Background(), ds)
+			generation := ds.GetGeneration()
+			err := k8sClient.Patch(context.Background(), ds, patch)
 			Expect(err).ToNot(HaveOccurred())
 
 			By("waiting for the Deployment generation to increase")
-			Eventually(func() int {
+			Eventually(func() bool {
 				dep := &appsv1.Deployment{}
 				key := types.NamespacedName{
 					Name:      "marin3r-instance",
@@ -153,8 +156,8 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				}
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
-				return int(dep.Status.ObservedGeneration)
-			}, 60*time.Second, 5*time.Second).Should(Equal(2))
+				return dep.GetGeneration() > generation
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 	})
