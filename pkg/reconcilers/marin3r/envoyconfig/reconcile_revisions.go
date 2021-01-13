@@ -105,26 +105,7 @@ func (r *RevisionReconciler) GetCacheState() string {
 func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	log := r.logger
 
-	list, err := revisions.List(r.ctx, r.client, r.Namespace(), filters.ByNodeID(r.NodeID()))
-	if err == nil {
-		ok := r.areRevisionLabelsOk(list)
-		if !ok {
-			log.Info("reconciling revision labels")
-			if err := r.client.Update(r.ctx, list); err != nil {
-				log.Error(err, "unable to update revisions", "Phase", "ReconcileRevisionLabels")
-				return ctrl.Result{}, err
-			}
-			// Revision labels updated, trigger a new reconcile loop
-			return ctrl.Result{Requeue: true}, nil
-		}
-	} else {
-		if !revisions.ErrorIsNoMatchesForFilter(err) {
-			log.Error(err, "unable to list revisions", "Phase", "ReconcileRevisionLabels")
-			return ctrl.Result{}, err
-		}
-	}
-
-	_, err = revisions.Get(r.ctx, r.client, r.Namespace(),
+	_, err := revisions.Get(r.ctx, r.client, r.Namespace(),
 		filters.ByNodeID(r.NodeID()), filters.ByVersion(r.DesiredVersion()), filters.ByEnvoyAPI(r.EnvoyAPI()))
 	if err != nil {
 		if revisions.ErrorIsNoMatchesForFilter(err) {
@@ -149,7 +130,7 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	list, err = revisions.List(r.ctx, r.client, r.Namespace(), filters.ByNodeID(r.NodeID()), filters.ByEnvoyAPI(r.EnvoyAPI()))
+	list, err := revisions.List(r.ctx, r.client, r.Namespace(), filters.ByNodeID(r.NodeID()), filters.ByEnvoyAPI(r.EnvoyAPI()))
 	if err != nil {
 		log.Error(err, "unable to list revisions", "Phase", "BuildRevisionList")
 		return ctrl.Result{}, err
@@ -191,30 +172,6 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 
 	log.Info(fmt.Sprintf("CacheState is %s after revision reconcile", cacheState))
 	return ctrl.Result{}, nil
-}
-
-// areRevisionLabelsOk ensures all the EnvoyConfigRevisions owned by the EnvoyConfig have
-// the appropriate labels. This is important as labels are extensively used to get the lists of
-// EnvoyConfigRevision resources.
-func (r *RevisionReconciler) areRevisionLabelsOk(list *marin3rv1alpha1.EnvoyConfigRevisionList) bool {
-	ok := true
-
-	for _, ecr := range list.Items {
-		_, okVersionTag := ecr.GetLabels()[filters.VersionTag]
-		_, okEnvoyAPITag := ecr.GetLabels()[filters.EnvoyAPITag]
-		_, okNodeIDTag := ecr.GetLabels()[filters.NodeIDTag]
-		if !okVersionTag || !okEnvoyAPITag || !okNodeIDTag {
-
-			ecr.SetLabels(map[string]string{
-				filters.VersionTag:  ecr.Spec.Version,
-				filters.EnvoyAPITag: ecr.GetEnvoyAPIVersion().String(),
-				filters.NodeIDTag:   ecr.Spec.NodeID,
-			})
-			ok = false
-		}
-	}
-
-	return ok
 }
 
 // getVersionToPublish takes an EnvoyConfigRevisionList and returns the version that should be

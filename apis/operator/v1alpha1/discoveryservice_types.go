@@ -29,8 +29,8 @@ import (
 const (
 	// DiscoveryServiceKind is Kind of the DiscoveryService resources
 	DiscoveryServiceKind string = "DiscoveryService"
-	// DiscoveryServiceListind is the Kind of the DiscoveryServiceList resources
-	DiscoveryServiceListind string = "DiscoveryServiceList"
+	// DiscoveryServiceListKind is the Kind of the DiscoveryServiceList resources
+	DiscoveryServiceListKind string = "DiscoveryServiceList"
 	// DiscoveryServiceEnabledKey is the label key that the mutating webhook uses
 	// to determine if mutation is enabled for a Pod
 	DiscoveryServiceEnabledKey string = "marin3r.3scale.net/status"
@@ -43,6 +43,9 @@ const (
 	// DiscoveryServiceCertificateHashLabelKey is the label in the discovery service Deployment that
 	// stores the hash of the current server certificate
 	DiscoveryServiceCertificateHashLabelKey string = "marin3r.3scale.net/server-certificate-hash"
+
+	// DiscoveryServiceFinalizer is the finalizer for DiscoveryService objects
+	DiscoveryServiceFinalizer string = "finalizer.operator.marin3r.3scale.net"
 
 	/* Default values */
 
@@ -103,7 +106,7 @@ type DiscoveryServiceSpec struct {
 	// XdsServerPort is the port where the xDS server listens. Defaults to 18000.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	XdsServerPort *uint32 `json:"xdsPort,omitempty"`
+	XdsServerPort *uint32 `json:"xdsServerPort,omitempty"`
 	// MetricsPort is the port where metrics are served. Defaults to 8383.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
@@ -111,7 +114,7 @@ type DiscoveryServiceSpec struct {
 	// ServiceConfig configures the way the DiscoveryService endpoints are exposed
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	ServiceConfig *ServiceConfig `json:"ServiceConfig,omitempty"`
+	ServiceConfig *ServiceConfig `json:"serviceConfig,omitempty"`
 }
 
 // DiscoveryServiceStatus defines the observed state of DiscoveryService

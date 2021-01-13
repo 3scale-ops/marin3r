@@ -30,8 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
@@ -63,7 +61,6 @@ func TestAPIs(t *testing.T) {
 
 var _ = BeforeSuite(func(done Done) {
 
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 	logger = ctrl.Log.WithName("e2e")
 
 	seed := time.Now().UTC().UnixNano()

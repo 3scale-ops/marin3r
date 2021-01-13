@@ -20,19 +20,18 @@ import (
 	"context"
 	"time"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-
-	"github.com/3scale/marin3r/pkg/reconcilers"
+	"github.com/3scale/marin3r/pkg/common"
+	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
+	"github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
+	"github.com/redhat-cop/operator-utils/pkg/util"
+	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedpatch"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 const (
@@ -41,19 +40,19 @@ const (
 	// in the future when renewal is managed by the operator
 	caCertValidFor             int64  = 3600 * 24 * 365 * 3 // 3 years
 	serverCertValidFor         int64  = 3600 * 24 * 90      // 90 days
-	clientCertValidFor         string = "48h"
+	clientCertValidFor         int64  = 3600 * 48           // 48 hours
 	caCommonName               string = "marin3r-ca"
 	caCertSecretNamePrefix     string = "marin3r-ca-cert"
 	serverCommonName           string = "marin3r-server"
 	serverCertSecretNamePrefix string = "marin3r-server-cert"
 )
 
+var defaultExcludedPaths = []string{".metadata", ".status"}
+
 // DiscoveryServiceReconciler reconciles a DiscoveryService object
 type DiscoveryServiceReconciler struct {
-	Client client.Client
-	Scheme *runtime.Scheme
-	ds     *operatorv1alpha1.DiscoveryService
-	Log    logr.Logger
+	lockedresources.Reconciler
+	Log logr.Logger
 }
 
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=*,verbs=*
@@ -64,13 +63,12 @@ type DiscoveryServiceReconciler struct {
 // +kubebuilder:rbac:groups="rbac.authorization.k8s.io",namespace=placeholder,resources=roles,verbs=get;list;watch;create;patch
 // +kubebuilder:rbac:groups="rbac.authorization.k8s.io",namespace=placeholder,resources=rolebindings,verbs=get;list;watch;create;patch
 
-func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
 	ds := &operatorv1alpha1.DiscoveryService{}
 	key := types.NamespacedName{Name: request.Name, Namespace: request.Namespace}
-	err := r.Client.Get(ctx, key, ds)
+	err := r.GetClient().Get(ctx, key, ds)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return and don't requeue
@@ -79,79 +77,98 @@ func (r *DiscoveryServiceReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return ctrl.Result{}, err
 	}
 
-	// Call reconcilers in the proper installation order
-	var result ctrl.Result
-	r.ds = ds
-
-	result, err = r.reconcileCA(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
+	if ok := r.IsInitialized(ds, operatorv1alpha1.DiscoveryServiceFinalizer); !ok {
+		err := r.GetClient().Update(ctx, ds)
+		if err != nil {
+			log.Error(err, "unable to initialize instance")
+			return r.ManageError(ctx, ds, err)
+		}
+		return ctrl.Result{}, nil
 	}
 
-	result, err = r.reconcileServerCertificate(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
+	if util.IsBeingDeleted(ds) {
+		if !util.HasFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer) {
+			return ctrl.Result{}, nil
+		}
+		err := r.ManageCleanUpLogic(ds, log)
+		if err != nil {
+			log.Error(err, "unable to delete instance")
+			return r.ManageError(ctx, ds, err)
+		}
+		util.RemoveFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer)
+		err = r.GetClient().Update(ctx, ds)
+		if err != nil {
+			log.Error(err, "unable to update instance")
+			return r.ManageError(ctx, ds, err)
+		}
+		return ctrl.Result{}, nil
 	}
 
-	result, err = r.reconcileServiceAccount(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
+	generate := generators.GeneratorOptions{
+		InstanceName:                      ds.GetName(),
+		Namespace:                         ds.GetNamespace(),
+		RootCertificateNamePrefix:         "marin3r-ca-cert",
+		RootCertificateCommonNamePrefix:   "marin3r-ca",
+		RootCertificateDuration:           func() (d time.Duration) { d, _ = time.ParseDuration("26280h"); return }(), // 3 years
+		ServerCertificateNamePrefix:       "marin3r-server-cert",
+		ServerCertificateCommonNamePrefix: "marin3r-server",
+		ServerCertificateDuration:         func() (d time.Duration) { d, _ = time.ParseDuration("2160h"); return }(), // 90 days,
+		ClientCertificateDuration:         func() (d time.Duration) { d, _ = time.ParseDuration("48h"); return }(),
+		XdsServerPort:                     int32(ds.GetXdsServerPort()),
+		MetricsServerPort:                 int32(ds.GetMetricsPort()),
+		ServiceType:                       operatorv1alpha1.ClusterIPType,
+		DeploymentImage:                   ds.GetImage(),
+		DeploymentResources:               ds.Resources(),
 	}
 
-	result, err = r.reconcileRole(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
+	hash, err := r.calculateServerCertificateHash(ctx, common.ObjectKey(generate.ServerCertificate()()))
+	if err != nil {
+		return r.ManageError(ctx, ds, err)
 	}
 
-	result, err = r.reconcileRoleBinding(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
+	resources, err := r.NewLockedResources(
+		[]lockedresources.LockedResource{
+			{GeneratorFn: generate.RootCertificationAuthority(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.ServerCertificate(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.ServiceAccount(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.Role(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.RoleBinding(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.Service(), ExcludePaths: append(defaultExcludedPaths, ".spec.clusterIP")},
+			{GeneratorFn: generate.Deployment(hash), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.EnvoyBootstrap(), ExcludePaths: defaultExcludedPaths},
+		},
+		ds,
+	)
+
+	err = r.UpdateLockedResources(ctx, ds, resources, []lockedpatch.LockedPatch{})
+	if err != nil {
+		log.Error(err, "unable to update locked resources")
+		return r.ManageError(ctx, ds, err)
 	}
 
+	return r.ManageSuccess(ctx, ds)
+}
+
+func (r *DiscoveryServiceReconciler) calculateServerCertificateHash(ctx context.Context, key types.NamespacedName) (string, error) {
 	// Fetch the server certificate to calculate the hash and
 	// populate the deployment's label.
 	// This will trigger rollouts on server certificate changes.
 	serverDSC := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: getServerCertName(r.ds), Namespace: r.ds.GetNamespace()}, serverDSC)
+	err := r.GetClient().Get(ctx, key, serverDSC)
 	if err != nil {
-		return ctrl.Result{}, err
+		if errors.IsNotFound(err) {
+			// The server certificate hasn't been created yet
+			return "", nil
+		}
+		return "", err
 	}
-	if !serverDSC.Status.IsReady() {
-		log.Info("Server certificate still not available, requeue")
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	}
-
-	dr := reconcilers.NewDeploymentReconciler(ctx, log, r.Client, r.Scheme, r.ds)
-	result, err = dr.Reconcile(
-		types.NamespacedName{Name: OwnedObjectName(r.ds), Namespace: OwnedObjectNamespace(r.ds)},
-		deploymentGeneratorFn(r.ds, *serverDSC.Status.CertificateHash),
-	)
-	if result.Requeue || err != nil {
-		return result, err
-	}
-
-	result, err = r.reconcileService(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
-	}
-
-	result, err = r.reconcileEnvoyBootstrap(ctx, log)
-	if result.Requeue || err != nil {
-		return result, err
-	}
-
-	return ctrl.Result{}, nil
+	return serverDSC.Status.GetCertificateHash(), nil
 }
 
+// SetupWithManager adds the controller to the manager
 func (r *DiscoveryServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).For(&operatorv1alpha1.DiscoveryService{}).
-		Owns(&operatorv1alpha1.DiscoveryServiceCertificate{}).
-		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Service{}).
-		Owns(&rbacv1.Role{}).
-		Owns(&rbacv1.RoleBinding{}).
-		Owns(&corev1.ServiceAccount{}).
-		Owns(&marin3rv1alpha1.EnvoyBootstrap{}).
+		Watches(&source.Channel{Source: r.GetStatusChangeChannel()}, &handler.EnqueueRequestForObject{}).
 		Complete(r)
 }

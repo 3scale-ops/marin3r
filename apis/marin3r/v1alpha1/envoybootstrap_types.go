@@ -20,6 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// EnvoyBootstrapKind is Kind of the EnvoyBootstrap resources
+	EnvoyBootstrapKind string = "EnvoyBootstrap"
+)
+
 // EnvoyBootstrapSpec defines the desired state of EnvoyBootstrap
 type EnvoyBootstrapSpec struct {
 	// DiscoveryService is the name of the DiscoveryService resource the envoy will be a client of

@@ -31,11 +31,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -59,7 +58,6 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
@@ -92,9 +90,8 @@ var _ = BeforeSuite(func(done Done) {
 
 	// Add the EnvoyConfig controller
 	err = (&DiscoveryServiceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), true),
+		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 

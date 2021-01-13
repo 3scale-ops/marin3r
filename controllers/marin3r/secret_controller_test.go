@@ -60,7 +60,7 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 		cl := fake.NewFakeClient(secret, ecr)
 		r := &SecretReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
 
-		_, gotErr := r.Reconcile(reconcile.Request{
+		_, gotErr := r.Reconcile(context.TODO(), reconcile.Request{
 			NamespacedName: types.NamespacedName{
 				Name:      "secret",
 				Namespace: "default",

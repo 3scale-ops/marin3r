@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"runtime"
@@ -39,6 +38,7 @@ import (
 	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
 	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
+	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale/marin3r/pkg/version"
 	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
 	// +kubebuilder:scaffold:imports
@@ -159,23 +159,28 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	options := ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               webhookPort,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "2cfbe7d6.operator.marin3r.3scale.net",
-		Namespace:          watchNamespace, // namespaced-scope when the value is not an empty string
+		Scheme:                     scheme,
+		MetricsBindAddress:         metricsAddr,
+		Port:                       webhookPort,
+		LeaderElection:             enableLeaderElection,
+		LeaderElectionID:           "2cfbe7d6.operator.marin3r.3scale.net",
+		LeaderElectionResourceLock: "configmaps",
+		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
 	}
 
+	var isClusterScoped bool
 	if strings.Contains(watchNamespace, ",") {
 		setupLog.Info(fmt.Sprintf("manager in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
 		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
+		isClusterScoped = false
 	} else if watchNamespace == "" {
 		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
 		options.Namespace = watchNamespace
+		isClusterScoped = true
 	} else {
 		setupLog.Info(fmt.Sprintf("manager in Namespaced mode will be watching namespace %q", watchNamespace))
-		options.Namespace = ""
+		options.Namespace = watchNamespace
+		isClusterScoped = false
 	}
 
 	mgr, err := ctrl.NewManager(cfg, options)
@@ -185,12 +190,11 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	// watch for syscalls
-	stopCh := signals.SetupSignalHandler()
+	ctx := signals.SetupSignalHandler()
 
 	if err := (&operatorcontroller.DiscoveryServiceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservice"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), isClusterScoped),
+		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
 		os.Exit(1)
@@ -217,7 +221,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting the Operator.")
-	if err := mgr.Start(stopCh); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)
 	}
@@ -229,7 +233,7 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	printVersion()
 
 	cfg := ctrl.GetConfigOrDie()
-	ctx := context.Background()
+	ctx := signals.SetupSignalHandler()
 
 	mgr := discoveryservice.Manager{
 		Namespace:             os.Getenv("WATCH_NAMESPACE"),
