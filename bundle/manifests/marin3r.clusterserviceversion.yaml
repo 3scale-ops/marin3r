@@ -138,7 +138,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/3scale/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.7.0-alpha7
+  name: marin3r.v0.7.0-alpha8
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -513,7 +513,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.7.0-alpha7
+                image: quay.io/3scale/marin3r:v0.7.0-alpha8
                 name: manager
                 resources:
                   limits:
@@ -544,7 +544,7 @@ spec:
                 - --tls-key-name=apiserver.key
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:v0.7.0-alpha7
+                image: quay.io/3scale/marin3r:v0.7.0-alpha8
                 name: webhook
                 ports:
                 - containerPort: 9443
@@ -774,8 +774,8 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.7.0-alpha7
-  replaces: marin3r.v0.7.0-alpha6
+  version: 0.7.0-alpha8
+  replaces: marin3r.v0.7.0-alpha7
   webhookdefinitions:
   - admissionReviewVersions:
     - v1beta1
