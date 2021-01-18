@@ -532,7 +532,7 @@ DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCer
 | *`hosts`* __string array__ | Hosts is the list of hosts the certificate is valid for. Only use when 'IsServerCertificate' is true. If unset, the CommonName field will be used to populate the valid hosts of the certificate.
 | *`signer`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]__ | Signer specifies  the signer to use to create this certificate. Supported signers are CertManager and SelfSigned.
 | *`secretRef`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#secretreference-v1-core[$$SecretReference$$]__ | SecretRef is a reference to the secret that will hold the certificate and the private key.
-| *`certificateRenewalNotification`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-certificaterenewalconfig[$$CertificateRenewalConfig$$]__ | CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
+| *`certificateRenewal`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-certificaterenewalconfig[$$CertificateRenewalConfig$$]__ | CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
 |===
 
 
@@ -549,6 +549,10 @@ DiscoveryServiceCertificateStatus defines the observed state of DiscoveryService
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
+| *`ready`* __boolean__ | Ready is a boolean that specifies if the certificate is ready to be used
+| *`notBefore`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#time-v1-meta[$$Time$$]__ | NotBefore is the time at which the certificate starts being valid
+| *`notAfter`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#time-v1-meta[$$Time$$]__ | NotAfter is the time at which the certificate expires
+| *`certificateHash`* __string__ | CertificateHash stores the current hash of the certificate. It is used for other controllers to validate if a certificate has been re-issued.
 | *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-lib-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
 |===
 
@@ -588,9 +592,9 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 | *`debug`* __boolean__ | Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
 | *`resources`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#resourcerequirements-v1-core[$$ResourceRequirements$$]__ | Resources holds the Resource Requirements to use for the discovery service Deployment. When not set it defaults to no resource requests nor limits. CPU and Memory resources are supported.
 | *`pkiConfg`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-pkiconfig[$$PKIConfig$$]__ | PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
-| *`xdsPort`* __integer__ | XdsServerPort is the port where the xDS server listens. Defaults to 18000.
+| *`xdsServerPort`* __integer__ | XdsServerPort is the port where the xDS server listens. Defaults to 18000.
 | *`metricsPort`* __integer__ | MetricsPort is the port where metrics are served. Defaults to 8383.
-| *`ServiceConfig`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-serviceconfig[$$ServiceConfig$$]__ | ServiceConfig configures the way the DiscoveryService endpoints are exposed
+| *`serviceConfig`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-serviceconfig[$$ServiceConfig$$]__ | ServiceConfig configures the way the DiscoveryService endpoints are exposed
 |===
 
 
