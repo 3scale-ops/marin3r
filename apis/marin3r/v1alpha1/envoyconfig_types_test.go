@@ -19,9 +19,9 @@ package v1alpha1
 import (
 	"testing"
 
-	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
+	"github.com/3scale/marin3r/pkg/util"
 	"k8s.io/utils/pointer"
 )
 
@@ -107,7 +107,7 @@ func TestEnvoyConfig_GetEnvoyResourcesVersion(t *testing.T) {
 					},
 				}
 			},
-			common.Hash(&EnvoyResources{}),
+			util.Hash(&EnvoyResources{}),
 		},
 	}
 

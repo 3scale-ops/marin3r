@@ -5,11 +5,11 @@ import (
 	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/common"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
+	"github.com/3scale/marin3r/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -159,7 +159,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 	// that changes in the content of secret resources wont be reflected in the hash of spec.envoyResources.
 	// To reflect changes to the content of secrets we append the hash of the runtime calculated secrets to
 	// the hash of sepc.envoyResources in the version of secret resources in the snapshot.
-	secretsHash := common.Hash(snap.GetResources(envoy.Secret))
+	secretsHash := util.Hash(snap.GetResources(envoy.Secret))
 	snap.SetVersion(envoy.Secret, fmt.Sprintf("%s-%s", version, secretsHash))
 
 	return snap, nil

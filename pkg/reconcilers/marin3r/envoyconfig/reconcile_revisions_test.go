@@ -6,10 +6,10 @@ import (
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/common"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
+	"github.com/3scale/marin3r/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -397,7 +397,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 							Labels: map[string]string{
 								filters.NodeIDTag:   "node",
 								filters.EnvoyAPITag: envoy.APIv3.String(),
-								filters.VersionTag:  common.Hash(&marin3rv1alpha1.EnvoyResources{}),
+								filters.VersionTag:  util.Hash(&marin3rv1alpha1.EnvoyResources{}),
 							},
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
@@ -409,7 +409,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 							Labels: map[string]string{
 								filters.NodeIDTag:   "node",
 								filters.EnvoyAPITag: envoy.APIv3.String(),
-								filters.VersionTag:  common.Hash(&marin3rv1alpha1.EnvoyResources{}),
+								filters.VersionTag:  util.Hash(&marin3rv1alpha1.EnvoyResources{}),
 							},
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
@@ -442,7 +442,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 							Labels: map[string]string{
 								filters.NodeIDTag:   "node",
 								filters.EnvoyAPITag: envoy.APIv3.String(),
-								filters.VersionTag:  common.Hash(&marin3rv1alpha1.EnvoyResources{}),
+								filters.VersionTag:  util.Hash(&marin3rv1alpha1.EnvoyResources{}),
 							},
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},

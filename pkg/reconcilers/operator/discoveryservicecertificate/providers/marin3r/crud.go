@@ -7,7 +7,7 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	"github.com/3scale/marin3r/pkg/common"
+	"github.com/3scale/marin3r/pkg/util"
 	"github.com/3scale/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -66,8 +66,8 @@ func (cp *CertificateProvider) CreateCertificate() ([]byte, []byte, error) {
 	err = cp.client.Get(cp.ctx, key, secret)
 
 	if err == nil {
-		logger.Error(fmt.Errorf("Secret %s already exists", common.ObjectKey(secret)), "Secret already exists")
-		return nil, nil, fmt.Errorf("Secret %s already exists", common.ObjectKey(secret))
+		logger.Error(fmt.Errorf("Secret %s already exists", util.ObjectKey(secret)), "Secret already exists")
+		return nil, nil, fmt.Errorf("Secret %s already exists", util.ObjectKey(secret))
 
 	} else if !errors.IsNotFound(err) {
 		logger.Error(err, "unable to get Secret")
