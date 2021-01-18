@@ -5,8 +5,8 @@ metadata:
   namespace: marin3r-system
 spec:
   sourceType: grpc
-  image: quay.io/roivaz/marin3r-catalog:latest
-  displayName: Marin3r Catalog
+  image: quay.io/3scale/marin3r-catalog:latest
+  displayName: MARIN3R Catalog
   publisher: Red Hat
   updateStrategy:
     registryPoll:
