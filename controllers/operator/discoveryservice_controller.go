@@ -119,6 +119,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		ServiceType:                       operatorv1alpha1.ClusterIPType,
 		DeploymentImage:                   ds.GetImage(),
 		DeploymentResources:               ds.Resources(),
+		Debug:                             ds.Debug(),
 	}
 
 	hash, err := r.calculateServerCertificateHash(ctx, util.ObjectKey(generate.ServerCertificate()()))
