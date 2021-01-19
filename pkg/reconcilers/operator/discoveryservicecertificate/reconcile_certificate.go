@@ -6,9 +6,9 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers"
 	internal_provider "github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers/marin3r"
+	"github.com/3scale/marin3r/pkg/util"
 	"github.com/3scale/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -164,7 +164,7 @@ func (r *CertificateReconciler) Reconcile() (ctrl.Result, error) {
 	}
 
 	// store the certificate hash for status reconciliation
-	r.hash = common.Hash(certBytes)
+	r.hash = util.Hash(certBytes)
 
 	//store certificate validity times for status reconciliation
 	r.notBefore = &cert.NotBefore

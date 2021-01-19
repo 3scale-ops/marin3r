@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/common"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
@@ -15,6 +14,7 @@ import (
 	envoy_resources_v2 "github.com/3scale/marin3r/pkg/envoy/resources/v2"
 	envoy_resources_v3 "github.com/3scale/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
+	"github.com/3scale/marin3r/pkg/util"
 	testutil "github.com/3scale/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
@@ -744,7 +744,7 @@ func Test_calculateSecretsHash(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := common.Hash(tt.args.resources); got != tt.want {
+			if got := util.Hash(tt.args.resources); got != tt.want {
 				t.Errorf("calculateSecretsHash() = %v, want %v", got, tt.want)
 			}
 		})

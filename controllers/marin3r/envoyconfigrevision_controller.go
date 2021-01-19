@@ -21,12 +21,12 @@ import (
 	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/common"
 	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
 	envoy "github.com/3scale/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
 	envoyconfigrevision "github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision"
+	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
@@ -81,7 +81,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, nil
 	}
 
-	if common.IsBeingDeleted(ecr) {
+	if util.IsBeingDeleted(ecr) {
 		if !controllerutil.ContainsFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
 			return reconcile.Result{}, nil
 		}

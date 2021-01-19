@@ -21,11 +21,11 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
-	"github.com/3scale/marin3r/pkg/common"
 	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
+	"github.com/3scale/marin3r/pkg/util"
 	"github.com/go-logr/logr"
-	"github.com/redhat-cop/operator-utils/pkg/util"
+	operatorutil "github.com/redhat-cop/operator-utils/pkg/util"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedpatch"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,8 +86,8 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		return ctrl.Result{}, nil
 	}
 
-	if util.IsBeingDeleted(ds) {
-		if !util.HasFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer) {
+	if operatorutil.IsBeingDeleted(ds) {
+		if !operatorutil.HasFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer) {
 			return ctrl.Result{}, nil
 		}
 		err := r.ManageCleanUpLogic(ds, log)
@@ -95,7 +95,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 			log.Error(err, "unable to delete instance")
 			return r.ManageError(ctx, ds, err)
 		}
-		util.RemoveFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer)
+		operatorutil.RemoveFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer)
 		err = r.GetClient().Update(ctx, ds)
 		if err != nil {
 			log.Error(err, "unable to update instance")
@@ -119,9 +119,10 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		ServiceType:                       operatorv1alpha1.ClusterIPType,
 		DeploymentImage:                   ds.GetImage(),
 		DeploymentResources:               ds.Resources(),
+		Debug:                             ds.Debug(),
 	}
 
-	hash, err := r.calculateServerCertificateHash(ctx, common.ObjectKey(generate.ServerCertificate()()))
+	hash, err := r.calculateServerCertificateHash(ctx, util.ObjectKey(generate.ServerCertificate()()))
 	if err != nil {
 		return r.ManageError(ctx, ds, err)
 	}

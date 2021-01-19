@@ -6,11 +6,25 @@ metadata:
   creationTimestamp: null
   name: discoveryservicecertificates.operator.marin3r.3scale.net
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.ready
+    name: Ready
+    type: boolean
+  - JSONPath: .status.notBefore
+    format: date-time
+    name: Not Before
+    type: string
+  - JSONPath: .status.notAfter
+    format: date-time
+    name: Not After
+    type: string
   group: operator.marin3r.3scale.net
   names:
     kind: DiscoveryServiceCertificate
     listKind: DiscoveryServiceCertificateList
     plural: discoveryservicecertificates
+    shortNames:
+    - dsc
     singular: discoveryservicecertificate
   scope: Namespaced
   subresources:
@@ -30,7 +44,7 @@ spec:
         spec:
           description: DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate
           properties:
-            certificateRenewalNotification:
+            certificateRenewal:
               description: CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
               properties:
                 enabled:
@@ -99,6 +113,9 @@ spec:
         status:
           description: DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
           properties:
+            certificateHash:
+              description: CertificateHash stores the current hash of the certificate. It is used for other controllers to validate if a certificate has been re-issued.
+              type: string
             conditions:
               description: Conditions represent the latest available observations of an object's state
               items:
@@ -122,6 +139,17 @@ spec:
                 - type
                 type: object
               type: array
+            notAfter:
+              description: NotAfter is the time at which the certificate expires
+              format: date-time
+              type: string
+            notBefore:
+              description: NotBefore is the time at which the certificate starts being valid
+              format: date-time
+              type: string
+            ready:
+              description: Ready is a boolean that specifies if the certificate is ready to be used
+              type: boolean
           required:
           - conditions
           type: object
