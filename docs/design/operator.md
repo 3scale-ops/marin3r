@@ -48,8 +48,4 @@ Certificates are stored in kubernetes Secrets of type `kubernetes.io/tls`.
 
 ### Certificate renewal
 
-The DiscoveryServiceCertificate controller reissues a given certificate when the condition `CertificateNeedsRenewal` is set to true.
-
-## DiscoveryServiceCertificateWatcher controller
-
-This controller does not own resources by itself and watches for DiscoveryServiceCertificate expirations instead. When an expiration is close to occur the controller sets the `CertificateNeedsRenewal` condition in the appropriate DiscoveryServiceCertificate, which will trigger a certificate reissuance by the DiscoveryServiceCertificate controller.
+The DiscoveryServiceCertificate controller starts trying to reissue a given certificate when the 80% of the certificate's duration has passed. Certificate renewal can be disabled setting `spec.certificateRenewalConfig.enabled: false` in the DiscoveryServiceCertificate resource.
