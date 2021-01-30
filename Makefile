@@ -85,37 +85,29 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+# go-get-tool will 'go get' any package $2 and install it to $1.
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+define go-get-tool
+@[ -f $(1) ] || { \
+set -e ;\
+TMP_DIR=$$(mktemp -d) ;\
+cd $$TMP_DIR ;\
+go mod init tmp ;\
+echo "Downloading $(2)" ;\
+GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+rm -rf $$TMP_DIR ;\
+}
+endef
 
+# Download controller-gen locally if necessary
+CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
+controller-gen:
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+
+# Download kustomize locally if necessary
+KUSTOMIZE = $(shell pwd)/bin/kustomize
 kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
@@ -151,15 +143,10 @@ bundle-custom-updates: yq
 	sed -E -i 's/(operators\.operatorframework\.io\.bundle\.package\.v1=).+/\1marin3r-$(BUNDLE_SUFFIX)/' bundle.Dockerfile
 	@echo "Update operator image reference URL"
 
-# find or download yq
-# download yq if necessary
+# Download yq locally if necessary
+YQ = $(shell pwd)/bin/yq
 yq:
-ifeq (, $(shell command -v yq 2> /dev/null))
-	@GO111MODULE=off go get github.com/mikefarah/yq/v3
-YQ=$(GOBIN)/yq
-else
-YQ=$(shell command -v yq 2> /dev/null)
-endif
+	$(call go-get-tool,$(YQ),github.com/mikefarah/yq/v3)
 
 bump-release:
 	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
@@ -236,7 +223,7 @@ MARIN3R_COVERPROFILE = marin3r.coverprofile
 integration-test: generate fmt vet manifests ginkgo
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
-		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
+		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; \
 		fetch_envtest_tools $(ENVTEST_ASSETS_DIR); \
 		setup_envtest_env $(ENVTEST_ASSETS_DIR); \
@@ -259,33 +246,26 @@ e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 
 test: unit-test integration-test e2e-test coverprofile
 
+# Download ginkgo locally if necessary
+GINKGO = $(shell pwd)/bin/ginkgo
 ginkgo:
-ifeq (, $(shell command -v ginkgo 2> /dev/null))
-	@GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo;
-GINKGO=$(GOBIN)/ginkgo
-else
-GINKGO=$(shell command -v ginkgo 2> /dev/null)
-endif
+	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo)
 
+# Download ginkgo locally if necessary
+GOCOVMERGE = $(shell pwd)/bin/gocovmerge
 gocovmerge:
-ifeq (, $(shell command -v gocovmerge 2> /dev/null))
-	@GO111MODULE=off go get -u github.com/wadey/gocovmerge
-GOCOVMERGE=$(GOBIN)/gocovmerge
-else
-GOCOVMERGE=$(shell command -v gocovmerge 2> /dev/null)
-endif
+	$(call go-get-tool,$(GOCOVMERGE),github.com/wadey/gocovmerge)
 
 ############################################
 #### Targets to manually test with Kind ####
 ############################################
 
 KIND_VERSION ?= v0.9.0
-KIND ?= bin/kind
 
-$(KIND):
-	mkdir -p $$(dirname $@)
-	curl -sLo $(KIND) https://github.com/kubernetes-sigs/kind/releases/download/$(KIND_VERSION)/kind-$$(uname)-amd64
-	chmod +x $(KIND)
+# Download kind locally if necessary
+KIND = $(shell pwd)/bin/kind
+kind:
+	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@$(KIND_VERSION))
 
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
 kind-create: export KUBECONFIG = ${PWD}/kubeconfig
@@ -316,7 +296,7 @@ kind-delete: $(KIND)
 #### Targets to run components locally ####
 ###########################################
 
-ENVOY_VERSION ?= v1.14.1
+ENVOY_VERSION ?= v1.16.0
 
 run-ds: ## locally starts marin3r's discovery service
 run-ds: certs
@@ -361,15 +341,13 @@ grpc-proxy: certs
 #### refdocs generation ####
 ############################
 
-CRD_REFDOCS_VERSION := v0.0.5
-CRD_REFDOCS := bin/crd-ref-docs
+# Download crd-ref-docs locally if necessary
+CRD_REFDOCS_VERSION := v0.0.6
+CRD_REFDOCS = $(shell pwd)/bin/crd-ref-docs
 $(CRD_REFDOCS):
-		mkdir -p $$(dirname $@)
-		curl -sLo $(CRD_REFDOCS) https://github.com/elastic/crd-ref-docs/releases/download/$(CRD_REFDOCS_VERSION)/crd-ref-docs
-		chmod +x $(CRD_REFDOCS)
-
+	$(call go-get-tool,$(CRD_REFDOCS),github.com/elastic/crd-ref-docs@$(CRD_REFDOCS_VERSION))
 refdocs: $(CRD_REFDOCS) ## Generates api reference documentation from code
-	crd-ref-docs \
+	$(CRD_REFDOCS) \
 		--source-path=apis \
 		--config=docs/api-reference/config.yaml \
 		--templates-dir=docs/api-reference/templates/asciidoctor \
