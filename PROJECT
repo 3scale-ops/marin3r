@@ -6,19 +6,19 @@ repo: github.com/3scale/marin3r
 resources:
 - group: operator.marin3r
   kind: DiscoveryService
-  version: v1alpha1
+  version: v1
 - group: operator.marin3r
   kind: DiscoveryServiceCertificate
-  version: v1alpha1
+  version: v1
 - group: marin3r
   kind: EnvoyConfig
-  version: v1alpha1
+  version: v1
 - group: marin3r
   kind: EnvoyConfigRevision
-  version: v1alpha1
+  version: v1
 - group: marin3r
   kind: EnvoyBootstrap
-  version: v1alpha1
+  version: v1
 version: 3-alpha
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
