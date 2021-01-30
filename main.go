@@ -29,6 +29,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -189,9 +190,6 @@ func runOperator(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// watch for syscalls
-	ctx := signals.SetupSignalHandler()
-
 	if err := (&operatorcontroller.DiscoveryServiceReconciler{
 		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), isClusterScoped),
 		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
@@ -220,8 +218,17 @@ func runOperator(cmd *cobra.Command, args []string) {
 
 	// +kubebuilder:scaffold:builder
 
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting the Operator.")
-	if err := mgr.Start(ctx); err != nil {
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)
 	}
@@ -233,7 +240,6 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	printVersion()
 
 	cfg := ctrl.GetConfigOrDie()
-	ctx := signals.SetupSignalHandler()
 
 	mgr := discoveryservice.Manager{
 		Namespace:             os.Getenv("WATCH_NAMESPACE"),
@@ -244,7 +250,9 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 		Cfg:                   cfg,
 	}
 
-	mgr.Start(ctx)
+	// TODO: add liveness and readiness
+
+	mgr.Start(signals.SetupSignalHandler())
 }
 
 func runWebhook(cmd *cobra.Command, args []string) {
@@ -252,7 +260,6 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 	printVersion()
 
-	stopCh := signals.SetupSignalHandler()
 	cfg := ctrl.GetConfigOrDie()
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -275,8 +282,17 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
 	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
 
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting the webhook")
-	if err := mgr.Start(stopCh); err != nil {
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)
 	}
