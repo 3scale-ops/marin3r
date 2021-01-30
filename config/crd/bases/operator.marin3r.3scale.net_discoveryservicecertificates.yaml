@@ -200,8 +200,6 @@ spec:
                 description: Ready is a boolean that specifies if the certificate
                   is ready to be used
                 type: boolean
-            required:
-            - conditions
             type: object
         type: object
     served: true
