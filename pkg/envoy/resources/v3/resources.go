@@ -66,6 +66,7 @@ func (g Generator) NewSecret(name, privateKey, certificateChain string) envoy.Re
 func (g Generator) NewSecretFromPath(name, certificateChainPath, privateKeyPath string) envoy.Resource {
 
 	return &envoy_extensions_transport_sockets_tls_v3.Secret{
+		Name: name,
 		Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
 			TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
 				CertificateChain: &envoy_config_core_v3.DataSource{
