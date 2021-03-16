@@ -2,7 +2,7 @@ SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
-VERSION ?= 0.7.0
+VERSION ?= 0.8.0-dev.1
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/3scale/marin3r-catalog:latest
@@ -48,8 +48,8 @@ uninstall: manifests kustomize
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
-	cd config/webhook && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
+	cd config/default && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
+	cd config/webhook && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Undeploy controller from the configured Kubernetes cluster in ~/.kube/config
@@ -113,7 +113,7 @@ kustomize:
 .PHONY: bundle
 bundle: manifests kustomize
 	operator-sdk generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
+	cd config/olm && $(KUSTOMIZE) edit set image controller=${IMG_NAME}:v${VERSION}
 	cd config/webhook && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	operator-sdk bundle validate ./bundle
@@ -190,7 +190,7 @@ clean-dirty-builds:
 
 docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
 docker-build: generate
-	docker build . -t ${IMG_NAME}:$(RELEASE)
+	docker build -t ${IMG_NAME}:$(RELEASE) .
 	docker tag ${IMG_NAME}:$(RELEASE) ${IMG_NAME}:test
 
 ######################

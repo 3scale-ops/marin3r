@@ -58,7 +58,7 @@ const (
 var (
 	debug                        bool
 	metricsAddr                  string
-	enableLeaderElection         bool
+	leaderElect                  bool
 	xdssPort                     int
 	xdssTLSServerCertificatePath string
 	xdssTLSCACertificatePath     string
@@ -66,6 +66,7 @@ var (
 	webhookTLSCertDir            string
 	webhookTLSKeyName            string
 	webhookTLSCertName           string
+	probeAddr                    string
 )
 
 var (
@@ -120,10 +121,11 @@ func init() {
 
 	// Global flags
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logs")
-	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metrics endpoint binds to.")
+	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metrics endpoint binds to.")
+	rootCmd.PersistentFlags().StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 
 	// Operator flags
-	operatorCmd.Flags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	operatorCmd.Flags().BoolVar(&leaderElect, "leader-elect", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 
 	// Discovery service flags
@@ -162,8 +164,8 @@ func runOperator(cmd *cobra.Command, args []string) {
 	options := ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         metricsAddr,
-		Port:                       webhookPort,
-		LeaderElection:             enableLeaderElection,
+		HealthProbeBindAddress:     probeAddr,
+		LeaderElection:             leaderElect,
 		LeaderElectionID:           "2cfbe7d6.operator.marin3r.3scale.net",
 		LeaderElectionResourceLock: "configmaps",
 		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
@@ -263,10 +265,11 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	cfg := ctrl.GetConfigOrDie()
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
-		Port:               webhookPort,
-		LeaderElection:     false,
+		Scheme:                 scheme,
+		MetricsBindAddress:     "0",
+		HealthProbeBindAddress: probeAddr,
+		Port:                   webhookPort,
+		LeaderElection:         false,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

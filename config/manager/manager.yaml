@@ -24,6 +24,8 @@ spec:
         control-plane: controller-manager
     spec:
       serviceAccountName: controller-manager
+      securityContext:
+        runAsUser: 65532
       containers:
       - command:
         - /manager
@@ -32,9 +34,23 @@ spec:
             value: ""
         args:
         - operator
-        - --enable-leader-election
+        - --leader-elect
         image: controller:latest
         name: manager
+        securityContext:
+          allowPrivilegeEscalation: false
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
             cpu: 300m

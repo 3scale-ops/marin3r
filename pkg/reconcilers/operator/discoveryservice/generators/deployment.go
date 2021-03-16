@@ -72,7 +72,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 										"--server-certificate-path=/etc/marin3r/tls/server",
 										"--ca-certificate-path=/etc/marin3r/tls/ca",
 										func() string { return fmt.Sprintf("--xdss-port=%v", cfg.XdsServerPort) }(),
-										func() string { return fmt.Sprintf("--metrics-addr=:%v", cfg.MetricsServerPort) }(),
+										func() string { return fmt.Sprintf("--metrics-bind-address=:%v", cfg.MetricsServerPort) }(),
 									}
 									if cfg.Debug {
 										args = append(args, "--debug")

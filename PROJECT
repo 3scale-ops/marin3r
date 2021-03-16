@@ -1,25 +1,55 @@
 domain: 3scale.net
 layout: go.kubebuilder.io/v3
 multigroup: true
-projectName: marin3r
-repo: github.com/3scale/marin3r
-resources:
-- group: operator.marin3r
-  kind: DiscoveryService
-  version: v1
-- group: operator.marin3r
-  kind: DiscoveryServiceCertificate
-  version: v1
-- group: marin3r
-  kind: EnvoyConfig
-  version: v1
-- group: marin3r
-  kind: EnvoyConfigRevision
-  version: v1
-- group: marin3r
-  kind: EnvoyBootstrap
-  version: v1
-version: 3-alpha
 plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
+projectName: marin3r
+repo: github.com/3scale/marin3r
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 3scale.net
+  group: operator.marin3r
+  kind: DiscoveryService
+  path: github.com/3scale/marin3r/apis/operator/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 3scale.net
+  group: operator.marin3r
+  kind: DiscoveryServiceCertificate
+  path: github.com/3scale/marin3r/apis/operator/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 3scale.net
+  group: marin3r
+  kind: EnvoyConfig
+  path: github.com/3scale/marin3r/apis/marin3r/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 3scale.net
+  group: marin3r
+  kind: EnvoyConfigRevision
+  path: github.com/3scale/marin3r/apis/marin3r/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 3scale.net
+  group: marin3r
+  kind: EnvoyBootstrap
+  path: github.com/3scale/marin3r/apis/marin3r/v1alpha1
+  version: v1alpha1
+version: "3"
