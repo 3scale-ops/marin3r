@@ -14,7 +14,7 @@ resources:
   domain: 3scale.net
   group: operator.marin3r
   kind: DiscoveryService
-  path: github.com/3scale/marin3r/apis/operator/v1alpha1
+  path: github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -23,7 +23,7 @@ resources:
   domain: 3scale.net
   group: operator.marin3r
   kind: DiscoveryServiceCertificate
-  path: github.com/3scale/marin3r/apis/operator/v1alpha1
+  path: github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
