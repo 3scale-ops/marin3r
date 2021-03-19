@@ -138,22 +138,6 @@ bundle-publish:
 		--tag $(CATALOG_IMG)
 	docker push $(CATALOG_IMG)
 
-.PHONY: bundle-custom-updates
-bundle-custom-updates: yq
-	@echo "Update metadata to avoid collision with existing 3scale Operator official public operators catalog entries"
-	@echo "using BUNDLE_SUFFIX $(BUNDLE_SUFFIX)"
-	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml metadata.name marin3r-$(BUNDLE_SUFFIX).$(VERSION)
-	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml spec.displayName "Marin3r $(BUNDLE_SUFFIX)"
-	$(YQ) w --inplace bundle/manifests/marin3r.clusterserviceversion.yaml spec.provider.name $(BUNDLE_SUFFIX)
-	$(YQ) w --inplace bundle/metadata/annotations.yaml 'annotations."operators.operatorframework.io.bundle.package.v1"' marin3r-$(BUNDLE_SUFFIX)
-	sed -E -i 's/(operators\.operatorframework\.io\.bundle\.package\.v1=).+/\1marin3r-$(BUNDLE_SUFFIX)/' bundle.Dockerfile
-	@echo "Update operator image reference URL"
-
-# Download yq locally if necessary
-YQ = $(shell pwd)/bin/yq
-yq:
-	$(call go-get-tool,$(YQ),github.com/mikefarah/yq/v3)
-
 bump-release:
 	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
 
