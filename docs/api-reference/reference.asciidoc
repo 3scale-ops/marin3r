@@ -373,21 +373,21 @@ EnvoyConfigStatus defines the observed state of EnvoyConfig
 Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API group
 
 .Resource Types
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservice[$$DiscoveryService$$]
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatelist[$$DiscoveryServiceCertificateList$$]
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicelist[$$DiscoveryServiceList$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservice[$$DiscoveryService$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatelist[$$DiscoveryServiceCertificateList$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicelist[$$DiscoveryServiceList$$]
 
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-casignedconfig"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-casignedconfig"]
 ==== CASignedConfig 
 
 
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -397,14 +397,14 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-certificateoptions"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-certificateoptions"]
 ==== CertificateOptions 
 
 
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-pkiconfig[$$PKIConfig$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-pkiconfig[$$PKIConfig$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -415,14 +415,14 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-certificaterenewalconfig"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-certificaterenewalconfig"]
 ==== CertificateRenewalConfig 
 
 
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatespec[$$DiscoveryServiceCertificateSpec$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatespec[$$DiscoveryServiceCertificateSpec$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -432,14 +432,14 @@ Package v1alpha1 contains API Schema definitions for the operator v1alpha1 API g
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservice"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservice"]
 ==== DiscoveryService 
 
 DiscoveryService represents an envoy discovery service server. Currently only one DiscoveryService per cluster is supported.
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicelist[$$DiscoveryServiceList$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicelist[$$DiscoveryServiceList$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -449,19 +449,19 @@ DiscoveryService represents an envoy discovery service server. Currently only on
 | *`kind`* __string__ | `DiscoveryService`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`spec`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicespec[$$DiscoveryServiceSpec$$]__ | 
-| *`status`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicestatus[$$DiscoveryServiceStatus$$]__ | 
+| *`spec`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicespec[$$DiscoveryServiceSpec$$]__ | 
+| *`status`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicestatus[$$DiscoveryServiceStatus$$]__ | 
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificate"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificate"]
 ==== DiscoveryServiceCertificate 
 
 DiscoveryServiceCertificate is used to create certificates, either self-signed or by using a cert-manager CA issuer. This object is used by the DiscoveryService controller to create the required certificates for the different components of the discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatelist[$$DiscoveryServiceCertificateList$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatelist[$$DiscoveryServiceCertificateList$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -471,12 +471,12 @@ DiscoveryServiceCertificate is used to create certificates, either self-signed o
 | *`kind`* __string__ | `DiscoveryServiceCertificate`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`spec`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatespec[$$DiscoveryServiceCertificateSpec$$]__ | 
-| *`status`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatestatus[$$DiscoveryServiceCertificateStatus$$]__ | 
+| *`spec`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatespec[$$DiscoveryServiceCertificateSpec$$]__ | 
+| *`status`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatestatus[$$DiscoveryServiceCertificateStatus$$]__ | 
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatelist"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatelist"]
 ==== DiscoveryServiceCertificateList 
 
 DiscoveryServiceCertificateList contains a list of DiscoveryServiceCertificate
@@ -490,36 +490,36 @@ DiscoveryServiceCertificateList contains a list of DiscoveryServiceCertificate
 | *`kind`* __string__ | `DiscoveryServiceCertificateList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]__ | 
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatesigner"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatesigner"]
 ==== DiscoveryServiceCertificateSigner 
 
 DiscoveryServiceCertificateSigner specifies the signer to use to provision the certificate
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatespec[$$DiscoveryServiceCertificateSpec$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatespec[$$DiscoveryServiceCertificateSpec$$]
 ****
 
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`selfSigned`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-selfsignedconfig[$$SelfSignedConfig$$]__ | SelfSigned holds specific configuration for the SelfSigned signer
-| *`caSigned`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-casignedconfig[$$CASignedConfig$$]__ | CASigned holds specific configuration for the CASigned signer
+| *`selfSigned`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-selfsignedconfig[$$SelfSignedConfig$$]__ | SelfSigned holds specific configuration for the SelfSigned signer
+| *`caSigned`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-casignedconfig[$$CASignedConfig$$]__ | CASigned holds specific configuration for the CASigned signer
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatespec"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatespec"]
 ==== DiscoveryServiceCertificateSpec 
 
 DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCertificate
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -530,20 +530,20 @@ DiscoveryServiceCertificateSpec defines the desired state of DiscoveryServiceCer
 | *`isCA`* __boolean__ | IsCA is a boolean specifying that the certificate is a CA
 | *`validFor`* __integer__ | ValidFor specifies the validity of the certificate in seconds
 | *`hosts`* __string array__ | Hosts is the list of hosts the certificate is valid for. Only use when 'IsServerCertificate' is true. If unset, the CommonName field will be used to populate the valid hosts of the certificate.
-| *`signer`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]__ | Signer specifies  the signer to use to create this certificate. Supported signers are CertManager and SelfSigned.
+| *`signer`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]__ | Signer specifies  the signer to use to create this certificate. Supported signers are CertManager and SelfSigned.
 | *`secretRef`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#secretreference-v1-core[$$SecretReference$$]__ | SecretRef is a reference to the secret that will hold the certificate and the private key.
-| *`certificateRenewal`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-certificaterenewalconfig[$$CertificateRenewalConfig$$]__ | CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
+| *`certificateRenewal`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-certificaterenewalconfig[$$CertificateRenewalConfig$$]__ | CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatestatus"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatestatus"]
 ==== DiscoveryServiceCertificateStatus 
 
 DiscoveryServiceCertificateStatus defines the observed state of DiscoveryServiceCertificate
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificate[$$DiscoveryServiceCertificate$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -557,7 +557,7 @@ DiscoveryServiceCertificateStatus defines the observed state of DiscoveryService
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicelist"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicelist"]
 ==== DiscoveryServiceList 
 
 DiscoveryServiceList contains a list of DiscoveryService
@@ -571,18 +571,18 @@ DiscoveryServiceList contains a list of DiscoveryService
 | *`kind`* __string__ | `DiscoveryServiceList`
 | *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
 
-| *`items`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservice[$$DiscoveryService$$]__ | 
+| *`items`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservice[$$DiscoveryService$$]__ | 
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicespec"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicespec"]
 ==== DiscoveryServiceSpec 
 
 DiscoveryServiceSpec defines the desired state of DiscoveryService
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservice[$$DiscoveryService$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservice[$$DiscoveryService$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -591,21 +591,21 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 | *`image`* __string__ | Image holds the image to use for the discovery service Deployment
 | *`debug`* __boolean__ | Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
 | *`resources`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#resourcerequirements-v1-core[$$ResourceRequirements$$]__ | Resources holds the Resource Requirements to use for the discovery service Deployment. When not set it defaults to no resource requests nor limits. CPU and Memory resources are supported.
-| *`pkiConfg`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-pkiconfig[$$PKIConfig$$]__ | PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
+| *`pkiConfg`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-pkiconfig[$$PKIConfig$$]__ | PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
 | *`xdsServerPort`* __integer__ | XdsServerPort is the port where the xDS server listens. Defaults to 18000.
 | *`metricsPort`* __integer__ | MetricsPort is the port where metrics are served. Defaults to 8383.
-| *`serviceConfig`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-serviceconfig[$$ServiceConfig$$]__ | ServiceConfig configures the way the DiscoveryService endpoints are exposed
+| *`serviceConfig`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-serviceconfig[$$ServiceConfig$$]__ | ServiceConfig configures the way the DiscoveryService endpoints are exposed
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicestatus"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicestatus"]
 ==== DiscoveryServiceStatus 
 
 DiscoveryServiceStatus defines the observed state of DiscoveryService
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservice[$$DiscoveryService$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservice[$$DiscoveryService$$]
 ****
 
 [cols="25a,75a", options="header"]
@@ -615,44 +615,44 @@ DiscoveryServiceStatus defines the observed state of DiscoveryService
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-pkiconfig"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-pkiconfig"]
 ==== PKIConfig 
 
 
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicespec[$$DiscoveryServiceSpec$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicespec[$$DiscoveryServiceSpec$$]
 ****
 
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`rootCertificateAuthority`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-certificateoptions[$$CertificateOptions$$]__ | 
-| *`serverCertificate`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-certificateoptions[$$CertificateOptions$$]__ | 
+| *`rootCertificateAuthority`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-certificateoptions[$$CertificateOptions$$]__ | 
+| *`serverCertificate`* __xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-certificateoptions[$$CertificateOptions$$]__ | 
 |===
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-selfsignedconfig"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-selfsignedconfig"]
 ==== SelfSignedConfig 
 
 
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificatesigner[$$DiscoveryServiceCertificateSigner$$]
 ****
 
 
 
-[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-serviceconfig"]
+[id="{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-serviceconfig"]
 ==== ServiceConfig 
 
 
 
 .Appears In:
 ****
-- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-v1alpha1-discoveryservicespec[$$DiscoveryServiceSpec$$]
+- xref:{anchor_prefix}-github-com-3scale-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicespec[$$DiscoveryServiceSpec$$]
 ****
 
 [cols="25a,75a", options="header"]

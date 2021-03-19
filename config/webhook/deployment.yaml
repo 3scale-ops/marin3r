@@ -15,8 +15,9 @@ spec:
       labels:
         control-plane: controller-webhook
     spec:
-      securityContext:
-        runAsUser: 65532
+      # This breaks in Openshift
+      # securityContext:
+      #   runAsUser: 65532
       containers:
         - command:
             - /manager

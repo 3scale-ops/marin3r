@@ -92,7 +92,3 @@ resources:
 - ../manager
 - ../webhook
 - ../certmanager
-images:
-- name: controller
-  newName: quay.io/3scale/marin3r
-  newTag: v0.8.0-alpha1
