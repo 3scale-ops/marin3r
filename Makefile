@@ -5,7 +5,7 @@ NAME := marin3r
 VERSION ?= 0.8.0-dev.7
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:v$(VERSION)
-CATALOG_IMG ?= quay.io/3scale/marin3r-catalog:latest
+INDEX_IMG ?= quay.io/3scale/marin3r-index:latest
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -17,7 +17,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 IMG_NAME ?= quay.io/3scale/marin3r
-IMG ?= $(IMG_NAME):latest
+IMG ?= $(IMG_NAME):$(VERSION)
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,preserveUnknownFields=false"
 
@@ -29,6 +29,95 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 all: manager
+
+#############################
+### Makefile requirements ###
+#############################
+
+OS=$(shell uname | awk '{print tolower($$0)}')
+ARCH = $(shell arch)
+ifeq ($(shell arch),x86_64)
+ARCH := amd64
+endif
+ifeq ($(shell arch),aarch64)
+ARCH := arm64
+endif
+
+# Download operator-sdk binary if necesasry
+OPERATOR_SDK_RELEASE = v1.5.0
+OPERATOR_SDK = $(shell pwd)/bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
+OPERATOR_SDK_DL_URL = https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_RELEASE)/operator-sdk_$(OS)_$(ARCH)
+$(OPERATOR_SDK):
+	curl -sL -o $(OPERATOR_SDK) $(OPERATOR_SDK_DL_URL)
+	chmod +x $(OPERATOR_SDK)
+
+# Download operator package manager if necessary
+OPM_RELEASE = v1.16.1
+OPM = $(shell pwd)/bin/opm-$(OPM_RELEASE)
+OPM_DL_URL = https://github.com/operator-framework/operator-registry/releases/download/$(OPM_RELEASE)/$(OS)-$(ARCH)-opm
+$(OPM):
+	curl -sL -o $(OPM) $(OPM_DL_URL)
+	chmod +x $(OPM)
+
+# go-get-tool will 'go get' any package $2 and install it to $1.
+PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
+define go-get-tool
+@[ -f $(1) ] || { \
+set -e ;\
+TMP_DIR=$$(mktemp -d) ;\
+cd $$TMP_DIR ;\
+go mod init tmp ;\
+echo "Downloading $(2)" ;\
+GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
+rm -rf $$TMP_DIR ;\
+}
+endef
+
+# Download controller-gen locally if necessary
+CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
+controller-gen:
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+
+# Download kustomize locally if necessary
+KUSTOMIZE = $(shell pwd)/bin/kustomize
+kustomize:
+	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+
+# Download ginkgo locally if necessary
+GINKGO = $(shell pwd)/bin/ginkgo
+ginkgo:
+	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo)
+
+
+# Download gocovmerge locally if necessary
+GOCOVMERGE = $(shell pwd)/bin/gocovmerge
+gocovmerge:
+	$(call go-get-tool,$(GOCOVMERGE),github.com/wadey/gocovmerge)
+
+# Download kind locally if necessary
+KIND = $(shell pwd)/bin/kind
+kind:
+	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.9.0)
+
+# Download crd-ref-docs locally if necessary
+CRD_REFDOCS = $(shell pwd)/bin/crd-ref-docs
+crd-ref-docs:
+	$(call go-get-tool,$(CRD_REFDOCS),github.com/elastic/crd-ref-docs@v0.0.6)
+
+#######################
+### General targets ###
+#######################
+
+.PHONY: help
+help:
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+tmp:
+	mkdir -p $@
+
+.PHONY: clean
+clean: ## remove temporary resources from the repo
+	rm -rf certs tmp bin kubeconfig cover.out
 
 # Build manager binary
 manager: generate fmt vet
@@ -85,37 +174,21 @@ vet:
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-# go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
+# Build the docker image
+docker-build:
+	docker build -t $(IMG) .
+	docker tag $(IMG) $(IMG_NAME):test
 
-# Download controller-gen locally if necessary
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen:
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1)
+# Push the docker image
+docker-push:
+	docker push $(IMG)
 
-# Download kustomize locally if necessary
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize:
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
-
-# Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests kustomize
-	operator-sdk generate kustomize manifests -q
+bundle: $(OPERATOR_SDK) manifests kustomize
+	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
 	cd config/webhook && $(KUSTOMIZE) edit set image controller=$(IMG_NAME):v$(VERSION)
-	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 	# (2021-03-19) Remove the services generated by kustomize due
 	# to a bug in OLM where upgrading a CSV fails when providing
 	# a Service object as part of the bundle manifests. This problem
@@ -128,62 +201,40 @@ bundle: manifests kustomize
 bundle-build:
 	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
-bundle-publish:
-	opm index add \
-		--build-tool docker \
-		--mode replaces \
-		--bundles $(BUNDLE_IMG) \
-		--from-index $(CATALOG_IMG) \
-		--tag $(CATALOG_IMG)
-	docker push $(CATALOG_IMG)
+#########################
+#### Release targets ####
+#########################
+
+prepare-alpha-release: bump-release generate fmt vet manifests bundle
+
+prepare-release: bump-release generate fmt vet manifests bundle refdocs
+	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=alpha
 
 bump-release:
 	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
 
-prepare-release: bump-release generate fmt vet manifests bundle refdocs
+bundle-push:
+	docker push $(BUNDLE_IMG)
 
-#########################
-#### General targets ####
-#########################
+index-build: $(OPM)
+	$(OPM) index add \
+		--build-tool docker \
+		--mode semver-skippatch \
+		--bundles $(BUNDLE_IMG) \
+		--from-index $(INDEX_IMG) \
+		--tag $(INDEX_IMG)
 
-.PHONY: help
-help:
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+index-push:
+	docker push $(INDEX_IMG)
 
-tmp:
-	mkdir -p $@
+bundle-publish: bundle-build bundle-push index-build index-push
 
-EASYRSA_VERSION ?= v3.0.6
-certs:
-	hack/gen-certs.sh $(EASYRSA_VERSION)
 
-.PHONY: clean
-clean: ## remove temporary resources from the repo
-	rm -rf certs build tmp bin
-
-#######################
-#### Build targets ####
-#######################
-
-CURRENT_GIT_REF := $(shell git describe --always --dirty)
-RELEASE := $(CURRENT_GIT_REF)
-
-build: ## builds $(RELEASE) or HEAD of the current branch when $(RELEASE) is unset
-build: build/bin/$(NAME)_amd64_$(RELEASE)
-
-build/bin/$(NAME)_amd64_$(RELEASE):
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags '-extldflags "-static"' -o build/bin/$(NAME)_amd64_$(RELEASE) main.go
-
-clean-dirty-builds:
-	rm -rf build/bin/*-dirty
-
-docker-build: ## builds the docker image for $(RELEASE) or for HEAD of the current branch when $(RELEASE) is unset
-docker-build: generate
-	docker build -t $(IMG_NAME):$(RELEASE) .
-	docker tag $(IMG_NAME):$(RELEASE) $(IMG_NAME):test
+get-new-release:
+	@hack/new-release.sh v$(VERSION)
 
 ######################
-#### test targets ####
+#### Test targets ####
 ######################
 
 COVERPKGS = ./controllers/...,./apis/...,./pkg/...
@@ -235,30 +286,13 @@ e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 
 test: unit-test integration-test e2e-test coverprofile
 
-# Download ginkgo locally if necessary
-GINKGO = $(shell pwd)/bin/ginkgo
-ginkgo:
-	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo)
-
-# Download ginkgo locally if necessary
-GOCOVMERGE = $(shell pwd)/bin/gocovmerge
-gocovmerge:
-	$(call go-get-tool,$(GOCOVMERGE),github.com/wadey/gocovmerge)
-
 ############################################
 #### Targets to manually test with Kind ####
 ############################################
 
-KIND_VERSION ?= v0.9.0
-
-# Download kind locally if necessary
-KIND = $(shell pwd)/bin/kind
-kind:
-	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@$(KIND_VERSION))
-
 kind-create: ## runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
 kind-create: export KUBECONFIG = $(PWD)/kubeconfig
-kind-create: tmp $(KIND)
+kind-create: tmp docker-build kind
 	$(KIND) create cluster --wait 5m --config test/kind.yaml
 	$(MAKE) deploy-cert-manager
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
@@ -269,21 +303,25 @@ kind-deploy: manifests kustomize
 
 kind-refresh-discoveryservice: ## rebuilds the marin3r image, pushes it to the kind registry and recycles the marin3r pod
 kind-refresh-discoveryservice: export KUBECONFIG = $(PWD)/kubeconfig
-kind-refresh-discoveryservice: docker-build
+kind-refresh-discoveryservice: kind docker-build
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 	kubectl delete pods -A -l app.kubernetes.io/name=marin3r --force --grace-period=0
 
 kind-load-image: export KUBECONFIG = $(PWD)/kubeconfig
-kind-load-image:
+kind-load-image: kind
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
 kind-delete: ## deletes the kind cluster and the registry
-kind-delete: $(KIND)
+kind-delete: kind
 	$(KIND) delete cluster
 
 ###########################################
 #### Targets to run components locally ####
 ###########################################
+
+EASYRSA_VERSION ?= v3.0.6
+certs:
+	hack/gen-certs.sh $(EASYRSA_VERSION)
 
 ENVOY_VERSION ?= v1.16.0
 
@@ -330,12 +368,8 @@ grpc-proxy: certs
 #### refdocs generation ####
 ############################
 
-# Download crd-ref-docs locally if necessary
-CRD_REFDOCS_VERSION := v0.0.6
-CRD_REFDOCS = $(shell pwd)/bin/crd-ref-docs
-$(CRD_REFDOCS):
-	$(call go-get-tool,$(CRD_REFDOCS),github.com/elastic/crd-ref-docs@$(CRD_REFDOCS_VERSION))
-refdocs: $(CRD_REFDOCS) ## Generates api reference documentation from code
+refdocs: ## Generates api reference documentation from code
+refdocs: crd-ref-docs
 	$(CRD_REFDOCS) \
 		--source-path=apis \
 		--config=docs/api-reference/config.yaml \
