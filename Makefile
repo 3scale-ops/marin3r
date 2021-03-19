@@ -252,15 +252,15 @@ fix-cover:
 UNIT_COVERPROFILE = unit.coverprofile
 unit-test: export COVERPROFILE=$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE)
 unit-test: export RUN_ENVTEST=0
-unit-test: fmt vet
+unit-test: fmt vet $(COVER_OUTPUT_DIR)
 	mkdir -p $(shell dirname $(COVERPROFILE))
 	go test -p $(TEST_CPUS) ./controllers/... ./apis/... ./pkg/... -race -coverpkg="$(COVERPKGS)" -coverprofile=$(COVERPROFILE)
 
 # Run integration tests
 ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
-OPERATOR_COVERPROFILE = operator.coverprofile
+OPERATOR_COVERPROFILE = operator.marin3r.coverprofile
 MARIN3R_COVERPROFILE = marin3r.coverprofile
-integration-test: generate fmt vet manifests ginkgo
+integration-test: generate fmt vet manifests ginkgo $(COVER_OUTPUT_DIR)
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
 		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
