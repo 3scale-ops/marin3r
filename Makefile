@@ -120,8 +120,7 @@ bundle: manifests kustomize
 	# to a bug in OLM where upgrading a CSV fails when providing
 	# a Service object as part of the bundle manifests. This problem
 	# affects Openshift <4.6
-	rm -f bundle/manifests/marin3r-controller-manager-metrics-service_v1_service.yaml
-	rm bundle/manifests/marin3r-webhook-service_v1_service.yaml
+	rm -vf bundle/manifests/*_v1_service.yaml
 	operator-sdk bundle validate ./bundle
 
 # Build the bundle image.

@@ -75,3 +75,34 @@ patches:
     kind: Deployment
     name: controller-webhook
     version: v1
+# The webhook service install breaks for ocp4.5 if the
+# webhook container port and service port are not the same
+- patch: |-
+    - op: replace
+      path: /spec/ports
+      value:
+      - port: 9443
+        targetPort: 9443
+  target:
+    group: ""
+    kind: Service
+    name: webhook-service
+    version: v1
+- patch: |-
+    - op: add
+      path: /webhooks/0/clientConfig/service/port
+      value: 9443
+  target:
+    group: admissionregistration.k8s.io
+    kind: ValidatingWebhookConfiguration
+    name: validating-webhook-configuration
+    version: v1
+- patch: |-
+    - op: add
+      path: /webhooks/0/clientConfig/service/port
+      value: 9443
+  target:
+    group: admissionregistration.k8s.io
+    kind: MutatingWebhookConfiguration
+    name: mutating-webhook-configuration
+    version: v1
