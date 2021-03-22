@@ -26,6 +26,8 @@ type PodMutator struct {
 	decoder *admission.Decoder
 }
 
+//+kubebuilder:webhook:path=/pod-v1-mutate,mutating=true,failurePolicy=fail,sideEffects=None,groups=core,resources=pods,verbs=create,versions=v1,name=sidecar-injector.marin3r.3scale.net,admissionReviewVersions={v1,v1beta1}
+
 // Handle injects an envoy container in every incoming Pod
 func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	pod := &corev1.Pod{}
