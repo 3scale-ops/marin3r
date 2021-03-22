@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -108,7 +108,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										"--server-certificate-path=/etc/marin3r/tls/server",
 										"--ca-certificate-path=/etc/marin3r/tls/ca",
 										"--xdss-port=1000",
-										"--metrics-addr=:1001",
+										"--metrics-bind-address=:1001",
 										"--debug",
 									},
 									Ports: []corev1.ContainerPort{

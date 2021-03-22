@@ -1,3 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../crd
+- ../rbac
+- ../manager
+- ../webhook
+
 # Adds namespace to all resources.
 namespace: marin3r-system
 
@@ -12,63 +20,58 @@ namePrefix: marin3r-
 #commonLabels:
 #  someName: someValue
 
-bases:
-  - ../crd
-  - ../rbac
-  - ../manager
-  - ../webhook
 
-patchesStrategicMerge:
   # Protect the /metrics endpoint by putting it behind auth.
   # If you want your controller-manager to expose the /metrics
   # endpoint w/o any authn/z, please comment the following lines.
-  - |-
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      name: controller-manager
-      namespace: system
-    spec:
-      template:
-        spec:
-          containers:
-          - name: kube-rbac-proxy
-            image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
-            args:
-            - "--secure-listen-address=0.0.0.0:8443"
-            - "--upstream=http://127.0.0.1:8080/"
-            - "--logtostderr=true"
-            - "--v=10"
-            ports:
-            - containerPort: 8443
-              name: https
-          - name: manager
-            args:
-            - operator
-            - "--metrics-addr=127.0.0.1:8080"
-            - "--enable-leader-election"
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: controller-manager
+    namespace: system
+  spec:
+    template:
+      spec:
+        containers:
+        - name: kube-rbac-proxy
+          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+          args:
+          - "--secure-listen-address=0.0.0.0:8443"
+          - "--upstream=http://127.0.0.1:8080/"
+          - "--logtostderr=true"
+          - "--v=10"
+          ports:
+          - containerPort: 8443
+            name: https
+        - name: manager
+          args:
+          - operator
+          - "--metrics-bind-address=127.0.0.1:8080"
+          - "--leader-elect"
 
 patches:
-  - target:
-      group: apps
-      version: v1
-      kind: Deployment
-      name: controller-webhook
-    patch: |-
-      - op: remove
-        path: /spec/template/spec/volumes
-      - op: remove
-        path: /spec/template/spec/containers/0/volumeMounts
-  - target:
-      group: apps
-      version: v1
-      kind: Deployment
-      name: controller-webhook
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/args
-        value:
-        - webhook
-        - --tls-dir=/apiserver.local.config/certificates
-        - --tls-cert-name=apiserver.crt
-        - --tls-key-name=apiserver.key
+- patch: |-
+    - op: remove
+      path: /spec/template/spec/volumes
+    - op: remove
+      path: /spec/template/spec/containers/0/volumeMounts
+  target:
+    group: apps
+    kind: Deployment
+    name: controller-webhook
+    version: v1
+- patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/args
+      value:
+      - webhook
+      - --tls-dir=/apiserver.local.config/certificates
+      - --tls-cert-name=apiserver.crt
+      - --tls-key-name=apiserver.key
+  target:
+    group: apps
+    kind: Deployment
+    name: controller-webhook
+    version: v1

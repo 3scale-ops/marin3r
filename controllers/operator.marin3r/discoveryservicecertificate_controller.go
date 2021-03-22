@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	discoveryservicecertificate "github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate"
 	marin3r_provider "github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers/marin3r"
 	"github.com/go-logr/logr"

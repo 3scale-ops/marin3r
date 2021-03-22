@@ -1,7 +1,7 @@
 package reconcilers
 
 import (
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	"k8s.io/utils/pointer"
 )
 

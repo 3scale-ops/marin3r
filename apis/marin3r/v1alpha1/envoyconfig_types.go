@@ -139,21 +139,26 @@ type EnvoyConfigStatus struct {
 	// It is intended only for human consumption. Other controllers should relly on conditions
 	// to determine the status of the discovery server cache.
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	CacheState string `json:"cacheState,omitempty"`
+	// +optional
+	CacheState *string `json:"cacheState,omitempty"`
 	// PublishedVersion is the config version currently
 	// served by the envoy discovery service for the give nodeID
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	PublishedVersion string `json:"publishedVersion,omitempty"`
+	// +optional
+	PublishedVersion *string `json:"publishedVersion,omitempty"`
 	// DesiredVersion represents the resources version described in
 	// the spec of the EnvoyConfig object
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	DesiredVersion string `json:"desiredVersion,omitempty"`
+	// +optional
+	DesiredVersion *string `json:"desiredVersion,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
 	Conditions status.Conditions `json:"conditions,omitempty"`
 	// ConfigRevisions is an ordered list of references to EnvoyConfigRevision
 	// objects
 	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
 	ConfigRevisions []ConfigRevisionRef `json:"revisions,omitempty"`
 }
 

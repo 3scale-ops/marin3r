@@ -29,14 +29,15 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
-	operatorcontroller "github.com/3scale/marin3r/controllers/operator"
+	operatorcontroller "github.com/3scale/marin3r/controllers/operator.marin3r"
 	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
 	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale/marin3r/pkg/version"
@@ -57,7 +58,7 @@ const (
 var (
 	debug                        bool
 	metricsAddr                  string
-	enableLeaderElection         bool
+	leaderElect                  bool
 	xdssPort                     int
 	xdssTLSServerCertificatePath string
 	xdssTLSCACertificatePath     string
@@ -65,6 +66,7 @@ var (
 	webhookTLSCertDir            string
 	webhookTLSKeyName            string
 	webhookTLSCertName           string
+	probeAddr                    string
 )
 
 var (
@@ -119,10 +121,11 @@ func init() {
 
 	// Global flags
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logs")
-	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-addr", fmt.Sprintf(":%v", operatorv1alpha1.DefaultMetricsPort), "The address the metrics endpoint binds to.")
+	rootCmd.PersistentFlags().StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metrics endpoint binds to.")
+	rootCmd.PersistentFlags().StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 
 	// Operator flags
-	operatorCmd.Flags().BoolVar(&enableLeaderElection, "enable-leader-election", false,
+	operatorCmd.Flags().BoolVar(&leaderElect, "leader-elect", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 
 	// Discovery service flags
@@ -161,8 +164,8 @@ func runOperator(cmd *cobra.Command, args []string) {
 	options := ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         metricsAddr,
-		Port:                       webhookPort,
-		LeaderElection:             enableLeaderElection,
+		HealthProbeBindAddress:     probeAddr,
+		LeaderElection:             leaderElect,
 		LeaderElectionID:           "2cfbe7d6.operator.marin3r.3scale.net",
 		LeaderElectionResourceLock: "configmaps",
 		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
@@ -188,9 +191,6 @@ func runOperator(cmd *cobra.Command, args []string) {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
-	// watch for syscalls
-	ctx := signals.SetupSignalHandler()
 
 	if err := (&operatorcontroller.DiscoveryServiceReconciler{
 		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), isClusterScoped),
@@ -220,8 +220,17 @@ func runOperator(cmd *cobra.Command, args []string) {
 
 	// +kubebuilder:scaffold:builder
 
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting the Operator.")
-	if err := mgr.Start(ctx); err != nil {
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)
 	}
@@ -233,7 +242,6 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	printVersion()
 
 	cfg := ctrl.GetConfigOrDie()
-	ctx := signals.SetupSignalHandler()
 
 	mgr := discoveryservice.Manager{
 		Namespace:             os.Getenv("WATCH_NAMESPACE"),
@@ -244,7 +252,9 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 		Cfg:                   cfg,
 	}
 
-	mgr.Start(ctx)
+	// TODO: add liveness and readiness
+
+	mgr.Start(signals.SetupSignalHandler())
 }
 
 func runWebhook(cmd *cobra.Command, args []string) {
@@ -252,14 +262,14 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
 	printVersion()
 
-	stopCh := signals.SetupSignalHandler()
 	cfg := ctrl.GetConfigOrDie()
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: "0",
-		Port:               webhookPort,
-		LeaderElection:     false,
+		Scheme:                 scheme,
+		MetricsBindAddress:     "0",
+		HealthProbeBindAddress: probeAddr,
+		Port:                   webhookPort,
+		LeaderElection:         false,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -275,8 +285,17 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
 	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
 
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting the webhook")
-	if err := mgr.Start(stopCh); err != nil {
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "controller manager exited non-zero")
 		os.Exit(1)
 	}

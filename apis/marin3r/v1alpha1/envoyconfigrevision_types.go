@@ -90,7 +90,8 @@ type EnvoyConfigRevisionStatus struct {
 	Tainted *bool `json:"tainted,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	Conditions status.Conditions `json:"conditions"`
+	// +optional
+	Conditions status.Conditions `json:"conditions,omitempty"`
 }
 
 // IsPublished returns true if this revision is published, false otherwise

@@ -121,7 +121,8 @@ type DiscoveryServiceSpec struct {
 type DiscoveryServiceStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	Conditions status.Conditions `json:"conditions"`
+	// +optional
+	Conditions status.Conditions `json:"conditions,omitempty"`
 }
 
 // PKIConfig has configuration for the PKI that marin3r manages for the

@@ -3,7 +3,7 @@ package generators
 import (
 	"fmt"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -72,7 +72,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 										"--server-certificate-path=/etc/marin3r/tls/server",
 										"--ca-certificate-path=/etc/marin3r/tls/ca",
 										func() string { return fmt.Sprintf("--xdss-port=%v", cfg.XdsServerPort) }(),
-										func() string { return fmt.Sprintf("--metrics-addr=:%v", cfg.MetricsServerPort) }(),
+										func() string { return fmt.Sprintf("--metrics-bind-address=:%v", cfg.MetricsServerPort) }(),
 									}
 									if cfg.Debug {
 										args = append(args, "--debug")

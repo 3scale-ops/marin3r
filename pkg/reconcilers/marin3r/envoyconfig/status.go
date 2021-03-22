@@ -21,18 +21,23 @@ func IsStatusReconciled(ec *marin3rv1alpha1.EnvoyConfig, cacheState, publishedVe
 
 	desiredVersion := ec.GetEnvoyResourcesVersion()
 
-	if ec.Status.PublishedVersion != publishedVersion {
-		ec.Status.PublishedVersion = publishedVersion
+	if ec.Status.PublishedVersion == nil || *ec.Status.PublishedVersion != publishedVersion {
+		ec.Status.PublishedVersion = &publishedVersion
 		ok = false
 	}
 
-	if ec.Status.DesiredVersion != desiredVersion {
-		ec.Status.DesiredVersion = desiredVersion
+	if ec.Status.DesiredVersion == nil || *ec.Status.DesiredVersion != desiredVersion {
+		ec.Status.DesiredVersion = &desiredVersion
 		ok = false
 	}
 
-	if ec.Status.CacheState != cacheState {
-		ec.Status.CacheState = cacheState
+	if ec.Status.CacheState == nil || *ec.Status.CacheState != cacheState {
+		ec.Status.CacheState = &cacheState
+		ok = false
+	}
+
+	if ec.Status.Conditions == nil {
+		ec.Status.Conditions = status.NewConditions()
 		ok = false
 	}
 

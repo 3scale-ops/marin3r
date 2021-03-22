@@ -12,58 +12,41 @@ namePrefix: marin3r-
 #commonLabels:
 #  someName: someValue
 
-bases:
-  - ../crd
-  - ../rbac
-  - ../rbac_cluster_scope
-  - ../manager
-  # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix including the one in
-  # crd/kustomization.yaml
-  - ../webhook
-  # [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER'. 'WEBHOOK' components are required.
-  - ../certmanager
-# [PROMETHEUS] To enable prometheus monitor, uncomment all sections with 'PROMETHEUS'.
-#- ../prometheus
-
 patchesStrategicMerge:
-  # Protect the /metrics endpoint by putting it behind auth.
-  # If you want your controller-manager to expose the /metrics
-  # endpoint w/o any authn/z, please comment the following lines.
-  - |-
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-      name: controller-manager
-      namespace: system
-    spec:
-      template:
-        spec:
-          containers:
-          - name: kube-rbac-proxy
-            image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
-            args:
-            - "--secure-listen-address=0.0.0.0:8443"
-            - "--upstream=http://127.0.0.1:8080/"
-            - "--logtostderr=true"
-            - "--v=10"
-            ports:
-            - containerPort: 8443
-              name: https
-          - name: manager
-            args:
-            - "operator"
-            - "--metrics-addr=127.0.0.1:8080"
-            - "--enable-leader-election"
-  # Enable the CA injection in the admission webhooks using cert-manager.
-  - |-
-    apiVersion: admissionregistration.k8s.io/v1beta1
-    kind: MutatingWebhookConfiguration
-    metadata:
-      name: mutating-webhook-configuration
-      annotations:
-        cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: controller-manager
+    namespace: system
+  spec:
+    template:
+      spec:
+        containers:
+        - name: kube-rbac-proxy
+          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+          args:
+          - --secure-listen-address=0.0.0.0:8443
+          - --upstream=http://127.0.0.1:8080/
+          - --logtostderr=true
+          - --v=10
+          ports:
+          - containerPort: 8443
+            name: https
+        - name: manager
+          args:
+          - operator
+          - --metrics-bind-address=127.0.0.1:8080
+          - --leader-elect
+- |-
+  apiVersion: admissionregistration.k8s.io/v1
+  kind: MutatingWebhookConfiguration
+  metadata:
+    name: mutating-webhook-configuration
+    annotations:
+      cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
   # - |-
-  #   apiVersion: admissionregistration.k8s.io/v1beta1
+  #   apiVersion: admissionregistration.k8s.io/v1
   #   kind: ValidatingWebhookConfiguration
   #   metadata:
   #     name: validating-webhook-configuration
@@ -72,29 +55,40 @@ patchesStrategicMerge:
 
 # the following config is for teaching kustomize how to do var substitution
 vars:
-  - name: CERTIFICATE_NAMESPACE # namespace of the certificate CR
-    objref:
-      kind: Certificate
-      group: cert-manager.io
-      version: v1alpha2
-      name: serving-cert # this name should match the one in certificate.yaml
-    fieldref:
-      fieldpath: metadata.namespace
-  - name: CERTIFICATE_NAME
-    objref:
-      kind: Certificate
-      group: cert-manager.io
-      version: v1alpha2
-      name: serving-cert # this name should match the one in certificate.yaml
-  - name: SERVICE_NAMESPACE # namespace of the service
-    objref:
-      kind: Service
-      version: v1
-      name: webhook-service
-    fieldref:
-      fieldpath: metadata.namespace
-  - name: SERVICE_NAME
-    objref:
-      kind: Service
-      version: v1
-      name: webhook-service
+- fieldref:
+    fieldPath: metadata.namespace
+  name: CERTIFICATE_NAMESPACE
+  objref:
+    group: cert-manager.io
+    kind: Certificate
+    name: serving-cert
+    version: v1
+- fieldref: {}
+  name: CERTIFICATE_NAME
+  objref:
+    group: cert-manager.io
+    kind: Certificate
+    name: serving-cert
+    version: v1
+- fieldref:
+    fieldPath: metadata.namespace
+  name: SERVICE_NAMESPACE
+  objref:
+    kind: Service
+    name: webhook-service
+    version: v1
+- fieldref: {}
+  name: SERVICE_NAME
+  objref:
+    kind: Service
+    name: webhook-service
+    version: v1
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../crd
+- ../rbac
+- ../rbac_cluster_scope
+- ../manager
+- ../webhook
+- ../certmanager

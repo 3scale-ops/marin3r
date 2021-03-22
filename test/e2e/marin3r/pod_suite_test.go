@@ -11,7 +11,7 @@ import (
 
 	"github.com/3scale/marin3r/apis/marin3r/v1alpha1"
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale/marin3r/pkg/envoy"
 	testutil "github.com/3scale/marin3r/test/e2e/util"
 	. "github.com/onsi/ginkgo"
@@ -206,7 +206,7 @@ var _ = Describe("Envoy pods", func() {
 
 			Eventually(func() bool {
 				err = k8sClient.Get(context.Background(), key, ec)
-				return ec.Status.CacheState == marin3rv1alpha1.RollbackState
+				return *ec.Status.CacheState == marin3rv1alpha1.RollbackState
 			}, 300*time.Second, 5*time.Second).ShouldNot(BeTrue())
 
 			By("validating the envoy Pod still replis anything with 200 OK")

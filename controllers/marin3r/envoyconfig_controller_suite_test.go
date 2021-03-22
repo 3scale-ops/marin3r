@@ -127,7 +127,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.PublishedVersion == "" {
+					if ec.Status.PublishedVersion == nil || *ec.Status.PublishedVersion == "" {
 						return false
 					}
 					return true
@@ -163,8 +163,8 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
-				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.PublishedVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.DesiredVersion).To(Equal(wantRevision))
 				Expect(len(ec.Status.ConfigRevisions)).To(Equal(1))
 				Expect(ec.Status.ConfigRevisions[0].Ref.Name).To(Equal(fmt.Sprintf("%s-%s", ec.Spec.NodeID, wantRevision)))
 			})
@@ -178,7 +178,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.PublishedVersion == "" {
+					if ec.Status.PublishedVersion == nil || *ec.Status.PublishedVersion == "" {
 						return false
 					}
 					return true
@@ -197,7 +197,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.PublishedVersion != wantRevision {
+					if ec.Status.PublishedVersion != nil && *ec.Status.PublishedVersion != wantRevision {
 						return false
 					}
 					return true
@@ -206,8 +206,8 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 			It("should create a new matching EnvoyConfigRevision and new resources should be in the xDS cache", func() {
 
-				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
-				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.PublishedVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.DesiredVersion).To(Equal(wantRevision))
 				Expect(len(ec.Status.ConfigRevisions)).To(Equal(2))
 				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(fmt.Sprintf("%s-%s", ec.Spec.NodeID, wantRevision)))
 
@@ -255,14 +255,14 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.PublishedVersion != wantRevision {
+					if ec.Status.PublishedVersion != nil && *ec.Status.PublishedVersion != wantRevision {
 						return false
 					}
 					return true
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
-				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
-				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.PublishedVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.DesiredVersion).To(Equal(wantRevision))
 				Expect(len(ec.Status.ConfigRevisions)).To(Equal(2))
 				Expect(ec.Status.ConfigRevisions[len(ec.Status.ConfigRevisions)-1].Ref.Name).To(Equal(fmt.Sprintf("%s-%s", ec.Spec.NodeID, wantRevision)))
 
@@ -329,7 +329,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.PublishedVersion == "" {
+					if ec.Status.PublishedVersion == nil || *ec.Status.PublishedVersion == "" {
 						return false
 					}
 					return true
@@ -365,8 +365,8 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(ec.Status.PublishedVersion).To(Equal(wantRevision))
-				Expect(ec.Status.DesiredVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.PublishedVersion).To(Equal(wantRevision))
+				Expect(*ec.Status.DesiredVersion).To(Equal(wantRevision))
 				Expect(len(ec.Status.ConfigRevisions)).To(Equal(1))
 				Expect(ec.Status.ConfigRevisions[0].Ref.Name).To(Equal(fmt.Sprintf("%s-%s-%s", ec.Spec.NodeID, string(ec.GetEnvoyAPIVersion()), wantRevision)))
 			})
@@ -396,7 +396,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				if err != nil {
 					return false
 				}
-				if ec.Status.CacheState != marin3rv1alpha1.InSyncState {
+				if ec.Status.CacheState == nil || *ec.Status.CacheState != marin3rv1alpha1.InSyncState {
 					return false
 				}
 				return true
@@ -420,7 +420,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.CacheState == marin3rv1alpha1.RollbackState {
+					if ec.Status.CacheState != nil && *ec.Status.CacheState == marin3rv1alpha1.RollbackState {
 						return true
 					}
 					return false
@@ -449,7 +449,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					Eventually(func() bool {
 						err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 						Expect(err).ToNot(HaveOccurred())
-						if ec.Status.CacheState == marin3rv1alpha1.InSyncState {
+						if ec.Status.CacheState != nil && *ec.Status.CacheState == marin3rv1alpha1.InSyncState {
 							return true
 						}
 						return false
@@ -489,7 +489,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.CacheState != marin3rv1alpha1.RollbackFailedState {
+					if ec.Status.CacheState == nil || *ec.Status.CacheState != marin3rv1alpha1.RollbackFailedState {
 						return false
 					}
 					return true
@@ -518,7 +518,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					Eventually(func() bool {
 						err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 						Expect(err).ToNot(HaveOccurred())
-						if ec.Status.CacheState == marin3rv1alpha1.InSyncState {
+						if ec.Status.CacheState != nil && *ec.Status.CacheState == marin3rv1alpha1.InSyncState {
 							return true
 						}
 						return false
@@ -565,7 +565,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
-					if ec.Status.CacheState == marin3rv1alpha1.InSyncState {
+					if ec.Status.CacheState != nil && *ec.Status.CacheState == marin3rv1alpha1.InSyncState {
 						return true
 					}
 					return false
@@ -718,7 +718,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				if err != nil {
 					return false
 				}
-				if ec.Status.CacheState != marin3rv1alpha1.InSyncState {
+				if ec.Status.CacheState == nil || *ec.Status.CacheState != marin3rv1alpha1.InSyncState {
 					return false
 				}
 				return true

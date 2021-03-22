@@ -178,6 +178,62 @@ spec:
       - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
         displayName: Envoy Resources
         path: envoyResources
+      - description: 'Clusters is a list of the envoy Cluster resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
+        displayName: Clusters
+        path: envoyResources.clusters
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.clusters[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.clusters[0].value
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
+        displayName: Endpoints
+        path: envoyResources.endpoints
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.endpoints[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.endpoints[0].value
+      - description: 'Listeners is a list of the envoy Listener resource type. V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
+        displayName: Listeners
+        path: envoyResources.listeners
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.listeners[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.listeners[0].value
+      - description: 'Routes is a list of the envoy Route resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
+        displayName: Routes
+        path: envoyResources.routes
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.routes[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.routes[0].value
+      - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
+        displayName: Runtimes
+        path: envoyResources.runtime
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.runtime[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.runtime[0].value
+      - description: Secrets is a list of references to Kubernetes Secret objects.
+        displayName: Secrets
+        path: envoyResources.secrets
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.secrets[0].name
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls" from which an envoy Secret resource will be automatically created.
+        displayName: Ref
+        path: envoyResources.secrets[0].ref
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:SecretReference
       - description: NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
         displayName: Node ID
         path: nodeID

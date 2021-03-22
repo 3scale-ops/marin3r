@@ -15,33 +15,50 @@ spec:
       labels:
         control-plane: controller-webhook
     spec:
+      # This breaks in Openshift
+      # securityContext:
+      #   runAsUser: 65532
       containers:
-      - name: webhook
-        image: controller:latest
-        command:
-        - /manager
-        args:
-        - webhook
-        - --tls-dir=/tmp/k8s-webhook-server/serving-certs
-        - --tls-cert-name=tls.crt
-        - --tls-key-name=tls.key
-        ports:
-        - containerPort: 9443
-          name: webhook-server
-          protocol: TCP
-        volumeMounts:
-        - mountPath: /tmp/k8s-webhook-server/serving-certs
-          name: cert
-          readOnly: true
-        resources:
-          limits:
-            cpu: 100m
-            memory: 100Mi
-          requests:
-            cpu: 50m
-            memory: 30Mi
+        - command:
+            - /manager
+          args:
+            - webhook
+            - --tls-dir=/tmp/k8s-webhook-server/serving-certs
+            - --tls-cert-name=tls.crt
+            - --tls-key-name=tls.key
+          image: controller:latest
+          name: webhook
+          securityContext:
+            allowPrivilegeEscalation: false
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          ports:
+            - containerPort: 9443
+              name: webhook-server
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /tmp/k8s-webhook-server/serving-certs
+              name: cert
+              readOnly: true
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 50m
+              memory: 30Mi
       volumes:
-      - name: cert
-        secret:
-          defaultMode: 420
-          secretName: webhook-server-cert
+        - name: cert
+          secret:
+            defaultMode: 420
+            secretName: webhook-server-cert

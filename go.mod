@@ -1,6 +1,6 @@
 module github.com/3scale/marin3r
 
-go 1.13
+go 1.15
 
 require (
 	github.com/MakeNowJust/heredoc v1.0.0

@@ -166,7 +166,8 @@ type DiscoveryServiceCertificateStatus struct {
 	CertificateHash *string `json:"certificateHash,omitempty"`
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	Conditions status.Conditions `json:"conditions"`
+	// +optional
+	Conditions status.Conditions `json:"conditions,omitempty"`
 }
 
 // IsReady returns true if the certificate is ready to use, false otherwise
