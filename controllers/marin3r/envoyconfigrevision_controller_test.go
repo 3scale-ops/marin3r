@@ -11,12 +11,19 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
+
+	err := marin3rv1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	t.Run("Taints the ecr object", func(t *testing.T) {
 		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
@@ -29,7 +36,7 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 		}
 		r := &EnvoyConfigRevisionReconciler{
 			Client:   fake.NewFakeClient(ecr),
-			Scheme:   s,
+			Scheme:   scheme.Scheme,
 			XdsCache: xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 			Log:      ctrl.Log.WithName("test"),
 		}
