@@ -24,9 +24,8 @@ spec:
         control-plane: controller-manager
     spec:
       serviceAccountName: controller-manager
-      # This breaks in Openshift
-      # securityContext:
-      #   runAsUser: 65532
+      securityContext:
+        runAsNonRoot: true
       containers:
       - command:
         - /manager
