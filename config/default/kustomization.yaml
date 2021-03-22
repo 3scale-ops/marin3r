@@ -45,13 +45,13 @@ patchesStrategicMerge:
     name: mutating-webhook-configuration
     annotations:
       cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
-  # - |-
-  #   apiVersion: admissionregistration.k8s.io/v1
-  #   kind: ValidatingWebhookConfiguration
-  #   metadata:
-  #     name: validating-webhook-configuration
-  #     annotations:
-  #       cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+- |-
+  apiVersion: admissionregistration.k8s.io/v1
+  kind: ValidatingWebhookConfiguration
+  metadata:
+    name: validating-webhook-configuration
+    annotations:
+      cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
 
 # the following config is for teaching kustomize how to do var substitution
 vars:

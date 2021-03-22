@@ -2,6 +2,7 @@ resources:
 - manifests.yaml
 - service.yaml
 - deployment.yaml
+- podv1mutator.yaml
 
 configurations:
 - kustomizeconfig.yaml

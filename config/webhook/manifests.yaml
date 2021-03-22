@@ -1,34 +1,29 @@
 
 ---
 apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
+kind: ValidatingWebhookConfiguration
 metadata:
-  name: mutating-webhook-configuration
+  creationTimestamp: null
+  name: validating-webhook-configuration
 webhooks:
-  - name: sidecar-injector.marin3r.3scale.net
-    sideEffects: None
-    clientConfig:
-      caBundle: Cg==
-      service:
-        name: webhook-service
-        namespace: system
-        path: /pod-v1-mutate
-        port: 9443
-    reinvocationPolicy: Never
-    rules:
-      - operations:
-          - CREATE
-        apiGroups:
-          - ''
-        apiVersions:
-          - v1
-        resources:
-          - pods
-        scope: Namespaced
-    matchPolicy: Equivalent
-    admissionReviewVersions: ["v1"]
-    failurePolicy: Fail
-    objectSelector:
-      matchLabels:
-        marin3r.3scale.net/status: enabled
-    timeoutSeconds: 5
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-marin3r-3scale-net-v1alpha1-envoyconfig
+  failurePolicy: Fail
+  name: venvoyconfig.kb.io
+  rules:
+  - apiGroups:
+    - marin3r.3scale.net
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - envoyconfigs
+  sideEffects: None
