@@ -229,9 +229,9 @@ e2e-test: kind-create
 	$(MAKE) e2e-envtest-suite
 	$(MAKE) kind-delete
 
+e2e-envtest-suite: export KUBECONFIG = $(PWD)/kubeconfig
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
-	$(GINKGO) -r -nodes=1 ./test/e2e/operator
-	$(GINKGO) -r -p ./test/e2e/marin3r
+	$(GINKGO) -r -p ./test/e2e
 
 test: unit-test integration-test e2e-test coverprofile
 
