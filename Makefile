@@ -5,7 +5,7 @@ NAME := marin3r
 VERSION ?= 0.8.0-dev.8
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:v$(VERSION)
-INDEX_IMG ?= quay.io/3scale/marin3r-index:latest
+INDEX_IMG ?= quay.io/3scale/marin3r-catalog:latest
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
