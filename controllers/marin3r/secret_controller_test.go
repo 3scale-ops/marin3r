@@ -10,20 +10,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func init() {
-	s.AddKnownTypes(marin3rv1alpha1.GroupVersion,
-		&marin3rv1alpha1.EnvoyConfigRevision{},
-		&marin3rv1alpha1.EnvoyConfigRevisionList{},
-		&marin3rv1alpha1.EnvoyConfig{},
-	)
-}
-
 func TestReconcileSecret_Reconcile(t *testing.T) {
+
+	err := marin3rv1alpha1.AddToScheme(scheme.Scheme)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	t.Run("Sets ResourcesInSyncCondition to false in EnvoyConfigRevision resource when a referred secret changes", func(t *testing.T) {
 		secret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
@@ -58,7 +58,7 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 		}
 
 		cl := fake.NewFakeClient(secret, ecr)
-		r := &SecretReconciler{Client: cl, Scheme: s, Log: ctrl.Log.WithName("test")}
+		r := &SecretReconciler{Client: cl, Scheme: scheme.Scheme, Log: ctrl.Log.WithName("test")}
 
 		_, gotErr := r.Reconcile(context.TODO(), reconcile.Request{
 			NamespacedName: types.NamespacedName{

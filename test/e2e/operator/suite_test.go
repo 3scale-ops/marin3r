@@ -45,7 +45,6 @@ var _ = BeforeSuite(func(done Done) {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:  []string{"../../../config/crd/bases"},
 		UseExistingCluster: pointer.BoolPtr(true),
 	}
 

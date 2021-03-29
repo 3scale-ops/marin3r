@@ -282,8 +282,16 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	hookServer.KeyName = webhookTLSKeyName
 	hookServer.CertName = webhookTLSCertName
 	hookServer.Port = webhookPort
+
+	// Register the Pod mutating webhook
 	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
 	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
+
+	// Register the EnvoyConfig validating webhook
+	if err = (&marin3rv1alpha1.EnvoyConfig{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "EnvoyConfig")
+		os.Exit(1)
+	}
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")

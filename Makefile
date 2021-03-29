@@ -2,7 +2,7 @@ SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
-VERSION ?= 0.8.0-dev.4
+VERSION ?= 0.8.0-dev.7
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:v$(VERSION)
 CATALOG_IMG ?= quay.io/3scale/marin3r-catalog:latest
@@ -120,8 +120,7 @@ bundle: manifests kustomize
 	# to a bug in OLM where upgrading a CSV fails when providing
 	# a Service object as part of the bundle manifests. This problem
 	# affects Openshift <4.6
-	rm -f bundle/manifests/marin3r-controller-manager-metrics-service_v1_service.yaml
-	rm bundle/manifests/marin3r-webhook-service_v1_service.yaml
+	rm -vf bundle/manifests/*_v1_service.yaml
 	operator-sdk bundle validate ./bundle
 
 # Build the bundle image.
@@ -217,7 +216,7 @@ integration-test: generate fmt vet manifests ginkgo
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; \
 		fetch_envtest_tools $(ENVTEST_ASSETS_DIR); \
 		setup_envtest_env $(ENVTEST_ASSETS_DIR); \
-		$(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
+		$(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers ./apis/marin3r
 
 coverprofile: gocovmerge
 	$(GOCOVMERGE) $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
@@ -230,9 +229,9 @@ e2e-test: kind-create
 	$(MAKE) e2e-envtest-suite
 	$(MAKE) kind-delete
 
+e2e-envtest-suite: export KUBECONFIG = $(PWD)/kubeconfig
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
-	$(GINKGO) -r -nodes=1 ./test/e2e/operator
-	$(GINKGO) -r -p ./test/e2e/marin3r
+	$(GINKGO) -r -p ./test/e2e
 
 test: unit-test integration-test e2e-test coverprofile
 
