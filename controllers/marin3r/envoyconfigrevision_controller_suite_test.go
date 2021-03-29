@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
@@ -10,6 +11,7 @@ import (
 	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale/marin3r/pkg/util"
 	testutil "github.com/3scale/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -322,17 +324,31 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx-77c9875d7b", Items: map[string]cache_types.Resource{
-						"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
-							Name: "secret",
-							Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-								TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-									PrivateKey: &envoy_config_core_v3.DataSource{
-										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
-									},
-									CertificateChain: &envoy_config_core_v3.DataSource{
-										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-									}}}}}},
+					{
+						Version: strings.Join([]string{"xxxx",
+							util.Hash(map[string]envoy.Resource{
+								"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+									Name: "secret",
+									Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+										TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+											PrivateKey: &envoy_config_core_v3.DataSource{
+												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+											},
+											CertificateChain: &envoy_config_core_v3.DataSource{
+												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+											}}}}}),
+						}, "-"),
+						Items: map[string]cache_types.Resource{
+							"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+								Name: "secret",
+								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+									TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+										PrivateKey: &envoy_config_core_v3.DataSource{
+											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+										},
+										CertificateChain: &envoy_config_core_v3.DataSource{
+											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+										}}}}}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 				}})
 
@@ -372,17 +388,31 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-						{Version: "xxxx-679f7cbbfd", Items: map[string]cache_types.Resource{
-							"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
-								Name: "secret",
-								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-									TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-										PrivateKey: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-key")},
-										},
-										CertificateChain: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-cert")},
-										}}}}}},
+						{
+							Version: strings.Join([]string{"xxxx",
+								util.Hash(map[string]envoy.Resource{
+									"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+										Name: "secret",
+										Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+											TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+												PrivateKey: &envoy_config_core_v3.DataSource{
+													Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-key")},
+												},
+												CertificateChain: &envoy_config_core_v3.DataSource{
+													Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-cert")},
+												}}}}}),
+							}, "-"),
+							Items: map[string]cache_types.Resource{
+								"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+									Name: "secret",
+									Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+										TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+											PrivateKey: &envoy_config_core_v3.DataSource{
+												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-key")},
+											},
+											CertificateChain: &envoy_config_core_v3.DataSource{
+												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-cert")},
+											}}}}}},
 						{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					}})
 

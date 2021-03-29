@@ -3,6 +3,7 @@ package reconcilers
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
@@ -556,17 +557,32 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx-6c68d58f5f", Items: map[string]cache_types.Resource{
-						"secret": &envoy_api_v2_auth.Secret{
-							Name: "secret",
-							Type: &envoy_api_v2_auth.Secret_TlsCertificate{
-								TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
-									PrivateKey: &envoy_api_v2_core.DataSource{
-										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
-									},
-									CertificateChain: &envoy_api_v2_core.DataSource{
-										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-									}}}}}},
+					{
+						// Version: "xxxx-6c68d58f5f",
+						Version: strings.Join([]string{"xxxx",
+							util.Hash(map[string]envoy.Resource{
+								"secret": &envoy_api_v2_auth.Secret{
+									Name: "secret",
+									Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+										TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+											PrivateKey: &envoy_api_v2_core.DataSource{
+												Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
+											},
+											CertificateChain: &envoy_api_v2_core.DataSource{
+												Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+											}}}}}),
+						}, "-"),
+						Items: map[string]cache_types.Resource{
+							"secret": &envoy_api_v2_auth.Secret{
+								Name: "secret",
+								Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+									TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+										PrivateKey: &envoy_api_v2_core.DataSource{
+											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
+										},
+										CertificateChain: &envoy_api_v2_core.DataSource{
+											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+										}}}}}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 				},
 			}),
@@ -603,17 +619,31 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx-77c9875d7b", Items: map[string]cache_types.Resource{
-						"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
-							Name: "secret",
-							Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-								TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-									PrivateKey: &envoy_config_core_v3.DataSource{
-										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
-									},
-									CertificateChain: &envoy_config_core_v3.DataSource{
-										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-									}}}}}},
+					{
+						Version: strings.Join([]string{"xxxx",
+							util.Hash(map[string]envoy.Resource{
+								"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+									Name: "secret",
+									Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+										TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+											PrivateKey: &envoy_config_core_v3.DataSource{
+												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+											},
+											CertificateChain: &envoy_config_core_v3.DataSource{
+												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+											}}}}}),
+						}, "-"),
+						Items: map[string]cache_types.Resource{
+							"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+								Name: "secret",
+								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+									TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+										PrivateKey: &envoy_config_core_v3.DataSource{
+											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+										},
+										CertificateChain: &envoy_config_core_v3.DataSource{
+											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+										}}}}}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 				},
 			}),
@@ -687,7 +717,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				return
 			}
 			if !tt.wantErr && !testutil.SnapshotsAreEqual(got, tt.want) {
-				t.Errorf("CacheReconciler.GenerateSnapshot() = %v, want %v", got, tt.want)
+				t.Errorf("CacheReconciler.GenerateSnapshot() = %v, want %v", got.GetVersion(envoy.Secret), tt.want.GetVersion(envoy.Secret))
 			}
 		})
 	}
