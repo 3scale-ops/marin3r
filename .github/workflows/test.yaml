@@ -1,12 +1,16 @@
 name: test
 
-on: push
-  # pull_request:
-  #   branches:
-  #     - main
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - labeled
 jobs:
   test:
+    if: ${{ github.event.label.name == 'ok-to-test' }}
     runs-on: ubuntu-20.04
+
     steps:
       - uses: actions/checkout@v2
 
