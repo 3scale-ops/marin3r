@@ -10,7 +10,7 @@ metadata:
   namespace: marin3r-system
 spec:
   sourceType: grpc
-  image: quay.io/3scale/marin3r-catalog:latest
+  image: quay.io/3scale/marin3r-index:latest
   displayName: MARIN3R Catalog
   publisher: Red Hat
 ---
