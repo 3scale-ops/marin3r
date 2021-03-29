@@ -184,7 +184,7 @@ docker-build:
 
 # Push the docker image
 docker-push:
-	docker push $(IMG)
+	docker push $(IMG_NAME):v$(VERSION)
 
 .PHONY: bundle
 bundle: $(OPERATOR_SDK) manifests kustomize
