@@ -43,11 +43,14 @@ ifeq ($(shell arch),aarch64)
 ARCH := arm64
 endif
 
+$(shell pwd)/bin:
+	mkdir -p $(shell pwd)/bin
+
 # Download operator-sdk binary if necesasry
 OPERATOR_SDK_RELEASE = v1.5.0
 OPERATOR_SDK = $(shell pwd)/bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
 OPERATOR_SDK_DL_URL = https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_RELEASE)/operator-sdk_$(OS)_$(ARCH)
-$(OPERATOR_SDK):
+$(OPERATOR_SDK): $(shell pwd)/bin
 	curl -sL -o $(OPERATOR_SDK) $(OPERATOR_SDK_DL_URL)
 	chmod +x $(OPERATOR_SDK)
 
@@ -55,7 +58,7 @@ $(OPERATOR_SDK):
 OPM_RELEASE = v1.16.1
 OPM = $(shell pwd)/bin/opm-$(OPM_RELEASE)
 OPM_DL_URL = https://github.com/operator-framework/operator-registry/releases/download/$(OPM_RELEASE)/$(OS)-$(ARCH)-opm
-$(OPM):
+$(OPM): $(shell pwd)/bin
 	curl -sL -o $(OPM) $(OPM_DL_URL)
 	chmod +x $(OPM)
 
