@@ -1,0 +1,7 @@
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: EnvoyDeployment
+metadata:
+  name: envoydeployment-sample
+spec:
+  # Add fields here
+  foo: bar
