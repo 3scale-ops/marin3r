@@ -11,8 +11,8 @@ import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_bootstrap "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	envoy_bootstrap_options "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/options"
-	"github.com/3scale-ops/marin3r/pkg/webhooks/podv1mutator"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -164,7 +164,7 @@ func (r *BootstrapConfigReconciler) getBootstrapConfigMapObject(ds *operatorv1al
 			Namespace: r.eb.GetNamespace(),
 		},
 		Data: map[string]string{
-			podv1mutator.DefaultEnvoyConfigFileName: config,
+			defaults.EnvoyConfigFileName: config,
 		},
 	}
 

@@ -7,7 +7,7 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/webhooks/podv1mutator"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,17 +61,17 @@ func TestGeneratorOptions_EnvoyBootstrap(t *testing.T) {
 				Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
 					DiscoveryService: "test",
 					ClientCertificate: &marin3rv1alpha1.ClientCertificate{
-						Directory:  podv1mutator.DefaultEnvoyTLSBasePath,
-						SecretName: podv1mutator.DefaultClientCertificate,
+						Directory:  defaults.EnvoyTLSBasePath,
+						SecretName: defaults.SidecarClientCertificate,
 						Duration: metav1.Duration{
 							Duration: time.Duration(10 * time.Second),
 						},
 					},
 					EnvoyStaticConfig: &marin3rv1alpha1.EnvoyStaticConfig{
-						ConfigMapNameV2:       podv1mutator.DefaultBootstrapConfigMapV2,
-						ConfigMapNameV3:       podv1mutator.DefaultBootstrapConfigMapV3,
-						ConfigFile:            fmt.Sprintf("%s/%s", podv1mutator.DefaultEnvoyConfigBasePath, podv1mutator.DefaultEnvoyConfigFileName),
-						ResourcesDir:          podv1mutator.DefaultEnvoyConfigBasePath,
+						ConfigMapNameV2:       defaults.SidecarBootstrapConfigMapV2,
+						ConfigMapNameV3:       defaults.SidecarBootstrapConfigMapV3,
+						ConfigFile:            fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
+						ResourcesDir:          defaults.EnvoyConfigBasePath,
 						RtdsLayerResourceName: "runtime",
 						AdminBindAddress:      "0.0.0.0:9901",
 						AdminAccessLogPath:    "/dev/null",
