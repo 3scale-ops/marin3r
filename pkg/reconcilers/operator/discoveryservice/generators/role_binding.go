@@ -1,7 +1,7 @@
 package generators
 
 import (
-	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
+	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"

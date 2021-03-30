@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/util"
-	"github.com/3scale/marin3r/pkg/util/pki"
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util"
+	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"

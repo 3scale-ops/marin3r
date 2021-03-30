@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"

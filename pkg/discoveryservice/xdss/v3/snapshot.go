@@ -1,8 +1,8 @@
 package discoveryservice
 
 import (
-	"github.com/3scale/marin3r/pkg/envoy"
-	envoy_resources_v3 "github.com/3scale/marin3r/pkg/envoy/resources/v3"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -12,7 +12,7 @@ import (
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
 
-// Snapshot implements "github.com/3scale/marin3r/pkg/discoveryservice/xdss".Snapshot for envoy API v3.
+// Snapshot implements "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss".Snapshot for envoy API v3.
 type Snapshot struct {
 	v3 *cache_v3.Snapshot
 }

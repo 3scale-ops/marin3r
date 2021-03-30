@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers"
-	"github.com/3scale/marin3r/pkg/util/pki"
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers"
+	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	"github.com/MakeNowJust/heredoc"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"

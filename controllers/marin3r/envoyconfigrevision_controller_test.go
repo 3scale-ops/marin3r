@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
-	"github.com/3scale/marin3r/pkg/envoy"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
+	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

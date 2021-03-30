@@ -18,9 +18,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/3scale/marin3r/pkg/envoy"
-	envoy_resources_v3 "github.com/3scale/marin3r/pkg/envoy/resources/v3"
-	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
+	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/go-logr/logr"

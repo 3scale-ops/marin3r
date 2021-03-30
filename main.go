@@ -34,14 +34,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
-	marin3rcontroller "github.com/3scale/marin3r/controllers/marin3r"
-	operatorcontroller "github.com/3scale/marin3r/controllers/operator.marin3r"
-	discoveryservice "github.com/3scale/marin3r/pkg/discoveryservice"
-	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
-	"github.com/3scale/marin3r/pkg/version"
-	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	marin3rcontroller "github.com/3scale-ops/marin3r/controllers/marin3r"
+	operatorcontroller "github.com/3scale-ops/marin3r/controllers/operator.marin3r"
+	discoveryservice "github.com/3scale-ops/marin3r/pkg/discoveryservice"
+	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
+	"github.com/3scale-ops/marin3r/pkg/version"
+	"github.com/3scale-ops/marin3r/pkg/webhooks/podv1mutator"
 	// +kubebuilder:scaffold:imports
 )
 

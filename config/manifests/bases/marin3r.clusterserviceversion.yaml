@@ -9,7 +9,7 @@ metadata:
     description: Manage an Envoy Discovery Service and a fleet of Envoy proxies.
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-    repository: https://github.com/3scale/marin3r
+    repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
   name: marin3r.v0.0.0
   namespace: placeholder
@@ -412,7 +412,7 @@ spec:
   - network
   links:
   - name: GitHub
-    url: https://github.com/3scale/marin3r
+    url: https://github.com/3scale-ops/marin3r
   maintainers:
   - email: 3scale-operations+marin3r@redhat.com
     name: 3scale Operations Team

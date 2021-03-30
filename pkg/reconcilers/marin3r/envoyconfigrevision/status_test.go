@@ -3,9 +3,9 @@ package reconcilers
 import (
 	"testing"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
-	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
+	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
+	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/operator-framework/operator-lib/status"

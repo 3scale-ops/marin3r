@@ -1,8 +1,8 @@
 package envoy
 
 import (
-	"github.com/3scale/marin3r/pkg/envoy"
-	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 )
 
 func Validate(resource string, encoding envoy_serializer.Serialization, version envoy.APIVersion, rType envoy.Type) error {

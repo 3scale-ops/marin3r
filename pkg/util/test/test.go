@@ -1,11 +1,11 @@
 package test
 
 import (
-	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
+	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
-	envoy_resources_v2 "github.com/3scale/marin3r/pkg/envoy/resources/v2"
-	envoy_resources_v3 "github.com/3scale/marin3r/pkg/envoy/resources/v3"
+	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
+	envoy_resources_v2 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v2"
+	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 )
 
 func SnapshotsAreEqual(x xdss.Snapshot, y xdss.Snapshot) bool {
