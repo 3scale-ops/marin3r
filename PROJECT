@@ -5,7 +5,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: marin3r
-repo: github.com/3scale/marin3r
+repo: github.com/3scale-ops/marin3r
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   domain: 3scale.net
   group: operator.marin3r
   kind: DiscoveryService
-  path: github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1
+  path: github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -23,7 +23,7 @@ resources:
   domain: 3scale.net
   group: operator.marin3r
   kind: DiscoveryServiceCertificate
-  path: github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1
+  path: github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -32,7 +32,7 @@ resources:
   domain: 3scale.net
   group: marin3r
   kind: EnvoyConfig
-  path: github.com/3scale/marin3r/apis/marin3r/v1alpha1
+  path: github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1
   version: v1alpha1
   webhooks:
     validation: true
@@ -44,7 +44,7 @@ resources:
   domain: 3scale.net
   group: marin3r
   kind: EnvoyConfigRevision
-  path: github.com/3scale/marin3r/apis/marin3r/v1alpha1
+  path: github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -53,6 +53,6 @@ resources:
   domain: 3scale.net
   group: marin3r
   kind: EnvoyBootstrap
-  path: github.com/3scale/marin3r/apis/marin3r/v1alpha1
+  path: github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1
   version: v1alpha1
 version: "3"

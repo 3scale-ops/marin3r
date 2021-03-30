@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/3scale/marin3r/pkg/envoy"
-	envoy_bootstrap_options "github.com/3scale/marin3r/pkg/envoy/bootstrap/options"
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_bootstrap_options "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/options"
+	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"

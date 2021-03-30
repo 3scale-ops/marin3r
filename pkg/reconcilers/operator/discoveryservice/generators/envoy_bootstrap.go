@@ -3,9 +3,9 @@ package generators
 import (
 	"fmt"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	"github.com/3scale/marin3r/pkg/reconcilers/lockedresources"
-	"github.com/3scale/marin3r/pkg/webhooks/podv1mutator"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
+	"github.com/3scale-ops/marin3r/pkg/webhooks/podv1mutator"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

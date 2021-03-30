@@ -1,12 +1,12 @@
 package discoveryservice
 
 import (
-	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
+	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 )
 
-// Cache implements "github.com/3scale/marin3r/pkg/discoveryservice/xdss".Cache for envoy API v2.
+// Cache implements "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss".Cache for envoy API v2.
 type Cache struct {
 	v2 cache_v2.SnapshotCache
 }

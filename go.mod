@@ -1,4 +1,4 @@
-module github.com/3scale/marin3r
+module github.com/3scale-ops/marin3r
 
 go 1.15
 

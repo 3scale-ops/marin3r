@@ -1,8 +1,8 @@
 package reconcilers
 
 import (
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	xdss "github.com/3scale/marin3r/pkg/discoveryservice/xdss"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
+	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	"github.com/go-logr/logr"
 )
 

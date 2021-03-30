@@ -17,8 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/3scale/marin3r/pkg/envoy"
-	envoy_resources "github.com/3scale/marin3r/pkg/envoy/resources"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"

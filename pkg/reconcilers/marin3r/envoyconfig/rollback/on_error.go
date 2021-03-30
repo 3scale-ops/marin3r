@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	envoy "github.com/3scale/marin3r/pkg/envoy"
-	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
-	"github.com/3scale/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
+	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
+	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
 
 	"github.com/operator-framework/operator-lib/status"
 	"sigs.k8s.io/controller-runtime/pkg/client"

@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	envoy "github.com/3scale/marin3r/pkg/envoy"
+	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"

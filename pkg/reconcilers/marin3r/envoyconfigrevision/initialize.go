@@ -1,7 +1,7 @@
 package reconcilers
 
 import (
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
@@ -15,9 +15,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 
-	envoy "github.com/3scale/marin3r/pkg/envoy"
-	envoy_serializer "github.com/3scale/marin3r/pkg/envoy/serializer"
-	"github.com/3scale/marin3r/pkg/util/pki"
+	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"

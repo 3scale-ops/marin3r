@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REPO="3scale/marin3r"
+REPO="3scale-ops/marin3r"
 
 # Skip if alpha release
 [[ ${1} == *"-alpha"* ]] || [[ ${1} == *"-dev"* ]] && echo "" && exit 0

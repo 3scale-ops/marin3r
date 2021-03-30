@@ -22,7 +22,7 @@ metadata:
 spec: {}
 ```
 
-Sidecar injection can also be manually configured for a namespace by creating the required resources manually. The names of the ConfigMap for the bootstrap envoy config and the Secret for the client certificate can be modified using Pod annotations as described in [this table](https://github.com/3scale/marin3r#sidecar-injection-configuration).
+Sidecar injection can also be manually configured for a namespace by creating the required resources manually. The names of the ConfigMap for the bootstrap envoy config and the Secret for the client certificate can be modified using Pod annotations as described in [this table](https://github.com/3scale-ops/marin3r#sidecar-injection-configuration).
 
 The following diagram depicts the sidecar injection.
 

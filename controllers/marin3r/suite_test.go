@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	xdss_v2 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v2"
-	xdss_v3 "github.com/3scale/marin3r/pkg/discoveryservice/xdss/v3"
-	envoy "github.com/3scale/marin3r/pkg/envoy"
+	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
+	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
+	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/goombaio/namegenerator"
@@ -37,8 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/envtest/printer"
 
-	marin3rv1alpha1 "github.com/3scale/marin3r/apis/marin3r/v1alpha1"
-	operatorv1alpha1 "github.com/3scale/marin3r/apis/operator.marin3r/v1alpha1"
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 

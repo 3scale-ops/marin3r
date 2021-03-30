@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	envoy "github.com/3scale/marin3r/pkg/envoy"
+	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 )
 
 func TestMappings(t *testing.T) {

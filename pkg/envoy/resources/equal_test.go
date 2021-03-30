@@ -3,7 +3,7 @@ package envoy
 import (
 	"testing"
 
-	"github.com/3scale/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 )
 

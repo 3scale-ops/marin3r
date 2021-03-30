@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	envoy_bootstrap_options "github.com/3scale/marin3r/pkg/envoy/bootstrap/options"
+	envoy_bootstrap_options "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/options"
 )
 
 func TestConfig_GenerateStatic(t *testing.T) {
