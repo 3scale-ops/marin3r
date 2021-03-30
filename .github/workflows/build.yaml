@@ -1,0 +1,65 @@
+name: build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.15"
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+
+      - uses: actions/cache@v2
+        with:
+          path: ./tmp
+          key: ${{ runner.os }}-tmp
+
+      - uses: actions/cache@v2
+        with:
+          path: ./bin
+          key: ${{ runner.os }}-bin
+
+      - name: Build image
+        run: make docker-build
+
+      - name: Export release name
+        run: |
+          echo "NEW_RELEASE=$(make get-new-release)" >> $GITHUB_ENV
+
+      - name: Login to quay.io/3scale
+        if: ${{ env.NEW_RELEASE != '' }}
+        uses: docker/login-action@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Push new operator image
+        if: ${{ env.NEW_RELEASE != '' }}
+        run: make docker-push
+
+      - name: Publish new bundle image in marin3r index
+        if: ${{ env.NEW_RELEASE != '' }}
+        run: make bundle-publish
+
+      - name: Create a new draft-release in github
+        if: ${{ env.NEW_RELEASE != '' }}
+        uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          automatic_release_tag: "${{ env.NEW_RELEASE }}"
+          title: "${{ env.NEW_RELEASE }}"
+          draft: true
