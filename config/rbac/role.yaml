@@ -74,6 +74,8 @@ rules:
   resources:
   - envoybootstraps
   verbs:
+  - create
+  - delete
   - get
   - list
   - patch
@@ -149,6 +151,32 @@ rules:
   - operator.marin3r.3scale.net
   resources:
   - discoveryservicecertificates/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - envoydeployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - envoydeployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - envoydeployments/status
   verbs:
   - get
   - patch

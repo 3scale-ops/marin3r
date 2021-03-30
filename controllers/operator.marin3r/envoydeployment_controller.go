@@ -35,9 +35,9 @@ type EnvoyDeploymentReconciler struct {
 	Log logr.Logger
 }
 
-//+kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=envoydeployments,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=envoydeployments/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=operator.marin3r.3scale.net,resources=envoydeployments/finalizers,verbs=update
+//+kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=envoydeployments,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=envoydeployments/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=envoydeployments/finalizers,verbs=update
 //+kubebuilder:rbac:groups="core",namespace=placeholder,resources=services,verbs=get;list;watch;create;update;patch
 //+kubebuilder:rbac:groups="apps",namespace=placeholder,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoybootstraps,verbs=get;list;watch;create;update;patch;delete
