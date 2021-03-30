@@ -197,7 +197,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), isClusterScoped),
 		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
+		setupLog.Error(err, "unable to create controller", "controller", "discoveryservice")
 		os.Exit(1)
 	}
 
@@ -220,9 +220,8 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	if err = (&operatorcontroller.EnvoyDeploymentReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("operator.marin3r").WithName("EnvoyDeployment"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("EnvoyDeployment"), isClusterScoped),
+		Log:        ctrl.Log.WithName("controllers").WithName("envoydeployment"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EnvoyDeployment")
 		os.Exit(1)

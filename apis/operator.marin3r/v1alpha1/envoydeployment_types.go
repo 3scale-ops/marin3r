@@ -17,19 +17,42 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
 type EnvoyDeploymentSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// EnvoyConfigRef points to an EnvoyConfig in the same namespace
+	// that holds the envoy resources for this Deployment
+	EnvoyConfigRef string `json:"envoyConfigRef"`
+	// Ports exposed by the Envoy container
+	// TODO: calculate this inspecting the list of listeners in the
+	// published EnvoyConfigRevision
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Ports []ContainerPort `json:"ports,omitempty"`
+	// Image is the envoy image and tag to use
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Image *string `json:"image,omitempty"`
+	// Resources holds the resource requirements to use for the Envoy
+	// Deployment. When not set it defaults to no resource requests nor limits.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// Foo is an example field of EnvoyDeployment. Edit envoydeployment_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// TODO: labels, annotations, probes
+}
+
+// ContainerPort defines port for the Marin3r sidecar container
+type ContainerPort struct {
+	// Port name
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Name string `json:"name"`
+	// Port value
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Port int32 `json:"port"`
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment
