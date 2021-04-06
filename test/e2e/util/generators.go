@@ -81,12 +81,12 @@ func GeneratePodWithBootstrap(key types.NamespacedName, nodeID, envoyAPI, envoyV
 		ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace},
 		Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
 			DiscoveryService: discoveryService,
-			ClientCertificate: &marin3rv1alpha1.ClientCertificate{
+			ClientCertificate: marin3rv1alpha1.ClientCertificate{
 				Directory:  "/etc/envoy/tls/client",
 				SecretName: "xds-client-certificate",
 				Duration:   metav1.Duration{Duration: func() time.Duration { d, _ := time.ParseDuration("5m"); return d }()},
 			},
-			EnvoyStaticConfig: &marin3rv1alpha1.EnvoyStaticConfig{
+			EnvoyStaticConfig: marin3rv1alpha1.EnvoyStaticConfig{
 				ConfigMapNameV2:       "envoy-bootstrap-v2",
 				ConfigMapNameV3:       "envoy-bootstrap-v3",
 				ConfigFile:            "config.json",

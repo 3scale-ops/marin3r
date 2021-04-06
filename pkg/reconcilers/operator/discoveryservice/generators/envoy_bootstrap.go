@@ -26,14 +26,14 @@ func (cfg *GeneratorOptions) EnvoyBootstrap() lockedresources.GeneratorFunction 
 			},
 			Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
 				DiscoveryService: cfg.InstanceName,
-				ClientCertificate: &marin3rv1alpha1.ClientCertificate{
+				ClientCertificate: marin3rv1alpha1.ClientCertificate{
 					Directory:  defaults.EnvoyTLSBasePath,
 					SecretName: defaults.SidecarClientCertificate,
 					Duration: metav1.Duration{
 						Duration: cfg.ClientCertificateDuration,
 					},
 				},
-				EnvoyStaticConfig: &marin3rv1alpha1.EnvoyStaticConfig{
+				EnvoyStaticConfig: marin3rv1alpha1.EnvoyStaticConfig{
 					ConfigMapNameV2:       defaults.SidecarBootstrapConfigMapV2,
 					ConfigMapNameV3:       defaults.SidecarBootstrapConfigMapV3,
 					ConfigFile:            fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),

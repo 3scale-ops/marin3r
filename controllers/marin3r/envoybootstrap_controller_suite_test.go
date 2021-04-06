@@ -88,7 +88,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 				ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: namespace},
 				Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
 					DiscoveryService: "instance",
-					ClientCertificate: &marin3rv1alpha1.ClientCertificate{
+					ClientCertificate: marin3rv1alpha1.ClientCertificate{
 						Directory:  "/tls",
 						SecretName: "my-cert",
 						Duration: metav1.Duration{
@@ -98,7 +98,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 							}(),
 						},
 					},
-					EnvoyStaticConfig: &marin3rv1alpha1.EnvoyStaticConfig{
+					EnvoyStaticConfig: marin3rv1alpha1.EnvoyStaticConfig{
 						ConfigMapNameV2:       "bootstrap-v2",
 						ConfigMapNameV3:       "bootstrap-v3",
 						ConfigFile:            "/config.json",
