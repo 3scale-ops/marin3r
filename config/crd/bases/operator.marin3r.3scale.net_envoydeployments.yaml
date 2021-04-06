@@ -36,10 +36,24 @@ spec:
           spec:
             description: EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
             properties:
+              clusterID:
+                description: Defines the local service cluster name where Envoy is
+                  running. Defaults to the NodeID in the EnvoyConfig if unset
+                type: string
+              duration:
+                description: Defines the duration of the client certificate that is
+                  used to authenticate with the DiscoveryService
+                type: string
               envoyConfigRef:
                 description: EnvoyConfigRef points to an EnvoyConfig in the same namespace
                   that holds the envoy resources for this Deployment
                 type: string
+              extraArgs:
+                description: Allows the user to define extra command line arguments
+                  for the Envoy process
+                items:
+                  type: string
+                type: array
               image:
                 description: Image is the envoy image and tag to use
                 type: string
@@ -57,6 +71,10 @@ spec:
                       description: Port value
                       format: int32
                       type: integer
+                    protocol:
+                      default: TCP
+                      description: Protocol. Defaults to TCP.
+                      type: string
                   required:
                   - name
                   - port

@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"time"
+
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -25,6 +28,8 @@ const (
 	// DiscoveryServiceCertificateHashLabelKey is the label in the discovery service Deployment that
 	// stores the hash of the current server certificate
 	EnvoyDeploymentBootstrapConfigHashLabelKey string = "marin3r.3scale.net/bootstrap-config-hash"
+	// ClientCertificateDefaultDuration
+	ClientCertificateDefaultDuration string = "48h"
 )
 
 // EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
@@ -32,6 +37,11 @@ type EnvoyDeploymentSpec struct {
 	// EnvoyConfigRef points to an EnvoyConfig in the same namespace
 	// that holds the envoy resources for this Deployment
 	EnvoyConfigRef string `json:"envoyConfigRef"`
+	// Defines the local service cluster name where Envoy is running. Defaults
+	// to the NodeID in the EnvoyConfig if unset
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ClusterID *string `json:"clusterID,omitempty"`
 	// Ports exposed by the Envoy container
 	// TODO: calculate this inspecting the list of listeners in the
 	// published EnvoyConfigRevision
@@ -47,6 +57,15 @@ type EnvoyDeploymentSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	// Defines the duration of the client certificate that is used to authenticate
+	// with the DiscoveryService
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ClientCertificateDuration *metav1.Duration `json:"duration,omitempty"`
+	// Allows the user to define extra command line arguments for the Envoy process
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ExtraArgs []string `json:"extraArgs,omitempty"`
 
 	// TODO: customizations for labels, annotations and probes
 }
@@ -65,16 +84,29 @@ type ContainerPort struct {
 	Protocol *corev1.Protocol `json:"protocol,omitempty"`
 }
 
-// Resources returns the Pod resources for the envoy pod
-func (d *EnvoyDeployment) Resources() corev1.ResourceRequirements {
-	if d.Spec.Resources == nil {
-		return d.defaultDeploymentResources()
+// Image returns the envoy container image to use
+func (ed *EnvoyDeployment) Image() string {
+	if ed.Spec.Image == nil {
+		return defaults.Image
 	}
-	return *d.Spec.Resources
+	return *ed.Spec.Image
 }
 
-func (d *EnvoyDeployment) defaultDeploymentResources() corev1.ResourceRequirements {
-	return corev1.ResourceRequirements{}
+// Resources returns the Pod resources for the envoy pod
+func (ed *EnvoyDeployment) Resources() corev1.ResourceRequirements {
+	if ed.Spec.Resources == nil {
+		return corev1.ResourceRequirements{}
+	}
+	return *ed.Spec.Resources
+}
+
+// Image returns the envoy container image to use
+func (ed *EnvoyDeployment) ClientCertificateDuration() time.Duration {
+	if ed.Spec.ClientCertificateDuration == nil {
+		d, _ := time.ParseDuration(ClientCertificateDefaultDuration)
+		return d
+	}
+	return ed.Spec.ClientCertificateDuration.Duration
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment

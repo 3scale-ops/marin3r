@@ -19,6 +19,7 @@ type GeneratorOptions struct {
 	DeploymentImage           string
 	DeploymentResources       corev1.ResourceRequirements
 	ExposedPorts              []operatorv1alpha1.ContainerPort
+	ExtraArgs                 []string
 }
 
 func (cfg *GeneratorOptions) labels() map[string]string {

@@ -74,14 +74,19 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 								Name:    defaults.DeploymentContainerName,
 								Image:   cfg.DeploymentImage,
 								Command: []string{"envoy"},
-								Args: []string{
-									"-c",
-									fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
-									"--service-node",
-									cfg.EnvoyNodeID,
-									"--service-cluster",
-									cfg.EnvoyClusterID,
-								},
+								Args: func() []string {
+									args := []string{"-c",
+										fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
+										"--service-node",
+										cfg.EnvoyNodeID,
+										"--service-cluster",
+										cfg.EnvoyClusterID,
+									}
+									if len(cfg.ExtraArgs) > 0 {
+										args = append(args, cfg.ExtraArgs...)
+									}
+									return args
+								}(),
 								Resources: cfg.DeploymentResources,
 								Ports: func() []corev1.ContainerPort {
 									ports := make([]corev1.ContainerPort, len(cfg.ExposedPorts))
