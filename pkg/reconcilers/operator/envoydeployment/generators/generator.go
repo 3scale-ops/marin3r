@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -15,9 +16,9 @@ type GeneratorOptions struct {
 	EnvoyNodeID               string
 	EnvoyClusterID            string
 	ClientCertificateDuration time.Duration
-	AdminBindAddress          string
 	DeploymentImage           string
 	DeploymentResources       corev1.ResourceRequirements
+	ExposedPorts              []operatorv1alpha1.ContainerPort
 }
 
 func (cfg *GeneratorOptions) labels() map[string]string {

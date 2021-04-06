@@ -3,6 +3,7 @@ package generators
 import (
 	"fmt"
 
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
@@ -38,8 +39,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 						CreationTimestamp: metav1.Time{},
 						Labels: func() (labels map[string]string) {
 							labels = cfg.labels()
-							// TODO: Hash the bootstrap config
-							// labels[operatorv1alpha1.DiscoveryServiceCertificateHashLabelKey] = hash
+							labels[operatorv1alpha1.EnvoyDeploymentBootstrapConfigHashLabelKey] = hash
 							return
 						}(),
 					},
@@ -49,7 +49,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 								Name: defaults.DeploymentTLSVolume,
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName: defaults.DeploymentClientCertificate,
+										SecretName: fmt.Sprintf("%s-%s", defaults.DeploymentClientCertificate, cfg.InstanceName),
 									},
 								},
 							},
@@ -60,9 +60,9 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 										LocalObjectReference: corev1.LocalObjectReference{
 											Name: func() string {
 												if cfg.EnvoyAPIVersion == envoy.APIv2 {
-													return defaults.DeploymentBootstrapConfigMapV2
+													return fmt.Sprintf("%s-%s", defaults.DeploymentBootstrapConfigMapV2, cfg.InstanceName)
 												}
-												return defaults.DeploymentBootstrapConfigMapV3
+												return fmt.Sprintf("%s-%s", defaults.DeploymentBootstrapConfigMapV3, cfg.InstanceName)
 											}(),
 										},
 									},
@@ -82,9 +82,21 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 									"--service-cluster",
 									cfg.EnvoyClusterID,
 								},
-								// TODO
-								// Resources: {},
-								// Ports: {},
+								Resources: cfg.DeploymentResources,
+								Ports: func() []corev1.ContainerPort {
+									ports := make([]corev1.ContainerPort, len(cfg.ExposedPorts))
+									for i := 0; i < len(cfg.ExposedPorts); i++ {
+										p := corev1.ContainerPort{
+											Name:          cfg.ExposedPorts[i].Name,
+											ContainerPort: cfg.ExposedPorts[i].Port,
+										}
+										if cfg.ExposedPorts[i].Protocol != nil {
+											p.Protocol = *cfg.ExposedPorts[i].Protocol
+										}
+										ports[i] = p
+									}
+									return ports
+								}(),
 								VolumeMounts: []corev1.VolumeMount{
 									{
 										Name:      defaults.DeploymentTLSVolume,
@@ -123,6 +135,9 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 									SuccessThreshold:    1,
 									FailureThreshold:    1,
 								},
+								TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+								ImagePullPolicy:          corev1.PullIfNotPresent,
 							},
 						},
 						RestartPolicy:                 corev1.RestartPolicyAlways,

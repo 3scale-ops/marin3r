@@ -21,6 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	// DiscoveryServiceCertificateHashLabelKey is the label in the discovery service Deployment that
+	// stores the hash of the current server certificate
+	EnvoyDeploymentBootstrapConfigHashLabelKey string = "marin3r.3scale.net/bootstrap-config-hash"
+)
+
 // EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
 type EnvoyDeploymentSpec struct {
 	// EnvoyConfigRef points to an EnvoyConfig in the same namespace
@@ -42,7 +48,7 @@ type EnvoyDeploymentSpec struct {
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// TODO: labels, annotations, probes
+	// TODO: customizations for labels, annotations and probes
 }
 
 // ContainerPort defines port for the Marin3r sidecar container
@@ -53,6 +59,22 @@ type ContainerPort struct {
 	// Port value
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Port int32 `json:"port"`
+	// Protocol. Defaults to TCP.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Protocol *corev1.Protocol `json:"protocol,omitempty"`
+}
+
+// Resources returns the Pod resources for the envoy pod
+func (d *EnvoyDeployment) Resources() corev1.ResourceRequirements {
+	if d.Spec.Resources == nil {
+		return d.defaultDeploymentResources()
+	}
+	return *d.Spec.Resources
+}
+
+func (d *EnvoyDeployment) defaultDeploymentResources() corev1.ResourceRequirements {
+	return corev1.ResourceRequirements{}
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment

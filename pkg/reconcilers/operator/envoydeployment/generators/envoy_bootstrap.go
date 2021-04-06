@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) EnvoyBootstrap() lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) EnvoyBootstrap(discoveryServiceName string) lockedresources.GeneratorFunction {
 
 	return func() client.Object {
 
@@ -25,17 +25,17 @@ func (cfg *GeneratorOptions) EnvoyBootstrap() lockedresources.GeneratorFunction 
 				Labels:    cfg.labels(),
 			},
 			Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
-				DiscoveryService: cfg.InstanceName,
-				ClientCertificate: &marin3rv1alpha1.ClientCertificate{
+				DiscoveryService: discoveryServiceName,
+				ClientCertificate: marin3rv1alpha1.ClientCertificate{
 					Directory:  defaults.EnvoyTLSBasePath,
-					SecretName: defaults.DeploymentClientCertificate,
+					SecretName: fmt.Sprintf("%s-%s", defaults.DeploymentClientCertificate, cfg.InstanceName),
 					Duration: metav1.Duration{
 						Duration: cfg.ClientCertificateDuration,
 					},
 				},
-				EnvoyStaticConfig: &marin3rv1alpha1.EnvoyStaticConfig{
-					ConfigMapNameV2:       defaults.DeploymentBootstrapConfigMapV2,
-					ConfigMapNameV3:       defaults.DeploymentBootstrapConfigMapV3,
+				EnvoyStaticConfig: marin3rv1alpha1.EnvoyStaticConfig{
+					ConfigMapNameV2:       fmt.Sprintf("%s-%s", defaults.DeploymentBootstrapConfigMapV2, cfg.InstanceName),
+					ConfigMapNameV3:       fmt.Sprintf("%s-%s", defaults.DeploymentBootstrapConfigMapV3, cfg.InstanceName),
 					ConfigFile:            fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
 					ResourcesDir:          defaults.EnvoyConfigBasePath,
 					RtdsLayerResourceName: "runtime",
