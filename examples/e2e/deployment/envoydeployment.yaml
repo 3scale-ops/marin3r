@@ -1,0 +1,12 @@
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: EnvoyDeployment
+metadata:
+  name: kuard
+spec:
+  envoyConfigRef: kuard
+  ports:
+    - name: https
+      port: 8443
+  extraArgs:
+    - --component-log-level
+    - http:debug
