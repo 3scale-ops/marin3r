@@ -36,6 +36,7 @@ const (
 type EnvoyDeploymentSpec struct {
 	// EnvoyConfigRef points to an EnvoyConfig in the same namespace
 	// that holds the envoy resources for this Deployment
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	EnvoyConfigRef string `json:"envoyConfigRef"`
 	// Defines the local service cluster name where Envoy is running. Defaults
 	// to the NodeID in the EnvoyConfig if unset
