@@ -49,7 +49,7 @@ var (
 	logger        logr.Logger
 	testNamespace string
 	ds            *operatorv1alpha1.DiscoveryService
-	timeout       time.Duration = 300 * time.Second
+	timeout       time.Duration = 3000 * time.Second
 	poll          time.Duration = 5 * time.Second
 )
 

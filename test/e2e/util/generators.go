@@ -113,7 +113,7 @@ func GeneratePodWithBootstrap(key types.NamespacedName, nodeID, envoyAPI, envoyV
 	}
 }
 
-func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI, envoyVersion string, envoyPort uint32) *appsv1.Deployment {
+func GenerateDeployment(key types.NamespacedName) *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
@@ -126,27 +126,49 @@ func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						DeploymentLabelKey:          DeploymentLabelValue,
-						"marin3r.3scale.net/status": "enabled",
+						DeploymentLabelKey: DeploymentLabelValue,
 					},
-					Annotations: map[string]string{
-						"marin3r.3scale.net/node-id":           nodeID,
-						"marin3r.3scale.net/envoy-extra-args":  "--component-log-level config:debug",
-						"marin3r.3scale.net/ports":             fmt.Sprintf("envoy-http:%v", envoyPort),
-						"marin3r.3scale.net/envoy-api-version": envoyAPI,
-						"marin3r.3scale.net/envoy-image":       fmt.Sprintf("envoyproxy/envoy:%s", envoyVersion),
-					},
+					Annotations: map[string]string{},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{
 						Name:  "nginx",
 						Image: "nginxdemos/hello:plain-text",
-						Ports: []corev1.ContainerPort{{Name: "http", ContainerPort: int32(envoyPort)}},
+						Ports: []corev1.ContainerPort{{Name: "http", ContainerPort: 80}},
 					}},
 				},
 			},
 		},
 	}
+}
+
+func GenerateHeadlessService(key types.NamespacedName) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:      corev1.ServiceTypeClusterIP,
+			ClusterIP: "None",
+			Ports:     []corev1.ServicePort{{Name: "http", Port: 80, TargetPort: intstr.FromString("http")}},
+			Selector: map[string]string{
+				DeploymentLabelKey: DeploymentLabelValue,
+			},
+		},
+	}
+}
+
+func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI, envoyVersion string, envoyPort uint32) *appsv1.Deployment {
+	dep := GenerateDeployment(key)
+	dep.Spec.Template.ObjectMeta.Labels["marin3r.3scale.net/status"] = "enabled"
+	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/node-id"] = nodeID
+	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-extra-args"] = "--component-log-level config:debug"
+	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/ports"] = fmt.Sprintf("envoy-http:%v", envoyPort)
+	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-api-version"] = envoyAPI
+	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-image"] = fmt.Sprintf("envoyproxy/envoy:%s", envoyVersion)
+
+	return dep
 }
 
 func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string) (*corev1.Secret, error) {
@@ -557,5 +579,59 @@ func ClusterWithEdsV3(clusterName string) (string, *envoy_config_cluster_v3.Clus
 				},
 				ResourceApiVersion: envoy_config_core_v3.ApiVersion_V3,
 			}},
+	}
+}
+
+func ClusterWithStrictDNSV2(clusterName, host string, port uint32) (string, *envoy_api_v2.Cluster) {
+	return clusterName, &envoy_api_v2.Cluster{
+		Name:           clusterName,
+		ConnectTimeout: ptypes.DurationProto(10 * time.Millisecond),
+		ClusterDiscoveryType: &envoy_api_v2.Cluster_Type{
+			Type: envoy_api_v2.Cluster_STRICT_DNS,
+		},
+		LbPolicy: envoy_api_v2.Cluster_ROUND_ROBIN,
+		LoadAssignment: &envoy_api_v2.ClusterLoadAssignment{
+			ClusterName: clusterName,
+			Endpoints: []*envoy_api_v2_endpoint.LocalityLbEndpoints{
+				{
+					LbEndpoints: []*envoy_api_v2_endpoint.LbEndpoint{
+						{
+							HostIdentifier: &envoy_api_v2_endpoint.LbEndpoint_Endpoint{
+								Endpoint: &envoy_api_v2_endpoint.Endpoint{
+									Address: &envoy_api_v2_core.Address{
+										Address: &envoy_api_v2_core.Address_SocketAddress{
+											SocketAddress: &envoy_api_v2_core.SocketAddress{
+												Address: host,
+												PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
+													PortValue: port,
+												}}}}}}}}}},
+		},
+	}
+}
+
+func ClusterWithStrictDNSV3(clusterName, host string, port uint32) (string, *envoy_config_cluster_v3.Cluster) {
+	return clusterName, &envoy_config_cluster_v3.Cluster{
+		Name:           clusterName,
+		ConnectTimeout: ptypes.DurationProto(10 * time.Millisecond),
+		ClusterDiscoveryType: &envoy_config_cluster_v3.Cluster_Type{
+			Type: envoy_config_cluster_v3.Cluster_STRICT_DNS,
+		},
+		LbPolicy: envoy_config_cluster_v3.Cluster_ROUND_ROBIN,
+		LoadAssignment: &envoy_config_endpoint_v3.ClusterLoadAssignment{
+			ClusterName: clusterName,
+			Endpoints: []*envoy_config_endpoint_v3.LocalityLbEndpoints{
+				{
+					LbEndpoints: []*envoy_config_endpoint_v3.LbEndpoint{
+						{
+							HostIdentifier: &envoy_config_endpoint_v3.LbEndpoint_Endpoint{
+								Endpoint: &envoy_config_endpoint_v3.Endpoint{
+									Address: &envoy_config_core_v3.Address{
+										Address: &envoy_config_core_v3.Address_SocketAddress{
+											SocketAddress: &envoy_config_core_v3.SocketAddress{
+												Address: host,
+												PortSpecifier: &envoy_config_core_v3.SocketAddress_PortValue{
+													PortValue: port,
+												}}}}}}}}}},
+		},
 	}
 }
