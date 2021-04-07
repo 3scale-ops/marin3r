@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("Envpoy sidecars", func() {
+var _ = Describe("Envoy sidecars", func() {
 	var testNamespace string
 
 	BeforeEach(func() {
@@ -45,7 +45,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				return false
 			}
 			return true
-		}, 300*time.Second, 5*time.Second).Should(BeTrue())
+		}, timeout, poll).Should(BeTrue())
 
 		By("creating a DiscoveryService instance")
 		ds = &operatorv1alpha1.DiscoveryService{
@@ -70,7 +70,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				return 0
 			}
 			return int(dep.Status.ReadyReplicas)
-		}, 300*time.Second, 5*time.Second).Should(Equal(1))
+		}, timeout, poll).Should(Equal(1))
 	})
 
 	AfterEach(func() {
@@ -134,7 +134,7 @@ var _ = Describe("Envpoy sidecars", func() {
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 			Eventually(func() int {
 				return testutil.ReadyReplicas(k8sClient, testNamespace, selector)
-			}, 300*time.Second, 5*time.Second).Should(Equal(1))
+			}, timeout, poll).Should(Equal(1))
 
 			By("checking that the Pods were mutated to add the envoy sidecar")
 			podList := &corev1.PodList{}
@@ -170,7 +170,7 @@ var _ = Describe("Envpoy sidecars", func() {
 			Eventually(func() error {
 				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
-			}, 300*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -218,7 +218,7 @@ var _ = Describe("Envpoy sidecars", func() {
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 			Eventually(func() int {
 				return testutil.ReadyReplicas(k8sClient, testNamespace, selector)
-			}, 300*time.Second, 5*time.Second).Should(Equal(1))
+			}, timeout, poll).Should(Equal(1))
 
 			By("checking that the Pods were mutated to add the envoy sidecar")
 			podList := &corev1.PodList{}
@@ -254,7 +254,7 @@ var _ = Describe("Envpoy sidecars", func() {
 			Eventually(func() error {
 				resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 				return err
-			}, 300*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			defer resp.Body.Close()
 			Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -302,7 +302,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 				Eventually(func() int {
 					return testutil.ReadyReplicas(k8sClient, testNamespace, selector)
-				}, 300*time.Second, 5*time.Second).Should(Equal(1))
+				}, timeout, poll).Should(Equal(1))
 			}
 
 			By("checking that the Pod was mutated to add the envoy sidecar")
@@ -347,7 +347,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				Eventually(func() error {
 					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 					return err
-				}, 300*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, timeout, poll).ShouldNot(HaveOccurred())
 
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))
@@ -408,7 +408,7 @@ var _ = Describe("Envpoy sidecars", func() {
 						return true
 					}
 					return false
-				}, 300*time.Second, 5*time.Second).Should(BeTrue())
+				}, timeout, poll).Should(BeTrue())
 			}
 
 			By("waiting until the old v2 ReplicaSet is completely drained")
@@ -421,7 +421,7 @@ var _ = Describe("Envpoy sidecars", func() {
 					Expect(err).ToNot(HaveOccurred())
 					pod = podList.Items[0]
 					return len(podList.Items)
-				}, 300*time.Second, 5*time.Second).Should(Equal(1))
+				}, timeout, poll).Should(Equal(1))
 			}
 
 			By("reopening the port forward to the new pod")
@@ -456,7 +456,7 @@ var _ = Describe("Envpoy sidecars", func() {
 				Eventually(func() error {
 					resp, err = http.Get(fmt.Sprintf("http://localhost:%v", localPort))
 					return err
-				}, 300*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, timeout, poll).ShouldNot(HaveOccurred())
 
 				defer resp.Body.Close()
 				Expect(resp.StatusCode).To(Equal(http.StatusOK))

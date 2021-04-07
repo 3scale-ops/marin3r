@@ -49,6 +49,8 @@ var (
 	logger        logr.Logger
 	testNamespace string
 	ds            *operatorv1alpha1.DiscoveryService
+	timeout       time.Duration = 300 * time.Second
+	poll          time.Duration = 5 * time.Second
 )
 
 func TestAPIs(t *testing.T) {

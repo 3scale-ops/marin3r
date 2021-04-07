@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"context"
-	"time"
 
 	testutil "github.com/3scale-ops/marin3r/test/e2e/util"
 	. "github.com/onsi/ginkgo"
@@ -15,11 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-)
-
-const (
-	image         string = "quay.io/3scale/marin3r:test"
-	testNamespace string = "default"
 )
 
 var _ = Describe("DiscoveryService intall and lifecycle", func() {
@@ -46,7 +40,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				return false
 			}
 			return true
-		}, 60*time.Second, 5*time.Second).Should(BeTrue())
+		}, timeout, poll).Should(BeTrue())
 
 		By("creating a DiscoveryService instance")
 		ds = &operatorv1alpha1.DiscoveryService{
@@ -67,7 +61,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				return false
 			}
 			return true
-		}, 60*time.Second, 5*time.Second).Should(BeTrue())
+		}, timeout, poll).Should(BeTrue())
 
 	})
 
@@ -97,7 +91,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 					return 0
 				}
 				return int(dep.Status.ReadyReplicas)
-			}, 60*time.Second, 5*time.Second).Should(Equal(1))
+			}, timeout, poll).Should(Equal(1))
 		})
 
 		It("triggers a rollout on certificate change", func() {
@@ -122,7 +116,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
 				return dep.GetGeneration() > generation
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
+			}, timeout, poll).Should(BeTrue())
 
 			By("waiting for the ready replicas to be 1")
 			Eventually(func() int {
@@ -136,7 +130,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 						"app.kubernetes.io/instance":   ds.GetName(),
 					},
 				)
-			}, 60*time.Second, 5*time.Second).Should(Equal(1))
+			}, timeout, poll).Should(Equal(1))
 		})
 
 		It("reconciles the discovery service deployment", func() {
@@ -157,7 +151,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
 				return dep.GetGeneration() > generation
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
+			}, timeout, poll).Should(BeTrue())
 		})
 
 	})
