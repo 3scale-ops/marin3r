@@ -33,6 +33,8 @@ func TestGeneratorOptions_EnvoyBootstrap(t *testing.T) {
 				DeploymentImage:           "test:latest",
 				DeploymentResources:       corev1.ResourceRequirements{},
 				ExposedPorts:              []operatorv1alpha1.ContainerPort{},
+				AdminPort:                 9901,
+				AdminAccessLogPath:        "/dev/null",
 			},
 			want: &marin3rv1alpha1.EnvoyBootstrap{
 				TypeMeta: metav1.TypeMeta{

@@ -90,7 +90,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 								}(),
 								Resources: cfg.DeploymentResources,
 								Ports: func() []corev1.ContainerPort {
-									ports := make([]corev1.ContainerPort, len(cfg.ExposedPorts))
+									ports := make([]corev1.ContainerPort, len(cfg.ExposedPorts)+1)
 									for i := 0; i < len(cfg.ExposedPorts); i++ {
 										p := corev1.ContainerPort{
 											Name:          cfg.ExposedPorts[i].Name,
@@ -100,6 +100,10 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 											p.Protocol = *cfg.ExposedPorts[i].Protocol
 										}
 										ports[i] = p
+									}
+									ports[len(cfg.ExposedPorts)] = corev1.ContainerPort{
+										Name:          "admin",
+										ContainerPort: cfg.AdminPort,
 									}
 									return ports
 								}(),

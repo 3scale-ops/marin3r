@@ -37,6 +37,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				DeploymentImage:           "test:latest",
 				DeploymentResources:       corev1.ResourceRequirements{},
 				ExposedPorts:              []operatorv1alpha1.ContainerPort{{Name: "port", Port: 8080}},
+				AdminPort:                 9901,
+				AdminAccessLogPath:        "/dev/null",
 			},
 			args: args{hash: "hash"},
 			want: &appsv1.Deployment{
@@ -113,6 +115,10 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										{
 											Name:          "port",
 											ContainerPort: int32(8080),
+										},
+										{
+											Name:          "admin",
+											ContainerPort: int32(9901),
 										},
 									},
 									VolumeMounts: []corev1.VolumeMount{
