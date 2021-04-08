@@ -58,7 +58,7 @@ type EnvoyDeploymentSpec struct {
 	// +optional
 	Image *string `json:"image,omitempty"`
 	// Resources holds the resource requirements to use for the Envoy
-	// Deployment. When not set it defaults to no resource requests nor limits.
+	// Deployment. Defaults to no resource requests nor limits.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -71,6 +71,14 @@ type EnvoyDeploymentSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ExtraArgs []string `json:"extraArgs,omitempty"`
+	// Configures envoy's admin port. Defaults to 9901.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	AdminPort *uint32 `json:"adminPort,omitempty"`
+	// Configures envoy's admin access log path. Defaults to /dev/null.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	AdminAccessLogPath *string `json:"adminAccessLogPath,omitempty"`
 
 	// TODO: customizations for labels, annotations and probes
 }
@@ -112,6 +120,20 @@ func (ed *EnvoyDeployment) ClientCertificateDuration() time.Duration {
 		return d
 	}
 	return ed.Spec.ClientCertificateDuration.Duration
+}
+
+func (ed *EnvoyDeployment) AdminPort() uint32 {
+	if ed.Spec.AdminPort == nil {
+		return defaults.EnvoyAdminPort
+	}
+	return *ed.Spec.AdminPort
+}
+
+func (ed *EnvoyDeployment) AdminAccessLogPath() string {
+	if ed.Spec.AdminAccessLogPath == nil {
+		return defaults.EnvoyAdminAccessLogPath
+	}
+	return *ed.Spec.AdminAccessLogPath
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment

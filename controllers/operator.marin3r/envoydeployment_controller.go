@@ -21,6 +21,7 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/envoydeployment/generators"
 	"github.com/go-logr/logr"
@@ -100,12 +101,10 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return r.ManageError(ctx, ed, err)
 	}
 
-	hash := r.getBootstrapConfigHash()
-
 	generate := generators.GeneratorOptions{
 		InstanceName:         ed.GetName(),
-		DiscoveryServiceName: ed.Spec.DiscoveryServiceRef,
 		Namespace:            ed.GetNamespace(),
+		DiscoveryServiceName: ed.Spec.DiscoveryServiceRef,
 		EnvoyAPIVersion:      ec.GetEnvoyAPIVersion(),
 		EnvoyNodeID:          ec.Spec.NodeID,
 		EnvoyClusterID: func() string {
@@ -115,11 +114,18 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ec.Spec.NodeID
 		}(),
 		ClientCertificateDuration: ed.ClientCertificateDuration(),
-		// Function with default
-		DeploymentImage:     ed.Image(),
-		DeploymentResources: ed.Resources(),
-		ExposedPorts:        []operatorv1alpha1.ContainerPort{{Name: "port", Port: 8080}},
-		ExtraArgs:           ed.Spec.ExtraArgs,
+		DeploymentImage:           ed.Image(),
+		DeploymentResources:       ed.Resources(),
+		ExposedPorts:              ed.Spec.Ports,
+		ExtraArgs:                 ed.Spec.ExtraArgs,
+		AdminPort:                 int32(ed.AdminPort()),
+		AdminAccessLogPath:        ed.AdminAccessLogPath(),
+	}
+
+	hash, err := r.getBootstrapConfigHash(ctx, generate.EnvoyBootstrap()().(*marin3rv1alpha1.EnvoyBootstrap), generate.EnvoyAPIVersion)
+	if err != nil {
+		log.Error(err, "unable to get EnvoyBootstrap", "EnvoyBootstrap", ed.Spec.EnvoyConfigRef)
+		return r.ManageError(ctx, ed, err)
 	}
 
 	resources, err := r.NewLockedResources(
@@ -153,8 +159,20 @@ func (r *EnvoyDeploymentReconciler) getEnvoyConfig(ctx context.Context, key type
 	return ec, nil
 }
 
-func (r *EnvoyDeploymentReconciler) getBootstrapConfigHash() string {
-	return ""
+func (r *EnvoyDeploymentReconciler) getBootstrapConfigHash(ctx context.Context, eb *marin3rv1alpha1.EnvoyBootstrap, envoyAPI envoy.APIVersion) (string, error) {
+	key := types.NamespacedName{Name: eb.GetName(), Namespace: eb.GetNamespace()}
+	err := r.GetClient().Get(ctx, key, eb)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return "", nil
+		}
+		return "", err
+	}
+
+	if envoyAPI == envoy.APIv2 {
+		return eb.Status.GetConfigHashV2(), nil
+	}
+	return eb.Status.GetConfigHashV3(), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

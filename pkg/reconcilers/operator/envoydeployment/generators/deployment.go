@@ -82,6 +82,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 										"--service-cluster",
 										cfg.EnvoyClusterID,
 									}
+									// TODO: validate that user is not overwriting 'service-node' or 'service-cluster'
 									if len(cfg.ExtraArgs) > 0 {
 										args = append(args, cfg.ExtraArgs...)
 									}
@@ -118,7 +119,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 									Handler: corev1.Handler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.IntOrString{IntVal: 9901},
+											Port: intstr.IntOrString{IntVal: cfg.AdminPort},
 										},
 									},
 									InitialDelaySeconds: 30,
@@ -131,7 +132,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 									Handler: corev1.Handler{
 										HTTPGet: &corev1.HTTPGetAction{
 											Path: "/ready",
-											Port: intstr.IntOrString{IntVal: 9901},
+											Port: intstr.IntOrString{IntVal: cfg.AdminPort},
 										},
 									},
 									InitialDelaySeconds: 15,

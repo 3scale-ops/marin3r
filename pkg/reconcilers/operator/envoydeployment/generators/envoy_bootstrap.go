@@ -39,8 +39,8 @@ func (cfg *GeneratorOptions) EnvoyBootstrap() lockedresources.GeneratorFunction 
 					ConfigFile:            fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
 					ResourcesDir:          defaults.EnvoyConfigBasePath,
 					RtdsLayerResourceName: "runtime",
-					AdminBindAddress:      "0.0.0.0:9901",
-					AdminAccessLogPath:    "/dev/null",
+					AdminBindAddress:      fmt.Sprintf("0.0.0.0:%d", cfg.AdminPort),
+					AdminAccessLogPath:    cfg.AdminAccessLogPath,
 				},
 			},
 		}

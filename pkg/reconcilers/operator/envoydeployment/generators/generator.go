@@ -21,6 +21,8 @@ type GeneratorOptions struct {
 	DeploymentResources       corev1.ResourceRequirements
 	ExposedPorts              []operatorv1alpha1.ContainerPort
 	ExtraArgs                 []string
+	AdminPort                 int32
+	AdminAccessLogPath        string
 }
 
 func (cfg *GeneratorOptions) labels() map[string]string {

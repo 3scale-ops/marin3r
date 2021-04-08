@@ -36,6 +36,14 @@ spec:
           spec:
             description: EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
             properties:
+              adminAccessLogPath:
+                description: Configures envoy's admin access log path. Defaults to
+                  /dev/null.
+                type: string
+              adminPort:
+                description: Configures envoy's admin port. Defaults to 9901.
+                format: int32
+                type: integer
               clusterID:
                 description: Defines the local service cluster name where Envoy is
                   running. Defaults to the NodeID in the EnvoyConfig if unset
@@ -86,8 +94,7 @@ spec:
                 type: array
               resources:
                 description: Resources holds the resource requirements to use for
-                  the Envoy Deployment. When not set it defaults to no resource requests
-                  nor limits.
+                  the Envoy Deployment. Defaults to no resource requests nor limits.
                 properties:
                   limits:
                     additionalProperties:
