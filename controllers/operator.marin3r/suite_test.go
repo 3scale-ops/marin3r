@@ -88,7 +88,6 @@ var _ = BeforeSuite(func(done Done) {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	// Add the EnvoyConfig controller
 	err = (&DiscoveryServiceReconciler{
 		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), true),
 		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
@@ -99,6 +98,12 @@ var _ = BeforeSuite(func(done Done) {
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
 		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr)
+	Expect(err).ToNot(HaveOccurred())
+
+	err = (&EnvoyDeploymentReconciler{
+		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("EnvoyDeployment"), true),
+		Log:        ctrl.Log.WithName("controllers").WithName("envoydeployment"),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
