@@ -140,6 +140,9 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		},
 		ds,
 	)
+	if err != nil {
+		return r.ManageError(ctx, ds, err)
+	}
 
 	err = r.UpdateLockedResources(ctx, ds, resources, []lockedpatch.LockedPatch{})
 	if err != nil {
