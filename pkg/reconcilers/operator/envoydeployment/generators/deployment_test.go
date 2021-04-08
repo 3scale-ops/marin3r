@@ -17,7 +17,8 @@ import (
 
 func TestGeneratorOptions_Deployment(t *testing.T) {
 	type args struct {
-		hash string
+		hash     string
+		replicas *int32
 	}
 	tests := []struct {
 		name string
@@ -39,8 +40,23 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				ExposedPorts:              []operatorv1alpha1.ContainerPort{{Name: "port", Port: 8080}},
 				AdminPort:                 9901,
 				AdminAccessLogPath:        "/dev/null",
+				Replicas:                  operatorv1alpha1.ReplicasSpec{Static: pointer.Int32Ptr(1)},
+				LivenessProbe: operatorv1alpha1.ProbeSpec{
+					InitialDelaySeconds: 30,
+					TimeoutSeconds:      1,
+					PeriodSeconds:       10,
+					SuccessThreshold:    1,
+					FailureThreshold:    10,
+				},
+				ReadinessProbe: operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15,
+					TimeoutSeconds:   1,
+					PeriodSeconds:    5,
+					SuccessThreshold: 1,
+					FailureThreshold: 1,
+				},
+				PodAffinity: nil,
 			},
-			args: args{hash: "hash"},
+			args: args{hash: "hash", replicas: pointer.Int32Ptr(1)},
 			want: &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Deployment",
@@ -195,7 +211,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.opts
-			if got := cfg.Deployment(tt.args.hash)(); !equality.Semantic.DeepEqual(got, tt.want) {
+			if got := cfg.Deployment(tt.args.hash, tt.args.replicas)(); !equality.Semantic.DeepEqual(got, tt.want) {
 				t.Errorf("GeneratorOptions.Deployment() = %v, want %v", got, tt.want)
 			}
 		})

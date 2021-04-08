@@ -20,8 +20,11 @@ import (
 	"time"
 
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -30,6 +33,26 @@ const (
 	EnvoyDeploymentBootstrapConfigHashLabelKey string = "marin3r.3scale.net/bootstrap-config-hash"
 	// ClientCertificateDefaultDuration
 	ClientCertificateDefaultDuration string = "48h"
+	// DefaultReplicas is the default number of replicas for the Deployment
+	DefaultReplicas int32 = 1
+)
+
+var (
+	defaultLivenessProbe ProbeSpec = ProbeSpec{
+		InitialDelaySeconds: 30,
+		TimeoutSeconds:      1,
+		PeriodSeconds:       10,
+		SuccessThreshold:    1,
+		FailureThreshold:    10,
+	}
+	defaultReadinessProbe ProbeSpec = ProbeSpec{
+		InitialDelaySeconds: 15,
+		TimeoutSeconds:      1,
+		PeriodSeconds:       5,
+		SuccessThreshold:    1,
+		FailureThreshold:    1,
+	}
+	defaultPodDisruptionBudget PodDisruptionBudgetSpec = PodDisruptionBudgetSpec{}
 )
 
 // EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
@@ -79,22 +102,27 @@ type EnvoyDeploymentSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	AdminAccessLogPath *string `json:"adminAccessLogPath,omitempty"`
-
-	// TODO: customizations for labels, annotations and probes
-}
-
-// ContainerPort defines port for the Marin3r sidecar container
-type ContainerPort struct {
-	// Port name
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Name string `json:"name"`
-	// Port value
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Port int32 `json:"port"`
-	// Protocol. Defaults to TCP.
+	// Replicas configures the number of replicas in the Deployment. One of
+	// 'static', 'dynamic' can be set. If both are set, static has precedence.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Protocol *corev1.Protocol `json:"protocol,omitempty"`
+	Replicas *ReplicasSpec `json:"replicas,omitempty"`
+	// Liveness probe for the envoy pods
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	LivenessProbe *ProbeSpec `json:"livenessProbe,omitempty"`
+	// Readiness probe for the envoy pods
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ReadinessProbe *ProbeSpec `json:"readinessProbe,omitempty"`
+	// Affinity configuration for the envoy pods
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	PodAffinity *corev1.Affinity `json:"podAffinity,omitempty"`
+	// Configures PodDisruptionBudget for the envoy Pods
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
 }
 
 // Image returns the envoy container image to use
@@ -134,6 +162,135 @@ func (ed *EnvoyDeployment) AdminAccessLogPath() string {
 		return defaults.EnvoyAdminAccessLogPath
 	}
 	return *ed.Spec.AdminAccessLogPath
+}
+
+func (ed *EnvoyDeployment) Replicas() ReplicasSpec {
+	if ed.Spec.Replicas == nil {
+		return ReplicasSpec{Static: pointer.Int32Ptr(DefaultReplicas)}
+	}
+	if ed.Spec.Replicas.Static != nil {
+		return ReplicasSpec{Static: ed.Spec.Replicas.Static}
+	}
+	return ReplicasSpec{Dynamic: ed.Spec.Replicas.Dynamic}
+}
+
+func (ed *EnvoyDeployment) LivenessProbe() ProbeSpec {
+	if ed.Spec.LivenessProbe == nil {
+		return defaultLivenessProbe
+	}
+	return *ed.Spec.LivenessProbe
+}
+
+func (ed *EnvoyDeployment) ReadinessProbe() ProbeSpec {
+	if ed.Spec.ReadinessProbe == nil {
+		return defaultReadinessProbe
+	}
+	return *ed.Spec.ReadinessProbe
+}
+
+func (ed *EnvoyDeployment) PodAffinity() *corev1.Affinity {
+	return ed.Spec.PodAffinity
+}
+
+func (ed *EnvoyDeployment) PodDisruptionBudget() PodDisruptionBudgetSpec {
+	if ed.Spec.PodDisruptionBudget == nil {
+		return defaultPodDisruptionBudget
+	}
+	return *ed.Spec.PodDisruptionBudget
+}
+
+// ReplicasSpec configures the number of replicas of the Deployment
+type ReplicasSpec struct {
+	// Configure a static number of replicas. Defaults to 1.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Static *int32 `json:"static,omitempty"`
+	// Configure a min and max value for the number of pods to autoscale dynamically.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Dynamic *DynamicReplicasSpec `json:"dynamic,omitempty"`
+}
+
+type DynamicReplicasSpec struct {
+	// minReplicas is the lower limit for the number of replicas to which the autoscaler
+	// can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
+	// alpha feature gate HPAScaleToZero is enabled and at least one Object or External
+	// metric is configured.  Scaling is active as long as at least one metric value is
+	// available.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	MinReplicas *int32 `json:"minReplicas,omitempty"`
+	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
+	// It cannot be less that minReplicas.
+	MaxReplicas int32 `json:"maxReplicas"`
+	// metrics contains the specifications for which to use to calculate the
+	// desired replica count (the maximum replica count across all metrics will
+	// be used).  The desired replica count is calculated multiplying the
+	// ratio between the target value and the current value by the current
+	// number of pods.  Ergo, metrics used must decrease as the pod count is
+	// increased, and vice-versa.  See the individual metric source types for
+	// more information about how each type of metric must respond.
+	// If not set, the default metric will be set to 80% average CPU utilization.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Metrics []autoscalingv2beta2.MetricSpec `json:"metrics,omitempty"`
+	// behavior configures the scaling behavior of the target
+	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
+	// If not set, the default HPAScalingRules for scale up and scale down are used.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Behavior *autoscalingv2beta2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+}
+
+// ProbeSpec specifies configuration for a probe
+type ProbeSpec struct {
+	// Number of seconds after the container has started before liveness probes are initiated
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	InitialDelaySeconds int32 `json:"initialDelaySeconds"`
+	// Number of seconds after which the probe times out
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	TimeoutSeconds int32 `json:"timeoutSeconds"`
+	// How often (in seconds) to perform the probe
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	PeriodSeconds int32 `json:"periodSeconds"`
+	// Minimum consecutive successes for the probe to be considered successful after having failed
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	SuccessThreshold int32 `json:"successThreshold"`
+	// Minimum consecutive failures for the probe to be considered failed after having succeeded
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	FailureThreshold int32 `json:"failureThreshold"`
+}
+
+// ContainerPort defines port for the Marin3r sidecar container
+type ContainerPort struct {
+	// Port name
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Name string `json:"name"`
+	// Port value
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Port int32 `json:"port"`
+	// Protocol. Defaults to TCP.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Protocol *corev1.Protocol `json:"protocol,omitempty"`
+}
+
+// PodDisruptionBudgetSpec defines the PDB for the component
+type PodDisruptionBudgetSpec struct {
+	// An eviction is allowed if at least "minAvailable" pods selected by
+	// "selector" will still be available after the eviction, i.e. even in the
+	// absence of the evicted pod.  So for example you can prevent all voluntary
+	// evictions by specifying "100%".
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	MinAvailable *intstr.IntOrString `json:"minAvailable,omitempty"`
+	// An eviction is allowed if at most "maxUnavailable" pods selected by
+	// "selector" are unavailable after the eviction, i.e. even in absence of
+	// the evicted pod. For example, one can prevent all voluntary evictions
+	// by specifying 0. This is a mutually exclusive setting with "minAvailable".
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment

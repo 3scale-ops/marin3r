@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
@@ -27,6 +28,7 @@ import (
 	"github.com/go-logr/logr"
 	operatorutil "github.com/redhat-cop/operator-utils/pkg/util"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedpatch"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -94,7 +96,7 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	// Get the EnvoyConfig for additional data
+	// Get the EnvoyConfig for additional data (like the envoy API version in use)
 	ec, err := r.getEnvoyConfig(ctx, types.NamespacedName{Name: ed.Spec.EnvoyConfigRef, Namespace: ed.GetNamespace()})
 	if err != nil {
 		log.Error(err, "unable to get EnvoyConfig", "EnvoyConfig", ed.Spec.EnvoyConfigRef)
@@ -120,21 +122,37 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		ExtraArgs:                 ed.Spec.ExtraArgs,
 		AdminPort:                 int32(ed.AdminPort()),
 		AdminAccessLogPath:        ed.AdminAccessLogPath(),
+		Replicas:                  ed.Replicas(),
+		LivenessProbe:             ed.LivenessProbe(),
+		ReadinessProbe:            ed.ReadinessProbe(),
+		PodAffinity:               ed.PodAffinity(),
+		PodDisruptionBudget:       ed.PodDisruptionBudget(),
 	}
 
-	hash, err := r.getBootstrapConfigHash(ctx, generate.EnvoyBootstrap()().(*marin3rv1alpha1.EnvoyBootstrap), generate.EnvoyAPIVersion)
+	hash, err := r.getBootstrapConfigHash(ctx, generate.OwnedResourceKey(), generate.EnvoyAPIVersion)
 	if err != nil {
 		log.Error(err, "unable to get EnvoyBootstrap", "EnvoyBootstrap", ed.Spec.EnvoyConfigRef)
 		return r.ManageError(ctx, ed, err)
 	}
 
-	resources, err := r.NewLockedResources(
-		[]lockedresources.LockedResource{
-			{GeneratorFn: generate.Deployment(hash), ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.EnvoyBootstrap(), ExcludePaths: defaultExcludedPaths},
-		},
-		ed,
-	)
+	replicas, err := r.getDeploymentReplicas(ctx, generate.OwnedResourceKey())
+	if err != nil {
+		log.Error(err, "unable to get Deployment", "DeploymentName", key.Name)
+		return r.ManageError(ctx, ed, err)
+	}
+
+	lr := []lockedresources.LockedResource{
+		{GeneratorFn: generate.Deployment(hash, replicas), ExcludePaths: defaultExcludedPaths},
+		{GeneratorFn: generate.EnvoyBootstrap(), ExcludePaths: defaultExcludedPaths},
+	}
+	if ed.Replicas().Dynamic != nil {
+		lr = append(lr, lockedresources.LockedResource{GeneratorFn: generate.HPA(), ExcludePaths: defaultExcludedPaths})
+	}
+	if !reflect.DeepEqual(ed.PodDisruptionBudget(), operatorv1alpha1.PodDisruptionBudgetSpec{}) {
+		lr = append(lr, lockedresources.LockedResource{GeneratorFn: generate.PDB(), ExcludePaths: defaultExcludedPaths})
+	}
+
+	resources, err := r.NewLockedResources(lr, ed)
 	if err != nil {
 		return r.ManageError(ctx, ed, err)
 	}
@@ -159,8 +177,8 @@ func (r *EnvoyDeploymentReconciler) getEnvoyConfig(ctx context.Context, key type
 	return ec, nil
 }
 
-func (r *EnvoyDeploymentReconciler) getBootstrapConfigHash(ctx context.Context, eb *marin3rv1alpha1.EnvoyBootstrap, envoyAPI envoy.APIVersion) (string, error) {
-	key := types.NamespacedName{Name: eb.GetName(), Namespace: eb.GetNamespace()}
+func (r *EnvoyDeploymentReconciler) getBootstrapConfigHash(ctx context.Context, key types.NamespacedName, envoyAPI envoy.APIVersion) (string, error) {
+	eb := &marin3rv1alpha1.EnvoyBootstrap{}
 	err := r.GetClient().Get(ctx, key, eb)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -173,6 +191,20 @@ func (r *EnvoyDeploymentReconciler) getBootstrapConfigHash(ctx context.Context, 
 		return eb.Status.GetConfigHashV2(), nil
 	}
 	return eb.Status.GetConfigHashV3(), nil
+}
+
+// reconcileDeploymentReplicas: this is required when using dynamic number of replicas to avoid the controller from
+// overriding the dynamic replica value set by the HPA
+func (r *EnvoyDeploymentReconciler) getDeploymentReplicas(ctx context.Context, key types.NamespacedName) (*int32, error) {
+	dep := &appsv1.Deployment{}
+	err := r.GetClient().Get(ctx, key, dep)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return dep.Spec.Replicas, err
 }
 
 // SetupWithManager sets up the controller with the Manager.

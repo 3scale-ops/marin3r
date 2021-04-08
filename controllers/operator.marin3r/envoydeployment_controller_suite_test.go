@@ -9,10 +9,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
+	corev1 "k8s.io/api/core/v1"
+	policyv1beta1 "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("EnvoyDeployment controller", func() {
@@ -24,7 +28,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 		namespace = "test-ns-" + nameGenerator.Generate()
 
 		// Add any setup steps that needs to be executed before each test
-		testNamespace := &v1.Namespace{
+		testNamespace := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
@@ -32,7 +36,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 		err := k8sClient.Create(context.Background(), testNamespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		n := &v1.Namespace{}
+		n := &corev1.Namespace{}
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
 		}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
@@ -119,6 +123,68 @@ var _ = Describe("EnvoyDeployment controller", func() {
 				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
 				Eventually(func() error {
 					return k8sClient.Get(context.Background(), key, dep)
+				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}
+		})
+
+		It("creates HPA resource", func() {
+
+			By("updating the EnvoyDeployment resource to use a dynamic number of replicas")
+			{
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ed)
+				Expect(err).ToNot(HaveOccurred())
+				patch := client.MergeFrom(ed.DeepCopy())
+				ed.Spec.Replicas = &operatorv1alpha1.ReplicasSpec{
+					Dynamic: &operatorv1alpha1.DynamicReplicasSpec{
+						MaxReplicas: 5,
+						Metrics: []autoscalingv2beta2.MetricSpec{
+							{
+								Type: autoscalingv2beta2.ResourceMetricSourceType,
+								Resource: &autoscalingv2beta2.ResourceMetricSource{
+									Name: corev1.ResourceCPU,
+									Target: autoscalingv2beta2.MetricTarget{
+										Type:               autoscalingv2beta2.UtilizationMetricType,
+										AverageUtilization: pointer.Int32Ptr(50),
+									},
+								},
+							},
+						},
+					},
+				}
+				err = k8sClient.Patch(context.Background(), ed, patch)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			By("waiting for the envoy HPA to be created")
+			{
+				hpa := &autoscalingv2beta2.HorizontalPodAutoscaler{}
+				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
+				Eventually(func() error {
+					return k8sClient.Get(context.Background(), key, hpa)
+				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}
+		})
+
+		It("creates the PDB resource", func() {
+
+			By("updating the EnvoyDeployment resource to use a PodDisruptionBudget")
+			{
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ed)
+				Expect(err).ToNot(HaveOccurred())
+				patch := client.MergeFrom(ed.DeepCopy())
+				ed.Spec.PodDisruptionBudget = &operatorv1alpha1.PodDisruptionBudgetSpec{
+					MinAvailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+				}
+				err = k8sClient.Patch(context.Background(), ed, patch)
+				Expect(err).ToNot(HaveOccurred())
+			}
+
+			By("waiting for the envoy PDB to be created")
+			{
+				pdb := &policyv1beta1.PodDisruptionBudget{}
+				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
+				Eventually(func() error {
+					return k8sClient.Get(context.Background(), key, pdb)
 				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 		})

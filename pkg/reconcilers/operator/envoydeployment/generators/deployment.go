@@ -15,11 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedresources.GeneratorFunction {
 
 	return func() client.Object {
 
-		return &appsv1.Deployment{
+		dep := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Deployment",
 				APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -30,7 +30,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 				Labels:    cfg.labels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
+				Replicas: replicas,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: cfg.labels(),
 				},
@@ -44,6 +44,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 						}(),
 					},
 					Spec: corev1.PodSpec{
+						Affinity: cfg.PodAffinity,
 						Volumes: []corev1.Volume{
 							{
 								Name: defaults.DeploymentTLSVolume,
@@ -126,11 +127,11 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 											Port: intstr.IntOrString{IntVal: cfg.AdminPort},
 										},
 									},
-									InitialDelaySeconds: 30,
-									TimeoutSeconds:      1,
-									PeriodSeconds:       10,
-									SuccessThreshold:    1,
-									FailureThreshold:    10,
+									InitialDelaySeconds: cfg.LivenessProbe.InitialDelaySeconds,
+									TimeoutSeconds:      cfg.LivenessProbe.TimeoutSeconds,
+									PeriodSeconds:       cfg.LivenessProbe.PeriodSeconds,
+									SuccessThreshold:    cfg.LivenessProbe.SuccessThreshold,
+									FailureThreshold:    cfg.LivenessProbe.FailureThreshold,
 								},
 								ReadinessProbe: &corev1.Probe{
 									Handler: corev1.Handler{
@@ -139,11 +140,11 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 											Port: intstr.IntOrString{IntVal: cfg.AdminPort},
 										},
 									},
-									InitialDelaySeconds: 15,
-									TimeoutSeconds:      1,
-									PeriodSeconds:       5,
-									SuccessThreshold:    1,
-									FailureThreshold:    1,
+									InitialDelaySeconds: cfg.ReadinessProbe.InitialDelaySeconds,
+									TimeoutSeconds:      cfg.ReadinessProbe.TimeoutSeconds,
+									PeriodSeconds:       cfg.ReadinessProbe.PeriodSeconds,
+									SuccessThreshold:    cfg.ReadinessProbe.SuccessThreshold,
+									FailureThreshold:    cfg.ReadinessProbe.FailureThreshold,
 								},
 								TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
@@ -176,5 +177,12 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 				ProgressDeadlineSeconds: pointer.Int32Ptr(600),
 			},
 		}
+
+		// Enforce a fixed number of replicas if static replicas is active
+		if cfg.Replicas.Static != nil {
+			dep.Spec.Replicas = cfg.Replicas.Static
+		}
+
+		return dep
 	}
 }
