@@ -138,7 +138,8 @@ func (r *BootstrapConfigReconciler) Reconcile(envoyAPI envoy.APIVersion) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if equality.Semantic.DeepEqual(desired.Data, cm.Data) {
+	if !equality.Semantic.DeepEqual(desired.Data, cm.Data) {
+		r.logger.V(1).Info("Updating bootstrap config", "Version", envoyAPI)
 		patch := client.MergeFrom(cm.DeepCopy())
 		cm.Data = desired.Data
 		if err := r.client.Patch(r.ctx, cm, patch); err != nil {
