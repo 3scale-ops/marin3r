@@ -45,7 +45,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 					APIVersion: appsv1.SchemeGroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "marin3r-envoy-deployment-instance",
+					Name:      "marin3r-envoydeployment-instance",
 					Namespace: "default",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":       "marin3r",

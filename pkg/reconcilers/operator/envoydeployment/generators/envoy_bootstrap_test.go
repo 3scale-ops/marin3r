@@ -40,7 +40,7 @@ func TestGeneratorOptions_EnvoyBootstrap(t *testing.T) {
 					APIVersion: marin3rv1alpha1.GroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "marin3r-envoy-deployment-instance",
+					Name:      "marin3r-envoydeployment-instance",
 					Namespace: "default",
 					Labels: map[string]string{
 						"app.kubernetes.io/name":       "marin3r",

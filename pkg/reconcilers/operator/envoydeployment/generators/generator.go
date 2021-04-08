@@ -35,5 +35,5 @@ func (cfg *GeneratorOptions) labels() map[string]string {
 }
 
 func (cfg *GeneratorOptions) resourceName() string {
-	return fmt.Sprintf("%s-%s", "marin3r-envoy-deployment", cfg.InstanceName)
+	return fmt.Sprintf("%s-%s", "marin3r-envoydeployment", cfg.InstanceName)
 }
