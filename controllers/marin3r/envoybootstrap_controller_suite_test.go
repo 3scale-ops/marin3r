@@ -7,7 +7,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -25,7 +24,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 		// Create a namespace for each block
 		namespace = "test-ns-" + nameGenerator.Generate()
 		// Add any setup steps that needs to be executed before each test
-		testNamespace := &v1.Namespace{
+		testNamespace := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
@@ -33,13 +32,10 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 		err := k8sClient.Create(context.Background(), testNamespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		n := &v1.Namespace{}
+		n := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
@@ -47,7 +43,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 	AfterEach(func() {
 
 		// Delete the namespace
-		testNamespace := &v1.Namespace{
+		testNamespace := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
@@ -55,7 +51,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 		err := k8sClient.Delete(context.Background(), testNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
 		Expect(err).ToNot(HaveOccurred())
 
-		n := &v1.Namespace{}
+		n := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
 			if err != nil && errors.IsNotFound(err) {
@@ -114,10 +110,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 
 			Eventually(func() bool {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "test", Namespace: namespace}, eb)
-				if err != nil {
-					return false
-				}
-				return true
+				return err == nil
 			}, 30*time.Second, 5*time.Second).Should(BeTrue())
 
 		})
@@ -158,6 +151,14 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 					}
 					return true
 				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}
+
+			By("Checking that the hashes of the configs are set in the status")
+			{
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: eb.GetName(), Namespace: eb.GetNamespace()}, eb)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(eb.Status.GetConfigHashV2()).ToNot(Equal(""))
+				Expect(eb.Status.GetConfigHashV3()).ToNot(Equal(""))
 			}
 		})
 	})

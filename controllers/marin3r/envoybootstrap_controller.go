@@ -81,6 +81,16 @@ func (r *EnvoyBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return result, err
 	}
 
+	if ok := envoybootstrap.IsStatusReconciled(eb,
+		configReconciler.GetConfigHash(envoy.APIv2), configReconciler.GetConfigHash(envoy.APIv3)); !ok {
+		if err := r.Client.Status().Update(ctx, eb); err != nil {
+			log.Error(err, "unable to update EnvoyBootstrap status")
+			return ctrl.Result{}, err
+		}
+		log.Info("status updated for EnvoyBootstrap resource")
+		return ctrl.Result{}, nil
+	}
+
 	return ctrl.Result{}, nil
 }
 

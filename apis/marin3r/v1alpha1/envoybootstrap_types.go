@@ -85,7 +85,36 @@ type ClientCertificate struct {
 }
 
 // EnvoyBootstrapStatus defines the observed state of EnvoyBootstrap
-type EnvoyBootstrapStatus struct{}
+type EnvoyBootstrapStatus struct {
+	// ConfigHashV2 stores the hash of the current V2 bootstrap
+	// config generated for the given EnvoyBootstrap parameters
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	ConfigHashV2 *string `json:"configHashV2,omitempty"`
+	// ConfigHashV3 stores the hash of the current V3 bootstrap
+	// config generated for the given EnvoyBootstrap parameters
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	ConfigHashV3 *string `json:"configHashV3,omitempty"`
+}
+
+// GetConfigHashV2 returns the hash of the v2 bootstrap config.
+// Returns an empty string if not set.
+func (status *EnvoyBootstrapStatus) GetConfigHashV2() string {
+	if status.ConfigHashV2 == nil {
+		return ""
+	}
+	return *status.ConfigHashV2
+}
+
+// GetConfigHashV3 returns the hash of the v3 bootstrap config.
+// Returns an empty string if not set.
+func (status *EnvoyBootstrapStatus) GetConfigHashV3() string {
+	if status.ConfigHashV3 == nil {
+		return ""
+	}
+	return *status.ConfigHashV3
+}
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
