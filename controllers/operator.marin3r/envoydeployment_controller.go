@@ -27,10 +27,12 @@ import (
 	operatorutil "github.com/redhat-cop/operator-utils/pkg/util"
 	"github.com/redhat-cop/operator-utils/pkg/util/lockedresourcecontroller/lockedpatch"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -160,7 +162,33 @@ func (r *EnvoyDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&operatorv1alpha1.EnvoyDeployment{}).
 		Watches(&source.Channel{Source: r.GetStatusChangeChannel()}, &handler.EnqueueRequestForObject{}).
-		// TODO: watch for changes to the EnvoyConfig resource
-		// TODO: watch for changes to the DiscoveryService resource
+		Watches(&source.Kind{Type: &marin3rv1alpha1.EnvoyConfig{TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfig"}}},
+			r.EnvoyConfigHandler()).
 		Complete(r)
+}
+
+// EnvoyConfigHandler returns an EventHandler to watch for EnvoyConfigs
+func (r *EnvoyDeploymentReconciler) EnvoyConfigHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(
+		func(o client.Object) []reconcile.Request {
+			edList := &operatorv1alpha1.EnvoyDeploymentList{}
+			if err := r.GetClient().List(context.TODO(), edList, client.InNamespace(o.GetNamespace())); err != nil {
+				r.Log.Error(err, "unable to retrieve the list of EnvoyDeployment resources in the namespace",
+					"Type", "EnvoyConfig", "Name", o.GetName(), "Namespace", o.GetNamespace())
+				return []reconcile.Request{}
+			}
+
+			// Return a reconcile event for all EnvoyDeployments that have a reference to this EnvoyConfig
+			req := []reconcile.Request{}
+			for _, ed := range edList.Items {
+				if ed.Spec.EnvoyConfigRef == o.GetName() {
+					req = append(req, reconcile.Request{
+						NamespacedName: types.NamespacedName{Name: ed.GetName(), Namespace: ed.GetNamespace()},
+					})
+				}
+			}
+
+			return req
+		},
+	)
 }
