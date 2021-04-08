@@ -149,8 +149,8 @@ var _ = Describe("EnvoyDeployment", func() {
 					Namespace: key.Namespace,
 				},
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
-					EnvoyConfigRef: "envoyconfig",
-				},
+					DiscoveryServiceRef: ds.GetName(),
+					EnvoyConfigRef:      ec.GetName()},
 			}
 			err = k8sClient.Create(context.Background(), edep)
 			Expect(err).ToNot(HaveOccurred())
@@ -167,10 +167,12 @@ var _ = Describe("EnvoyDeployment", func() {
 
 			By("getting the Envoy Pod")
 			podList := &corev1.PodList{}
-			err = k8sClient.List(context.Background(), podList,
-				[]client.ListOption{selector, client.InNamespace(testNamespace)}...)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(podList.Items)).To(Equal(1))
+			Eventually(func() int {
+				err = k8sClient.List(context.Background(), podList,
+					[]client.ListOption{selector, client.InNamespace(testNamespace)}...)
+				Expect(err).ToNot(HaveOccurred())
+				return len(podList.Items)
+			}, timeout, poll).Should(Equal(1))
 
 			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", localPort))
 			stopCh := make(chan struct{})
@@ -277,7 +279,8 @@ var _ = Describe("EnvoyDeployment", func() {
 					Namespace: key.Namespace,
 				},
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
-					EnvoyConfigRef: "envoyconfig",
+					DiscoveryServiceRef: ds.GetName(),
+					EnvoyConfigRef:      ec.GetName(),
 				},
 			}
 			err = k8sClient.Create(context.Background(), edep)
@@ -295,10 +298,12 @@ var _ = Describe("EnvoyDeployment", func() {
 
 			By("getting the Envoy Pod")
 			podList := &corev1.PodList{}
-			err = k8sClient.List(context.Background(), podList,
-				[]client.ListOption{selector, client.InNamespace(testNamespace)}...)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(podList.Items)).To(Equal(1))
+			Eventually(func() int {
+				err = k8sClient.List(context.Background(), podList,
+					[]client.ListOption{selector, client.InNamespace(testNamespace)}...)
+				Expect(err).ToNot(HaveOccurred())
+				return len(podList.Items)
+			}, timeout, poll).Should(Equal(1))
 
 			By(fmt.Sprintf("forwarding the Pod's port to localhost: %v", localPort))
 			stopCh := make(chan struct{})
