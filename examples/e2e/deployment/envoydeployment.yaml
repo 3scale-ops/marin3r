@@ -3,6 +3,7 @@ kind: EnvoyDeployment
 metadata:
   name: kuard
 spec:
+  discoveryServiceRef: instance
   envoyConfigRef: kuard
   ports:
     - name: https
@@ -10,3 +11,4 @@ spec:
   extraArgs:
     - --component-log-level
     - http:debug
+  adminAccessLogPath: /dev/stdout
