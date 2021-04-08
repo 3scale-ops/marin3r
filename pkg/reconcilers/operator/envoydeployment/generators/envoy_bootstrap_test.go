@@ -15,19 +15,16 @@ import (
 )
 
 func TestGeneratorOptions_EnvoyBootstrap(t *testing.T) {
-	type args struct {
-		discoveryServiceName string
-	}
 	tests := []struct {
 		name string
 		opts GeneratorOptions
-		args args
 		want client.Object
 	}{
 		{
 			name: "Generates an EnvoyBootstrap",
 			opts: GeneratorOptions{
 				InstanceName:              "instance",
+				DiscoveryServiceName:      "discoveryservice",
 				Namespace:                 "default",
 				EnvoyAPIVersion:           "v3",
 				EnvoyNodeID:               "test",
@@ -37,7 +34,6 @@ func TestGeneratorOptions_EnvoyBootstrap(t *testing.T) {
 				DeploymentResources:       corev1.ResourceRequirements{},
 				ExposedPorts:              []operatorv1alpha1.ContainerPort{},
 			},
-			args: args{discoveryServiceName: "discoveryservice"},
 			want: &marin3rv1alpha1.EnvoyBootstrap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       marin3rv1alpha1.EnvoyBootstrapKind,
@@ -78,7 +74,7 @@ func TestGeneratorOptions_EnvoyBootstrap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.opts
-			if got := cfg.EnvoyBootstrap(tt.args.discoveryServiceName)(); !equality.Semantic.DeepEqual(got, tt.want) {
+			if got := cfg.EnvoyBootstrap()(); !equality.Semantic.DeepEqual(got, tt.want) {
 				t.Errorf("GeneratorOptions.EnvoyBootstrap() = %v, want %v", got, tt.want)
 			}
 		})

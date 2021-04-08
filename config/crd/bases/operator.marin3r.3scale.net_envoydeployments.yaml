@@ -40,6 +40,10 @@ spec:
                 description: Defines the local service cluster name where Envoy is
                   running. Defaults to the NodeID in the EnvoyConfig if unset
                 type: string
+              discoveryServiceRef:
+                description: DiscoveryServiceRef points to a DiscoveryService in the
+                  same namespace
+                type: string
               duration:
                 description: Defines the duration of the client certificate that is
                   used to authenticate with the DiscoveryService
@@ -109,6 +113,7 @@ spec:
                     type: object
                 type: object
             required:
+            - discoveryServiceRef
             - envoyConfigRef
             type: object
           status:

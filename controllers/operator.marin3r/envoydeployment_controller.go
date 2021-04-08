@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
@@ -92,29 +91,21 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	// 1. get the DiscoveryService
-	discoveryServiceName, err := r.getDiscoveryService(ctx, req.Namespace)
-	if err != nil {
-		log.Error(err, "unable to get DiscoveryService")
-		return r.ManageError(ctx, ed, err)
-	}
-
-	// 2. get the EnvoyConfig
+	// Get the EnvoyConfig for additional data
 	ec, err := r.getEnvoyConfig(ctx, types.NamespacedName{Name: ed.Spec.EnvoyConfigRef, Namespace: ed.GetNamespace()})
 	if err != nil {
 		log.Error(err, "unable to get EnvoyConfig", "EnvoyConfig", ed.Spec.EnvoyConfigRef)
 		return r.ManageError(ctx, ed, err)
 	}
 
-	// 3. Calculate hash of bootstrap configuration
 	hash := r.getBootstrapConfigHash()
 
-	// 4. Create resources
 	generate := generators.GeneratorOptions{
-		InstanceName:    ed.GetName(),
-		Namespace:       ed.GetNamespace(),
-		EnvoyAPIVersion: ec.GetEnvoyAPIVersion(),
-		EnvoyNodeID:     ec.Spec.NodeID,
+		InstanceName:         ed.GetName(),
+		DiscoveryServiceName: ed.Spec.DiscoveryServiceRef,
+		Namespace:            ed.GetNamespace(),
+		EnvoyAPIVersion:      ec.GetEnvoyAPIVersion(),
+		EnvoyNodeID:          ec.Spec.NodeID,
 		EnvoyClusterID: func() string {
 			if ed.Spec.ClusterID != nil {
 				return *ed.Spec.ClusterID
@@ -132,10 +123,13 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	resources, err := r.NewLockedResources(
 		[]lockedresources.LockedResource{
 			{GeneratorFn: generate.Deployment(hash), ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.EnvoyBootstrap(discoveryServiceName), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.EnvoyBootstrap(), ExcludePaths: defaultExcludedPaths},
 		},
 		ed,
 	)
+	if err != nil {
+		return r.ManageError(ctx, ed, err)
+	}
 
 	err = r.UpdateLockedResources(ctx, ed, resources, []lockedpatch.LockedPatch{})
 	if err != nil {
@@ -144,19 +138,6 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	return r.ManageSuccess(ctx, ed)
-}
-
-func (r *EnvoyDeploymentReconciler) getDiscoveryService(ctx context.Context, namespace string) (string, error) {
-	dsList := &operatorv1alpha1.DiscoveryServiceList{}
-	err := r.GetClient().List(ctx, dsList, client.InNamespace(namespace))
-
-	if err != nil {
-		return "", err
-	}
-	if len(dsList.Items) != 1 {
-		return "", fmt.Errorf("found an incorrect number of discoveryservices (%d) in namespace '%s'", len(dsList.Items), namespace)
-	}
-	return dsList.Items[0].GetName(), nil
 }
 
 func (r *EnvoyDeploymentReconciler) getEnvoyConfig(ctx context.Context, key types.NamespacedName) (*marin3rv1alpha1.EnvoyConfig, error) {

@@ -12,6 +12,7 @@ import (
 type GeneratorOptions struct {
 	InstanceName              string
 	Namespace                 string
+	DiscoveryServiceName      string
 	EnvoyAPIVersion           envoy.APIVersion
 	EnvoyNodeID               string
 	EnvoyClusterID            string

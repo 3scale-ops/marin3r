@@ -38,6 +38,10 @@ type EnvoyDeploymentSpec struct {
 	// that holds the envoy resources for this Deployment
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	EnvoyConfigRef string `json:"envoyConfigRef"`
+	// DiscoveryServiceRef points to a DiscoveryService in the same
+	// namespace
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	DiscoveryServiceRef string `json:"discoveryServiceRef"`
 	// Defines the local service cluster name where Envoy is running. Defaults
 	// to the NodeID in the EnvoyConfig if unset
 	// +operator-sdk:csv:customresourcedefinitions:type=spec

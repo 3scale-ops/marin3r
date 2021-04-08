@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) EnvoyBootstrap(discoveryServiceName string) lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) EnvoyBootstrap() lockedresources.GeneratorFunction {
 
 	return func() client.Object {
 
@@ -25,7 +25,7 @@ func (cfg *GeneratorOptions) EnvoyBootstrap(discoveryServiceName string) lockedr
 				Labels:    cfg.labels(),
 			},
 			Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
-				DiscoveryService: discoveryServiceName,
+				DiscoveryService: cfg.DiscoveryServiceName,
 				ClientCertificate: marin3rv1alpha1.ClientCertificate{
 					Directory:  defaults.EnvoyTLSBasePath,
 					SecretName: fmt.Sprintf("%s-%s", defaults.DeploymentClientCertificate, cfg.InstanceName),
