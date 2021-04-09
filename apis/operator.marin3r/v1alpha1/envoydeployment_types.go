@@ -71,8 +71,6 @@ type EnvoyDeploymentSpec struct {
 	// +optional
 	ClusterID *string `json:"clusterID,omitempty"`
 	// Ports exposed by the Envoy container
-	// TODO: calculate this inspecting the list of listeners in the
-	// published EnvoyConfigRevision
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Ports []ContainerPort `json:"ports,omitempty"`

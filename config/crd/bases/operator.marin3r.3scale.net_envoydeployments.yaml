@@ -718,8 +718,7 @@ spec:
                     x-kubernetes-int-or-string: true
                 type: object
               ports:
-                description: 'Ports exposed by the Envoy container TODO: calculate
-                  this inspecting the list of listeners in the published EnvoyConfigRevision'
+                description: Ports exposed by the Envoy container
                 items:
                   description: ContainerPort defines port for the Marin3r sidecar
                     container
