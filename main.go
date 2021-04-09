@@ -226,6 +226,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 		setupLog.Error(err, "unable to create controller", "controller", "EnvoyDeployment")
 		os.Exit(1)
 	}
+
 	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
@@ -298,6 +299,12 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	// Register the EnvoyConfig validating webhook
 	if err = (&marin3rv1alpha1.EnvoyConfig{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "EnvoyConfig")
+		os.Exit(1)
+	}
+
+	// Register the EnvoyDeployment validating webhook
+	if err = (&operatorv1alpha1.EnvoyDeployment{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "EnvoyDeployment")
 		os.Exit(1)
 	}
 

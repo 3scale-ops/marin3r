@@ -26,11 +26,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("EnvoyConfig webhook", func() {
+var _ = Describe("EnvoyDeployment webhook", func() {
 	var namespace string
 
 	BeforeEach(func() {
@@ -74,47 +75,34 @@ var _ = Describe("EnvoyConfig webhook", func() {
 		}, 30*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
-	Context("envoy resource validation", func() {
-		It("fails for an EnvoyConfig with a syntax error in one of the envoy resources (from json)", func() {
-			// key := types.NamespacedName{Name: "test-envoyconfig", Namespace: namespace}
-			ec := &EnvoyConfig{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-envoyconfig", Namespace: namespace},
-				Spec: EnvoyConfigSpec{
-					NodeID:        "test",
-					Serialization: pointer.StringPtr("json"),
-					EnvoyAPI:      pointer.StringPtr("v3"),
-					EnvoyResources: &EnvoyResources{
-						Clusters: []EnvoyResource{{
-							Name: "cluster",
-							// the connect_timeout value unit is wrong
-							Value: `{"name":"cluster1","type":"STRICT_DNS","connect_timeout":"2xs","load_assignment":{"cluster_name":"cluster1"}}`,
-						}},
+	Context("resource validation", func() {
+		It("fails for an EnvoyDeployment with both static and dynamic replicas configuration", func() {
+			ec := &EnvoyDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: namespace},
+				Spec: EnvoyDeploymentSpec{
+					EnvoyConfigRef:      "test",
+					DiscoveryServiceRef: "test",
+					Replicas: &ReplicasSpec{
+						Static: pointer.Int32Ptr(5),
+						Dynamic: &DynamicReplicasSpec{
+							MinReplicas: pointer.Int32Ptr(2),
+							MaxReplicas: 10,
+						},
 					},
 				},
 			}
 			err := k8sClient.Create(ctx, ec)
 			Expect(err).To(HaveOccurred())
 		})
-		It("fails for an EnvoyConfig with a syntax error in one of the envoy resources (from yaml)", func() {
-			// key := types.NamespacedName{Name: "test-envoyconfig", Namespace: namespace}
-			ec := &EnvoyConfig{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-envoyconfig", Namespace: namespace},
-				Spec: EnvoyConfigSpec{
-					NodeID:        "test",
-					Serialization: pointer.StringPtr("yaml"),
-					EnvoyAPI:      pointer.StringPtr("v3"),
-					EnvoyResources: &EnvoyResources{
-						Listeners: []EnvoyResource{{
-							Name: "test",
-							// the "port" property should be "port_value"
-							Value: `
-                              name: listener1
-                              address:
-                                socket_address:
-                                  address: 0.0.0.0
-                                  port: 8443
-                            `,
-						}},
+		It("fails for an EnvoyDeployment with both minAvailable and maxUnavailable fields configured for the PDB", func() {
+			ec := &EnvoyDeployment{
+				ObjectMeta: metav1.ObjectMeta{Name: "test", Namespace: namespace},
+				Spec: EnvoyDeploymentSpec{
+					EnvoyConfigRef:      "test",
+					DiscoveryServiceRef: "test",
+					PodDisruptionBudget: &PodDisruptionBudgetSpec{
+						MinAvailable:   &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
+						MaxUnavailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
 					},
 				},
 			}

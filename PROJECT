@@ -64,4 +64,7 @@ resources:
   kind: EnvoyDeployment
   path: github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1
   version: v1alpha1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 version: "3"

@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	"time"
 
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
@@ -209,6 +210,14 @@ type ReplicasSpec struct {
 	Dynamic *DynamicReplicasSpec `json:"dynamic,omitempty"`
 }
 
+// Validate validates that the received struct is correct
+func (rs *ReplicasSpec) Validate() error {
+	if rs.Static != nil && rs.Dynamic != nil {
+		return fmt.Errorf("only one of 'spec.replicas.static' or 'spec.replicas.dynamic' is allowed")
+	}
+	return nil
+}
+
 type DynamicReplicasSpec struct {
 	// minReplicas is the lower limit for the number of replicas to which the autoscaler
 	// can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
@@ -289,6 +298,14 @@ type PodDisruptionBudgetSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+}
+
+// Validate validates that the received struct is correct
+func (pdbs *PodDisruptionBudgetSpec) Validate() error {
+	if pdbs.MinAvailable != nil && pdbs.MaxUnavailable != nil {
+		return fmt.Errorf("only one of 'spec.podDisruptionBudget.minAvailable' or 'spec.podDisruptionBudget.maxUnavailable' is allowed")
+	}
+	return nil
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment
