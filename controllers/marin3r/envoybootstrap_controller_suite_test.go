@@ -36,7 +36,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
 			return err == nil
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
 
@@ -58,7 +58,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
 	Context("an EnvoyBootstrap is created", func() {
@@ -111,7 +111,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 			Eventually(func() bool {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "test", Namespace: namespace}, eb)
 				return err == nil
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 		})
 
@@ -125,7 +125,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				Expect(dsc.Spec.SecretRef.Name).To(Equal(eb.Spec.ClientCertificate.SecretName))
 				Expect(dsc.Spec.ValidFor).To(Equal(int64(eb.Spec.ClientCertificate.Duration.Seconds())))
@@ -139,7 +139,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
 			By("Checking that the v3 bootstrap ConfigMap has been created")
@@ -150,7 +150,7 @@ var _ = Describe("EnvoyBootstrap controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
 			By("Checking that the hashes of the configs are set in the status")

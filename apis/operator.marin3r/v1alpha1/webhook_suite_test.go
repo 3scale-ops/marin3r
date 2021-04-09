@@ -57,7 +57,7 @@ func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecsWithDefaultAndCustomReporters(t,
-		"Webhook Suite",
+		"'operator.marin3r.3scale.net' Webhook Suite",
 		[]Reporter{printer.NewlineReporter{}})
 }
 

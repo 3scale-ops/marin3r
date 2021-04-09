@@ -39,7 +39,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 		n := &corev1.Namespace{}
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
-		}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 		By("creating a DiscoveryService instance")
 		ds := &operatorv1alpha1.DiscoveryService{
@@ -55,7 +55,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ds)
-		}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 		By("creating an EnvoyConfig instance")
 		ec := &marin3rv1alpha1.EnvoyConfig{
@@ -71,7 +71,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "config", Namespace: namespace}, ec)
 			return err == nil
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 		By("creating a EnvoyDeployment instance")
 		ed = &operatorv1alpha1.EnvoyDeployment{
@@ -88,7 +88,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ed)
-		}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 	})
 
@@ -100,7 +100,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ed)
 				Expect(err).ToNot(HaveOccurred())
 				return len(ed.GetFinalizers()) > 0
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		It("creates the required resources", func() {
@@ -114,7 +114,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 						types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace},
 						eb,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 
 			By("waiting for the envoy Deployment to be created")
@@ -123,7 +123,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
 				Eventually(func() error {
 					return k8sClient.Get(context.Background(), key, dep)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 		})
 
@@ -161,7 +161,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
 				Eventually(func() error {
 					return k8sClient.Get(context.Background(), key, hpa)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 		})
 
@@ -185,7 +185,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
 				Eventually(func() error {
 					return k8sClient.Get(context.Background(), key, pdb)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 		})
 	})

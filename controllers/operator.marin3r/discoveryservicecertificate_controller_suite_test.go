@@ -39,7 +39,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
 
@@ -66,13 +66,13 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(func() error {
 				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "dsc", Namespace: namespace}, dsc)
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 			Eventually(func() bool {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "dsc", Namespace: namespace}, dsc)
 				Expect(err).ToNot(HaveOccurred())
 				return dsc.Status.IsReady()
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		It("creates a valid certificate within a Secret", func() {
@@ -93,7 +93,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "dsc", Namespace: namespace}, dsc)
 				Expect(err).ToNot(HaveOccurred())
 				return dsc.Status.GetCertificateHash()
-			}, 30*time.Second, 5*time.Second).ShouldNot(Equal(hash))
+			}, 60*time.Second, 5*time.Second).ShouldNot(Equal(hash))
 		})
 
 	})
@@ -124,7 +124,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 
 			Eventually(func() error {
 				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "ca", Namespace: namespace}, caSecret)
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 		})
 
 		It("creates a valid certificate within a Secret, signed by the ca", func() {
@@ -151,7 +151,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 
 			Eventually(func() error {
 				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "cert", Namespace: namespace}, certSecret)
-			}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 			ca, err := pki.LoadX509Certificate(caSecret.Data["tls.crt"])
 			Expect(err).ToNot(HaveOccurred())

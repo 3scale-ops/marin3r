@@ -49,7 +49,7 @@ var _ = Describe("EnvoyConfig webhook", func() {
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
 			return err == nil
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
 
@@ -71,7 +71,7 @@ var _ = Describe("EnvoyConfig webhook", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
 	Context("envoy resource validation", func() {
