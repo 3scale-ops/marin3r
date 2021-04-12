@@ -2,7 +2,6 @@ apiVersion: marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
   name: kuard
-  namespace: default
 spec:
   nodeID: kuard
   serialization: yaml
@@ -12,7 +11,6 @@ spec:
       - name: kuard.default.svc
         ref:
           name: kuard
-          namespace: default
     clusters:
       - name: kuard
         value: |
