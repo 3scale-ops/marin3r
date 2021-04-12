@@ -90,6 +90,13 @@ spec:
             type: object
           status:
             description: EnvoyBootstrapStatus defines the observed state of EnvoyBootstrap
+            properties:
+              configHashV2:
+                description: ConfigHashV2 stores the hash of the current V2 bootstrap config generated for the given EnvoyBootstrap parameters
+                type: string
+              configHashV3:
+                description: ConfigHashV3 stores the hash of the current V3 bootstrap config generated for the given EnvoyBootstrap parameters
+                type: string
             type: object
         type: object
     served: true
