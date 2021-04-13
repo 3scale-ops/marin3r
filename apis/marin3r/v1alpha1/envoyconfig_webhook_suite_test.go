@@ -76,7 +76,6 @@ var _ = Describe("EnvoyConfig webhook", func() {
 
 	Context("envoy resource validation", func() {
 		It("fails for an EnvoyConfig with a syntax error in one of the envoy resources (from json)", func() {
-			// key := types.NamespacedName{Name: "test-envoyconfig", Namespace: namespace}
 			ec := &EnvoyConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-envoyconfig", Namespace: namespace},
 				Spec: EnvoyConfigSpec{
@@ -96,7 +95,6 @@ var _ = Describe("EnvoyConfig webhook", func() {
 			Expect(err).To(HaveOccurred())
 		})
 		It("fails for an EnvoyConfig with a syntax error in one of the envoy resources (from yaml)", func() {
-			// key := types.NamespacedName{Name: "test-envoyconfig", Namespace: namespace}
 			ec := &EnvoyConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-envoyconfig", Namespace: namespace},
 				Spec: EnvoyConfigSpec{
@@ -114,6 +112,28 @@ var _ = Describe("EnvoyConfig webhook", func() {
                                   address: 0.0.0.0
                                   port: 8443
                             `,
+						}},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, ec)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("fails for an EnvoyConfig that points to a Secret in a different namespace", func() {
+			ec := &EnvoyConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-envoyconfig", Namespace: namespace},
+				Spec: EnvoyConfigSpec{
+					NodeID:        "test",
+					Serialization: pointer.StringPtr("yaml"),
+					EnvoyAPI:      pointer.StringPtr("v3"),
+					EnvoyResources: &EnvoyResources{
+						Secrets: []EnvoySecretResource{{
+							Name: "secret",
+							Ref: &v1.SecretReference{
+								Name:      "secret",
+								Namespace: "other-ns",
+							},
 						}},
 					},
 				},

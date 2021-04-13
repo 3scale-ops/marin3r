@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util"
@@ -141,6 +143,18 @@ func (esr *EnvoySecretResource) GetSecretKey(namespace string) types.NamespacedN
 		return types.NamespacedName{Name: esr.Ref.Name, Namespace: namespace}
 	}
 	return types.NamespacedName{Name: esr.Name, Namespace: namespace}
+}
+
+func (esr *EnvoySecretResource) Validate(namespace string) error {
+	if esr.Ref != nil {
+		if esr.Ref.Name == "" {
+			return fmt.Errorf("'%T.ref.name' cannot be empty", esr)
+		}
+		if esr.Ref.Namespace != "" && esr.Ref.Namespace != namespace {
+			return fmt.Errorf("only Secrets from the same namespace '%s' can be referred", namespace)
+		}
+	}
+	return nil
 }
 
 // EnvoyConfigStatus defines the observed state of EnvoyConfig
