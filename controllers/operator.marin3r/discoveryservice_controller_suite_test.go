@@ -37,7 +37,7 @@ var _ = Describe("DiscoveryService controller", func() {
 		n := &v1.Namespace{}
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
-		}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 		By("creating a DiscoveryService instance")
 		ds = &operatorv1alpha1.DiscoveryService{
@@ -53,7 +53,7 @@ var _ = Describe("DiscoveryService controller", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ds)
-		}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 	})
 
@@ -68,7 +68,7 @@ var _ = Describe("DiscoveryService controller", func() {
 					return true
 				}
 				return false
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		It("creates the required resources", func() {
@@ -82,7 +82,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						types.NamespacedName{Name: "marin3r-ca-cert-instance", Namespace: namespace},
 						dsc,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 				Expect(dsc.Spec.SecretRef.Name).To(Equal(ds.GetRootCertificateAuthorityOptions().SecretName))
 				Expect(dsc.Spec.ValidFor).To(Equal(int64(ds.GetRootCertificateAuthorityOptions().Duration.Seconds())))
@@ -97,7 +97,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						types.NamespacedName{Name: "marin3r-server-cert-instance", Namespace: namespace},
 						dsc,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 				Expect(dsc.Spec.SecretRef.Name).To(Equal(ds.GetServerCertificateOptions().SecretName))
 				Expect(dsc.Spec.ValidFor).To(Equal(int64(ds.GetServerCertificateOptions().Duration.Seconds())))
@@ -112,7 +112,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						sa,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 
 			By("waiting for the discovery service Role to be created")
@@ -124,7 +124,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						cr,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 
 			By("waiting for the discovery service RoleBinding to be created")
@@ -136,7 +136,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						crb,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 
 			By("waiting for the discovery service Deployment to be created")
@@ -152,7 +152,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			}
 
 			By("waiting for the discovery service Service to be created")
@@ -164,7 +164,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						types.NamespacedName{Name: ds.GetServiceConfig().Name, Namespace: namespace},
 						svc,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 
 			By("waiting for the EnvoyBootstrap resource to be created")
@@ -176,7 +176,7 @@ var _ = Describe("DiscoveryService controller", func() {
 						types.NamespacedName{Name: "marin3r-instance", Namespace: namespace},
 						eb,
 					)
-				}, 30*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 			}
 		})
 	})

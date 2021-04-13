@@ -99,14 +99,14 @@ func TestBootstrapConfigReconciler_Reconcile(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{Name: "eb", Namespace: "default"},
 					Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
 						DiscoveryService: "ds",
-						ClientCertificate: &marin3rv1alpha1.ClientCertificate{
+						ClientCertificate: marin3rv1alpha1.ClientCertificate{
 							Directory:  "/tls",
 							SecretName: "client-certificate",
 							Duration: metav1.Duration{
 								Duration: func() time.Duration { d, _ := time.ParseDuration("24h"); return d }(),
 							},
 						},
-						EnvoyStaticConfig: &marin3rv1alpha1.EnvoyStaticConfig{
+						EnvoyStaticConfig: marin3rv1alpha1.EnvoyStaticConfig{
 							ConfigMapNameV2:       "cm-v2",
 							ConfigMapNameV3:       "cm-v3",
 							ConfigFile:            "config.json",

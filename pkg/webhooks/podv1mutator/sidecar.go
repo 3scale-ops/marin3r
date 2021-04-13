@@ -20,16 +20,11 @@ import (
 	"strings"
 
 	"github.com/3scale-ops/marin3r/pkg/envoy"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
-
-type parameter struct {
-	name         string
-	annotation   string
-	defaultValua string
-}
 
 const (
 
@@ -57,22 +52,6 @@ const (
 	paramResourceLimitsCPU      = "resources.limits.cpu"
 	paramResourceLimitsMemory   = "resources.limits.memory"
 
-	// default values
-	DefaultContainerName        = "envoy-sidecar"
-	DefaultImage                = "envoyproxy/envoy:v1.16.0"
-	DefaultBootstrapConfigMapV2 = "envoy-sidecar-bootstrap"
-	DefaultBootstrapConfigMapV3 = "envoy-sidecar-bootstrap-v3"
-	DefaultConfigVolume         = "envoy-sidecar-bootstrap"
-	DefaultTLSVolume            = "envoy-sidecar-tls"
-	DefaultClientCertificate    = "envoy-sidecar-client-cert"
-	DefaultEnvoyExtraArgs       = ""
-	DefaultEnvoyConfigBasePath  = "/etc/envoy/bootstrap"
-	DefaultEnvoyConfigFileName  = "config.json"
-	DefaultEnvoyTLSBasePath     = "/etc/envoy/tls/client"
-	DefaultEnvoyAPIVersion      = string(envoy.APIv2)
-
-	TlsCertificateSdsSecretFileName = "tls_certificate_sds_secret.yaml"
-
 	marin3rAnnotationsDomain = "marin3r.3scale.net"
 )
 
@@ -99,13 +78,13 @@ func lookupMarin3rAnnotation(key string, annotations map[string]string) (string,
 func getStringParam(key string, annotations map[string]string) string {
 
 	var defaults = map[string]string{
-		paramContainerName:     DefaultContainerName,
-		paramImage:             DefaultImage,
-		paramConfigVolume:      DefaultConfigVolume,
-		paramTLSVolume:         DefaultTLSVolume,
-		paramClientCertificate: DefaultClientCertificate,
-		paramEnvoyExtraArgs:    DefaultEnvoyExtraArgs,
-		paramEnvoyAPIVersion:   DefaultEnvoyAPIVersion,
+		paramContainerName:     defaults.SidecarContainerName,
+		paramImage:             defaults.Image,
+		paramConfigVolume:      defaults.SidecarConfigVolume,
+		paramTLSVolume:         defaults.SidecarTLSVolume,
+		paramClientCertificate: defaults.SidecarClientCertificate,
+		paramEnvoyExtraArgs:    defaults.EnvoyExtraArgs,
+		paramEnvoyAPIVersion:   defaults.EnvoyAPIVersion,
 	}
 
 	// return the value specified in the corresponding annotation, if any
@@ -168,12 +147,12 @@ func getBootstrapConfigMap(annotations map[string]string) string {
 	// Otherwise check if envoy v3 has been configured
 	if value, ok := lookupMarin3rAnnotation(paramEnvoyAPIVersion, annotations); ok {
 		if version, err := envoy.ParseAPIVersion(value); err == nil && version == envoy.APIv3 {
-			return DefaultBootstrapConfigMapV3
+			return defaults.SidecarBootstrapConfigMapV3
 		}
 	}
 
 	// Fallback to the default V2 ConfigMap for all other cases
-	return DefaultBootstrapConfigMapV2
+	return defaults.SidecarBootstrapConfigMapV2
 }
 
 func getContainerResourceRequirements(annotations map[string]string) (corev1.ResourceRequirements, error) {
@@ -328,7 +307,7 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 		Command: []string{"envoy"},
 		Args: []string{
 			"-c",
-			fmt.Sprintf("%s/%s", DefaultEnvoyConfigBasePath, DefaultEnvoyConfigFileName),
+			fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
 			"--service-node",
 			esc.nodeID,
 			"--service-cluster",
@@ -340,12 +319,12 @@ func (esc *envoySidecarConfig) container() corev1.Container {
 			{
 				Name:      esc.tlsVolume,
 				ReadOnly:  true,
-				MountPath: DefaultEnvoyTLSBasePath,
+				MountPath: defaults.EnvoyTLSBasePath,
 			},
 			{
 				Name:      esc.configVolume,
 				ReadOnly:  true,
-				MountPath: DefaultEnvoyConfigBasePath,
+				MountPath: defaults.EnvoyConfigBasePath,
 			},
 		},
 		LivenessProbe: &corev1.Probe{

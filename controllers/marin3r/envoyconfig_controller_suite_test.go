@@ -57,7 +57,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
 
@@ -79,7 +79,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
 	Context("using v2 envoy API version", func() {
@@ -105,7 +105,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("EnvoyConfig is created", func() {
@@ -119,7 +119,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				// Get the EnvoyConfigRevision that should have been created
 				ecr := &marin3rv1alpha1.EnvoyConfigRevision{}
@@ -147,7 +147,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 				Expect(err).ToNot(HaveOccurred())
@@ -170,7 +170,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				// Update the resources in the spec
 				ec.Spec.EnvoyResources = &marin3rv1alpha1.EnvoyResources{
@@ -189,7 +189,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 
 			It("should create a new matching EnvoyConfigRevision and new resources should be in the xDS cache", func() {
@@ -225,7 +225,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 
 			It("should publish an already existent EnvoyConfigRevision if one already matches the current EnvoyConfig resources", func() {
@@ -247,7 +247,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				Expect(*ec.Status.PublishedVersion).To(Equal(wantRevision))
 				Expect(*ec.Status.DesiredVersion).To(Equal(wantRevision))
@@ -279,7 +279,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
 	})
@@ -307,7 +307,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("EnvoyConfig is created", func() {
@@ -321,7 +321,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				// Get the EnvoyConfigRevision that should have been created
 				ecr := &marin3rv1alpha1.EnvoyConfigRevision{}
@@ -349,7 +349,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				err = k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 				Expect(err).ToNot(HaveOccurred())
@@ -388,7 +388,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("EnvoyConfig is updated with wrong resources", func() {
@@ -412,7 +412,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 
 			It("should set the CacheOutOfSync condition", func() {
@@ -441,7 +441,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 							return true
 						}
 						return false
-					}, 30*time.Second, 5*time.Second).Should(BeTrue())
+					}, 60*time.Second, 5*time.Second).Should(BeTrue())
 				})
 
 				It("should clear the CacheOutOfSync condition", func() {
@@ -481,7 +481,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 
 			It("should set the CacheOutOfSync and the RollbackFailed conditions", func() {
@@ -510,7 +510,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 							return true
 						}
 						return false
-					}, 30*time.Second, 5*time.Second).Should(BeTrue())
+					}, 60*time.Second, 5*time.Second).Should(BeTrue())
 				})
 
 				It("should set status.cacheState back to InSync", func() {
@@ -547,7 +547,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 			By("waiting for status.cacheState to be 'InSync'", func() {
 				Eventually(func() bool {
@@ -557,7 +557,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
 
@@ -585,7 +585,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 			})
 
@@ -676,7 +676,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 							}
 						}
 						return true
-					}, 30*time.Second, 5*time.Second).Should(BeTrue())
+					}, 60*time.Second, 5*time.Second).Should(BeTrue())
 				})
 			})
 		})
@@ -710,7 +710,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("OnError is called", func() {
@@ -728,7 +728,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
 					Expect(err).ToNot(HaveOccurred())
 					return ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
 	})

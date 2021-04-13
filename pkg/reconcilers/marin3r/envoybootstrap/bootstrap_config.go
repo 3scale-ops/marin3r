@@ -11,8 +11,9 @@ import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_bootstrap "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	envoy_bootstrap_options "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/options"
-	"github.com/3scale-ops/marin3r/pkg/webhooks/podv1mutator"
+	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -35,16 +36,39 @@ type BootstrapConfigReconciler struct {
 	client client.Client
 	scheme *runtime.Scheme
 	eb     *marin3rv1alpha1.EnvoyBootstrap
+
+	// These fields are only available once Reconcile()
+	// has been succesfully run
+	configHashV2 string
+	configHashV3 string
 }
 
 // NewBootstrapConfigReconciler returns a BootstrapConfigReconciler struct
 func NewBootstrapConfigReconciler(ctx context.Context, logger logr.Logger, client client.Client, scheme *runtime.Scheme,
 	eb *marin3rv1alpha1.EnvoyBootstrap) BootstrapConfigReconciler {
 
-	return BootstrapConfigReconciler{ctx, logger, client, scheme, eb}
+	return BootstrapConfigReconciler{ctx, logger, client, scheme, eb, "", ""}
 }
 
-// Reconcile keeps a discovery service client certificates in sync with the desired state
+// GetConfigHash returns the hash of the bootstrap config.
+// Should be invoked only after running Reconcile()
+func (r *BootstrapConfigReconciler) GetConfigHash(envoyAPI envoy.APIVersion) string {
+	if envoyAPI == envoy.APIv2 {
+		return r.configHashV2
+	}
+	return r.configHashV3
+}
+
+// SetConfigHash sets the hash of the bootstrap config.
+// Should be invoked only after running Reconcile()
+func (r *BootstrapConfigReconciler) SetConfigHash(envoyAPI envoy.APIVersion, hash string) {
+	if envoyAPI == envoy.APIv2 {
+		r.configHashV2 = hash
+	}
+	r.configHashV3 = hash
+}
+
+// Reconcile keeps a bootstrap configuration in sync with the desired state
 func (r *BootstrapConfigReconciler) Reconcile(envoyAPI envoy.APIVersion) (ctrl.Result, error) {
 
 	// Get the DiscoveryService instance this client want to connect to
@@ -114,7 +138,8 @@ func (r *BootstrapConfigReconciler) Reconcile(envoyAPI envoy.APIVersion) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if equality.Semantic.DeepEqual(desired.Data, cm.Data) {
+	if !equality.Semantic.DeepEqual(desired.Data, cm.Data) {
+		r.logger.V(1).Info("Updating bootstrap config", "Version", envoyAPI)
 		patch := client.MergeFrom(cm.DeepCopy())
 		cm.Data = desired.Data
 		if err := r.client.Patch(r.ctx, cm, patch); err != nil {
@@ -122,6 +147,8 @@ func (r *BootstrapConfigReconciler) Reconcile(envoyAPI envoy.APIVersion) (ctrl.R
 		}
 
 	}
+
+	r.SetConfigHash(envoyAPI, util.Hash(cm.Data))
 
 	return ctrl.Result{}, nil
 
@@ -164,7 +191,7 @@ func (r *BootstrapConfigReconciler) getBootstrapConfigMapObject(ds *operatorv1al
 			Namespace: r.eb.GetNamespace(),
 		},
 		Data: map[string]string{
-			podv1mutator.DefaultEnvoyConfigFileName: config,
+			defaults.EnvoyConfigFileName: config,
 		},
 	}
 

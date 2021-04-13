@@ -58,7 +58,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
 
@@ -79,7 +79,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				return false
 			}
 			return true
-		}, 30*time.Second, 5*time.Second).Should(BeTrue())
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
 	Context("using v2 envoy API version", func() {
@@ -105,7 +105,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("RevisionPublished condition is false in EnvoyConfigRevision", func() {
@@ -129,7 +129,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				patch := client.MergeFrom(ecr.DeepCopy())
 				ecr.Status.Conditions.SetCondition(status.Condition{
@@ -149,7 +149,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 					Resources: [6]cache_v2.Resources{
@@ -196,7 +196,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("RevisionPublished condition is false in EnvoyConfigRevision", func() {
@@ -220,7 +220,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				patch := client.MergeFrom(ecr.DeepCopy())
 				ecr.Status.Conditions.SetCondition(status.Condition{
@@ -240,7 +240,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return false
 					}
 					return true
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 					Resources: [6]cache_v3.Resources{
@@ -281,7 +281,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 			By("creating a EnvoyConfigRevision with a reference to the created Secret")
 			ecr = &marin3rv1alpha1.EnvoyConfigRevision{
@@ -306,7 +306,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 			By("settign the EnvoyConfigRevision as published")
 			patch := client.MergeFrom(ecr.DeepCopy())
@@ -359,7 +359,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return false
 				}
 				return testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("Secret changes", func() {
@@ -380,7 +380,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 					Resources: [6]cache_v3.Resources{
@@ -423,7 +423,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return false
 					}
 					return testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 			})
 
@@ -453,7 +453,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("resource is created", func() {
@@ -466,7 +466,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
 
@@ -501,7 +501,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
 	})
@@ -529,7 +529,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return false
 				}
 				return true
-			}, 30*time.Second, 5*time.Second).Should(BeTrue())
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 
 		When("RevisionTainted condition is true", func() {
@@ -554,7 +554,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 
 			Specify("status.tainted should be false when condition is cleared", func() {
@@ -576,7 +576,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return true
 					}
 					return false
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 		})
 
@@ -608,7 +608,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					err := k8sClient.Get(context.Background(), key, ecr)
 					Expect(err).ToNot(HaveOccurred())
 					return ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 
 			Specify("the EnvoyConfigRevision does not taint itself if the resource that failed was a Secret", func() {
@@ -639,7 +639,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					err := k8sClient.Get(context.Background(), key, ecr)
 					Expect(err).ToNot(HaveOccurred())
 					return ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)
-				}, 30*time.Second, 5*time.Second).Should(BeTrue())
+				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesInSyncCondition)).ToNot(BeTrue())
 				Expect(ecr.Status.IsPublished()).ToNot(BeTrue())

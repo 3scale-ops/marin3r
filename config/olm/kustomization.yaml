@@ -99,6 +99,15 @@ patches:
     version: v1
 - patch: |-
     - op: add
+      path: /webhooks/1/clientConfig/service/port
+      value: 9443
+  target:
+    group: admissionregistration.k8s.io
+    kind: ValidatingWebhookConfiguration
+    name: validating-webhook-configuration
+    version: v1
+- patch: |-
+    - op: add
       path: /webhooks/0/clientConfig/service/port
       value: 9443
   target:

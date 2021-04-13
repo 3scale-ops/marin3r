@@ -1,0 +1,34 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuard
+  namespace: default
+  labels:
+    app: kuard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kuard
+  template:
+    metadata:
+      labels:
+        app: kuard
+        marin3r.3scale.net/status: "enabled"
+      annotations:
+        marin3r.3scale.net/envoy-extra-args: "--component-log-level config:debug"
+        marin3r.3scale.net/node-id: kuard
+        marin3r.3scale.net/ports: envoy-https:8443
+        # Map envoy ports to extraPortMappings so they
+        # are reachable from the docker host
+        marin3r.3scale.net/host-port-mappings: envoy-https:8443
+        marin3r.3scale.net/envoy-api-version: v3
+    spec:
+      containers:
+        - name: kuard
+          image: gcr.io/kuar-demo/kuard-amd64:blue
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP

@@ -77,7 +77,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		return ctrl.Result{}, err
 	}
 
-	if ok := r.IsInitialized(ds, operatorv1alpha1.DiscoveryServiceFinalizer); !ok {
+	if ok := r.IsInitialized(ds, operatorv1alpha1.Finalizer); !ok {
 		err := r.GetClient().Update(ctx, ds)
 		if err != nil {
 			log.Error(err, "unable to initialize instance")
@@ -87,7 +87,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 	}
 
 	if operatorutil.IsBeingDeleted(ds) {
-		if !operatorutil.HasFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer) {
+		if !operatorutil.HasFinalizer(ds, operatorv1alpha1.Finalizer) {
 			return ctrl.Result{}, nil
 		}
 		err := r.ManageCleanUpLogic(ds, log)
@@ -95,7 +95,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 			log.Error(err, "unable to delete instance")
 			return r.ManageError(ctx, ds, err)
 		}
-		operatorutil.RemoveFinalizer(ds, operatorv1alpha1.DiscoveryServiceFinalizer)
+		operatorutil.RemoveFinalizer(ds, operatorv1alpha1.Finalizer)
 		err = r.GetClient().Update(ctx, ds)
 		if err != nil {
 			log.Error(err, "unable to update instance")
@@ -140,6 +140,9 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		},
 		ds,
 	)
+	if err != nil {
+		return r.ManageError(ctx, ds, err)
+	}
 
 	err = r.UpdateLockedResources(ctx, ds, resources, []lockedpatch.LockedPatch{})
 	if err != nil {

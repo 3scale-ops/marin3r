@@ -112,6 +112,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(marin3rv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(operatorv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	// Subcommands
@@ -196,7 +197,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("DiscoveryService"), isClusterScoped),
 		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "siscoveryservice")
+		setupLog.Error(err, "unable to create controller", "controller", "discoveryservice")
 		os.Exit(1)
 	}
 
@@ -215,6 +216,14 @@ func runOperator(cmd *cobra.Command, args []string) {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
+		os.Exit(1)
+	}
+
+	if err = (&operatorcontroller.EnvoyDeploymentReconciler{
+		Reconciler: lockedresources.NewFromManager(mgr, mgr.GetEventRecorderFor("EnvoyDeployment"), isClusterScoped),
+		Log:        ctrl.Log.WithName("controllers").WithName("envoydeployment"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EnvoyDeployment")
 		os.Exit(1)
 	}
 
@@ -290,6 +299,12 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	// Register the EnvoyConfig validating webhook
 	if err = (&marin3rv1alpha1.EnvoyConfig{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "EnvoyConfig")
+		os.Exit(1)
+	}
+
+	// Register the EnvoyDeployment validating webhook
+	if err = (&operatorv1alpha1.EnvoyDeployment{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "EnvoyDeployment")
 		os.Exit(1)
 	}
 

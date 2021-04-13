@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -74,15 +75,15 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				"marin3r.3scale.net/node-id": "node-id",
 			}},
 			&envoySidecarConfig{
-				name:               DefaultContainerName,
-				image:              DefaultImage,
+				name:               defaults.SidecarContainerName,
+				image:              defaults.Image,
 				ports:              []corev1.ContainerPort{},
-				bootstrapConfigMap: DefaultBootstrapConfigMapV2,
+				bootstrapConfigMap: defaults.SidecarBootstrapConfigMapV2,
 				nodeID:             "node-id",
 				clusterID:          "node-id",
-				tlsVolume:          DefaultTLSVolume,
-				configVolume:       DefaultConfigVolume,
-				clientCertSecret:   DefaultClientCertificate,
+				tlsVolume:          defaults.SidecarTLSVolume,
+				configVolume:       defaults.SidecarConfigVolume,
+				clientCertSecret:   defaults.SidecarClientCertificate,
 			},
 			false,
 		},
@@ -666,7 +667,7 @@ func Test_getStringParam(t *testing.T) {
 		}, {
 			"Return string value from default",
 			args{"envoy-image", map[string]string{}},
-			DefaultImage,
+			defaults.Image,
 		}, {
 			"Return cluster-id from annotation",
 			args{"cluster-id", map[string]string{"marin3r.3scale.net/cluster-id": "cluster-id"}},
@@ -954,21 +955,21 @@ func Test_getBootstrapConfigMap(t *testing.T) {
 			args{map[string]string{
 				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "v3",
 			}},
-			DefaultBootstrapConfigMapV3,
+			defaults.SidecarBootstrapConfigMapV3,
 		},
 		{
 			"Returns v2 ConfigMap when v2 version specified",
 			args{map[string]string{
 				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "v2",
 			}},
-			DefaultBootstrapConfigMapV2,
+			defaults.SidecarBootstrapConfigMapV2,
 		},
 		{
 			"Returns v2 ConfigMap when the version annotation does not parse correctly",
 			args{map[string]string{
 				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "xx",
 			}},
-			DefaultBootstrapConfigMapV2,
+			defaults.SidecarBootstrapConfigMapV2,
 		},
 	}
 	for _, tt := range tests {

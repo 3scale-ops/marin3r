@@ -55,4 +55,16 @@ resources:
   kind: EnvoyBootstrap
   path: github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: 3scale.net
+  group: operator.marin3r
+  kind: EnvoyDeployment
+  path: github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1
+  version: v1alpha1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 version: "3"
