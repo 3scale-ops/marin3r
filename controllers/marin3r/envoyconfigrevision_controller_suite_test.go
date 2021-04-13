@@ -291,10 +291,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					Version:  "xxxx",
 					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Secrets: []marin3rv1alpha1.EnvoySecretResource{{
-							Name: "secret",
-							Ref:  corev1.SecretReference{Name: "secret", Namespace: namespace}},
-						},
+						Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
 					},
 				},
 			}
@@ -619,10 +616,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				err := k8sClient.Get(context.Background(), key, ecr)
 				Expect(err).ToNot(HaveOccurred())
 				patch := client.MergeFrom(ecr.DeepCopy())
-				ecr.Spec.EnvoyResources.Secrets = []marin3rv1alpha1.EnvoySecretResource{{
-					Name: "secret",
-					Ref:  corev1.SecretReference{Name: "some-secret", Namespace: namespace},
-				}}
+				ecr.Spec.EnvoyResources.Secrets = []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}}
 				err = k8sClient.Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
 

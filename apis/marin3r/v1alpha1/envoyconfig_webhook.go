@@ -94,6 +94,12 @@ func (r *EnvoyConfig) ValidateResources() error {
 		}
 	}
 
+	for _, secret := range r.Spec.EnvoyResources.Secrets {
+		if err := secret.Validate(r.GetNamespace()); err != nil {
+			errList = append(errList, err)
+		}
+	}
+
 	if len(errList) > 0 {
 		return NewValidationError(errList)
 	}

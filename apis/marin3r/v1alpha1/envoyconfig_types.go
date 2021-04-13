@@ -17,12 +17,15 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -120,16 +123,38 @@ type EnvoyResource struct {
 	Value string `json:"value"`
 }
 
-// EnvoySecretResource holds a reference to a k8s
-// Secret from where to take a secret from
+// EnvoySecretResource holds a reference to a k8s Secret from where
+// to take a secret from. Only Secrets within the same namespace can
+// be referred.
 type EnvoySecretResource struct {
-	// Name of the envoy resource
+	// Name of the envoy resource. If ref is not set, a Secret with this same
+	// name will be fetched from within the namespace.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Name string `json:"name"`
-	// Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls" from which
-	// an envoy Secret resource will be automatically created.
+	// Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref'
+	// cannot point to a different namespace.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors="urn:alm:descriptor:io.kubernetes:SecretReference"
-	Ref corev1.SecretReference `json:"ref"`
+	// +optional
+	Ref *corev1.SecretReference `json:"ref,omitempty"`
+}
+
+func (esr *EnvoySecretResource) GetSecretKey(namespace string) types.NamespacedName {
+	if esr.Ref != nil {
+		return types.NamespacedName{Name: esr.Ref.Name, Namespace: namespace}
+	}
+	return types.NamespacedName{Name: esr.Name, Namespace: namespace}
+}
+
+func (esr *EnvoySecretResource) Validate(namespace string) error {
+	if esr.Ref != nil {
+		if esr.Ref.Name == "" {
+			return fmt.Errorf("'%T.ref.name' cannot be empty", esr)
+		}
+		if esr.Ref.Namespace != "" && esr.Ref.Namespace != namespace {
+			return fmt.Errorf("only Secrets from the same namespace '%s' can be referred", namespace)
+		}
+	}
+	return nil
 }
 
 // EnvoyConfigStatus defines the observed state of EnvoyConfig

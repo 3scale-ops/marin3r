@@ -18,9 +18,9 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
-
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
@@ -74,7 +74,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 
 			for _, secret := range ecr.Spec.EnvoyResources.Secrets {
-				if secret.Ref.Name == req.Name && secret.Ref.Namespace == req.Namespace {
+				if reflect.DeepEqual(secret.GetSecretKey(req.Namespace), req.NamespacedName) {
 					log.Info("Triggered EnvoyConfigRevision reconcile",
 						"EnvoyConfigRevision_Name", ecr.ObjectMeta.Name, "EnvoyConfigRevision_Namespace", ecr.GetNamespace())
 					if err != nil {
