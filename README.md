@@ -1,7 +1,7 @@
 <img src="docs/logos/white.svg" height="150px" alt="MARIN3R"></img>
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/3scale-ops/marin3r)](https://goreportcard.com/report/github.com/3scale-ops/marin3r)
-[![codecov](https://codecov.io/gh/3scale-ops/marin3r/branch/master/graph/badge.svg)](https://codecov.io/gh/3scale-ops/marin3r)
+[![codecov](https://codecov.io/gh/3scale-ops/marin3r/branch/main/graph/badge.svg)](https://codecov.io/gh/3scale-ops/marin3r)
 [![build](https://github.com/3scale-ops/marin3r/actions/workflows/build.yaml/badge.svg)](https://github.com/3scale-ops/marin3r/actions/workflows/build.yaml)
 [![license](https://badgen.net/github/license/3scale-ops/marin3r)](https://github.com/3scale-ops/marin3r/blob/master/LICENSE)
 
