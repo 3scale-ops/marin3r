@@ -252,7 +252,7 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 					for k, v := range secrets {
 						s = append(s, marin3rv1alpha1.EnvoySecretResource{
 							Name: k,
-							Ref: corev1.SecretReference{
+							Ref: &corev1.SecretReference{
 								Name:      v,
 								Namespace: key.Namespace,
 							},

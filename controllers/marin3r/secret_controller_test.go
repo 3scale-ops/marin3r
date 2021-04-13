@@ -47,10 +47,7 @@ func TestReconcileSecret_Reconcile(t *testing.T) {
 				EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{{
 						Name: "secret",
-						Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}}}},
+					}}},
 			},
 			Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 				Conditions: []status.Condition{{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue}},

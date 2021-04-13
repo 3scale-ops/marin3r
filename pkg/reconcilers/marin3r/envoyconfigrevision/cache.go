@@ -133,10 +133,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 
 	for idx, secret := range resources.Secrets {
 		s := &corev1.Secret{}
-		key := types.NamespacedName{
-			Name:      secret.Ref.Name,
-			Namespace: secret.Ref.Namespace,
-		}
+		key := secret.GetSecretKey(req.Namespace)
 		if err := r.client.Get(r.ctx, key, s); err != nil {
 			return nil, fmt.Errorf("%s", err.Error())
 		}

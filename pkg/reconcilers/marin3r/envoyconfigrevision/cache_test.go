@@ -531,7 +531,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
 				client: fake.NewFakeClient(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "default"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "xx"},
 					Type:       corev1.SecretTypeTLS,
 					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
 				}),
@@ -542,12 +542,8 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
-					Secrets: []marin3rv1alpha1.EnvoySecretResource{
-						{Name: "secret", Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}},
-					}},
+					Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
+				},
 				version: "xxxx",
 			},
 			wantErr: false,
@@ -593,7 +589,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
 				client: fake.NewFakeClient(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "default"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "xx"},
 					Type:       corev1.SecretTypeTLS,
 					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
 				}),
@@ -604,12 +600,8 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
-					Secrets: []marin3rv1alpha1.EnvoySecretResource{
-						{Name: "secret", Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}},
-					}},
+					Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
+				},
 				version: "xxxx",
 			},
 			wantErr: false,
@@ -652,7 +644,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			name: "Fails with wrong secret type",
 			fields: fields{
 				client: fake.NewFakeClient(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "default"},
+					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "xx"},
 					Type:       corev1.SecretTypeBasicAuth,
 					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
 				}),
@@ -666,11 +658,8 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{
-						{Name: "secret", Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}},
-					}},
+						{Name: "secret"}},
+				},
 				version: "xxxx",
 			},
 			wantErr: true,
@@ -690,11 +679,8 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{
-						{Name: "secret", Ref: corev1.SecretReference{
-							Name:      "secret",
-							Namespace: "default",
-						}},
-					}},
+						{Name: "secret"}},
+				},
 				version: "xxxx",
 			},
 			wantErr: true,
