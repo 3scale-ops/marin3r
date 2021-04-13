@@ -361,9 +361,6 @@ spec:
   envoyResources:
     secrets:
       - name: kuard-certificate
-        ref:
-          name: kuard-certificate
-          namespace: default
     clusters:
       - name: kuard
         value: |
@@ -471,12 +468,11 @@ spec:
     secrets:
         # name is the name by which the certificate can be referenced to from other resources
       - name: certificate
-        # ref is the Kubernetes object name and namespace where the Secret lives. Secrets from
-        # other namespaces can be referenced. This is usefull for example if you have a wildcard
-        # certificate that is used in different namespaces.
+        # ref is the Kubernetes object name and namespace where the Secret lives. If not set, a
+        # the 'name' field will be used as the Secret name. Secrets outside of the EnvoyConfig
+        # namespace cannot be referred.
         ref:
           name: some-secret
-          namespace: some-namespace
     # Endpoints is a list of the Envoy ClusterLoadAssignment resource type.
     # V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto
     # V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
@@ -524,7 +520,6 @@ spec:
       - name: certificate
         ref:
           name: some-k8s-secret-name
-          namespace: some-namespace
 ```
 
 This certificate can then be referenced in an Envoy cluster/listener with the folloing snippet (check the kuard example):
