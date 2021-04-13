@@ -148,13 +148,13 @@ spec:
                   secrets:
                     description: Secrets is a list of references to Kubernetes Secret objects.
                     items:
-                      description: EnvoySecretResource holds a reference to a k8s Secret from where to take a secret from
+                      description: EnvoySecretResource holds a reference to a k8s Secret from where to take a secret from. Only Secrets within the same namespace can be referred.
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
                           type: string
                         ref:
-                          description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls" from which an envoy Secret resource will be automatically created.
+                          description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
                           properties:
                             name:
                               description: Name is unique within a namespace to reference a secret resource.
@@ -165,7 +165,6 @@ spec:
                           type: object
                       required:
                       - name
-                      - ref
                       type: object
                     type: array
                 type: object

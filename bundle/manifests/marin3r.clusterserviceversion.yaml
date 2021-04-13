@@ -360,10 +360,10 @@ spec:
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
-      - description: Name of the envoy resource
+      - description: Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
         displayName: Name
         path: envoyResources.secrets[0].name
-      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls" from which an envoy Secret resource will be automatically created.
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
         displayName: Ref
         path: envoyResources.secrets[0].ref
         x-descriptors:
@@ -454,10 +454,10 @@ spec:
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
-      - description: Name of the envoy resource
+      - description: Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
         displayName: Name
         path: envoyResources.secrets[0].name
-      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls" from which an envoy Secret resource will be automatically created.
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
         displayName: Ref
         path: envoyResources.secrets[0].ref
         x-descriptors:
