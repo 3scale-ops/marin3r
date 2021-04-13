@@ -261,19 +261,32 @@ unit-test: fmt vet $(COVER_OUTPUT_DIR)
 
 # Run integration tests
 ENVTEST_ASSETS_DIR ?= $(shell pwd)/tmp
-OPERATOR_COVERPROFILE = operator.marin3r.coverprofile
+OPERATOR_COVERPROFILE = operator.coverprofile
 MARIN3R_COVERPROFILE = marin3r.coverprofile
+MARIN3R_WEBHOOK_COVERPROFILE = marin3r.webhook.coverprofile
+OPERATOR_WEBHOOK_COVERPROFILE = operator.webhook.coverprofile
 integration-test: generate fmt vet manifests ginkgo $(COVER_OUTPUT_DIR)
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
-		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.0/hack/setup-envtest.sh
+		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; \
 		fetch_envtest_tools $(ENVTEST_ASSETS_DIR); \
 		setup_envtest_env $(ENVTEST_ASSETS_DIR); \
-		$(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers ./apis
+		$(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_COVERPROFILE) ./controllers/marin3r; \
+		$(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_COVERPROFILE) ./controllers/operator.marin3r; \
+		$(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_WEBHOOK_COVERPROFILE) ./apis/marin3r; \
+		$(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_WEBHOOK_COVERPROFILE) ./apis/operator.marin3r
+
+		# $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) ./controllers
 
 coverprofile: gocovmerge
-	$(GOCOVMERGE) $(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) $(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) > $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
+	$(GOCOVMERGE) \
+		$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) \
+		$(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) \
+		$(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) \
+		$(COVER_OUTPUT_DIR)/$(MARIN3R_WEBHOOK_COVERPROFILE) \
+		$(COVER_OUTPUT_DIR)/$(OPERATOR_WEBHOOK_COVERPROFILE) \
+		> $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	go tool cover -func=$(COVER_OUTPUT_DIR)/$(COVERPROFILE) | awk '/total/{print $$3}'
 

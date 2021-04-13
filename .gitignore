@@ -30,3 +30,5 @@ build/bin
 tmp
 kubeconfig
 kind-logs-*
+*.coverprofile
+*.coverprofile.*
