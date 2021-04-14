@@ -19,6 +19,18 @@ rules:
   - update
   - watch
 - apiGroups:
+  - autoscaling
+  resources:
+  - horizontalpodautoscalers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - ""
   resources:
   - configmaps
@@ -46,6 +58,7 @@ rules:
   - serviceaccounts
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -57,6 +70,7 @@ rules:
   - services
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -73,6 +87,8 @@ rules:
   resources:
   - envoybootstraps
   verbs:
+  - create
+  - delete
   - get
   - list
   - patch
@@ -153,14 +169,62 @@ rules:
   - patch
   - update
 - apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - discoveryservices
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - envoydeployments
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - envoydeployments/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - operator.marin3r.3scale.net
+  resources:
+  - envoydeployments/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
+  - update
   - watch
 - apiGroups:
   - rbac.authorization.k8s.io
@@ -168,7 +232,9 @@ rules:
   - roles
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
+  - update
   - watch

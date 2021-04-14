@@ -138,7 +138,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.8.0-alpha.1
+  name: marin3r.v0.8.0-alpha.4
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -687,7 +687,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.1
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.4
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -732,7 +732,7 @@ spec:
                 - --tls-key-name=apiserver.key
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.1
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.4
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -801,6 +801,18 @@ spec:
           - update
           - watch
         - apiGroups:
+          - autoscaling
+          resources:
+          - horizontalpodautoscalers
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
           - ""
           resources:
           - configmaps
@@ -828,6 +840,7 @@ spec:
           - serviceaccounts
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
@@ -839,6 +852,7 @@ spec:
           - services
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
@@ -939,6 +953,14 @@ spec:
         - apiGroups:
           - operator.marin3r.3scale.net
           resources:
+          - discoveryservices
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - operator.marin3r.3scale.net
+          resources:
           - envoydeployments
           verbs:
           - create
@@ -963,14 +985,28 @@ spec:
           - patch
           - update
         - apiGroups:
+          - policy
+          resources:
+          - poddisruptionbudgets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
           - rbac.authorization.k8s.io
           resources:
           - rolebindings
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
+          - update
           - watch
         - apiGroups:
           - rbac.authorization.k8s.io
@@ -978,9 +1014,11 @@ spec:
           - roles
           verbs:
           - create
+          - delete
           - get
           - list
           - patch
+          - update
           - watch
         serviceAccountName: marin3r-controller-manager
     strategy: deployment
@@ -1010,7 +1048,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.8.0-alpha.1
+  version: 0.8.0-alpha.4
   webhookdefinitions:
   - admissionReviewVersions:
     - v1
