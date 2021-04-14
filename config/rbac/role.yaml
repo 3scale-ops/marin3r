@@ -59,6 +59,7 @@ rules:
   - serviceaccounts
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -70,6 +71,7 @@ rules:
   - services
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -219,9 +221,11 @@ rules:
   - rolebindings
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
+  - update
   - watch
 - apiGroups:
   - rbac.authorization.k8s.io
@@ -229,7 +233,9 @@ rules:
   - roles
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
+  - update
   - watch
