@@ -75,7 +75,7 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		err := r.GetClient().Update(ctx, ed)
 		if err != nil {
 			log.Error(err, "unable to initialize instance")
-			return r.ManageError(ctx, ed, err)
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
@@ -87,13 +87,13 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		err := r.ManageCleanUpLogic(ed, log)
 		if err != nil {
 			log.Error(err, "unable to delete instance")
-			return r.ManageError(ctx, ed, err)
+			return ctrl.Result{}, err
 		}
 		operatorutil.RemoveFinalizer(ed, operatorv1alpha1.Finalizer)
 		err = r.GetClient().Update(ctx, ed)
 		if err != nil {
 			log.Error(err, "unable to update instance")
-			return r.ManageError(ctx, ed, err)
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
@@ -102,7 +102,7 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	ec, err := r.getEnvoyConfig(ctx, types.NamespacedName{Name: ed.Spec.EnvoyConfigRef, Namespace: ed.GetNamespace()})
 	if err != nil {
 		log.Error(err, "unable to get EnvoyConfig", "EnvoyConfig", ed.Spec.EnvoyConfigRef)
-		return r.ManageError(ctx, ed, err)
+		return ctrl.Result{}, err
 	}
 
 	generate := generators.GeneratorOptions{
@@ -134,13 +134,13 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	hash, err := r.getBootstrapConfigHash(ctx, generate.OwnedResourceKey(), generate.EnvoyAPIVersion)
 	if err != nil {
 		log.Error(err, "unable to get EnvoyBootstrap", "EnvoyBootstrap", ed.Spec.EnvoyConfigRef)
-		return r.ManageError(ctx, ed, err)
+		return ctrl.Result{}, err
 	}
 
 	replicas, err := r.getDeploymentReplicas(ctx, generate.OwnedResourceKey())
 	if err != nil {
 		log.Error(err, "unable to get Deployment", "DeploymentName", key.Name)
-		return r.ManageError(ctx, ed, err)
+		return ctrl.Result{}, err
 	}
 
 	lr := []lockedresources.LockedResource{
@@ -156,16 +156,16 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	resources, err := r.NewLockedResources(lr, ed)
 	if err != nil {
-		return r.ManageError(ctx, ed, err)
+		return ctrl.Result{}, err
 	}
 
 	err = r.UpdateLockedResources(ctx, ed, resources, []lockedpatch.LockedPatch{})
 	if err != nil {
 		log.Error(err, "unable to update locked resources")
-		return r.ManageError(ctx, ed, err)
+		return ctrl.Result{}, err
 	}
 
-	return r.ManageSuccess(ctx, ed)
+	return ctrl.Result{}, nil
 }
 
 func (r *EnvoyDeploymentReconciler) getEnvoyConfig(ctx context.Context, key types.NamespacedName) (*marin3rv1alpha1.EnvoyConfig, error) {
