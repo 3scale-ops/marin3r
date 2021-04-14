@@ -81,7 +81,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		err := r.GetClient().Update(ctx, ds)
 		if err != nil {
 			log.Error(err, "unable to initialize instance")
-			return r.ManageError(ctx, ds, err)
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
@@ -93,13 +93,13 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		err := r.ManageCleanUpLogic(ds, log)
 		if err != nil {
 			log.Error(err, "unable to delete instance")
-			return r.ManageError(ctx, ds, err)
+			return ctrl.Result{}, err
 		}
 		operatorutil.RemoveFinalizer(ds, operatorv1alpha1.Finalizer)
 		err = r.GetClient().Update(ctx, ds)
 		if err != nil {
 			log.Error(err, "unable to update instance")
-			return r.ManageError(ctx, ds, err)
+			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
@@ -124,7 +124,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 
 	hash, err := r.calculateServerCertificateHash(ctx, util.ObjectKey(generate.ServerCertificate()()))
 	if err != nil {
-		return r.ManageError(ctx, ds, err)
+		return ctrl.Result{}, err
 	}
 
 	resources, err := r.NewLockedResources(
@@ -141,16 +141,16 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		ds,
 	)
 	if err != nil {
-		return r.ManageError(ctx, ds, err)
+		return ctrl.Result{}, err
 	}
 
 	err = r.UpdateLockedResources(ctx, ds, resources, []lockedpatch.LockedPatch{})
 	if err != nil {
 		log.Error(err, "unable to update locked resources")
-		return r.ManageError(ctx, ds, err)
+		return ctrl.Result{}, err
 	}
 
-	return r.ManageSuccess(ctx, ds)
+	return ctrl.Result{}, nil
 }
 
 func (r *DiscoveryServiceReconciler) calculateServerCertificateHash(ctx context.Context, key types.NamespacedName) (string, error) {
