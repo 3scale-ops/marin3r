@@ -156,7 +156,7 @@ spec:
                       - value
                       type: object
                     type: array
-                  runtime:
+                  runtimes:
                     description: 'Runtimes is a list of the envoy Runtime resource
                       type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto
                       V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
