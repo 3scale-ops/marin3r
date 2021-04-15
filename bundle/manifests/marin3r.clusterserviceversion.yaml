@@ -138,7 +138,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.8.0-alpha.5
+  name: marin3r.v0.8.0-alpha.6
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -350,13 +350,13 @@ spec:
         path: envoyResources.routes[0].value
       - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
-        path: envoyResources.runtime
+        path: envoyResources.runtimes
       - description: Name of the envoy resource
         displayName: Name
-        path: envoyResources.runtime[0].name
+        path: envoyResources.runtimes[0].name
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
-        path: envoyResources.runtime[0].value
+        path: envoyResources.runtimes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
@@ -444,13 +444,13 @@ spec:
         path: envoyResources.routes[0].value
       - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
-        path: envoyResources.runtime
+        path: envoyResources.runtimes
       - description: Name of the envoy resource
         displayName: Name
-        path: envoyResources.runtime[0].name
+        path: envoyResources.runtimes[0].name
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
-        path: envoyResources.runtime[0].value
+        path: envoyResources.runtimes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
@@ -687,7 +687,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.5
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.6
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -732,7 +732,7 @@ spec:
                 - --tls-key-name=apiserver.key
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.5
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.6
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1048,7 +1048,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.8.0-alpha.5
+  version: 0.8.0-alpha.6
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

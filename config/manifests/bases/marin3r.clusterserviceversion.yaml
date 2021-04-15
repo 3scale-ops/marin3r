@@ -223,13 +223,13 @@ spec:
         path: envoyResources.routes[0].value
       - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
-        path: envoyResources.runtime
+        path: envoyResources.runtimes
       - description: Name of the envoy resource
         displayName: Name
-        path: envoyResources.runtime[0].name
+        path: envoyResources.runtimes[0].name
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
-        path: envoyResources.runtime[0].value
+        path: envoyResources.runtimes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
@@ -317,13 +317,13 @@ spec:
         path: envoyResources.routes[0].value
       - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
-        path: envoyResources.runtime
+        path: envoyResources.runtimes
       - description: Name of the envoy resource
         displayName: Name
-        path: envoyResources.runtime[0].name
+        path: envoyResources.runtimes[0].name
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
-        path: envoyResources.runtime[0].value
+        path: envoyResources.runtimes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets

@@ -106,7 +106,7 @@ type EnvoyResources struct {
 	// V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto
 	// V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Runtimes []EnvoyResource `json:"runtime,omitempty"`
+	Runtimes []EnvoyResource `json:"runtimes,omitempty"`
 	// Secrets is a list of references to Kubernetes Secret objects.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Secrets []EnvoySecretResource `json:"secrets,omitempty"`
