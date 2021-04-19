@@ -19,11 +19,12 @@ import (
 	"strconv"
 	"strings"
 
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -56,18 +57,55 @@ const (
 )
 
 type envoySidecarConfig struct {
-	name               string
-	image              string
-	ports              []corev1.ContainerPort
-	bootstrapConfigMap string
-	nodeID             string
-	clusterID          string
-	tlsVolume          string
-	configVolume       string
-	clientCertSecret   string
-	extraArgs          string
-	resources          corev1.ResourceRequirements
-	envoyAPI           envoy.APIVersion
+	generator envoy_container.ContainerConfig
+}
+
+func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
+	var err error
+
+	esc.generator.Name = getStringParam(paramContainerName, annotations)
+	esc.generator.Image = getStringParam(paramImage, annotations)
+	esc.generator.Ports, err = getContainerPorts(annotations)
+	if err != nil {
+		return err
+	}
+	esc.generator.BootstrapConfigMap = getBootstrapConfigMap(annotations)
+	esc.generator.ConfigBasePath = defaults.EnvoyConfigBasePath
+	esc.generator.ConfigFileName = defaults.EnvoyConfigFileName
+	esc.generator.ConfigVolume = getStringParam(paramConfigVolume, annotations)
+	esc.generator.TLSBasePath = defaults.EnvoyTLSBasePath
+	esc.generator.TLSVolume = getStringParam(paramTLSVolume, annotations)
+	esc.generator.NodeID = getNodeID(annotations)
+	esc.generator.ClusterID = getStringParam(paramClusterID, annotations)
+	esc.generator.ClientCertSecret = getStringParam(paramClientCertificate, annotations)
+	esc.generator.ExtraArgs = func() []string {
+		extraArgs := getStringParam(paramEnvoyExtraArgs, annotations)
+		if extraArgs != "" {
+			return strings.Split(extraArgs, " ")
+		}
+		return nil
+	}()
+	esc.generator.Resources, err = getContainerResourceRequirements(annotations)
+	if err != nil {
+		return err
+	}
+	esc.generator.AdminPort = int32(defaults.EnvoyAdminPort)
+	esc.generator.LivenessProbe = operatorv1alpha1.ProbeSpec{
+		InitialDelaySeconds: 30,
+		TimeoutSeconds:      1,
+		PeriodSeconds:       10,
+		SuccessThreshold:    1,
+		FailureThreshold:    10,
+	}
+	esc.generator.ReadinessProbe = operatorv1alpha1.ProbeSpec{
+		InitialDelaySeconds: 15,
+		TimeoutSeconds:      1,
+		PeriodSeconds:       5,
+		SuccessThreshold:    1,
+		FailureThreshold:    1,
+	}
+
+	return nil
 }
 
 func lookupMarin3rAnnotation(key string, annotations map[string]string) (string, bool) {
@@ -108,33 +146,6 @@ func getNodeID(annotations map[string]string) string {
 	// mutation won't even be triggered
 	res, _ := lookupMarin3rAnnotation(paramNodeID, annotations)
 	return res
-}
-
-func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
-
-	esc.name = getStringParam(paramContainerName, annotations)
-	esc.image = getStringParam(paramImage, annotations)
-
-	ports, err := getContainerPorts(annotations)
-	if err != nil {
-		return err
-	}
-	esc.ports = ports
-	esc.bootstrapConfigMap = getBootstrapConfigMap(annotations)
-	esc.nodeID = getNodeID(annotations)
-	esc.clusterID = getStringParam(paramClusterID, annotations)
-	esc.configVolume = getStringParam(paramConfigVolume, annotations)
-	esc.tlsVolume = getStringParam(paramTLSVolume, annotations)
-	esc.clientCertSecret = getStringParam(paramClientCertificate, annotations)
-	esc.extraArgs = getStringParam(paramEnvoyExtraArgs, annotations)
-
-	resources, err := getContainerResourceRequirements(annotations)
-	if err != nil {
-		return err
-	}
-	esc.resources = resources
-
-	return nil
 }
 
 func getBootstrapConfigMap(annotations map[string]string) string {
@@ -301,91 +312,10 @@ func portNumber(sport string) (int32, error) {
 
 func (esc *envoySidecarConfig) container() corev1.Container {
 
-	container := corev1.Container{
-		Name:    esc.name,
-		Image:   esc.image,
-		Command: []string{"envoy"},
-		Args: []string{
-			"-c",
-			fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
-			"--service-node",
-			esc.nodeID,
-			"--service-cluster",
-			esc.clusterID,
-		},
-		Resources: esc.resources,
-		Ports:     esc.ports,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      esc.tlsVolume,
-				ReadOnly:  true,
-				MountPath: defaults.EnvoyTLSBasePath,
-			},
-			{
-				Name:      esc.configVolume,
-				ReadOnly:  true,
-				MountPath: defaults.EnvoyConfigBasePath,
-			},
-		},
-		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/ready",
-					Port: intstr.IntOrString{IntVal: 9901},
-				},
-			},
-			InitialDelaySeconds: 30,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       10,
-			SuccessThreshold:    1,
-			FailureThreshold:    10,
-		},
-		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/ready",
-					Port: intstr.IntOrString{IntVal: 9901},
-				},
-			},
-			InitialDelaySeconds: 15,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       5,
-			SuccessThreshold:    1,
-			FailureThreshold:    1,
-		},
-	}
-
-	if esc.extraArgs != "" {
-		for _, arg := range strings.Split(esc.extraArgs, " ") {
-			container.Args = append(container.Args, arg)
-		}
-	}
-
-	return container
+	return esc.generator.Container()
 }
 
 func (esc *envoySidecarConfig) volumes() []corev1.Volume {
 
-	volumes := []corev1.Volume{
-		{
-			Name: esc.tlsVolume,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: esc.clientCertSecret,
-				},
-			},
-		},
-		{
-			Name: esc.configVolume,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: esc.bootstrapConfigMap,
-					},
-				},
-			},
-		},
-	}
-
-	return volumes
+	return esc.generator.Volumes()
 }

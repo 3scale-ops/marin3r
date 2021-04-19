@@ -5,11 +5,12 @@ import (
 	"reflect"
 	"testing"
 
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
@@ -44,26 +45,46 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsMemory):   "900Mi",
 			}},
 			&envoySidecarConfig{
-				name:  "container",
-				image: "image",
-				ports: []corev1.ContainerPort{
-					{Name: "xxxx", ContainerPort: 1111, HostPort: 3000},
-				},
-				bootstrapConfigMap: "cm",
-				nodeID:             "node-id",
-				clusterID:          "cluster-id",
-				tlsVolume:          "tls-volume",
-				configVolume:       "config-volume",
-				clientCertSecret:   "client-cert",
-				extraArgs:          "--log-level debug",
-				resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("500m"),
-						corev1.ResourceMemory: resource.MustParse("700Mi"),
+				generator: envoy_container.ContainerConfig{
+					Name:  "container",
+					Image: "image",
+					Ports: []corev1.ContainerPort{
+						{Name: "xxxx", ContainerPort: 1111, HostPort: 3000},
 					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1000m"),
-						corev1.ResourceMemory: resource.MustParse("900Mi"),
+					AdminPort:          int32(defaults.EnvoyAdminPort),
+					BootstrapConfigMap: "cm",
+					ConfigBasePath:     defaults.EnvoyConfigBasePath,
+					ConfigFileName:     defaults.EnvoyConfigFileName,
+					TLSBasePath:        defaults.EnvoyTLSBasePath,
+					NodeID:             "node-id",
+					ClusterID:          "cluster-id",
+					TLSVolume:          "tls-volume",
+					ConfigVolume:       "config-volume",
+					ClientCertSecret:   "client-cert",
+					ExtraArgs:          []string{"--log-level", "debug"},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("500m"),
+							corev1.ResourceMemory: resource.MustParse("700Mi"),
+						},
+						Limits: corev1.ResourceList{
+							corev1.ResourceCPU:    resource.MustParse("1000m"),
+							corev1.ResourceMemory: resource.MustParse("900Mi"),
+						},
+					},
+					LivenessProbe: operatorv1alpha1.ProbeSpec{
+						InitialDelaySeconds: 30,
+						TimeoutSeconds:      1,
+						PeriodSeconds:       10,
+						SuccessThreshold:    1,
+						FailureThreshold:    10,
+					},
+					ReadinessProbe: operatorv1alpha1.ProbeSpec{
+						InitialDelaySeconds: 15,
+						TimeoutSeconds:      1,
+						PeriodSeconds:       5,
+						SuccessThreshold:    1,
+						FailureThreshold:    1,
 					},
 				},
 			},
@@ -75,15 +96,35 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 				"marin3r.3scale.net/node-id": "node-id",
 			}},
 			&envoySidecarConfig{
-				name:               defaults.SidecarContainerName,
-				image:              defaults.Image,
-				ports:              []corev1.ContainerPort{},
-				bootstrapConfigMap: defaults.SidecarBootstrapConfigMapV2,
-				nodeID:             "node-id",
-				clusterID:          "node-id",
-				tlsVolume:          defaults.SidecarTLSVolume,
-				configVolume:       defaults.SidecarConfigVolume,
-				clientCertSecret:   defaults.SidecarClientCertificate,
+				generator: envoy_container.ContainerConfig{
+					Name:               defaults.SidecarContainerName,
+					Image:              defaults.Image,
+					Ports:              []corev1.ContainerPort{},
+					AdminPort:          int32(defaults.EnvoyAdminPort),
+					BootstrapConfigMap: defaults.SidecarBootstrapConfigMapV2,
+					ConfigBasePath:     defaults.EnvoyConfigBasePath,
+					ConfigFileName:     defaults.EnvoyConfigFileName,
+					TLSBasePath:        defaults.EnvoyTLSBasePath,
+					NodeID:             "node-id",
+					ClusterID:          "node-id",
+					TLSVolume:          defaults.SidecarTLSVolume,
+					ConfigVolume:       defaults.SidecarConfigVolume,
+					ClientCertSecret:   defaults.SidecarClientCertificate,
+					LivenessProbe: operatorv1alpha1.ProbeSpec{
+						InitialDelaySeconds: 30,
+						TimeoutSeconds:      1,
+						PeriodSeconds:       10,
+						SuccessThreshold:    1,
+						FailureThreshold:    10,
+					},
+					ReadinessProbe: operatorv1alpha1.ProbeSpec{
+						InitialDelaySeconds: 15,
+						TimeoutSeconds:      1,
+						PeriodSeconds:       5,
+						SuccessThreshold:    1,
+						FailureThreshold:    1,
+					},
+				},
 			},
 			false,
 		},
@@ -351,305 +392,6 @@ func Test_portNumber(t *testing.T) {
 	}
 }
 
-func Test_envoySidecarConfig_container(t *testing.T) {
-	tests := []struct {
-		name string
-		esc  *envoySidecarConfig
-		want corev1.Container
-	}{
-		{
-			"Returns resolved container",
-			&envoySidecarConfig{
-				name:  "sidecar",
-				image: "sidecar:latest",
-				ports: []corev1.ContainerPort{
-					{
-						Name:          "udp",
-						ContainerPort: 6000,
-						Protocol:      corev1.Protocol("UDP"),
-					},
-					{
-						Name:          "https",
-						ContainerPort: 8443,
-					},
-				},
-				bootstrapConfigMap: "ads-configmap",
-				nodeID:             "test-id",
-				clusterID:          "cluster-id",
-				tlsVolume:          "tls-volume",
-				configVolume:       "config-volume",
-				clientCertSecret:   "secret",
-			},
-			corev1.Container{
-				Name:    "sidecar",
-				Image:   "sidecar:latest",
-				Command: []string{"envoy"},
-				Args: []string{
-					"-c",
-					"/etc/envoy/bootstrap/config.json",
-					"--service-node",
-					"test-id",
-					"--service-cluster",
-					"cluster-id",
-				},
-				Ports: []corev1.ContainerPort{
-					{
-						Name:          "udp",
-						ContainerPort: 6000,
-						Protocol:      corev1.Protocol("UDP"),
-					},
-					{
-						Name:          "https",
-						ContainerPort: 8443,
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "tls-volume",
-						ReadOnly:  true,
-						MountPath: "/etc/envoy/tls/client",
-					},
-					{
-						Name:      "config-volume",
-						ReadOnly:  true,
-						MountPath: "/etc/envoy/bootstrap",
-					},
-				},
-				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 9901},
-						},
-					},
-					InitialDelaySeconds: 30,
-					TimeoutSeconds:      1,
-					PeriodSeconds:       10,
-					SuccessThreshold:    1,
-					FailureThreshold:    10,
-				},
-				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 9901},
-						},
-					},
-					InitialDelaySeconds: 15,
-					TimeoutSeconds:      1,
-					PeriodSeconds:       5,
-					SuccessThreshold:    1,
-					FailureThreshold:    1,
-				},
-			},
-		},
-		{
-			"Returns resolved container, with extra-args",
-			&envoySidecarConfig{
-				name:  "sidecar",
-				image: "sidecar:latest",
-				ports: []corev1.ContainerPort{
-					{
-						Name:          "udp",
-						ContainerPort: 6000,
-						Protocol:      corev1.Protocol("UDP"),
-					},
-					{
-						Name:          "https",
-						ContainerPort: 8443,
-					},
-				},
-				bootstrapConfigMap: "ads-configmap",
-				nodeID:             "test-id",
-				clusterID:          "cluster-id",
-				tlsVolume:          "tls-volume",
-				configVolume:       "config-volume",
-				clientCertSecret:   "secret",
-				extraArgs:          "-x xxxx -z zzzz",
-			},
-			corev1.Container{
-				Name:    "sidecar",
-				Image:   "sidecar:latest",
-				Command: []string{"envoy"},
-				Args: []string{
-					"-c",
-					"/etc/envoy/bootstrap/config.json",
-					"--service-node",
-					"test-id",
-					"--service-cluster",
-					"cluster-id",
-					"-x",
-					"xxxx",
-					"-z",
-					"zzzz",
-				},
-				Ports: []corev1.ContainerPort{
-					{
-						Name:          "udp",
-						ContainerPort: 6000,
-						Protocol:      corev1.Protocol("UDP"),
-					},
-					{
-						Name:          "https",
-						ContainerPort: 8443,
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "tls-volume",
-						ReadOnly:  true,
-						MountPath: "/etc/envoy/tls/client",
-					},
-					{
-						Name:      "config-volume",
-						ReadOnly:  true,
-						MountPath: "/etc/envoy/bootstrap",
-					},
-				},
-				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 9901},
-						},
-					},
-					InitialDelaySeconds: 30,
-					TimeoutSeconds:      1,
-					PeriodSeconds:       10,
-					SuccessThreshold:    1,
-					FailureThreshold:    10,
-				},
-				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 9901},
-						},
-					},
-					InitialDelaySeconds: 15,
-					TimeoutSeconds:      1,
-					PeriodSeconds:       5,
-					SuccessThreshold:    1,
-					FailureThreshold:    1,
-				},
-			},
-		},
-		{
-			"Returns resolved container with resource requirements",
-			&envoySidecarConfig{
-				name:  "sidecar",
-				image: "sidecar:latest",
-				ports: []corev1.ContainerPort{
-					{
-						Name:          "udp",
-						ContainerPort: 6000,
-						Protocol:      corev1.Protocol("UDP"),
-					},
-					{
-						Name:          "https",
-						ContainerPort: 8443,
-					},
-				},
-				bootstrapConfigMap: "ads-configmap",
-				nodeID:             "test-id",
-				clusterID:          "cluster-id",
-				tlsVolume:          "tls-volume",
-				configVolume:       "config-volume",
-				clientCertSecret:   "secret",
-				resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("500m"),
-						corev1.ResourceMemory: resource.MustParse("700Mi"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1000m"),
-						corev1.ResourceMemory: resource.MustParse("900Mi"),
-					},
-				},
-			},
-			corev1.Container{
-				Name:    "sidecar",
-				Image:   "sidecar:latest",
-				Command: []string{"envoy"},
-				Args: []string{
-					"-c",
-					"/etc/envoy/bootstrap/config.json",
-					"--service-node",
-					"test-id",
-					"--service-cluster",
-					"cluster-id",
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("500m"),
-						corev1.ResourceMemory: resource.MustParse("700Mi"),
-					},
-					Limits: corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse("1000m"),
-						corev1.ResourceMemory: resource.MustParse("900Mi"),
-					},
-				},
-				Ports: []corev1.ContainerPort{
-					{
-						Name:          "udp",
-						ContainerPort: 6000,
-						Protocol:      corev1.Protocol("UDP"),
-					},
-					{
-						Name:          "https",
-						ContainerPort: 8443,
-					},
-				},
-				VolumeMounts: []corev1.VolumeMount{
-					{
-						Name:      "tls-volume",
-						ReadOnly:  true,
-						MountPath: "/etc/envoy/tls/client",
-					},
-					{
-						Name:      "config-volume",
-						ReadOnly:  true,
-						MountPath: "/etc/envoy/bootstrap",
-					},
-				},
-				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 9901},
-						},
-					},
-					InitialDelaySeconds: 30,
-					TimeoutSeconds:      1,
-					PeriodSeconds:       10,
-					SuccessThreshold:    1,
-					FailureThreshold:    10,
-				},
-				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 9901},
-						},
-					},
-					InitialDelaySeconds: 15,
-					TimeoutSeconds:      1,
-					PeriodSeconds:       5,
-					SuccessThreshold:    1,
-					FailureThreshold:    1,
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.esc.container(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("envoySidecarConfig.container() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_getStringParam(t *testing.T) {
 	type args struct {
 		key         string
@@ -706,51 +448,6 @@ func Test_getNodeID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getNodeID(tt.args.annotations); got != tt.want {
 				t.Errorf("getNodeID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_envoySidecarConfig_volumes(t *testing.T) {
-	tests := []struct {
-		name string
-		esc  *envoySidecarConfig
-		want []corev1.Volume
-	}{
-		{
-			"Returns resolved pod volumes",
-			&envoySidecarConfig{
-				bootstrapConfigMap: "ads-configmap",
-				tlsVolume:          "tls-volume",
-				configVolume:       "config-volume",
-				clientCertSecret:   "secret",
-			},
-			[]corev1.Volume{
-				{
-					Name: "tls-volume",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: "secret",
-						},
-					},
-				},
-				{
-					Name: "config-volume",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "ads-configmap",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.esc.volumes(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("envoySidecarConfig.volumes() = %v, want %v", got, tt.want)
 			}
 		})
 	}
