@@ -28,9 +28,9 @@ type ContainerConfig struct {
 	ReadinessProbe     operatorv1alpha1.ProbeSpec
 }
 
-func (cc *ContainerConfig) Container() corev1.Container {
+func (cc *ContainerConfig) Containers() []corev1.Container {
 
-	return corev1.Container{
+	return []corev1.Container{{
 		Name:    cc.Name,
 		Image:   cc.Image,
 		Command: []string{"envoy"},
@@ -93,7 +93,7 @@ func (cc *ContainerConfig) Container() corev1.Container {
 		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 		ImagePullPolicy:          corev1.PullIfNotPresent,
-	}
+	}}
 }
 
 func (cc *ContainerConfig) Volumes() []corev1.Volume {

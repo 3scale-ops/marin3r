@@ -85,7 +85,7 @@ func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedreso
 					Spec: corev1.PodSpec{
 						Affinity:                      cfg.PodAffinity,
 						Volumes:                       cc.Volumes(),
-						Containers:                    []corev1.Container{cc.Container()},
+						Containers:                    cc.Containers(),
 						RestartPolicy:                 corev1.RestartPolicyAlways,
 						TerminationGracePeriodSeconds: pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
 						DNSPolicy:                     corev1.DNSClusterFirst,

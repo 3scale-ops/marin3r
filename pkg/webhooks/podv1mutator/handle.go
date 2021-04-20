@@ -48,7 +48,7 @@ func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 		return admission.Errored(http.StatusBadRequest, fmt.Errorf("Error trying to load envoy container config from annotations: '%s'", err))
 	}
 
-	pod.Spec.Containers = append(pod.Spec.Containers, config.container())
+	pod.Spec.Containers = append(pod.Spec.Containers, config.containers()...)
 	pod.Spec.Volumes = append(pod.Spec.Volumes, config.volumes()...)
 
 	marshaledPod, err := json.Marshal(pod)

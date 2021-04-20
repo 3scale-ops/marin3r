@@ -310,9 +310,9 @@ func portNumber(sport string) (int32, error) {
 	return int32(iport), nil
 }
 
-func (esc *envoySidecarConfig) container() corev1.Container {
+func (esc *envoySidecarConfig) containers() []corev1.Container {
 
-	return esc.generator.Container()
+	return esc.generator.Containers()
 }
 
 func (esc *envoySidecarConfig) volumes() []corev1.Volume {

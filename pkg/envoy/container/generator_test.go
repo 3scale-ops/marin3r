@@ -13,7 +13,7 @@ func TestContainerConfig_Container(t *testing.T) {
 	tests := []struct {
 		name string
 		cc   ContainerConfig
-		want corev1.Container
+		want []corev1.Container
 	}{
 		{
 			name: "Generates an Envoy container for the given config",
@@ -58,7 +58,7 @@ func TestContainerConfig_Container(t *testing.T) {
 					FailureThreshold:    1,
 				},
 			},
-			want: corev1.Container{
+			want: []corev1.Container{{
 				Name:    "envoy",
 				Image:   "envoy:test",
 				Command: []string{"envoy"},
@@ -128,13 +128,13 @@ func TestContainerConfig_Container(t *testing.T) {
 				TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 				TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 				ImagePullPolicy:          corev1.PullIfNotPresent,
-			},
+			}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			if got := tt.cc.Container(); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.cc.Containers(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ContainerConfig.Container() = %v, want %v", got, tt.want)
 			}
 		})
