@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -25,7 +25,7 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"Populate '*envoySidecarConfig' from annotations",
+			"Populate ContainerConfig from annotations",
 			&envoySidecarConfig{},
 			args{map[string]string{
 				"marin3r.3scale.net/node-id":                                                "node-id",
@@ -86,11 +86,14 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 						SuccessThreshold:    1,
 						FailureThreshold:    1,
 					},
+					ShutdownManagerEnabled: false,
+					ShutdownManagerPort:    int32(defaults.ShtdnMgrDefaultServerPort),
+					ShutdownManagerImage:   defaults.ShtdnMgrImage(),
 				},
 			},
 			false,
 		}, {
-			"Populate '*envoySidecarConfig' from annotations, leave all by default",
+			"Populate ContainerConfig from annotations (all default)",
 			&envoySidecarConfig{},
 			args{map[string]string{
 				"marin3r.3scale.net/node-id": "node-id",
@@ -124,6 +127,53 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 						SuccessThreshold:    1,
 						FailureThreshold:    1,
 					},
+					ShutdownManagerEnabled: false,
+					ShutdownManagerPort:    int32(defaults.ShtdnMgrDefaultServerPort),
+					ShutdownManagerImage:   defaults.ShtdnMgrImage(),
+				},
+			},
+			false,
+		}, {
+			"Populate ContainerConfig from annotations (shtdnmgr enabled)",
+			&envoySidecarConfig{},
+			args{map[string]string{
+				"marin3r.3scale.net/node-id":          "node-id",
+				"marin3r.3scale.net/shtdnmgr.enabled": "true",
+				"marin3r.3scale.net/shtdnmgr.port":    "30000",
+				"marin3r.3scale.net/shtdnmgr.image":   "image:test",
+			}},
+			&envoySidecarConfig{
+				generator: envoy_container.ContainerConfig{
+					Name:               defaults.SidecarContainerName,
+					Image:              defaults.Image,
+					Ports:              []corev1.ContainerPort{},
+					AdminPort:          int32(defaults.EnvoyAdminPort),
+					BootstrapConfigMap: defaults.SidecarBootstrapConfigMapV2,
+					ConfigBasePath:     defaults.EnvoyConfigBasePath,
+					ConfigFileName:     defaults.EnvoyConfigFileName,
+					TLSBasePath:        defaults.EnvoyTLSBasePath,
+					NodeID:             "node-id",
+					ClusterID:          "node-id",
+					TLSVolume:          defaults.SidecarTLSVolume,
+					ConfigVolume:       defaults.SidecarConfigVolume,
+					ClientCertSecret:   defaults.SidecarClientCertificate,
+					LivenessProbe: operatorv1alpha1.ProbeSpec{
+						InitialDelaySeconds: 30,
+						TimeoutSeconds:      1,
+						PeriodSeconds:       10,
+						SuccessThreshold:    1,
+						FailureThreshold:    10,
+					},
+					ReadinessProbe: operatorv1alpha1.ProbeSpec{
+						InitialDelaySeconds: 15,
+						TimeoutSeconds:      1,
+						PeriodSeconds:       5,
+						SuccessThreshold:    1,
+						FailureThreshold:    1,
+					},
+					ShutdownManagerEnabled: true,
+					ShutdownManagerPort:    30000,
+					ShutdownManagerImage:   "image:test",
 				},
 			},
 			false,
@@ -673,6 +723,109 @@ func Test_getBootstrapConfigMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getBootstrapConfigMap(tt.args.annotations); got != tt.want {
 				t.Errorf("getBootstrapConfigMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_isShtdnMgrEnabled(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{
+			name: "Returns true (value: true)",
+			args: args{
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "other-stuff"):        "aaaa",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramShtdnMgrEnabled): "true",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "Returns false (value: false)",
+			args: args{
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "other-stuff"):        "aaaa",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramShtdnMgrEnabled): "false",
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Returns false (bad value)",
+			args: args{
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "other-stuff"):        "aaaa",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramShtdnMgrEnabled): "bad_value",
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := isShtdnMgrEnabled(tt.args.annotations); got != tt.want {
+				t.Errorf("isShtdnMgrEnabled() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getPortOrDefault(t *testing.T) {
+	type args struct {
+		key         string
+		annotations map[string]string
+		defaultPort uint32
+	}
+	tests := []struct {
+		name string
+		args args
+		want int32
+	}{
+		{
+			name: "Returns the port in the annotation",
+			args: args{
+				key: "port",
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "other-stuff"): "aaaa",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "port"):        "5000",
+				},
+				defaultPort: 1000,
+			},
+			want: 5000,
+		},
+		{
+			name: "Returns the default port if unset",
+			args: args{
+				key:         "port",
+				annotations: map[string]string{},
+				defaultPort: 1000,
+			},
+			want: 1000,
+		},
+		{
+			name: "Returns the default port if bad port provided",
+			args: args{
+				key: "port",
+				annotations: map[string]string{
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "other-stuff"): "aaaa",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, "port"):        "80",
+				},
+				defaultPort: 1000,
+			},
+			want: 1000,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getPortOrDefault(tt.args.key, tt.args.annotations, tt.args.defaultPort); got != tt.want {
+				t.Errorf("getPortOrDefault() = %v, want %v", got, tt.want)
 			}
 		})
 	}

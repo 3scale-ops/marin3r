@@ -40,9 +40,9 @@ import (
 	marin3rcontroller "github.com/3scale-ops/marin3r/controllers/marin3r"
 	operatorcontroller "github.com/3scale-ops/marin3r/controllers/operator.marin3r"
 	discoveryservice "github.com/3scale-ops/marin3r/pkg/discoveryservice"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/shutdownmanager"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
-	"github.com/3scale-ops/marin3r/pkg/shutdownmanager"
 	"github.com/3scale-ops/marin3r/pkg/version"
 	"github.com/3scale-ops/marin3r/pkg/webhooks/podv1mutator"
 	// +kubebuilder:scaffold:imports
@@ -166,21 +166,21 @@ func init() {
 	webhookCmd.Flags().StringVar(&webhookTLSKeyName, "tls-key-name", "apiserver.key", "The file name of the private key for the webhook.")
 
 	// Shutdown manager flags
-	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrHTTPServePort, "port", int(shutdownmanager.DefaultServerPort),
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrHTTPServePort, "port", int(defaults.ShtdnMgrDefaultServerPort),
 		"Port for the shutdown manager to listen at")
-	shutdownManagerCmd.Flags().StringVar(&shutdownmmgrReadyFile, "ready-file", shutdownmanager.DefaultReadyFile,
+	shutdownManagerCmd.Flags().StringVar(&shutdownmmgrReadyFile, "ready-file", defaults.ShtdnMgrDefaultReadyFile,
 		"File to communicate the shutdown status between processes")
-	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrReadyCheckInterval, "check-ready-interval", shutdownmanager.DefaultReadyCheckInterval,
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrReadyCheckInterval, "check-ready-interval", defaults.ShtdnMgrDefaultReadyCheckInterval,
 		"Polling interval to check if envoy is ready for shutdown")
-	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrDrainCheckInterval, "check-drain-interval", shutdownmanager.DefaultDrainCheckInterval,
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrDrainCheckInterval, "check-drain-interval", defaults.ShtdnMgrDefaultDrainCheckInterval,
 		"Polling interval to check if envoy listeners have drained")
-	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrStartDrainDelay, "start-drain-delay", shutdownmanager.DefaultStartDrainDelay,
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrStartDrainDelay, "start-drain-delay", defaults.ShtdnMgrDefaultStartDrainDelay,
 		"Time to wait before polling Envoy for open connections")
-	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrCheckDrainDelay, "check-drain-delay", shutdownmanager.DefaultCheckDrainDelay,
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrCheckDrainDelay, "check-drain-delay", defaults.ShtdnMgrDefaultCheckDrainDelay,
 		"Time to wait before draining Envoy connections")
 	shutdownManagerCmd.Flags().StringVar(&shutdownmmgrEnvoyAdminURL, "envoy-admin-address", fmt.Sprintf("http://localhost:%d", defaults.EnvoyAdminPort),
 		"Envoy admin port address")
-	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrMinOpenConnections, "min-open-connections", shutdownmanager.DefaultMinOpenConnections,
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrMinOpenConnections, "min-open-connections", defaults.ShtdnMgrDefaultMinOpenConnections,
 		"minimum amount of connections that can be open when polling for active connections in Envoy")
 }
 

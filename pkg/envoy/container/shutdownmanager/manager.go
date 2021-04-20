@@ -16,16 +16,9 @@ import (
 )
 
 const (
-	DefaultServerPort         int32  = 8090
-	DefaultReadyFile          string = "/tmp/shutdown-ok"
-	DefaultReadyCheckInterval int    = 1
-	DefaultDrainCheckInterval int    = 5
-	DefaultStartDrainDelay    int    = 0
-	DefaultCheckDrainDelay    int    = 60
-	DefaultMinOpenConnections int    = 0
-	ShutdownEndpoint          string = "/shutdown"
-	DrainEndpoint             string = "/drain"
-	HealthEndpoint            string = "/healthz"
+	ShutdownEndpoint string = "/shutdown"
+	DrainEndpoint    string = "/drain"
+	HealthEndpoint   string = "/healthz"
 )
 
 const (

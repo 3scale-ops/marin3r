@@ -1,36 +1,37 @@
-package envoy
+package container
 
 import (
 	"fmt"
-	"strings"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/version"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/shutdownmanager"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type ContainerConfig struct {
-	Name                     string
-	Image                    string
-	BootstrapConfigMap       string
-	ConfigBasePath           string
-	ConfigFileName           string
-	ConfigVolume             string
-	TLSBasePath              string
-	TLSVolume                string
-	NodeID                   string
-	ClusterID                string
-	ClientCertSecret         string
-	ExtraArgs                []string
-	Resources                corev1.ResourceRequirements
-	AdminPort                int32
-	Ports                    []corev1.ContainerPort
-	LivenessProbe            operatorv1alpha1.ProbeSpec
-	ReadinessProbe           operatorv1alpha1.ProbeSpec
-	ShutdownManagerEnabled   bool
-	ShutdownManagerPort      int32
-	ShutdownManagerResources corev1.ResourceRequirements
+	Name                   string
+	Image                  string
+	BootstrapConfigMap     string
+	ConfigBasePath         string
+	ConfigFileName         string
+	ConfigVolume           string
+	TLSBasePath            string
+	TLSVolume              string
+	NodeID                 string
+	ClusterID              string
+	ClientCertSecret       string
+	ExtraArgs              []string
+	Resources              corev1.ResourceRequirements
+	AdminPort              int32
+	Ports                  []corev1.ContainerPort
+	LivenessProbe          operatorv1alpha1.ProbeSpec
+	ReadinessProbe         operatorv1alpha1.ProbeSpec
+	ShutdownManagerEnabled bool
+	ShutdownManagerPort    int32
+	ShutdownManagerImage   string
 }
 
 func (cc *ContainerConfig) Containers() []corev1.Container {
@@ -102,20 +103,27 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 
 	if cc.ShutdownManagerEnabled {
 		containers = append(containers, corev1.Container{
-			Name:    "envoy-shutdown-manager",
-			Image:   strings.Join([]string{operatorv1alpha1.DefaultImageRegistry, version.Current()}, ":"),
-			Command: []string{},
-			Args:    []string{"shutdown-manager"},
-			Ports: []corev1.ContainerPort{{
-				Name:          "shutdown-manager",
-				ContainerPort: cc.ShutdownManagerPort,
-				Protocol:      corev1.ProtocolTCP,
-			}},
-			Resources: corev1.ResourceRequirements{},
+			Name:  "envoy-shtdn-mgr",
+			Image: cc.ShutdownManagerImage,
+			Args: []string{
+				"shutdown-manager",
+				"--port",
+				fmt.Sprintf("%d", cc.ShutdownManagerPort),
+			},
+			Resources: corev1.ResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse(defaults.ShtdnMgrDefaultCPURequests),
+					corev1.ResourceMemory: resource.MustParse(defaults.ShtdnMgrDefaultMemoryRequests),
+				},
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse(defaults.ShtdnMgrDefaultCPULimits),
+					corev1.ResourceMemory: resource.MustParse(defaults.ShtdnMgrDefaultMemoryLimits),
+				},
+			},
 			LivenessProbe: &corev1.Probe{
 				Handler: corev1.Handler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path:   "/health",
+						Path:   shutdownmanager.HealthEndpoint,
 						Port:   intstr.FromInt(int(cc.ShutdownManagerPort)),
 						Scheme: corev1.URISchemeHTTP,
 					},
@@ -126,7 +134,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.Handler{
 					HTTPGet: &corev1.HTTPGetAction{
-						Path:   "/drain",
+						Path:   shutdownmanager.DrainEndpoint,
 						Port:   intstr.FromInt(int(cc.ShutdownManagerPort)),
 						Scheme: corev1.URISchemeHTTP,
 					},
@@ -140,7 +148,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 		containers[0].Lifecycle = &corev1.Lifecycle{
 			PreStop: &corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path:   "/wait-for-drain",
+					Path:   shutdownmanager.ShutdownEndpoint,
 					Port:   intstr.FromInt(int(cc.ShutdownManagerPort)),
 					Scheme: corev1.URISchemeHTTP,
 				},

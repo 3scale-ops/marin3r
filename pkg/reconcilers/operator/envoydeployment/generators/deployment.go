@@ -5,8 +5,8 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -58,6 +58,12 @@ func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedreso
 			ReadinessProbe:   cfg.ReadinessProbe,
 		}
 
+		if cfg.ShutdownManager != nil {
+			cc.ShutdownManagerImage = cfg.ShutdownManager.GetImage()
+			cc.ShutdownManagerEnabled = true
+			cc.ShutdownManagerPort = int32(defaults.ShtdnMgrDefaultServerPort)
+		}
+
 		dep := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Deployment",
@@ -83,16 +89,23 @@ func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedreso
 						}(),
 					},
 					Spec: corev1.PodSpec{
-						Affinity:                      cfg.PodAffinity,
-						Volumes:                       cc.Volumes(),
-						Containers:                    cc.Containers(),
-						RestartPolicy:                 corev1.RestartPolicyAlways,
-						TerminationGracePeriodSeconds: pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
-						DNSPolicy:                     corev1.DNSClusterFirst,
-						ServiceAccountName:            "default",
-						DeprecatedServiceAccount:      "default",
-						SecurityContext:               &corev1.PodSecurityContext{},
-						SchedulerName:                 corev1.DefaultSchedulerName,
+						Affinity:                 cfg.PodAffinity,
+						Volumes:                  cc.Volumes(),
+						Containers:               cc.Containers(),
+						RestartPolicy:            corev1.RestartPolicyAlways,
+						DNSPolicy:                corev1.DNSClusterFirst,
+						ServiceAccountName:       "default",
+						DeprecatedServiceAccount: "default",
+						TerminationGracePeriodSeconds: func() *int64 {
+							// Increase the TerminationGracePeriod timeout if the shutdown manager
+							// is enabled (for graceful termination)
+							if cfg.ShutdownManager != nil {
+								return pointer.Int64Ptr(defaults.GracefulShutdownTimeoutSeconds)
+							}
+							return pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds)
+						}(),
+						SecurityContext: &corev1.PodSecurityContext{},
+						SchedulerName:   corev1.DefaultSchedulerName,
 					},
 				},
 				Strategy: appsv1.DeploymentStrategy{

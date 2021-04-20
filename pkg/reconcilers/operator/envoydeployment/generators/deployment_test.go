@@ -5,7 +5,7 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,18 +40,18 @@ const (
 
 var (
 	defaultLivenessProbe ProbeSpec = ProbeSpec{
-		InitialDelaySeconds: 30,
-		TimeoutSeconds:      1,
-		PeriodSeconds:       10,
-		SuccessThreshold:    1,
-		FailureThreshold:    10,
+		InitialDelaySeconds: defaults.LivenessInitialDelaySeconds,
+		TimeoutSeconds:      defaults.LivenessTimeoutSeconds,
+		PeriodSeconds:       defaults.LivenessPeriodSeconds,
+		SuccessThreshold:    defaults.LivenessSuccessThreshold,
+		FailureThreshold:    defaults.LivenessFailureThreshold,
 	}
 	defaultReadinessProbe ProbeSpec = ProbeSpec{
-		InitialDelaySeconds: 15,
-		TimeoutSeconds:      1,
-		PeriodSeconds:       5,
-		SuccessThreshold:    1,
-		FailureThreshold:    1,
+		InitialDelaySeconds: defaults.ReadinessProbeInitialDelaySeconds,
+		TimeoutSeconds:      defaults.ReadinessProbeTimeoutSeconds,
+		PeriodSeconds:       defaults.ReadinessProbePeriodSeconds,
+		SuccessThreshold:    defaults.ReadinessProbeSuccessThreshold,
+		FailureThreshold:    defaults.ReadinessProbeFailureThreshold,
 	}
 	defaultPodDisruptionBudget PodDisruptionBudgetSpec = PodDisruptionBudgetSpec{}
 )
@@ -122,6 +122,11 @@ type EnvoyDeploymentSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
+	// ShutdownManager defines configuration for Envoy's shutdown
+	// manager, which handles graceful termination of Envoy Pods
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
 }
 
 // Image returns the envoy container image to use
@@ -306,6 +311,33 @@ func (pdbs *PodDisruptionBudgetSpec) Validate() error {
 		return fmt.Errorf("only one of 'spec.podDisruptionBudget.minAvailable' or 'spec.podDisruptionBudget.maxUnavailable' is allowed")
 	}
 	return nil
+}
+
+// ShutdownManager defines configuration for Envoy's shutdown
+// manager, which handles graceful termination of Envoy Pods
+type ShutdownManager struct {
+	// Image is the envoy image and tag to use
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Image *string `json:"image,omitempty"`
+	// Configures envoy's admin port. Defaults to 8090.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ServerPort *uint32 `json:"serverPort,omitempty"`
+}
+
+func (sm *ShutdownManager) GetImage() string {
+	if sm.Image != nil {
+		return *sm.Image
+	}
+	return defaults.ShtdnMgrImage()
+}
+
+func (sm *ShutdownManager) GetServer() uint32 {
+	if sm.ServerPort != nil {
+		return *sm.ServerPort
+	}
+	return defaults.ShtdnMgrDefaultServerPort
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment

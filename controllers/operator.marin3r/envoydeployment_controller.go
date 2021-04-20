@@ -129,6 +129,7 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		ReadinessProbe:            ed.ReadinessProbe(),
 		PodAffinity:               ed.PodAffinity(),
 		PodDisruptionBudget:       ed.PodDisruptionBudget(),
+		ShutdownManager:           ed.Spec.ShutdownManager,
 	}
 
 	hash, err := r.getBootstrapConfigHash(ctx, generate.OwnedResourceKey(), generate.EnvoyAPIVersion)
