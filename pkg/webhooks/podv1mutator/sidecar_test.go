@@ -137,10 +137,10 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 			"Populate ContainerConfig from annotations (shtdnmgr enabled)",
 			&envoySidecarConfig{},
 			args{map[string]string{
-				"marin3r.3scale.net/node-id":          "node-id",
-				"marin3r.3scale.net/shtdnmgr.enabled": "true",
-				"marin3r.3scale.net/shtdnmgr.port":    "30000",
-				"marin3r.3scale.net/shtdnmgr.image":   "image:test",
+				"marin3r.3scale.net/node-id":                  "node-id",
+				"marin3r.3scale.net/shutdown-manager.enabled": "true",
+				"marin3r.3scale.net/shutdown-manager.port":    "30000",
+				"marin3r.3scale.net/shutdown-manager.image":   "image:test",
 			}},
 			&envoySidecarConfig{
 				generator: envoy_container.ContainerConfig{

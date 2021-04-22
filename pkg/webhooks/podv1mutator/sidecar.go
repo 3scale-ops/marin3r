@@ -57,9 +57,9 @@ const (
 
 	// Annotations to allow configuration of the shutdown manager for
 	// Envoy sidecards (to allow graceful termination of the envoy server)
-	paramShtdnMgrEnabled    = "shtdnmgr.enabled"
-	paramShtdnMgrServerPort = "shtdnmgr.port"
-	paramShtdnMgrImage      = "shtdnmgr.image"
+	paramShtdnMgrEnabled    = "shutdown-manager.enabled"
+	paramShtdnMgrServerPort = "shutdown-manager.port"
+	paramShtdnMgrImage      = "shutdown-manager.image"
 )
 
 type envoySidecarConfig struct {
