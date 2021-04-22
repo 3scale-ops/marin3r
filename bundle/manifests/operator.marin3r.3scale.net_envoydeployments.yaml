@@ -935,6 +935,17 @@ spec:
                     description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                     type: object
                 type: object
+              shutdownManager:
+                description: ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy Pods
+                properties:
+                  image:
+                    description: Image is the shutdown manager image and tag to use
+                    type: string
+                  serverPort:
+                    description: Configures the sutdown manager's server port. Defaults to 8090.
+                    format: int32
+                    type: integer
+                type: object
             required:
             - discoveryServiceRef
             - envoyConfigRef

@@ -1465,10 +1465,11 @@ spec:
                   manager, which handles graceful termination of Envoy Pods
                 properties:
                   image:
-                    description: Image is the envoy image and tag to use
+                    description: Image is the shutdown manager image and tag to use
                     type: string
                   serverPort:
-                    description: Configures envoy's admin port. Defaults to 8090.
+                    description: Configures the sutdown manager's server port. Defaults
+                      to 8090.
                     format: int32
                     type: integer
                 type: object

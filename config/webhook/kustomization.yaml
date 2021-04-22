@@ -10,7 +10,7 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/3scale/marin3r
-  newTag: v0.8.0-alpha.6
+  newTag: v0.8.0-alpha.10
 
 patchesStrategicMerge:
 - |-

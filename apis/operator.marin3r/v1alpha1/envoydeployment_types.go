@@ -316,11 +316,11 @@ func (pdbs *PodDisruptionBudgetSpec) Validate() error {
 // ShutdownManager defines configuration for Envoy's shutdown
 // manager, which handles graceful termination of Envoy Pods
 type ShutdownManager struct {
-	// Image is the envoy image and tag to use
+	// Image is the shutdown manager image and tag to use
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Image *string `json:"image,omitempty"`
-	// Configures envoy's admin port. Defaults to 8090.
+	// Configures the sutdown manager's server port. Defaults to 8090.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ServerPort *uint32 `json:"serverPort,omitempty"`

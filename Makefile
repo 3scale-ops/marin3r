@@ -2,7 +2,7 @@ SHELL := /bin/bash
 # Project name
 NAME := marin3r
 # Current Operator version
-VERSION ?= 0.8.0-alpha.6
+VERSION ?= 0.8.0-alpha.10
 # Default bundle image tag
 BUNDLE_IMG ?= quay.io/3scale/marin3r-bundle:v$(VERSION)
 INDEX_IMG ?= quay.io/3scale/marin3r-catalog:latest

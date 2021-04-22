@@ -744,6 +744,7 @@ EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
 | *`readinessProbe`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-probespec[$$ProbeSpec$$]__ | Readiness probe for the envoy pods
 | *`podAffinity`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#affinity-v1-core[$$Affinity$$]__ | Affinity configuration for the envoy pods
 | *`podDisruptionBudget`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-poddisruptionbudgetspec[$$PodDisruptionBudgetSpec$$]__ | Configures PodDisruptionBudget for the envoy Pods
+| *`shutdownManager`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-shutdownmanager[$$ShutdownManager$$]__ | ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy Pods
 |===
 
 
@@ -851,6 +852,24 @@ ServiceConfig has options to configure the way the Service is deployed
 | Field | Description
 | *`name`* __string__ | 
 | *`type`* __ServiceType__ | 
+|===
+
+
+[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-shutdownmanager"]
+==== ShutdownManager 
+
+ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy Pods
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-envoydeploymentspec[$$EnvoyDeploymentSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`image`* __string__ | Image is the shutdown manager image and tag to use
+| *`serverPort`* __integer__ | Configures the sutdown manager's server port. Defaults to 8090.
 |===
 
 
