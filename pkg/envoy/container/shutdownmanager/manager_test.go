@@ -270,25 +270,6 @@ func TestManager_drainHandler(t *testing.T) {
 		}
 	})
 
-	t.Run("Request should time out (metrics return 5 connections, min = 4)", func(t *testing.T) {
-		mgr.MinOpenConnections = 4
-		err := run(mgr,
-			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("OK")) }),
-			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Write([]byte(heredoc.Doc(`
-					# TYPE envoy_http_downstream_cx_active gauge
-					envoy_http_downstream_cx_active{envoy_http_conn_manager_prefix="my_listener"} 0
-					envoy_http_downstream_cx_active{envoy_http_conn_manager_prefix="aaaa"} 3
-					envoy_http_downstream_cx_active{envoy_http_conn_manager_prefix="bbbb"} 2
-				`)))
-			}),
-		)
-
-		if err == nil {
-			t.Errorf("Manager.drainHandler() error was expected, had success")
-		}
-	})
-
 	t.Run("Request should succeed (metrics return 3 admin connections, min = 0)", func(t *testing.T) {
 		mgr.MinOpenConnections = 0
 		err := run(mgr,
