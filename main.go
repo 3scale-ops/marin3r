@@ -21,6 +21,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +40,8 @@ import (
 	marin3rcontroller "github.com/3scale-ops/marin3r/controllers/marin3r"
 	operatorcontroller "github.com/3scale-ops/marin3r/controllers/operator.marin3r"
 	discoveryservice "github.com/3scale-ops/marin3r/pkg/discoveryservice"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/shutdownmanager"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale-ops/marin3r/pkg/version"
 	"github.com/3scale-ops/marin3r/pkg/webhooks/podv1mutator"
@@ -67,6 +70,17 @@ var (
 	webhookTLSKeyName            string
 	webhookTLSCertName           string
 	probeAddr                    string
+)
+
+var (
+	shutdownmmgrHTTPServePort      int
+	shutdownmmgrReadyFile          string
+	shutdownmmgrReadyCheckInterval int
+	shutdownmmgrDrainCheckInterval int
+	shutdownmmgrCheckDrainDelay    int
+	shutdownmmgrStartDrainDelay    int
+	shutdownmmgrEnvoyAdminURL      string
+	shutdownmmgrMinOpenConnections int
 )
 
 var (
@@ -101,6 +115,13 @@ var (
 		Short: "Run the Pod mutating webhook",
 		Run:   runWebhook,
 	}
+
+	// Shutdown manager subcommand
+	shutdownManagerCmd = &cobra.Command{
+		Use:   "shutdown-manager",
+		Short: "Run envoy's shutdown manager",
+		Run:   runShutdownManager,
+	}
 )
 
 var (
@@ -119,6 +140,7 @@ func init() {
 	rootCmd.AddCommand(operatorCmd)
 	rootCmd.AddCommand(discoveryServiceCmd)
 	rootCmd.AddCommand(webhookCmd)
+	rootCmd.AddCommand(shutdownManagerCmd)
 
 	// Global flags
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Enable debug logs")
@@ -143,6 +165,23 @@ func init() {
 	webhookCmd.Flags().StringVar(&webhookTLSCertName, "tls-cert-name", "apiserver.crt", "The file name of the certificate for the webhook.")
 	webhookCmd.Flags().StringVar(&webhookTLSKeyName, "tls-key-name", "apiserver.key", "The file name of the private key for the webhook.")
 
+	// Shutdown manager flags
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrHTTPServePort, "port", int(defaults.ShtdnMgrDefaultServerPort),
+		"Port for the shutdown manager to listen at")
+	shutdownManagerCmd.Flags().StringVar(&shutdownmmgrReadyFile, "ready-file", defaults.ShtdnMgrDefaultReadyFile,
+		"File to communicate the shutdown status between processes")
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrReadyCheckInterval, "check-ready-interval", defaults.ShtdnMgrDefaultReadyCheckInterval,
+		"Polling interval to check if envoy is ready for shutdown")
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrDrainCheckInterval, "check-drain-interval", defaults.ShtdnMgrDefaultDrainCheckInterval,
+		"Polling interval to check if envoy listeners have drained")
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrStartDrainDelay, "start-drain-delay", defaults.ShtdnMgrDefaultStartDrainDelay,
+		"Time to wait before polling Envoy for open connections")
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrCheckDrainDelay, "check-drain-delay", defaults.ShtdnMgrDefaultCheckDrainDelay,
+		"Time to wait before draining Envoy connections")
+	shutdownManagerCmd.Flags().StringVar(&shutdownmmgrEnvoyAdminURL, "envoy-admin-address", fmt.Sprintf("http://localhost:%d", defaults.EnvoyAdminPort),
+		"Envoy admin port address")
+	shutdownManagerCmd.Flags().IntVar(&shutdownmmgrMinOpenConnections, "min-open-connections", defaults.ShtdnMgrDefaultMinOpenConnections,
+		"minimum amount of connections that can be open when polling for active connections in Envoy")
 }
 
 func main() {
@@ -320,6 +359,28 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	setupLog.Info("starting the webhook")
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "controller manager exited non-zero")
+		os.Exit(1)
+	}
+}
+
+func runShutdownManager(cmd *cobra.Command, args []string) {
+
+	ctrl.SetLogger(zap.New(zap.UseDevMode(debug)))
+	printVersion()
+
+	mgr := shutdownmanager.Manager{
+		HTTPServePort:              shutdownmmgrHTTPServePort,
+		ShutdownReadyFile:          shutdownmmgrReadyFile,
+		ShutdownReadyCheckInterval: time.Duration(shutdownmmgrReadyCheckInterval) * time.Second,
+		CheckDrainInterval:         time.Duration(shutdownmmgrDrainCheckInterval) * time.Second,
+		CheckDrainDelay:            time.Duration(shutdownmmgrCheckDrainDelay) * time.Second,
+		StartDrainDelay:            time.Duration(shutdownmmgrStartDrainDelay) * time.Second,
+		EnvoyAdminAddress:          shutdownmmgrEnvoyAdminURL,
+		MinOpenConnections:         shutdownmmgrMinOpenConnections,
+	}
+
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "shutdown manager exited non-zero")
 		os.Exit(1)
 	}
 }

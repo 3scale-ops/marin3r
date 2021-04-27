@@ -138,7 +138,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.8.0-alpha.6
+  name: marin3r.v0.8.0-alpha.10
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -601,6 +601,15 @@ spec:
       - description: Resources holds the resource requirements to use for the Envoy Deployment. Defaults to no resource requests nor limits.
         displayName: Resources
         path: resources
+      - description: ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy Pods
+        displayName: Shutdown Manager
+        path: shutdownManager
+      - description: Image is the shutdown manager image and tag to use
+        displayName: Image
+        path: shutdownManager.image
+      - description: Configures the sutdown manager's server port. Defaults to 8090.
+        displayName: Server Port
+        path: shutdownManager.serverPort
       version: v1alpha1
   description: |
     MARIN3R is an operator to manage an Envoy discovery service and a fleet of Envoy proxies that
@@ -687,7 +696,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.6
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.10
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -732,7 +741,7 @@ spec:
                 - --tls-key-name=apiserver.key
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.6
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.10
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1048,7 +1057,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.8.0-alpha.6
+  version: 0.8.0-alpha.10
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

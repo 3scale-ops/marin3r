@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -37,19 +39,25 @@ func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if _, ok := pod.GetAnnotations()[fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramNodeID)]; !ok {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("Missing '%s/%s' annotation", marin3rAnnotationsDomain, paramNodeID))
+	if _, ok := lookupMarin3rAnnotation(paramNodeID, pod.GetAnnotations()); !ok {
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("missing '%s/%s' annotation", marin3rAnnotationsDomain, paramNodeID))
 	}
 
 	// Get the patches for the envoy sidecar container
 	config := envoySidecarConfig{}
 	err = config.PopulateFromAnnotations(pod.GetAnnotations())
 	if err != nil {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("Error trying to load envoy container config from annotations: '%s'", err))
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("error trying to load envoy container config from annotations: '%s'", err))
 	}
 
-	pod.Spec.Containers = append(pod.Spec.Containers, config.container())
+	pod.Spec.Containers = append(pod.Spec.Containers, config.containers()...)
 	pod.Spec.Volumes = append(pod.Spec.Volumes, config.volumes()...)
+
+	// Increase the TerminationGracePeriodSeconds parameter if shutdown
+	// manager is enabled
+	if isShtdnMgrEnabled(pod.GetAnnotations()) {
+		pod.Spec.TerminationGracePeriodSeconds = pointer.Int64Ptr(defaults.GracefulShutdownTimeoutSeconds)
+	}
 
 	marshaledPod, err := json.Marshal(pod)
 	if err != nil {

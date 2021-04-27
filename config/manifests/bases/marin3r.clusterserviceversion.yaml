@@ -474,6 +474,15 @@ spec:
       - description: Resources holds the resource requirements to use for the Envoy Deployment. Defaults to no resource requests nor limits.
         displayName: Resources
         path: resources
+      - description: ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy Pods
+        displayName: Shutdown Manager
+        path: shutdownManager
+      - description: Image is the shutdown manager image and tag to use
+        displayName: Image
+        path: shutdownManager.image
+      - description: Configures the sutdown manager's server port. Defaults to 8090.
+        displayName: Server Port
+        path: shutdownManager.serverPort
       version: v1alpha1
   description: |
     MARIN3R is an operator to manage an Envoy discovery service and a fleet of Envoy proxies that

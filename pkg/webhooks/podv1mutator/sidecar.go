@@ -19,14 +19,16 @@ import (
 	"strconv"
 	"strings"
 
+	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
+	marin3rAnnotationsDomain = "marin3r.3scale.net"
 
 	// parameter names
 	paramNodeID             = "node-id"
@@ -41,6 +43,7 @@ const (
 	paramClientCertificate  = "client-certificate"
 	paramEnvoyExtraArgs     = "envoy-extra-args"
 	paramEnvoyAPIVersion    = "envoy-api-version"
+	paramEnvoyAdminPort     = "admin-port"
 
 	// Annotations to allow definition of container resource requests
 	// and limits for CPU and Memory. For this annitations, a non-existing
@@ -52,22 +55,66 @@ const (
 	paramResourceLimitsCPU      = "resources.limits.cpu"
 	paramResourceLimitsMemory   = "resources.limits.memory"
 
-	marin3rAnnotationsDomain = "marin3r.3scale.net"
+	// Annotations to allow configuration of the shutdown manager for
+	// Envoy sidecards (to allow graceful termination of the envoy server)
+	paramShtdnMgrEnabled    = "shutdown-manager.enabled"
+	paramShtdnMgrServerPort = "shutdown-manager.port"
+	paramShtdnMgrImage      = "shutdown-manager.image"
 )
 
 type envoySidecarConfig struct {
-	name               string
-	image              string
-	ports              []corev1.ContainerPort
-	bootstrapConfigMap string
-	nodeID             string
-	clusterID          string
-	tlsVolume          string
-	configVolume       string
-	clientCertSecret   string
-	extraArgs          string
-	resources          corev1.ResourceRequirements
-	envoyAPI           envoy.APIVersion
+	generator envoy_container.ContainerConfig
+}
+
+func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
+	var err error
+
+	esc.generator.Name = getStringParam(paramContainerName, annotations)
+	esc.generator.Image = getStringParam(paramImage, annotations)
+	esc.generator.Ports, err = getContainerPorts(annotations)
+	if err != nil {
+		return err
+	}
+	esc.generator.BootstrapConfigMap = getBootstrapConfigMap(annotations)
+	esc.generator.ConfigBasePath = defaults.EnvoyConfigBasePath
+	esc.generator.ConfigFileName = defaults.EnvoyConfigFileName
+	esc.generator.ConfigVolume = getStringParam(paramConfigVolume, annotations)
+	esc.generator.TLSBasePath = defaults.EnvoyTLSBasePath
+	esc.generator.TLSVolume = getStringParam(paramTLSVolume, annotations)
+	esc.generator.NodeID = getNodeID(annotations)
+	esc.generator.ClusterID = getStringParam(paramClusterID, annotations)
+	esc.generator.ClientCertSecret = getStringParam(paramClientCertificate, annotations)
+	esc.generator.ExtraArgs = func() []string {
+		extraArgs := getStringParam(paramEnvoyExtraArgs, annotations)
+		if extraArgs != "" {
+			return strings.Split(extraArgs, " ")
+		}
+		return nil
+	}()
+	esc.generator.Resources, err = getContainerResourceRequirements(annotations)
+	if err != nil {
+		return err
+	}
+	esc.generator.AdminPort = getPortOrDefault(paramEnvoyAdminPort, annotations, defaults.EnvoyAdminPort)
+	esc.generator.LivenessProbe = operatorv1alpha1.ProbeSpec{
+		InitialDelaySeconds: defaults.LivenessInitialDelaySeconds,
+		TimeoutSeconds:      defaults.LivenessTimeoutSeconds,
+		PeriodSeconds:       defaults.LivenessPeriodSeconds,
+		SuccessThreshold:    defaults.LivenessSuccessThreshold,
+		FailureThreshold:    defaults.LivenessFailureThreshold,
+	}
+	esc.generator.ReadinessProbe = operatorv1alpha1.ProbeSpec{
+		InitialDelaySeconds: defaults.ReadinessProbeInitialDelaySeconds,
+		TimeoutSeconds:      defaults.ReadinessProbeTimeoutSeconds,
+		PeriodSeconds:       defaults.ReadinessProbePeriodSeconds,
+		SuccessThreshold:    defaults.ReadinessProbeSuccessThreshold,
+		FailureThreshold:    defaults.ReadinessProbeFailureThreshold,
+	}
+	esc.generator.ShutdownManagerEnabled = isShtdnMgrEnabled(annotations)
+	esc.generator.ShutdownManagerPort = getPortOrDefault(paramShtdnMgrServerPort, annotations, defaults.ShtdnMgrDefaultServerPort)
+	esc.generator.ShutdownManagerImage = getStringParam(paramShtdnMgrImage, annotations)
+
+	return nil
 }
 
 func lookupMarin3rAnnotation(key string, annotations map[string]string) (string, bool) {
@@ -85,6 +132,8 @@ func getStringParam(key string, annotations map[string]string) string {
 		paramClientCertificate: defaults.SidecarClientCertificate,
 		paramEnvoyExtraArgs:    defaults.EnvoyExtraArgs,
 		paramEnvoyAPIVersion:   defaults.EnvoyAPIVersion,
+		paramShtdnMgrEnabled:   "false",
+		paramShtdnMgrImage:     defaults.ShtdnMgrImage(),
 	}
 
 	// return the value specified in the corresponding annotation, if any
@@ -108,33 +157,6 @@ func getNodeID(annotations map[string]string) string {
 	// mutation won't even be triggered
 	res, _ := lookupMarin3rAnnotation(paramNodeID, annotations)
 	return res
-}
-
-func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
-
-	esc.name = getStringParam(paramContainerName, annotations)
-	esc.image = getStringParam(paramImage, annotations)
-
-	ports, err := getContainerPorts(annotations)
-	if err != nil {
-		return err
-	}
-	esc.ports = ports
-	esc.bootstrapConfigMap = getBootstrapConfigMap(annotations)
-	esc.nodeID = getNodeID(annotations)
-	esc.clusterID = getStringParam(paramClusterID, annotations)
-	esc.configVolume = getStringParam(paramConfigVolume, annotations)
-	esc.tlsVolume = getStringParam(paramTLSVolume, annotations)
-	esc.clientCertSecret = getStringParam(paramClientCertificate, annotations)
-	esc.extraArgs = getStringParam(paramEnvoyExtraArgs, annotations)
-
-	resources, err := getContainerResourceRequirements(annotations)
-	if err != nil {
-		return err
-	}
-	esc.resources = resources
-
-	return nil
 }
 
 func getBootstrapConfigMap(annotations map[string]string) string {
@@ -204,6 +226,18 @@ func getContainerResourceRequirements(annotations map[string]string) (corev1.Res
 	return res, nil
 }
 
+func getPortOrDefault(key string, annotations map[string]string, defaultPort uint32) int32 {
+	s, ok := lookupMarin3rAnnotation(key, annotations)
+	if ok {
+		p, err := portNumber(s)
+		if err != nil {
+			return int32(defaultPort)
+		}
+		return p
+	}
+	return int32(defaultPort)
+}
+
 // port spec format is "name:port[:protocol],name:port[:protcol]"
 func getContainerPorts(annotations map[string]string) ([]corev1.ContainerPort, error) {
 	plist := []corev1.ContainerPort{}
@@ -241,7 +275,7 @@ func parsePortSpec(spec string) (*corev1.ContainerPort, error) {
 	params := strings.Split(spec, ":")
 	// Each port spec should at least contain name and port number
 	if len(params) < 2 {
-		return nil, fmt.Errorf("Incorrect format, the por specification format for the envoy sidecar container is 'name:port[:protocol]'")
+		return nil, fmt.Errorf("incorrect format, the por specification format for the envoy sidecar container is 'name:port[:protocol]'")
 	}
 
 	port.Name = params[0]
@@ -257,7 +291,7 @@ func parsePortSpec(spec string) (*corev1.ContainerPort, error) {
 			port.Protocol = corev1.Protocol(params[2])
 
 		} else {
-			return nil, fmt.Errorf("Unsupported port protocol '%s'", params[2])
+			return nil, fmt.Errorf("unsupported port protocol '%s'", params[2])
 		}
 	}
 
@@ -271,7 +305,7 @@ func hostPortMapping(portName string, annotations map[string]string) (int32, err
 		for _, spec := range strings.Split(specs, ",") {
 			params := strings.Split(spec, ":")
 			if len(params) != 2 {
-				return 0, fmt.Errorf("Incorrect number of params in host-port-mapping spec '%v'", spec)
+				return 0, fmt.Errorf("incorrect number of params in host-port-mapping spec '%v'", spec)
 			}
 			if params[0] == portName {
 				p, err := portNumber(params[1])
@@ -294,98 +328,25 @@ func portNumber(sport string) (int32, error) {
 	}
 	// Check if port is within allowed ranges. Privileged ports are not allowed
 	if iport < 1024 || iport > 65535 {
-		return 0, fmt.Errorf("Port number %v is not in the range 1024-65535", iport)
+		return 0, fmt.Errorf("port number %v is not in the range 1024-65535", iport)
 	}
 	return int32(iport), nil
 }
 
-func (esc *envoySidecarConfig) container() corev1.Container {
-
-	container := corev1.Container{
-		Name:    esc.name,
-		Image:   esc.image,
-		Command: []string{"envoy"},
-		Args: []string{
-			"-c",
-			fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
-			"--service-node",
-			esc.nodeID,
-			"--service-cluster",
-			esc.clusterID,
-		},
-		Resources: esc.resources,
-		Ports:     esc.ports,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      esc.tlsVolume,
-				ReadOnly:  true,
-				MountPath: defaults.EnvoyTLSBasePath,
-			},
-			{
-				Name:      esc.configVolume,
-				ReadOnly:  true,
-				MountPath: defaults.EnvoyConfigBasePath,
-			},
-		},
-		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/ready",
-					Port: intstr.IntOrString{IntVal: 9901},
-				},
-			},
-			InitialDelaySeconds: 30,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       10,
-			SuccessThreshold:    1,
-			FailureThreshold:    10,
-		},
-		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
-				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/ready",
-					Port: intstr.IntOrString{IntVal: 9901},
-				},
-			},
-			InitialDelaySeconds: 15,
-			TimeoutSeconds:      1,
-			PeriodSeconds:       5,
-			SuccessThreshold:    1,
-			FailureThreshold:    1,
-		},
+func isShtdnMgrEnabled(annotations map[string]string) bool {
+	b, err := strconv.ParseBool(getStringParam(paramShtdnMgrEnabled, annotations))
+	if err != nil {
+		return false
 	}
+	return b
+}
 
-	if esc.extraArgs != "" {
-		for _, arg := range strings.Split(esc.extraArgs, " ") {
-			container.Args = append(container.Args, arg)
-		}
-	}
+func (esc *envoySidecarConfig) containers() []corev1.Container {
 
-	return container
+	return esc.generator.Containers()
 }
 
 func (esc *envoySidecarConfig) volumes() []corev1.Volume {
 
-	volumes := []corev1.Volume{
-		{
-			Name: esc.tlsVolume,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: esc.clientCertSecret,
-				},
-			},
-		},
-		{
-			Name: esc.configVolume,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: esc.bootstrapConfigMap,
-					},
-				},
-			},
-		},
-	}
-
-	return volumes
+	return esc.generator.Volumes()
 }

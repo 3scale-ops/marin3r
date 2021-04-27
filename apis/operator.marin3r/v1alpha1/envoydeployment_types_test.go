@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"

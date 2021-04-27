@@ -29,6 +29,7 @@ type GeneratorOptions struct {
 	ReadinessProbe            operatorv1alpha1.ProbeSpec
 	PodAffinity               *corev1.Affinity
 	PodDisruptionBudget       operatorv1alpha1.PodDisruptionBudgetSpec
+	ShutdownManager           *operatorv1alpha1.ShutdownManager
 }
 
 func (cfg *GeneratorOptions) labels() map[string]string {

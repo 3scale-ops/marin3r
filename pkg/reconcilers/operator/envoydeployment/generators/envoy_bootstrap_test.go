@@ -7,7 +7,7 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

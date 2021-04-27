@@ -1,11 +1,12 @@
 package generators
 
 import (
-	"fmt"
+	"strings"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/defaults"
+	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
+	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,50 @@ import (
 func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedresources.GeneratorFunction {
 
 	return func() client.Object {
+
+		cc := envoy_container.ContainerConfig{
+			Name:  defaults.DeploymentContainerName,
+			Image: cfg.DeploymentImage,
+			Ports: func() []corev1.ContainerPort {
+				ports := make([]corev1.ContainerPort, len(cfg.ExposedPorts))
+				for i := 0; i < len(cfg.ExposedPorts); i++ {
+					p := corev1.ContainerPort{
+						Name:          cfg.ExposedPorts[i].Name,
+						ContainerPort: cfg.ExposedPorts[i].Port,
+					}
+					if cfg.ExposedPorts[i].Protocol != nil {
+						p.Protocol = *cfg.ExposedPorts[i].Protocol
+					}
+					ports[i] = p
+				}
+				return ports
+			}(),
+			BootstrapConfigMap: func() string {
+				if cfg.EnvoyAPIVersion == envoy.APIv2 {
+					return strings.Join([]string{defaults.DeploymentBootstrapConfigMapV2, cfg.InstanceName}, "-")
+				}
+				return strings.Join([]string{defaults.DeploymentBootstrapConfigMapV3, cfg.InstanceName}, "-")
+			}(),
+			ConfigBasePath:   defaults.EnvoyConfigBasePath,
+			ConfigFileName:   defaults.EnvoyConfigFileName,
+			ConfigVolume:     defaults.DeploymentConfigVolume,
+			TLSBasePath:      defaults.EnvoyTLSBasePath,
+			TLSVolume:        defaults.DeploymentTLSVolume,
+			NodeID:           cfg.EnvoyNodeID,
+			ClusterID:        cfg.EnvoyClusterID,
+			ClientCertSecret: strings.Join([]string{defaults.DeploymentClientCertificate, cfg.InstanceName}, "-"),
+			ExtraArgs:        cfg.ExtraArgs,
+			Resources:        cfg.DeploymentResources,
+			AdminPort:        cfg.AdminPort,
+			LivenessProbe:    cfg.LivenessProbe,
+			ReadinessProbe:   cfg.ReadinessProbe,
+		}
+
+		if cfg.ShutdownManager != nil {
+			cc.ShutdownManagerImage = cfg.ShutdownManager.GetImage()
+			cc.ShutdownManagerEnabled = true
+			cc.ShutdownManagerPort = int32(defaults.ShtdnMgrDefaultServerPort)
+		}
 
 		dep := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
@@ -44,120 +89,23 @@ func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedreso
 						}(),
 					},
 					Spec: corev1.PodSpec{
-						Affinity: cfg.PodAffinity,
-						Volumes: []corev1.Volume{
-							{
-								Name: defaults.DeploymentTLSVolume,
-								VolumeSource: corev1.VolumeSource{
-									Secret: &corev1.SecretVolumeSource{
-										SecretName: fmt.Sprintf("%s-%s", defaults.DeploymentClientCertificate, cfg.InstanceName),
-									},
-								},
-							},
-							{
-								Name: defaults.DeploymentConfigVolume,
-								VolumeSource: corev1.VolumeSource{
-									ConfigMap: &corev1.ConfigMapVolumeSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: func() string {
-												if cfg.EnvoyAPIVersion == envoy.APIv2 {
-													return fmt.Sprintf("%s-%s", defaults.DeploymentBootstrapConfigMapV2, cfg.InstanceName)
-												}
-												return fmt.Sprintf("%s-%s", defaults.DeploymentBootstrapConfigMapV3, cfg.InstanceName)
-											}(),
-										},
-									},
-								},
-							},
-						},
-						Containers: []corev1.Container{
-							{
-								Name:    defaults.DeploymentContainerName,
-								Image:   cfg.DeploymentImage,
-								Command: []string{"envoy"},
-								Args: func() []string {
-									args := []string{"-c",
-										fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
-										"--service-node",
-										cfg.EnvoyNodeID,
-										"--service-cluster",
-										cfg.EnvoyClusterID,
-									}
-									// TODO: validate that user is not overwriting 'service-node' or 'service-cluster'
-									if len(cfg.ExtraArgs) > 0 {
-										args = append(args, cfg.ExtraArgs...)
-									}
-									return args
-								}(),
-								Resources: cfg.DeploymentResources,
-								Ports: func() []corev1.ContainerPort {
-									ports := make([]corev1.ContainerPort, len(cfg.ExposedPorts)+1)
-									for i := 0; i < len(cfg.ExposedPorts); i++ {
-										p := corev1.ContainerPort{
-											Name:          cfg.ExposedPorts[i].Name,
-											ContainerPort: cfg.ExposedPorts[i].Port,
-										}
-										if cfg.ExposedPorts[i].Protocol != nil {
-											p.Protocol = *cfg.ExposedPorts[i].Protocol
-										}
-										ports[i] = p
-									}
-									ports[len(cfg.ExposedPorts)] = corev1.ContainerPort{
-										Name:          "admin",
-										ContainerPort: cfg.AdminPort,
-									}
-									return ports
-								}(),
-								VolumeMounts: []corev1.VolumeMount{
-									{
-										Name:      defaults.DeploymentTLSVolume,
-										ReadOnly:  true,
-										MountPath: defaults.EnvoyTLSBasePath,
-									},
-									{
-										Name:      defaults.DeploymentConfigVolume,
-										ReadOnly:  true,
-										MountPath: defaults.EnvoyConfigBasePath,
-									},
-								},
-								LivenessProbe: &corev1.Probe{
-									Handler: corev1.Handler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path: "/ready",
-											Port: intstr.IntOrString{IntVal: cfg.AdminPort},
-										},
-									},
-									InitialDelaySeconds: cfg.LivenessProbe.InitialDelaySeconds,
-									TimeoutSeconds:      cfg.LivenessProbe.TimeoutSeconds,
-									PeriodSeconds:       cfg.LivenessProbe.PeriodSeconds,
-									SuccessThreshold:    cfg.LivenessProbe.SuccessThreshold,
-									FailureThreshold:    cfg.LivenessProbe.FailureThreshold,
-								},
-								ReadinessProbe: &corev1.Probe{
-									Handler: corev1.Handler{
-										HTTPGet: &corev1.HTTPGetAction{
-											Path: "/ready",
-											Port: intstr.IntOrString{IntVal: cfg.AdminPort},
-										},
-									},
-									InitialDelaySeconds: cfg.ReadinessProbe.InitialDelaySeconds,
-									TimeoutSeconds:      cfg.ReadinessProbe.TimeoutSeconds,
-									PeriodSeconds:       cfg.ReadinessProbe.PeriodSeconds,
-									SuccessThreshold:    cfg.ReadinessProbe.SuccessThreshold,
-									FailureThreshold:    cfg.ReadinessProbe.FailureThreshold,
-								},
-								TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-								ImagePullPolicy:          corev1.PullIfNotPresent,
-							},
-						},
-						RestartPolicy:                 corev1.RestartPolicyAlways,
-						TerminationGracePeriodSeconds: pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
-						DNSPolicy:                     corev1.DNSClusterFirst,
-						ServiceAccountName:            "default",
-						DeprecatedServiceAccount:      "default",
-						SecurityContext:               &corev1.PodSecurityContext{},
-						SchedulerName:                 corev1.DefaultSchedulerName,
+						Affinity:                 cfg.PodAffinity,
+						Volumes:                  cc.Volumes(),
+						Containers:               cc.Containers(),
+						RestartPolicy:            corev1.RestartPolicyAlways,
+						DNSPolicy:                corev1.DNSClusterFirst,
+						ServiceAccountName:       "default",
+						DeprecatedServiceAccount: "default",
+						TerminationGracePeriodSeconds: func() *int64 {
+							// Increase the TerminationGracePeriod timeout if the shutdown manager
+							// is enabled (for graceful termination)
+							if cfg.ShutdownManager != nil {
+								return pointer.Int64Ptr(defaults.GracefulShutdownTimeoutSeconds)
+							}
+							return pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds)
+						}(),
+						SecurityContext: &corev1.PodSecurityContext{},
+						SchedulerName:   corev1.DefaultSchedulerName,
 					},
 				},
 				Strategy: appsv1.DeploymentStrategy{
