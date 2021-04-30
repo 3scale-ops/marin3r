@@ -28,7 +28,7 @@ metadata:
   name: marin3r
   namespace: marin3r-system
 spec:
-  channel: alpha
+  channel: stable
   installPlanApproval: Automatic
   name: marin3r
   source: marin3r-catalog
