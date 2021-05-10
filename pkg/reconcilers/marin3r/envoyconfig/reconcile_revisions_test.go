@@ -669,6 +669,42 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 			wantPublished:    nil,
 			wantUnpublished:  nil,
 		},
+		{
+			name: "Publish a previous revision",
+			r:    testRevisionReconcilerBuilder(s, &marin3rv1alpha1.EnvoyConfig{}),
+			revisionList: &marin3rv1alpha1.EnvoyConfigRevisionList{
+				Items: []marin3rv1alpha1.EnvoyConfigRevision{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "yyyy",
+							Namespace: "test",
+						},
+						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
+							Version: "yyyy",
+						},
+						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "xxxx",
+							Namespace: "test",
+						},
+						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
+							Version: "xxxx",
+						},
+						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+							Conditions: []status.Condition{{
+								Type:   marin3rv1alpha1.RevisionTaintedCondition,
+								Status: corev1.ConditionTrue,
+							}},
+						},
+					},
+				},
+			},
+			versionToPublish: "yyyy",
+			wantPublished:    &types.NamespacedName{Name: "yyyy", Namespace: "test"},
+			wantUnpublished:  nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -678,18 +714,18 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 			// Check the published ecr is ok
 			if tt.wantPublished == nil {
 				if got != nil {
-					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotPublished '%v', wantPublished %v", got, tt.wantPublished)
+					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotPublished '%v', wanted 'nil'", types.NamespacedName{Name: got.GetName(), Namespace: got.GetNamespace()})
 				}
 			} else {
 				if got.GetName() != tt.wantPublished.Name || got.GetNamespace() != tt.wantPublished.Namespace || !got.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
-					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotPublished '%v', wantPublished %v", got, tt.wantPublished)
+					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotPublished '%v', wantPublished %v", types.NamespacedName{Name: got.GetName(), Namespace: got.GetNamespace()}, tt.wantPublished)
 				}
 			}
 
 			// Check the unpublished ecr are correct
 			if tt.wantUnpublished == nil {
-				if got != nil {
-					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotPublished '%v', wantPublished %v", got, tt.wantPublished)
+				if got1 != nil {
+					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotUnpublished '%v', wantUnpublished 'nil'", got)
 				}
 			} else {
 

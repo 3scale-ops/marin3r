@@ -226,7 +226,7 @@ func (r *RevisionReconciler) isRevisionPublishedConditionReconciled(versionToPub
 				Reason:  status.ConditionReason("VersionPublished"),
 				Message: fmt.Sprintf("Version '%s' has been published", versionToPublish),
 			})
-			shouldBeTrue = &ecr
+			shouldBeTrue = ecr.DeepCopy()
 		}
 	}
 
