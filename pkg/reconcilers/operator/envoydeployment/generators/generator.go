@@ -14,10 +14,14 @@ type GeneratorOptions struct {
 	InstanceName              string
 	Namespace                 string
 	DiscoveryServiceName      string
+	XdssAdress                string
+	XdssPort                  int
 	EnvoyAPIVersion           envoy.APIVersion
 	EnvoyNodeID               string
 	EnvoyClusterID            string
+	ClientCertificateName     string
 	ClientCertificateDuration time.Duration
+	SigningCertificateName    string
 	DeploymentImage           string
 	DeploymentResources       corev1.ResourceRequirements
 	ExposedPorts              []operatorv1alpha1.ContainerPort
@@ -30,6 +34,7 @@ type GeneratorOptions struct {
 	PodAffinity               *corev1.Affinity
 	PodDisruptionBudget       operatorv1alpha1.PodDisruptionBudgetSpec
 	ShutdownManager           *operatorv1alpha1.ShutdownManager
+	InitManager               *operatorv1alpha1.InitManager
 }
 
 func (cfg *GeneratorOptions) labels() map[string]string {

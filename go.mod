@@ -19,6 +19,7 @@ require (
 	github.com/spf13/cobra v1.1.3
 	google.golang.org/genproto v0.0.0-20200701001935-0939c5918c31
 	google.golang.org/grpc v1.30.0
+	google.golang.org/protobuf v1.25.0
 	k8s.io/api v0.20.0
 	k8s.io/apimachinery v0.20.0
 	k8s.io/client-go v0.20.0

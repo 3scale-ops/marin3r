@@ -69,6 +69,14 @@ spec:
               image:
                 description: Image is the envoy image and tag to use
                 type: string
+              initManager:
+                description: InitManager defines configuration for Envoy's init manager,
+                  which handles initialization for Envoy pods
+                properties:
+                  image:
+                    description: Image is the init manager image and tag to use
+                    type: string
+                type: object
               livenessProbe:
                 description: Liveness probe for the envoy pods
                 properties:
@@ -1462,7 +1470,7 @@ spec:
                 type: object
               shutdownManager:
                 description: ShutdownManager defines configuration for Envoy's shutdown
-                  manager, which handles graceful termination of Envoy Pods
+                  manager, which handles graceful termination of Envoy pods
                 properties:
                   image:
                     description: Image is the shutdown manager image and tag to use

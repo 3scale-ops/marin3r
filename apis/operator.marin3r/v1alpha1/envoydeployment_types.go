@@ -123,10 +123,15 @@ type EnvoyDeploymentSpec struct {
 	// +optional
 	PodDisruptionBudget *PodDisruptionBudgetSpec `json:"podDisruptionBudget,omitempty"`
 	// ShutdownManager defines configuration for Envoy's shutdown
-	// manager, which handles graceful termination of Envoy Pods
+	// manager, which handles graceful termination of Envoy pods
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ShutdownManager *ShutdownManager `json:"shutdownManager,omitempty"`
+	// InitManager defines configuration for Envoy's init
+	// manager, which handles initialization for Envoy pods
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	InitManager *InitManager `json:"initManager,omitempty"`
 }
 
 // Image returns the envoy container image to use
@@ -338,6 +343,22 @@ func (sm *ShutdownManager) GetServer() uint32 {
 		return *sm.ServerPort
 	}
 	return defaults.ShtdnMgrDefaultServerPort
+}
+
+// InitManager defines configuration for Envoy's shutdown
+// manager, which handles initialization for Envoy pods
+type InitManager struct {
+	// Image is the init manager image and tag to use
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Image *string `json:"image,omitempty"`
+}
+
+func (im *InitManager) GetImage() string {
+	if im.Image != nil {
+		return *im.Image
+	}
+	return defaults.InitMgrImage()
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment

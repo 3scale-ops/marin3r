@@ -3,7 +3,6 @@ package generators
 import (
 	"strings"
 
-	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
@@ -16,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.GeneratorFunction {
 
 	return func() client.Object {
 
@@ -43,25 +42,35 @@ func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedreso
 				}
 				return strings.Join([]string{defaults.DeploymentBootstrapConfigMapV3, cfg.InstanceName}, "-")
 			}(),
-			ConfigBasePath:   defaults.EnvoyConfigBasePath,
-			ConfigFileName:   defaults.EnvoyConfigFileName,
-			ConfigVolume:     defaults.DeploymentConfigVolume,
-			TLSBasePath:      defaults.EnvoyTLSBasePath,
-			TLSVolume:        defaults.DeploymentTLSVolume,
-			NodeID:           cfg.EnvoyNodeID,
-			ClusterID:        cfg.EnvoyClusterID,
-			ClientCertSecret: strings.Join([]string{defaults.DeploymentClientCertificate, cfg.InstanceName}, "-"),
-			ExtraArgs:        cfg.ExtraArgs,
-			Resources:        cfg.DeploymentResources,
-			AdminPort:        cfg.AdminPort,
-			LivenessProbe:    cfg.LivenessProbe,
-			ReadinessProbe:   cfg.ReadinessProbe,
+			ConfigBasePath:     defaults.EnvoyConfigBasePath,
+			ConfigFileName:     defaults.EnvoyConfigFileName,
+			ConfigVolume:       defaults.DeploymentConfigVolume,
+			TLSBasePath:        defaults.EnvoyTLSBasePath,
+			TLSVolume:          defaults.DeploymentTLSVolume,
+			NodeID:             cfg.EnvoyNodeID,
+			ClusterID:          cfg.EnvoyClusterID,
+			ClientCertSecret:   strings.Join([]string{defaults.DeploymentClientCertificate, cfg.InstanceName}, "-"),
+			ExtraArgs:          cfg.ExtraArgs,
+			Resources:          cfg.DeploymentResources,
+			AdminBindAddress:   defaults.EnvoyAdminBindAddress,
+			AdminPort:          cfg.AdminPort,
+			AdminAccessLogPath: cfg.AdminAccessLogPath,
+			LivenessProbe:      cfg.LivenessProbe,
+			ReadinessProbe:     cfg.ReadinessProbe,
+			InitManagerImage:   defaults.InitMgrImage(),
+			XdssHost:           cfg.XdssAdress,
+			XdssPort:           cfg.XdssPort,
+			APIVersion:         cfg.EnvoyAPIVersion.String(),
 		}
 
 		if cfg.ShutdownManager != nil {
 			cc.ShutdownManagerImage = cfg.ShutdownManager.GetImage()
 			cc.ShutdownManagerEnabled = true
 			cc.ShutdownManagerPort = int32(defaults.ShtdnMgrDefaultServerPort)
+		}
+
+		if cfg.InitManager != nil {
+			cc.InitManagerImage = cfg.InitManager.GetImage()
 		}
 
 		dep := &appsv1.Deployment{
@@ -82,15 +91,12 @@ func (cfg *GeneratorOptions) Deployment(hash string, replicas *int32) lockedreso
 				Template: corev1.PodTemplateSpec{
 					ObjectMeta: metav1.ObjectMeta{
 						CreationTimestamp: metav1.Time{},
-						Labels: func() (labels map[string]string) {
-							labels = cfg.labels()
-							labels[operatorv1alpha1.EnvoyDeploymentBootstrapConfigHashLabelKey] = hash
-							return
-						}(),
+						Labels:            cfg.labels(),
 					},
 					Spec: corev1.PodSpec{
 						Affinity:                 cfg.PodAffinity,
 						Volumes:                  cc.Volumes(),
+						InitContainers:           cc.InitContainers(),
 						Containers:               cc.Containers(),
 						RestartPolicy:            corev1.RestartPolicyAlways,
 						DNSPolicy:                corev1.DNSClusterFirst,

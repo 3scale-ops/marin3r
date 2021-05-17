@@ -150,7 +150,9 @@ var _ = Describe("EnvoyDeployment", func() {
 				},
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
 					DiscoveryServiceRef: ds.GetName(),
-					EnvoyConfigRef:      ec.GetName()},
+					EnvoyConfigRef:      ec.GetName(),
+					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
+				},
 			}
 			err = k8sClient.Create(context.Background(), edep)
 			Expect(err).ToNot(HaveOccurred())
@@ -281,6 +283,7 @@ var _ = Describe("EnvoyDeployment", func() {
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
 					DiscoveryServiceRef: ds.GetName(),
 					EnvoyConfigRef:      ec.GetName(),
+					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
 				},
 			}
 			err = k8sClient.Create(context.Background(), edep)

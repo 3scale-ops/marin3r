@@ -15,8 +15,9 @@ const (
 	EnvoyExtraArgs                  string = ""
 	EnvoyTLSBasePath                string = "/etc/envoy/tls/client"
 	EnvoyAPIVersion                 string = string(envoy.APIv2)
-	TlsCertificateSdsSecretFileName string = "tls_certificate_sds_secret.yaml"
+	TlsCertificateSdsSecretFileName string = "tls_certificate_sds_secret.json"
 	EnvoyAdminPort                  uint32 = 9901
+	EnvoyAdminBindAddress           string = "0.0.0.0"
 	EnvoyAdminAccessLogPath         string = "/dev/null"
 	GracefulShutdownTimeoutSeconds  int64  = 300
 
@@ -48,6 +49,10 @@ const (
 	DeploymentTLSVolume            string = "envoy-tls"
 	DeploymentClientCertificate    string = "envoy-client-cert"
 
+	// init manager defaults
+	InitMgrDefaultImageRegistry  string = "quay.io/3scale/marin3r"
+	InitMgrRtdsLayerResourceName string = "runtime"
+
 	// shutdown manager defaults
 	ShtdnMgrDefaultImageRegistry      string = "quay.io/3scale/marin3r"
 	ShtdnMgrDefaultServerPort         uint32 = 8090
@@ -65,4 +70,8 @@ const (
 
 func ShtdnMgrImage() string {
 	return strings.Join([]string{ShtdnMgrDefaultImageRegistry, version.Current()}, ":")
+}
+
+func InitMgrImage() string {
+	return strings.Join([]string{InitMgrDefaultImageRegistry, version.Current()}, ":")
 }

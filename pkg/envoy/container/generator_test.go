@@ -13,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func TestContainerConfig_Container(t *testing.T) {
+func TestContainerConfig_Containers(t *testing.T) {
 	tests := []struct {
 		name string
 		cc   ContainerConfig
@@ -342,11 +342,7 @@ func TestContainerConfig_Volumes(t *testing.T) {
 				{
 					Name: "config",
 					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "bootstrap-configmap",
-							},
-						},
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				},
 			},
@@ -356,6 +352,92 @@ func TestContainerConfig_Volumes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.cc.Volumes(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ContainerConfig.Volumes() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContainerConfig_InitContainers(t *testing.T) {
+	tests := []struct {
+		name string
+		cc   ContainerConfig
+		want []corev1.Container
+	}{
+		{
+			name: "Generates init manager init-container for the given config",
+			cc: ContainerConfig{
+				Image:              "envoy:test",
+				ConfigBasePath:     "/config",
+				ConfigFileName:     "config.json",
+				ConfigVolume:       "config",
+				TLSBasePath:        "/tls",
+				NodeID:             "test-id",
+				ClusterID:          "test-id",
+				ClientCertSecret:   "client-secret",
+				AdminAccessLogPath: "/dev/stdout",
+				AdminBindAddress:   "127.0.0.1",
+				AdminPort:          5000,
+				XdssHost:           "discovery-service.com",
+				XdssPort:           30000,
+				APIVersion:         "v2",
+				InitManagerImage:   "init-manager:test",
+			},
+			want: []corev1.Container{{
+				Name:  "envoy-init-mgr",
+				Image: "init-manager:test",
+				Env: []corev1.EnvVar{
+					{
+						Name: "POD_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.name",
+							},
+						},
+					},
+					{
+						Name: "POD_NAMESPACE",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "metadata.namespace",
+							},
+						},
+					},
+					{
+						Name: "HOST_NAME",
+						ValueFrom: &corev1.EnvVarSource{
+							FieldRef: &corev1.ObjectFieldSelector{
+								FieldPath: "spec.nodeName",
+							},
+						},
+					},
+				},
+				Args: []string{
+					"init-manager",
+					"--admin-access-log-path", "/dev/stdout",
+					"--admin-bind-address", "127.0.0.1:5000",
+					"--api-version", "v2",
+					"--client-certificate-path", "/tls",
+					"--config-file", "/config/config.json",
+					"--resources-path", "/config",
+					"--rtds-resource-name", defaults.InitMgrRtdsLayerResourceName,
+					"--xdss-host", "discovery-service.com",
+					"--xdss-port", "30000",
+					"--envoy-image", "envoy:test",
+				},
+				VolumeMounts: []corev1.VolumeMount{
+					{
+						Name:      "config",
+						ReadOnly:  false,
+						MountPath: "/config",
+					},
+				},
+			}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cc.InitContainers(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ContainerConfig.InitContainers() = %v, want %v", got, tt.want)
 			}
 		})
 	}
