@@ -69,9 +69,8 @@ func (c *Config) GenerateStatic() (string, error) {
 			},
 		},
 		Node: &envoy_api_v2_core.Node{
-			Id:            c.Options.NodeID,
-			Cluster:       c.Options.Cluster,
-			UserAgentName: "envoy",
+			Id:      c.Options.NodeID,
+			Cluster: c.Options.Cluster,
 		},
 		DynamicResources: &envoy_config_bootstrap_v2.Bootstrap_DynamicResources{
 			AdsConfig: &envoy_api_v2_core.ApiConfigSource{
