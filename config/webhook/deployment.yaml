@@ -15,6 +15,7 @@ spec:
       labels:
         control-plane: controller-webhook
     spec:
+      serviceAccountName: controller-manager
       # This breaks in Openshift
       # securityContext:
       #   runAsUser: 65532

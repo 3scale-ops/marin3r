@@ -1,6 +1,7 @@
 package podv1mutator
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -11,10 +12,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
+func init() {
+	operatorv1alpha1.AddToScheme(scheme.Scheme)
+}
+
+func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 	type args struct {
+		ctx         context.Context
+		clnt        client.Client
+		namespace   string
 		annotations map[string]string
 	}
 	tests := []struct {
@@ -27,150 +39,144 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 		{
 			"Populate ContainerConfig from annotations",
 			&envoySidecarConfig{},
-			args{map[string]string{
-				"marin3r.3scale.net/node-id":                                                "node-id",
-				"marin3r.3scale.net/ports":                                                  "xxxx:1111",
-				"marin3r.3scale.net/host-port-mappings":                                     "xxxx:3000",
-				"marin3r.3scale.net/container-name":                                         "container",
-				"marin3r.3scale.net/envoy-image":                                            "image",
-				"marin3r.3scale.net/ads-configmap":                                          "cm",
-				"marin3r.3scale.net/cluster-id":                                             "cluster-id",
-				"marin3r.3scale.net/config-volume":                                          "config-volume",
-				"marin3r.3scale.net/tls-volume":                                             "tls-volume",
-				"marin3r.3scale.net/client-certificate":                                     "client-cert",
-				"marin3r.3scale.net/envoy-extra-args":                                       "--log-level debug",
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsCPU):    "500m",
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsMemory): "700Mi",
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsCPU):      "1000m",
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsMemory):   "900Mi",
-			}},
+			args{
+				ctx: context.TODO(),
+				clnt: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(
+					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
+				).Build(),
+				namespace: "test",
+				annotations: map[string]string{
+					"marin3r.3scale.net/node-id":                                                "node-id",
+					"marin3r.3scale.net/ports":                                                  "xxxx:1111",
+					"marin3r.3scale.net/host-port-mappings":                                     "xxxx:3000",
+					"marin3r.3scale.net/container-name":                                         "container",
+					"marin3r.3scale.net/envoy-image":                                            "image",
+					"marin3r.3scale.net/ads-configmap":                                          "cm",
+					"marin3r.3scale.net/cluster-id":                                             "cluster-id",
+					"marin3r.3scale.net/config-volume":                                          "config-volume",
+					"marin3r.3scale.net/tls-volume":                                             "tls-volume",
+					"marin3r.3scale.net/client-certificate":                                     "client-cert",
+					"marin3r.3scale.net/envoy-extra-args":                                       "--log-level debug",
+					"marin3r.3scale.net/admin.port":                                             "2000",
+					"marin3r.3scale.net/admin.bind-address":                                     "127.0.0.1",
+					"marin3r.3scale.net/admin.access-log-path":                                  "/dev/stdout",
+					"marin3r.3scale.net/envoy-api-version":                                      "v3",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsCPU):    "500m",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceRequestsMemory): "700Mi",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsCPU):      "1000m",
+					fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramResourceLimitsMemory):   "900Mi",
+				}},
 			&envoySidecarConfig{
 				generator: envoy_container.ContainerConfig{
-					Name:  "container",
-					Image: "image",
-					Ports: []corev1.ContainerPort{
-						{Name: "xxxx", ContainerPort: 1111, HostPort: 3000},
-					},
-					AdminPort:          int32(defaults.EnvoyAdminPort),
-					BootstrapConfigMap: "cm",
-					ConfigBasePath:     defaults.EnvoyConfigBasePath,
-					ConfigFileName:     defaults.EnvoyConfigFileName,
-					TLSBasePath:        defaults.EnvoyTLSBasePath,
-					NodeID:             "node-id",
-					ClusterID:          "cluster-id",
-					TLSVolume:          "tls-volume",
-					ConfigVolume:       "config-volume",
-					ClientCertSecret:   "client-cert",
-					ExtraArgs:          []string{"--log-level", "debug"},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("500m"),
-							corev1.ResourceMemory: resource.MustParse("700Mi"),
-						},
-						Limits: corev1.ResourceList{
-							corev1.ResourceCPU:    resource.MustParse("1000m"),
-							corev1.ResourceMemory: resource.MustParse("900Mi"),
-						},
-					},
-					LivenessProbe: operatorv1alpha1.ProbeSpec{
-						InitialDelaySeconds: 30,
-						TimeoutSeconds:      1,
-						PeriodSeconds:       10,
-						SuccessThreshold:    1,
-						FailureThreshold:    10,
-					},
-					ReadinessProbe: operatorv1alpha1.ProbeSpec{
-						InitialDelaySeconds: 15,
-						TimeoutSeconds:      1,
-						PeriodSeconds:       5,
-						SuccessThreshold:    1,
-						FailureThreshold:    1,
-					},
+					Name:                   "container",
+					Image:                  "image",
+					ConfigBasePath:         defaults.EnvoyConfigBasePath,
+					ConfigFileName:         defaults.EnvoyConfigFileName,
+					ConfigVolume:           "config-volume",
+					TLSBasePath:            defaults.EnvoyTLSBasePath,
+					TLSVolume:              "tls-volume",
+					NodeID:                 "node-id",
+					ClusterID:              "cluster-id",
+					ClientCertSecret:       "client-cert",
+					ExtraArgs:              []string{"--log-level", "debug"},
+					Resources:              corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("500m"), corev1.ResourceMemory: resource.MustParse("700Mi")}, Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1000m"), corev1.ResourceMemory: resource.MustParse("900Mi")}},
+					AdminBindAddress:       "127.0.0.1",
+					AdminPort:              2000,
+					AdminAccessLogPath:     "/dev/stdout",
+					Ports:                  []corev1.ContainerPort{{Name: "xxxx", ContainerPort: 1111, HostPort: 3000}},
+					LivenessProbe:          operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
+					ReadinessProbe:         operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
+					InitManagerImage:       defaults.InitMgrImage(),
+					XdssHost:               "marin3r-ds.test.svc",
+					XdssPort:               18000,
+					APIVersion:             "v3",
 					ShutdownManagerEnabled: false,
 					ShutdownManagerPort:    int32(defaults.ShtdnMgrDefaultServerPort),
 					ShutdownManagerImage:   defaults.ShtdnMgrImage(),
 				},
 			},
 			false,
-		}, {
+		},
+		{
 			"Populate ContainerConfig from annotations (all default)",
 			&envoySidecarConfig{},
-			args{map[string]string{
-				"marin3r.3scale.net/node-id": "node-id",
-			}},
+			args{
+				ctx: context.TODO(),
+				clnt: fake.NewClientBuilder().WithObjects(
+					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
+				).Build(),
+				namespace: "test",
+				annotations: map[string]string{
+					"marin3r.3scale.net/node-id": "node-id",
+				}},
 			&envoySidecarConfig{
 				generator: envoy_container.ContainerConfig{
-					Name:               defaults.SidecarContainerName,
-					Image:              defaults.Image,
-					Ports:              []corev1.ContainerPort{},
-					AdminPort:          int32(defaults.EnvoyAdminPort),
-					BootstrapConfigMap: defaults.SidecarBootstrapConfigMapV2,
-					ConfigBasePath:     defaults.EnvoyConfigBasePath,
-					ConfigFileName:     defaults.EnvoyConfigFileName,
-					TLSBasePath:        defaults.EnvoyTLSBasePath,
-					NodeID:             "node-id",
-					ClusterID:          "node-id",
-					TLSVolume:          defaults.SidecarTLSVolume,
-					ConfigVolume:       defaults.SidecarConfigVolume,
-					ClientCertSecret:   defaults.SidecarClientCertificate,
-					LivenessProbe: operatorv1alpha1.ProbeSpec{
-						InitialDelaySeconds: 30,
-						TimeoutSeconds:      1,
-						PeriodSeconds:       10,
-						SuccessThreshold:    1,
-						FailureThreshold:    10,
-					},
-					ReadinessProbe: operatorv1alpha1.ProbeSpec{
-						InitialDelaySeconds: 15,
-						TimeoutSeconds:      1,
-						PeriodSeconds:       5,
-						SuccessThreshold:    1,
-						FailureThreshold:    1,
-					},
+					Name:                   defaults.SidecarContainerName,
+					Image:                  defaults.Image,
+					ConfigBasePath:         defaults.EnvoyConfigBasePath,
+					ConfigFileName:         defaults.EnvoyConfigFileName,
+					ConfigVolume:           defaults.SidecarConfigVolume,
+					TLSBasePath:            defaults.EnvoyTLSBasePath,
+					TLSVolume:              defaults.SidecarTLSVolume,
+					NodeID:                 "node-id",
+					ClusterID:              "node-id",
+					ClientCertSecret:       defaults.SidecarClientCertificate,
+					Resources:              corev1.ResourceRequirements{},
+					AdminBindAddress:       defaults.EnvoyAdminBindAddress,
+					AdminPort:              int32(defaults.EnvoyAdminPort),
+					AdminAccessLogPath:     defaults.EnvoyAdminAccessLogPath,
+					Ports:                  []corev1.ContainerPort{},
+					LivenessProbe:          operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
+					ReadinessProbe:         operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
+					InitManagerImage:       defaults.InitMgrImage(),
+					XdssHost:               "marin3r-ds.test.svc",
+					XdssPort:               18000,
+					APIVersion:             defaults.EnvoyAPIVersion,
 					ShutdownManagerEnabled: false,
 					ShutdownManagerPort:    int32(defaults.ShtdnMgrDefaultServerPort),
 					ShutdownManagerImage:   defaults.ShtdnMgrImage(),
 				},
 			},
 			false,
-		}, {
+		},
+		{
 			"Populate ContainerConfig from annotations (shtdnmgr enabled)",
 			&envoySidecarConfig{},
-			args{map[string]string{
-				"marin3r.3scale.net/node-id":                  "node-id",
-				"marin3r.3scale.net/shutdown-manager.enabled": "true",
-				"marin3r.3scale.net/shutdown-manager.port":    "30000",
-				"marin3r.3scale.net/shutdown-manager.image":   "image:test",
-			}},
+			args{
+				ctx: context.TODO(),
+				clnt: fake.NewClientBuilder().WithObjects(
+					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
+				).Build(),
+				namespace: "test",
+				annotations: map[string]string{
+					"marin3r.3scale.net/node-id":                  "node-id",
+					"marin3r.3scale.net/shutdown-manager.enabled": "true",
+					"marin3r.3scale.net/shutdown-manager.port":    "30000",
+					"marin3r.3scale.net/shutdown-manager.image":   "image:test",
+				}},
 			&envoySidecarConfig{
 				generator: envoy_container.ContainerConfig{
-					Name:               defaults.SidecarContainerName,
-					Image:              defaults.Image,
-					Ports:              []corev1.ContainerPort{},
-					AdminPort:          int32(defaults.EnvoyAdminPort),
-					BootstrapConfigMap: defaults.SidecarBootstrapConfigMapV2,
-					ConfigBasePath:     defaults.EnvoyConfigBasePath,
-					ConfigFileName:     defaults.EnvoyConfigFileName,
-					TLSBasePath:        defaults.EnvoyTLSBasePath,
-					NodeID:             "node-id",
-					ClusterID:          "node-id",
-					TLSVolume:          defaults.SidecarTLSVolume,
-					ConfigVolume:       defaults.SidecarConfigVolume,
-					ClientCertSecret:   defaults.SidecarClientCertificate,
-					LivenessProbe: operatorv1alpha1.ProbeSpec{
-						InitialDelaySeconds: 30,
-						TimeoutSeconds:      1,
-						PeriodSeconds:       10,
-						SuccessThreshold:    1,
-						FailureThreshold:    10,
-					},
-					ReadinessProbe: operatorv1alpha1.ProbeSpec{
-						InitialDelaySeconds: 15,
-						TimeoutSeconds:      1,
-						PeriodSeconds:       5,
-						SuccessThreshold:    1,
-						FailureThreshold:    1,
-					},
+					Name:                   defaults.SidecarContainerName,
+					Image:                  defaults.Image,
+					ConfigBasePath:         defaults.EnvoyConfigBasePath,
+					ConfigFileName:         defaults.EnvoyConfigFileName,
+					ConfigVolume:           defaults.SidecarConfigVolume,
+					TLSBasePath:            defaults.EnvoyTLSBasePath,
+					TLSVolume:              defaults.SidecarTLSVolume,
+					NodeID:                 "node-id",
+					ClusterID:              "node-id",
+					ClientCertSecret:       defaults.SidecarClientCertificate,
+					Resources:              corev1.ResourceRequirements{},
+					AdminBindAddress:       defaults.EnvoyAdminBindAddress,
+					AdminPort:              int32(defaults.EnvoyAdminPort),
+					AdminAccessLogPath:     defaults.EnvoyAdminAccessLogPath,
+					Ports:                  []corev1.ContainerPort{},
+					LivenessProbe:          operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
+					ReadinessProbe:         operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
+					InitManagerImage:       defaults.InitMgrImage(),
+					XdssHost:               "marin3r-ds.test.svc",
+					XdssPort:               18000,
+					APIVersion:             defaults.EnvoyAPIVersion,
 					ShutdownManagerEnabled: true,
 					ShutdownManagerPort:    30000,
 					ShutdownManagerImage:   "image:test",
@@ -181,7 +187,7 @@ func Test_envoySidecarConfig_PopulateFromAnnotations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.esc.PopulateFromAnnotations(tt.args.annotations); (err != nil) != tt.wantErr {
+			if err := tt.esc.PopulateFromAnnotations(tt.args.ctx, tt.args.clnt, tt.args.namespace, tt.args.annotations); (err != nil) != tt.wantErr {
 				t.Errorf("envoySidecarConfig.PopulateFromAnnotations() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if !reflect.DeepEqual(tt.esc, tt.want) {
@@ -681,53 +687,6 @@ func Test_getContainerResourceRequirements(t *testing.T) {
 
 }
 
-func Test_getBootstrapConfigMap(t *testing.T) {
-	type args struct {
-		annotations map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{
-			"Returns user defined ConfigMap",
-			args{map[string]string{
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramBootstrapConfigMap): "custom-cm",
-			}},
-			"custom-cm",
-		},
-		{
-			"Returns v3 ConfigMap when v3 version specified",
-			args{map[string]string{
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "v3",
-			}},
-			defaults.SidecarBootstrapConfigMapV3,
-		},
-		{
-			"Returns v2 ConfigMap when v2 version specified",
-			args{map[string]string{
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "v2",
-			}},
-			defaults.SidecarBootstrapConfigMapV2,
-		},
-		{
-			"Returns v2 ConfigMap when the version annotation does not parse correctly",
-			args{map[string]string{
-				fmt.Sprintf("%s/%s", marin3rAnnotationsDomain, paramEnvoyAPIVersion): "xx",
-			}},
-			defaults.SidecarBootstrapConfigMapV2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := getBootstrapConfigMap(tt.args.annotations); got != tt.want {
-				t.Errorf("getBootstrapConfigMap() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func Test_isShtdnMgrEnabled(t *testing.T) {
 	type args struct {
 		annotations map[string]string
@@ -826,6 +785,114 @@ func Test_getPortOrDefault(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := getPortOrDefault(tt.args.key, tt.args.annotations, tt.args.defaultPort); got != tt.want {
 				t.Errorf("getPortOrDefault() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_envoySidecarConfig_GetDiscoveryServiceAddress(t *testing.T) {
+	type args struct {
+		ctx         context.Context
+		clnt        client.Client
+		namespace   string
+		annotations map[string]string
+	}
+	tests := []struct {
+		name       string
+		args       args
+		wantServer string
+		wantPort   int
+		wantErr    bool
+	}{
+		{
+			name: "Returns the address using the 'discovery-service.name' annotations",
+			args: args{
+				ctx: context.TODO(),
+				clnt: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(
+					&operatorv1alpha1.DiscoveryService{
+						ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"},
+						Spec: operatorv1alpha1.DiscoveryServiceSpec{
+							XdsServerPort: func() *uint32 { var p uint32 = 20000; return &p }(),
+							ServiceConfig: &operatorv1alpha1.ServiceConfig{
+								Name: "example",
+							},
+						},
+					},
+				).Build(),
+				namespace: "test",
+				annotations: map[string]string{
+					"marin3r.3scale.net/discovery-service.name": "ds",
+				},
+			},
+			wantServer: "example.test.svc",
+			wantPort:   20000,
+			wantErr:    false,
+		},
+		{
+			name: "Returns the address without the 'discovery-service.name' annotation",
+			args: args{
+				ctx: context.TODO(),
+				clnt: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(
+					&operatorv1alpha1.DiscoveryService{
+						ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"},
+						Spec: operatorv1alpha1.DiscoveryServiceSpec{
+							XdsServerPort: func() *uint32 { var p uint32 = 20000; return &p }(),
+							ServiceConfig: &operatorv1alpha1.ServiceConfig{
+								Name: "example",
+							},
+						},
+					},
+				).Build(),
+				namespace:   "test",
+				annotations: map[string]string{},
+			},
+			wantServer: "example.test.svc",
+			wantPort:   20000,
+			wantErr:    false,
+		},
+		{
+			name: "'discovery-service.name' annotation points to inexistent resource",
+			args: args{
+				ctx:       context.TODO(),
+				clnt:      fake.NewClientBuilder().WithScheme(scheme.Scheme).Build(),
+				namespace: "test",
+				annotations: map[string]string{
+					"marin3r.3scale.net/discovery-service.name": "ds",
+				},
+			},
+			wantServer: "",
+			wantPort:   -1,
+			wantErr:    true,
+		},
+		{
+			name: "wrong number of discoveryservices found when 'discovery-service.name' not set",
+			args: args{
+				ctx: context.TODO(),
+				clnt: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(
+					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
+					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: "test"}},
+				).Build(),
+				namespace:   "test",
+				annotations: map[string]string{},
+			},
+			wantServer: "",
+			wantPort:   -1,
+			wantErr:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			gotServer, gotPort, err := getDiscoveryServiceAddress(tt.args.ctx, tt.args.clnt, tt.args.namespace, tt.args.annotations)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("envoySidecarConfig.GetDiscoveryServiceAddress() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if gotServer != tt.wantServer {
+				t.Errorf("envoySidecarConfig.GetDiscoveryServiceAddress() got = %v, want %v", gotServer, tt.wantServer)
+			}
+			if gotPort != tt.wantPort {
+				t.Errorf("envoySidecarConfig.GetDiscoveryServiceAddress() got1 = %v, want %v", gotPort, tt.wantPort)
 			}
 		})
 	}

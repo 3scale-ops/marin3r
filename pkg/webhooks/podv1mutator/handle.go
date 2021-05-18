@@ -45,11 +45,12 @@ func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 
 	// Get the patches for the envoy sidecar container
 	config := envoySidecarConfig{}
-	err = config.PopulateFromAnnotations(pod.GetAnnotations())
+	err = config.PopulateFromAnnotations(context.Background(), a.Client, req.Namespace, pod.GetAnnotations())
 	if err != nil {
-		return admission.Errored(http.StatusBadRequest, fmt.Errorf("error trying to load envoy container config from annotations: '%s'", err))
+		return admission.Errored(http.StatusBadRequest, fmt.Errorf("error trying to build envoy container config: '%s'", err))
 	}
 
+	pod.Spec.InitContainers = append(pod.Spec.InitContainers, config.initContainers()...)
 	pod.Spec.Containers = append(pod.Spec.Containers, config.containers()...)
 	pod.Spec.Volumes = append(pod.Spec.Volumes, config.volumes()...)
 

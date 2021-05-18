@@ -106,9 +106,9 @@ var _ = Describe("EnvoyDeployment controller", func() {
 
 		It("creates the required resources", func() {
 
-			By("waiting for the EnvoyBootstrap resource to be created")
+			By("waiting for the client certificate resource to be created")
 			{
-				eb := &marin3rv1alpha1.EnvoyBootstrap{}
+				eb := &operatorv1alpha1.DiscoveryServiceCertificate{}
 				Eventually(func() error {
 					return k8sClient.Get(
 						context.Background(),

@@ -136,7 +136,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 			{GeneratorFn: generate.RoleBinding(), ExcludePaths: defaultExcludedPaths},
 			{GeneratorFn: generate.Service(), ExcludePaths: append(defaultExcludedPaths, ".spec.clusterIP")},
 			{GeneratorFn: generate.Deployment(hash), ExcludePaths: defaultExcludedPaths},
-			{GeneratorFn: generate.EnvoyBootstrap(), ExcludePaths: defaultExcludedPaths},
+			{GeneratorFn: generate.ClientCertificate(), ExcludePaths: defaultExcludedPaths},
 		},
 		ds,
 	)
