@@ -188,6 +188,7 @@ func (mgr *Manager) drainHandler(w http.ResponseWriter, r *http.Request) {
 		case <-time.After(mgr.CheckDrainInterval):
 		case <-ctx.Done():
 			l.Info("request cancelled")
+			w.WriteHeader(499)
 			return
 		}
 	}
