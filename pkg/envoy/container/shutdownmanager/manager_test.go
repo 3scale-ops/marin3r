@@ -171,7 +171,7 @@ func TestManager_drainHandler(t *testing.T) {
 		mgr.EnvoyAdminAddress = fmt.Sprintf("http://localhost:%d", port)
 
 		// Create a request against shutdown manager /drain endpoint
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
 		defer cancel()
 		req, err := http.NewRequestWithContext(ctx, "GET", DrainEndpoint, nil)
 		if err != nil {
@@ -191,7 +191,9 @@ func TestManager_drainHandler(t *testing.T) {
 		success := make(chan struct{})
 		go func() {
 			mgr.drainHandler(rr, req)
-			close(success)
+			if rr.Result().StatusCode == http.StatusOK {
+				close(success)
+			}
 		}()
 
 		// Block until success or timeout
@@ -201,6 +203,7 @@ func TestManager_drainHandler(t *testing.T) {
 		case <-success:
 			return nil
 		}
+
 	}
 
 	t.Run("Request should timeout (no metrics returned)", func(t *testing.T) {
