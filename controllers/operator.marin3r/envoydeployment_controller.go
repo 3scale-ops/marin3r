@@ -18,11 +18,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"time"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/envoydeployment/generators"
 	"github.com/go-logr/logr"
@@ -98,6 +100,16 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
+	// Get the address of the DiscoveryService instance
+	ds := &operatorv1alpha1.DiscoveryService{}
+	dsKey := types.NamespacedName{Name: ed.Spec.DiscoveryServiceRef, Namespace: ed.GetNamespace()}
+	if err := r.GetClient().Get(ctx, dsKey, ds); err != nil {
+		if errors.IsNotFound(err) {
+			log.Error(err, "DiscoveryService does not exist", "DiscoveryService", ed.Spec.DiscoveryServiceRef)
+		}
+		return ctrl.Result{Requeue: true, RequeueAfter: 10 * time.Second}, err
+	}
+
 	// Get the EnvoyConfig for additional data (like the envoy API version in use)
 	ec, err := r.getEnvoyConfig(ctx, types.NamespacedName{Name: ed.Spec.EnvoyConfigRef, Namespace: ed.GetNamespace()})
 	if err != nil {
@@ -109,6 +121,8 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		InstanceName:         ed.GetName(),
 		Namespace:            ed.GetNamespace(),
 		DiscoveryServiceName: ed.Spec.DiscoveryServiceRef,
+		XdssAdress:           fmt.Sprintf("%s.%s.%s", ds.GetServiceConfig().Name, ds.GetNamespace(), "svc"),
+		XdssPort:             int(ds.GetXdsServerPort()),
 		EnvoyAPIVersion:      ec.GetEnvoyAPIVersion(),
 		EnvoyNodeID:          ec.Spec.NodeID,
 		EnvoyClusterID: func() string {
@@ -117,7 +131,9 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 			return ec.Spec.NodeID
 		}(),
+		ClientCertificateName:     fmt.Sprintf("%s-%s", defaults.DeploymentClientCertificate, ed.GetName()),
 		ClientCertificateDuration: ed.ClientCertificateDuration(),
+		SigningCertificateName:    ds.GetRootCertificateAuthorityOptions().SecretName,
 		DeploymentImage:           ed.Image(),
 		DeploymentResources:       ed.Resources(),
 		ExposedPorts:              ed.Spec.Ports,
@@ -130,12 +146,7 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		PodAffinity:               ed.PodAffinity(),
 		PodDisruptionBudget:       ed.PodDisruptionBudget(),
 		ShutdownManager:           ed.Spec.ShutdownManager,
-	}
-
-	hash, err := r.getBootstrapConfigHash(ctx, generate.OwnedResourceKey(), generate.EnvoyAPIVersion)
-	if err != nil {
-		log.Error(err, "unable to get EnvoyBootstrap", "EnvoyBootstrap", ed.Spec.EnvoyConfigRef)
-		return ctrl.Result{}, err
+		InitManager:               ed.Spec.InitManager,
 	}
 
 	replicas, err := r.getDeploymentReplicas(ctx, generate.OwnedResourceKey())
@@ -145,9 +156,10 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	lr := []lockedresources.LockedResource{
-		{GeneratorFn: generate.Deployment(hash, replicas), ExcludePaths: defaultExcludedPaths},
-		{GeneratorFn: generate.EnvoyBootstrap(), ExcludePaths: defaultExcludedPaths},
+		{GeneratorFn: generate.ClientCertificate(), ExcludePaths: defaultExcludedPaths},
+		{GeneratorFn: generate.Deployment(replicas), ExcludePaths: defaultExcludedPaths},
 	}
+
 	if ed.Replicas().Dynamic != nil {
 		lr = append(lr, lockedresources.LockedResource{GeneratorFn: generate.HPA(), ExcludePaths: defaultExcludedPaths})
 	}
@@ -178,22 +190,6 @@ func (r *EnvoyDeploymentReconciler) getEnvoyConfig(ctx context.Context, key type
 	}
 
 	return ec, nil
-}
-
-func (r *EnvoyDeploymentReconciler) getBootstrapConfigHash(ctx context.Context, key types.NamespacedName, envoyAPI envoy.APIVersion) (string, error) {
-	eb := &marin3rv1alpha1.EnvoyBootstrap{}
-	err := r.GetClient().Get(ctx, key, eb)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return "", nil
-		}
-		return "", err
-	}
-
-	if envoyAPI == envoy.APIv2 {
-		return eb.Status.GetConfigHashV2(), nil
-	}
-	return eb.Status.GetConfigHashV3(), nil
 }
 
 // reconcileDeploymentReplicas: this is required when using dynamic number of replicas to avoid the controller from

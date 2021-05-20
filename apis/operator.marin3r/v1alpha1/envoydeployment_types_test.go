@@ -401,3 +401,35 @@ func TestEnvoyDeployment_PodDisruptionBudget(t *testing.T) {
 		})
 	}
 }
+
+func TestInitManager_GetImage(t *testing.T) {
+	type fields struct {
+		Image *string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   string
+	}{
+		{
+			name:   "returns default",
+			fields: fields{Image: nil},
+			want:   defaults.InitMgrImage(),
+		},
+		{
+			name:   "returns value",
+			fields: fields{Image: pointer.StringPtr("test")},
+			want:   "test",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			im := &InitManager{
+				Image: tt.fields.Image,
+			}
+			if got := im.GetImage(); got != tt.want {
+				t.Errorf("InitManager.GetImage() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

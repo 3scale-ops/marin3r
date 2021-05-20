@@ -1,6 +1,7 @@
 package generators
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -17,7 +18,6 @@ import (
 
 func TestGeneratorOptions_Deployment(t *testing.T) {
 	type args struct {
-		hash     string
 		replicas *int32
 	}
 	tests := []struct {
@@ -31,6 +31,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 			opts: GeneratorOptions{
 				InstanceName:              "instance",
 				Namespace:                 "default",
+				XdssAdress:                "example.com",
+				XdssPort:                  10000,
 				EnvoyAPIVersion:           "v3",
 				EnvoyNodeID:               "test",
 				EnvoyClusterID:            "test",
@@ -41,22 +43,11 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				AdminPort:                 9901,
 				AdminAccessLogPath:        "/dev/null",
 				Replicas:                  operatorv1alpha1.ReplicasSpec{Static: pointer.Int32Ptr(1)},
-				LivenessProbe: operatorv1alpha1.ProbeSpec{
-					InitialDelaySeconds: 30,
-					TimeoutSeconds:      1,
-					PeriodSeconds:       10,
-					SuccessThreshold:    1,
-					FailureThreshold:    10,
-				},
-				ReadinessProbe: operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15,
-					TimeoutSeconds:   1,
-					PeriodSeconds:    5,
-					SuccessThreshold: 1,
-					FailureThreshold: 1,
-				},
-				PodAffinity: nil,
+				LivenessProbe:             operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
+				ReadinessProbe:            operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
+				InitManager:               &operatorv1alpha1.InitManager{Image: pointer.StringPtr("init-manager:latest")},
 			},
-			args: args{hash: "hash", replicas: pointer.Int32Ptr(1)},
+			args: args{replicas: pointer.Int32Ptr(1)},
 			want: &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Deployment",
@@ -86,11 +77,10 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							CreationTimestamp: metav1.Time{},
 							Labels: map[string]string{
-								"app.kubernetes.io/name":                                    "marin3r",
-								"app.kubernetes.io/managed-by":                              "marin3r-operator",
-								"app.kubernetes.io/component":                               "envoy-deployment",
-								"app.kubernetes.io/instance":                                "instance",
-								operatorv1alpha1.EnvoyDeploymentBootstrapConfigHashLabelKey: "hash",
+								"app.kubernetes.io/name":       "marin3r",
+								"app.kubernetes.io/managed-by": "marin3r-operator",
+								"app.kubernetes.io/component":  "envoy-deployment",
+								"app.kubernetes.io/instance":   "instance",
 							}},
 						Spec: corev1.PodSpec{
 							Volumes: []corev1.Volume{
@@ -105,14 +95,60 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 								{
 									Name: defaults.DeploymentConfigVolume,
 									VolumeSource: corev1.VolumeSource{
-										ConfigMap: &corev1.ConfigMapVolumeSource{
-											LocalObjectReference: corev1.LocalObjectReference{
-												Name: defaults.DeploymentBootstrapConfigMapV3 + "-instance",
+										EmptyDir: &corev1.EmptyDirVolumeSource{},
+									},
+								},
+							},
+							InitContainers: []corev1.Container{{
+								Name:  "envoy-init-mgr",
+								Image: "init-manager:latest",
+								Env: []corev1.EnvVar{
+									{
+										Name: "POD_NAME",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												FieldPath: "metadata.name",
+											},
+										},
+									},
+									{
+										Name: "POD_NAMESPACE",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												FieldPath: "metadata.namespace",
+											},
+										},
+									},
+									{
+										Name: "HOST_NAME",
+										ValueFrom: &corev1.EnvVarSource{
+											FieldRef: &corev1.ObjectFieldSelector{
+												FieldPath: "spec.nodeName",
 											},
 										},
 									},
 								},
-							},
+								Args: []string{
+									"init-manager",
+									"--admin-access-log-path", "/dev/null",
+									"--admin-bind-address", "0.0.0.0:9901",
+									"--api-version", "v3",
+									"--client-certificate-path", defaults.EnvoyTLSBasePath,
+									"--config-file", fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
+									"--resources-path", defaults.EnvoyConfigBasePath,
+									"--rtds-resource-name", defaults.InitMgrRtdsLayerResourceName,
+									"--xdss-host", "example.com",
+									"--xdss-port", "10000",
+									"--envoy-image", "test:latest",
+								},
+								VolumeMounts: []corev1.VolumeMount{
+									{
+										Name:      defaults.DeploymentConfigVolume,
+										ReadOnly:  false,
+										MountPath: defaults.EnvoyConfigBasePath,
+									},
+								},
+							}},
 							Containers: []corev1.Container{
 								{
 									Name:    defaults.DeploymentContainerName,
@@ -120,7 +156,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									Command: []string{"envoy"},
 									Args: []string{
 										"-c",
-										"/etc/envoy/bootstrap/config.json",
+										fmt.Sprintf("%s/%s", defaults.EnvoyConfigBasePath, defaults.EnvoyConfigFileName),
 										"--service-node",
 										"test",
 										"--service-cluster",
@@ -211,7 +247,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.opts
-			if got := cfg.Deployment(tt.args.hash, tt.args.replicas)(); !equality.Semantic.DeepEqual(got, tt.want) {
+			if got := cfg.Deployment(tt.args.replicas)(); !equality.Semantic.DeepEqual(got, tt.want) {
 				t.Errorf("GeneratorOptions.Deployment() = %v, want %v", got, tt.want)
 			}
 		})

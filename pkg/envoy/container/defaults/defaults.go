@@ -15,8 +15,9 @@ const (
 	EnvoyExtraArgs                  string = ""
 	EnvoyTLSBasePath                string = "/etc/envoy/tls/client"
 	EnvoyAPIVersion                 string = string(envoy.APIv2)
-	TlsCertificateSdsSecretFileName string = "tls_certificate_sds_secret.yaml"
+	TlsCertificateSdsSecretFileName string = "tls_certificate_sds_secret.json"
 	EnvoyAdminPort                  uint32 = 9901
+	EnvoyAdminBindAddress           string = "0.0.0.0"
 	EnvoyAdminAccessLogPath         string = "/dev/null"
 	GracefulShutdownTimeoutSeconds  int64  = 300
 
@@ -33,20 +34,20 @@ const (
 	ReadinessProbeFailureThreshold    int32 = 1
 
 	// sidecar specific defaults
-	SidecarContainerName        string = "envoy-sidecar"
-	SidecarBootstrapConfigMapV2 string = "envoy-sidecar-bootstrap"
-	SidecarBootstrapConfigMapV3 string = "envoy-sidecar-bootstrap-v3"
-	SidecarConfigVolume         string = "envoy-sidecar-bootstrap"
-	SidecarTLSVolume            string = "envoy-sidecar-tls"
-	SidecarClientCertificate    string = "envoy-sidecar-client-cert"
+	SidecarContainerName     string = "envoy-sidecar"
+	SidecarConfigVolume      string = "envoy-sidecar-bootstrap"
+	SidecarTLSVolume         string = "envoy-sidecar-tls"
+	SidecarClientCertificate string = "envoy-sidecar-client-cert"
 
 	// deployment specific defaults
-	DeploymentContainerName        string = "envoy"
-	DeploymentBootstrapConfigMapV2 string = "envoy-bootstrap"
-	DeploymentBootstrapConfigMapV3 string = "envoy-bootstrap-v3"
-	DeploymentConfigVolume         string = "envoy-bootstrap"
-	DeploymentTLSVolume            string = "envoy-tls"
-	DeploymentClientCertificate    string = "envoy-client-cert"
+	DeploymentContainerName     string = "envoy"
+	DeploymentConfigVolume      string = "envoy-bootstrap"
+	DeploymentTLSVolume         string = "envoy-tls"
+	DeploymentClientCertificate string = "envoy-client-cert"
+
+	// init manager defaults
+	InitMgrDefaultImageRegistry  string = "quay.io/3scale/marin3r"
+	InitMgrRtdsLayerResourceName string = "runtime"
 
 	// shutdown manager defaults
 	ShtdnMgrDefaultImageRegistry      string = "quay.io/3scale/marin3r"
@@ -65,4 +66,8 @@ const (
 
 func ShtdnMgrImage() string {
 	return strings.Join([]string{ShtdnMgrDefaultImageRegistry, version.Current()}, ":")
+}
+
+func InitMgrImage() string {
+	return strings.Join([]string{InitMgrDefaultImageRegistry, version.Current()}, ":")
 }

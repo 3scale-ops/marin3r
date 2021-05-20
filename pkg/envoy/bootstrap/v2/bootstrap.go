@@ -16,6 +16,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Config is a struct with options and methods to generate an envoy bootstrap config
@@ -66,6 +67,10 @@ func (c *Config) GenerateStatic() (string, error) {
 					},
 				},
 			},
+		},
+		Node: &envoy_api_v2_core.Node{
+			Id:      c.Options.NodeID,
+			Cluster: c.Options.Cluster,
 		},
 		DynamicResources: &envoy_config_bootstrap_v2.Bootstrap_DynamicResources{
 			AdsConfig: &envoy_api_v2_core.ApiConfigSource{
@@ -155,6 +160,13 @@ func (c *Config) GenerateStatic() (string, error) {
 		},
 	}
 
+	if len(c.Options.Metadata) > 0 {
+		cfg.Node.Metadata = &structpb.Struct{Fields: map[string]*structpb.Value{}}
+		for key, value := range c.Options.Metadata {
+			cfg.Node.Metadata.Fields[key] = structpb.NewStringValue(value)
+		}
+	}
+
 	m := jsonpb.Marshaler{OrigName: true}
 	json := bytes.NewBuffer([]byte{})
 	err = m.Marshal(json, cfg)
@@ -162,7 +174,7 @@ func (c *Config) GenerateStatic() (string, error) {
 		return "", err
 	}
 
-	return string(json.Bytes()), nil
+	return json.String(), nil
 }
 
 // GenerateSdsResources generates the envoy static config required for
@@ -188,7 +200,7 @@ func (c *Config) GenerateSdsResources() (map[string]string, error) {
 	}
 
 	return map[string]string{
-		envoy_bootstrap_options.TlsCertificateSdsSecretFileName: string(json.Bytes()),
+		envoy_bootstrap_options.TlsCertificateSdsSecretFileName: json.String(),
 	}, nil
 }
 

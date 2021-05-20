@@ -18,15 +18,18 @@ func TestConfig_GenerateStatic(t *testing.T) {
 			name: "Returns a string with the envoy booststrap static configuration",
 			c: &Config{
 				Options: envoy_bootstrap_options.ConfigOptions{
+					NodeID:                      "some-id",
+					Cluster:                     "some-cluster",
 					XdsHost:                     "localhost",
 					XdsPort:                     10000,
 					XdsClientCertificatePath:    "/tls.crt",
 					XdsClientCertificateKeyPath: "/tls.key",
 					SdsConfigSourcePath:         "/sds-config-source.json",
 					RtdsLayerResourceName:       "runtime",
+					Metadata:                    map[string]string{"key1": "value1", "key2": "value2"},
 				},
 			},
-			want:    `{"static_resources":{"clusters":[{"name":"xds_cluster","type":"STRICT_DNS","connect_timeout":"1s","load_assignment":{"cluster_name":"xds_cluster","endpoints":[{"lb_endpoints":[{"endpoint":{"address":{"socket_address":{"address":"localhost","port_value":10000}}}}]}]},"http2_protocol_options":{},"transport_socket":{"name":"envoy.transport_sockets.tls","typed_config":{"@type":"type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext","common_tls_context":{"tls_certificate_sds_secret_configs":[{"sds_config":{"path":"/sds-config-source.json"}}]}}}}]},"dynamic_resources":{"lds_config":{"ads":{},"resource_api_version":"V2"},"cds_config":{"ads":{},"resource_api_version":"V2"},"ads_config":{"api_type":"GRPC","transport_api_version":"V2","grpc_services":[{"envoy_grpc":{"cluster_name":"xds_cluster"}}]}},"layered_runtime":{"layers":[{"name":"runtime","rtds_layer":{"name":"runtime","rtds_config":{"ads":{},"resource_api_version":"V2"}}}]},"admin":{"access_log_path":"/dev/null","address":{"socket_address":{"address":"0.0.0.0","port_value":9001}}}}`,
+			want:    `{"node":{"id":"some-id","cluster":"some-cluster","metadata":{"key1":"value1","key2":"value2"}},"static_resources":{"clusters":[{"name":"xds_cluster","type":"STRICT_DNS","connect_timeout":"1s","load_assignment":{"cluster_name":"xds_cluster","endpoints":[{"lb_endpoints":[{"endpoint":{"address":{"socket_address":{"address":"localhost","port_value":10000}}}}]}]},"http2_protocol_options":{},"transport_socket":{"name":"envoy.transport_sockets.tls","typed_config":{"@type":"type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext","common_tls_context":{"tls_certificate_sds_secret_configs":[{"sds_config":{"path":"/sds-config-source.json"}}]}}}}]},"dynamic_resources":{"lds_config":{"ads":{},"resource_api_version":"V2"},"cds_config":{"ads":{},"resource_api_version":"V2"},"ads_config":{"api_type":"GRPC","transport_api_version":"V2","grpc_services":[{"envoy_grpc":{"cluster_name":"xds_cluster"}}]}},"layered_runtime":{"layers":[{"name":"runtime","rtds_layer":{"name":"runtime","rtds_config":{"ads":{},"resource_api_version":"V2"}}}]},"admin":{"access_log_path":"/dev/null","address":{"socket_address":{"address":"0.0.0.0","port_value":9001}}}}`,
 			wantErr: false,
 		},
 	}

@@ -39,15 +39,36 @@ const (
 	DeploymentLabelValue string = "nginx"
 	PodLabelKey          string = "app"
 	PodLabelValue        string = "testPod"
-	// SidecarPort          uint32 = 8080
 )
 
-type TestPod struct {
-	Pod            *corev1.Pod
-	EnvoyBootstrap *marin3rv1alpha1.EnvoyBootstrap
-}
+func GeneratePod(key types.NamespacedName, nodeID, envoyAPI, envoyVersion, discoveryService string) *corev1.Pod {
 
-func GeneratePodWithBootstrap(key types.NamespacedName, nodeID, envoyAPI, envoyVersion, discoveryService string) TestPod {
+	initContainers := []corev1.Container{{
+		Name:  "init-manager",
+		Image: "quay.io/3scale/marin3r:test",
+		Args: []string{
+			"init-manager",
+			"--api-version", envoyAPI,
+			"--xdss-host", fmt.Sprintf("marin3r-%s.%s.svc", discoveryService, key.Namespace),
+			"--envoy-image", "envoyproxy/envoy:v1.16.0",
+		},
+		Env: []corev1.EnvVar{
+			{Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.name"}}},
+			{Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
+			{Name: "HOST_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{FieldPath: "spec.nodeName"}}},
+		},
+		VolumeMounts: []corev1.VolumeMount{{
+			Name:      "config-volume",
+			ReadOnly:  false,
+			MountPath: "/etc/envoy/bootstrap",
+		}},
+	}}
 
 	containers := []corev1.Container{{
 		Name:    "envoy",
@@ -59,9 +80,6 @@ func GeneratePodWithBootstrap(key types.NamespacedName, nodeID, envoyAPI, envoyV
 			"--service-cluster", nodeID,
 			"--component-log-level", "config:debug",
 		},
-		// Ports: []corev1.ContainerPort{
-		// 	{Name: "envoy-http", ContainerPort: int32(SidecarPort)},
-		// },
 		VolumeMounts: []corev1.VolumeMount{
 			{Name: "tls-volume", ReadOnly: true, MountPath: "/etc/envoy/tls/client"},
 			{Name: "config-volume", ReadOnly: true, MountPath: "/etc/envoy/bootstrap"},
@@ -73,43 +91,21 @@ func GeneratePodWithBootstrap(key types.NamespacedName, nodeID, envoyAPI, envoyV
 	}}
 
 	volumes := []corev1.Volume{
-		{Name: "tls-volume", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "xds-client-certificate"}}},
-		{Name: "config-volume", VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: "envoy-bootstrap-v3"}}}},
+		{Name: "tls-volume", VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: "envoy-sidecar-client-cert"}}},
+		{Name: "config-volume", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}},
 	}
 
-	envoyBootstrap := &marin3rv1alpha1.EnvoyBootstrap{
-		ObjectMeta: metav1.ObjectMeta{Name: key.Name, Namespace: key.Namespace},
-		Spec: marin3rv1alpha1.EnvoyBootstrapSpec{
-			DiscoveryService: discoveryService,
-			ClientCertificate: marin3rv1alpha1.ClientCertificate{
-				Directory:  "/etc/envoy/tls/client",
-				SecretName: "xds-client-certificate",
-				Duration:   metav1.Duration{Duration: func() time.Duration { d, _ := time.ParseDuration("5m"); return d }()},
-			},
-			EnvoyStaticConfig: marin3rv1alpha1.EnvoyStaticConfig{
-				ConfigMapNameV2:       "envoy-bootstrap-v2",
-				ConfigMapNameV3:       "envoy-bootstrap-v3",
-				ConfigFile:            "config.json",
-				ResourcesDir:          "/etc/envoy/bootstrap/",
-				RtdsLayerResourceName: "runtime",
-				AdminBindAddress:      "0.0.0.0:9901",
-				AdminAccessLogPath:    "/dev/stdout",
-			},
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      key.Name,
+			Namespace: key.Namespace,
+			Labels:    map[string]string{PodLabelKey: PodLabelValue},
 		},
-	}
-
-	return TestPod{
-		Pod: &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      key.Name,
-				Namespace: key.Namespace,
-				Labels:    map[string]string{PodLabelKey: PodLabelValue},
-			},
-			Spec: corev1.PodSpec{
-				Volumes:    volumes,
-				Containers: containers,
-			}},
-		EnvoyBootstrap: envoyBootstrap,
+		Spec: corev1.PodSpec{
+			Volumes:        volumes,
+			InitContainers: initContainers,
+			Containers:     containers,
+		},
 	}
 }
 
@@ -167,6 +163,7 @@ func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI,
 	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/ports"] = fmt.Sprintf("envoy-http:%v", envoyPort)
 	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-api-version"] = envoyAPI
 	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-image"] = fmt.Sprintf("envoyproxy/envoy:%s", envoyVersion)
+	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/init-manager.image"] = "quay.io/3scale/marin3r:test"
 
 	return dep
 }

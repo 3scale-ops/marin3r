@@ -12,23 +12,33 @@ import (
 )
 
 type ContainerConfig struct {
-	Name                   string
-	Image                  string
-	BootstrapConfigMap     string
-	ConfigBasePath         string
-	ConfigFileName         string
-	ConfigVolume           string
-	TLSBasePath            string
-	TLSVolume              string
-	NodeID                 string
-	ClusterID              string
-	ClientCertSecret       string
-	ExtraArgs              []string
-	Resources              corev1.ResourceRequirements
-	AdminPort              int32
-	Ports                  []corev1.ContainerPort
-	LivenessProbe          operatorv1alpha1.ProbeSpec
-	ReadinessProbe         operatorv1alpha1.ProbeSpec
+	// Envoy container configuration
+	Name               string
+	Image              string
+	ConfigBasePath     string
+	ConfigFileName     string
+	ConfigVolume       string
+	TLSBasePath        string
+	TLSVolume          string
+	NodeID             string
+	ClusterID          string
+	ClientCertSecret   string
+	ExtraArgs          []string
+	Resources          corev1.ResourceRequirements
+	AdminBindAddress   string
+	AdminPort          int32
+	AdminAccessLogPath string
+	Ports              []corev1.ContainerPort
+	LivenessProbe      operatorv1alpha1.ProbeSpec
+	ReadinessProbe     operatorv1alpha1.ProbeSpec
+
+	// Init manager container configuration
+	InitManagerImage string
+	XdssHost         string
+	XdssPort         int
+	APIVersion       string
+
+	// Shutdown manager container configuration
 	ShutdownManagerEnabled bool
 	ShutdownManagerPort    int32
 	ShutdownManagerImage   string
@@ -159,6 +169,61 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 	return containers
 }
 
+func (cc *ContainerConfig) InitContainers() []corev1.Container {
+	containers := []corev1.Container{{
+		Name:  "envoy-init-mgr",
+		Image: cc.InitManagerImage,
+		Env: []corev1.EnvVar{
+			{
+				Name: "POD_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.name",
+					},
+				},
+			},
+			{
+				Name: "POD_NAMESPACE",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "metadata.namespace",
+					},
+				},
+			},
+			{
+				Name: "HOST_NAME",
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: "spec.nodeName",
+					},
+				},
+			},
+		},
+		Args: []string{
+			"init-manager",
+			"--admin-access-log-path", cc.AdminAccessLogPath,
+			"--admin-bind-address", fmt.Sprintf("%s:%d", cc.AdminBindAddress, cc.AdminPort),
+			"--api-version", cc.APIVersion,
+			"--client-certificate-path", cc.TLSBasePath,
+			"--config-file", fmt.Sprintf("%s/%s", cc.ConfigBasePath, cc.ConfigFileName),
+			"--resources-path", cc.ConfigBasePath,
+			"--rtds-resource-name", defaults.InitMgrRtdsLayerResourceName,
+			"--xdss-host", cc.XdssHost,
+			"--xdss-port", fmt.Sprintf("%d", cc.XdssPort),
+			"--envoy-image", cc.Image,
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      cc.ConfigVolume,
+				ReadOnly:  false,
+				MountPath: cc.ConfigBasePath,
+			},
+		},
+	}}
+
+	return containers
+}
+
 func (cc *ContainerConfig) Volumes() []corev1.Volume {
 
 	return []corev1.Volume{
@@ -173,11 +238,7 @@ func (cc *ContainerConfig) Volumes() []corev1.Volume {
 		{
 			Name: cc.ConfigVolume,
 			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cc.BootstrapConfigMap,
-					},
-				},
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
 	}

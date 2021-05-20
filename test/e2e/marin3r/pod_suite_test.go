@@ -44,10 +44,7 @@ var _ = Describe("Envoy pods", func() {
 		n := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: testNamespace}, n)
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}, timeout, poll).Should(BeTrue())
 
 		By("creating a DiscoveryService instance")
@@ -90,7 +87,7 @@ var _ = Describe("Envoy pods", func() {
 	})
 
 	Context("Envoy Pod with xDS configured", func() {
-		var t testutil.TestPod
+		var pod *corev1.Pod
 		var ec *v1alpha1.EnvoyConfig
 		var localPort int
 		var nodeID string
@@ -124,12 +121,9 @@ var _ = Describe("Envoy pods", func() {
 
 			By("deploying a Pod that will consume the EnvoyConfig through xDS")
 			key = types.NamespacedName{Name: "test-pod", Namespace: testNamespace}
-			t = testutil.GeneratePodWithBootstrap(key, nodeID, "v3", "v1.16.0", "instance")
+			pod = testutil.GeneratePod(key, nodeID, "v3", "v1.16.0", "instance")
 
-			err = k8sClient.Create(context.Background(), t.EnvoyBootstrap)
-			Expect(err).ToNot(HaveOccurred())
-
-			err = k8sClient.Create(context.Background(), t.Pod)
+			err = k8sClient.Create(context.Background(), pod)
 			Expect(err).ToNot(HaveOccurred())
 
 			selector := client.MatchingLabels{testutil.PodLabelKey: testutil.PodLabelValue}
@@ -143,7 +137,7 @@ var _ = Describe("Envoy pods", func() {
 			logger.Info(fmt.Sprintf("%v", cfg))
 			go func() {
 				defer GinkgoRecover()
-				fw, err := testutil.NewTestPortForwarder(cfg, *t.Pod, uint32(localPort), envoyListenerPort, GinkgoWriter, stopCh, readyCh)
+				fw, err := testutil.NewTestPortForwarder(cfg, *pod, uint32(localPort), envoyListenerPort, GinkgoWriter, stopCh, readyCh)
 				Expect(err).ToNot(HaveOccurred())
 				err = fw.ForwardPorts()
 				Expect(err).ToNot(HaveOccurred())

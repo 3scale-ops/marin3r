@@ -15,35 +15,41 @@
 package podv1mutator
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	marin3rAnnotationsDomain = "marin3r.3scale.net"
 
 	// parameter names
-	paramNodeID             = "node-id"
-	paramClusterID          = "cluster-id"
-	paramContainerName      = "container-name"
-	paramPorts              = "ports"
-	paramHostPortMapings    = "host-port-mappings"
-	paramImage              = "envoy-image"
-	paramBootstrapConfigMap = "ads-configmap"
-	paramConfigVolume       = "config-volume"
-	paramTLSVolume          = "tls-volume"
-	paramClientCertificate  = "client-certificate"
-	paramEnvoyExtraArgs     = "envoy-extra-args"
-	paramEnvoyAPIVersion    = "envoy-api-version"
-	paramEnvoyAdminPort     = "admin-port"
+	paramNodeID               = "node-id"
+	paramClusterID            = "cluster-id"
+	paramContainerName        = "container-name"
+	paramPorts                = "ports"
+	paramHostPortMapings      = "host-port-mappings"
+	paramImage                = "envoy-image"
+	paramConfigVolume         = "config-volume"
+	paramTLSVolume            = "tls-volume"
+	paramClientCertificate    = "client-certificate"
+	paramEnvoyExtraArgs       = "envoy-extra-args"
+	paramEnvoyAPIVersion      = "envoy-api-version"
+	paramDiscoveryServiceName = "discovery-service.name"
+
+	// Annotations to allow configuration of Envoy's admin api
+	paramEnvoyAdminPort          = "admin.port"
+	paramEnvoyAdminBindAddress   = "admin.bind-address"
+	paramEnvoyAdminAccessLogPath = "admin.access-log-path"
 
 	// Annotations to allow definition of container resource requests
 	// and limits for CPU and Memory. For this annitations, a non-existing
@@ -60,13 +66,17 @@ const (
 	paramShtdnMgrEnabled    = "shutdown-manager.enabled"
 	paramShtdnMgrServerPort = "shutdown-manager.port"
 	paramShtdnMgrImage      = "shutdown-manager.image"
+
+	// Annotations to allow configuration of the init manager for
+	// Envoy sidecards
+	paramInitMgrImage = "init-manager.image"
 )
 
 type envoySidecarConfig struct {
 	generator envoy_container.ContainerConfig
 }
 
-func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]string) error {
+func (esc *envoySidecarConfig) PopulateFromAnnotations(ctx context.Context, clnt client.Client, namespace string, annotations map[string]string) error {
 	var err error
 
 	esc.generator.Name = getStringParam(paramContainerName, annotations)
@@ -75,7 +85,6 @@ func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]st
 	if err != nil {
 		return err
 	}
-	esc.generator.BootstrapConfigMap = getBootstrapConfigMap(annotations)
 	esc.generator.ConfigBasePath = defaults.EnvoyConfigBasePath
 	esc.generator.ConfigFileName = defaults.EnvoyConfigFileName
 	esc.generator.ConfigVolume = getStringParam(paramConfigVolume, annotations)
@@ -95,7 +104,10 @@ func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]st
 	if err != nil {
 		return err
 	}
+	esc.generator.AdminBindAddress = getStringParam(paramEnvoyAdminBindAddress, annotations)
 	esc.generator.AdminPort = getPortOrDefault(paramEnvoyAdminPort, annotations, defaults.EnvoyAdminPort)
+	esc.generator.AdminAccessLogPath = getStringParam(paramEnvoyAdminAccessLogPath, annotations)
+
 	esc.generator.LivenessProbe = operatorv1alpha1.ProbeSpec{
 		InitialDelaySeconds: defaults.LivenessInitialDelaySeconds,
 		TimeoutSeconds:      defaults.LivenessTimeoutSeconds,
@@ -114,7 +126,40 @@ func (esc *envoySidecarConfig) PopulateFromAnnotations(annotations map[string]st
 	esc.generator.ShutdownManagerPort = getPortOrDefault(paramShtdnMgrServerPort, annotations, defaults.ShtdnMgrDefaultServerPort)
 	esc.generator.ShutdownManagerImage = getStringParam(paramShtdnMgrImage, annotations)
 
+	esc.generator.InitManagerImage = getStringParam(paramInitMgrImage, annotations)
+
+	xdssHost, xdssPort, err := getDiscoveryServiceAddress(ctx, clnt, namespace, annotations)
+	if err != nil {
+		return err
+	}
+	esc.generator.XdssHost = xdssHost
+	esc.generator.XdssPort = xdssPort
+	esc.generator.APIVersion = getStringParam(paramEnvoyAPIVersion, annotations)
+
 	return nil
+}
+
+func getDiscoveryServiceAddress(ctx context.Context, clnt client.Client, namespace string, annotations map[string]string) (string, int, error) {
+
+	if dsName := getStringParam(paramDiscoveryServiceName, annotations); dsName != "" {
+		// Get the address of the DiscoveryService instance
+		ds := &operatorv1alpha1.DiscoveryService{}
+		dsKey := types.NamespacedName{Name: dsName, Namespace: namespace}
+		if err := clnt.Get(ctx, dsKey, ds); err != nil {
+			return "", -1, err
+		}
+		return fmt.Sprintf("%s.%s.%s", ds.GetServiceConfig().Name, namespace, "svc"), int(ds.GetXdsServerPort()), nil
+	}
+
+	// If discovery service name is not specified, assume there is only one DiscoveryService in the namespace
+	dsList := &operatorv1alpha1.DiscoveryServiceList{}
+	if err := clnt.List(ctx, dsList, client.InNamespace(namespace)); err != nil {
+		return "", -1, err
+	}
+	if n := len(dsList.Items); n != 1 {
+		return "", -1, fmt.Errorf("expected just one DiscoveryService, got %d", n)
+	}
+	return fmt.Sprintf("%s.%s.%s", dsList.Items[0].GetServiceConfig().Name, namespace, "svc"), int(dsList.Items[0].GetXdsServerPort()), nil
 }
 
 func lookupMarin3rAnnotation(key string, annotations map[string]string) (string, bool) {
@@ -125,15 +170,19 @@ func lookupMarin3rAnnotation(key string, annotations map[string]string) (string,
 func getStringParam(key string, annotations map[string]string) string {
 
 	var defaults = map[string]string{
-		paramContainerName:     defaults.SidecarContainerName,
-		paramImage:             defaults.Image,
-		paramConfigVolume:      defaults.SidecarConfigVolume,
-		paramTLSVolume:         defaults.SidecarTLSVolume,
-		paramClientCertificate: defaults.SidecarClientCertificate,
-		paramEnvoyExtraArgs:    defaults.EnvoyExtraArgs,
-		paramEnvoyAPIVersion:   defaults.EnvoyAPIVersion,
-		paramShtdnMgrEnabled:   "false",
-		paramShtdnMgrImage:     defaults.ShtdnMgrImage(),
+		paramContainerName:           defaults.SidecarContainerName,
+		paramImage:                   defaults.Image,
+		paramConfigVolume:            defaults.SidecarConfigVolume,
+		paramTLSVolume:               defaults.SidecarTLSVolume,
+		paramClientCertificate:       defaults.SidecarClientCertificate,
+		paramEnvoyExtraArgs:          defaults.EnvoyExtraArgs,
+		paramEnvoyAPIVersion:         defaults.EnvoyAPIVersion,
+		paramShtdnMgrEnabled:         "false",
+		paramShtdnMgrImage:           defaults.ShtdnMgrImage(),
+		paramDiscoveryServiceName:    "",
+		paramEnvoyAdminBindAddress:   defaults.EnvoyAdminBindAddress,
+		paramEnvoyAdminAccessLogPath: defaults.EnvoyAdminAccessLogPath,
+		paramInitMgrImage:            defaults.InitMgrImage(),
 	}
 
 	// return the value specified in the corresponding annotation, if any
@@ -157,24 +206,6 @@ func getNodeID(annotations map[string]string) string {
 	// mutation won't even be triggered
 	res, _ := lookupMarin3rAnnotation(paramNodeID, annotations)
 	return res
-}
-
-func getBootstrapConfigMap(annotations map[string]string) string {
-
-	// If the ConfigMap is set by the user, return it directly
-	if cm, ok := lookupMarin3rAnnotation(paramBootstrapConfigMap, annotations); ok {
-		return cm
-	}
-
-	// Otherwise check if envoy v3 has been configured
-	if value, ok := lookupMarin3rAnnotation(paramEnvoyAPIVersion, annotations); ok {
-		if version, err := envoy.ParseAPIVersion(value); err == nil && version == envoy.APIv3 {
-			return defaults.SidecarBootstrapConfigMapV3
-		}
-	}
-
-	// Fallback to the default V2 ConfigMap for all other cases
-	return defaults.SidecarBootstrapConfigMapV2
 }
 
 func getContainerResourceRequirements(annotations map[string]string) (corev1.ResourceRequirements, error) {
@@ -344,6 +375,11 @@ func isShtdnMgrEnabled(annotations map[string]string) bool {
 func (esc *envoySidecarConfig) containers() []corev1.Container {
 
 	return esc.generator.Containers()
+}
+
+func (esc *envoySidecarConfig) initContainers() []corev1.Container {
+
+	return esc.generator.InitContainers()
 }
 
 func (esc *envoySidecarConfig) volumes() []corev1.Volume {

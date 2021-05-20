@@ -41,10 +41,7 @@ var _ = Describe("Envoy sidecars", func() {
 		n := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: testNamespace}, n)
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}, timeout, poll).Should(BeTrue())
 
 		By("creating a DiscoveryService instance")

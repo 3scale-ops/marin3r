@@ -7,6 +7,8 @@ const (
 
 // ConfigOptions has options to configure the way the bootstrap config is generated
 type ConfigOptions struct {
+	NodeID                      string
+	Cluster                     string
 	XdsHost                     string
 	XdsPort                     uint32
 	XdsClientCertificatePath    string
@@ -16,4 +18,5 @@ type ConfigOptions struct {
 	AdminAddress                string
 	AdminPort                   uint32
 	AdminAccessLogPath          string
+	Metadata                    map[string]string
 }
