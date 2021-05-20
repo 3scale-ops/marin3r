@@ -34,20 +34,16 @@ const (
 	ReadinessProbeFailureThreshold    int32 = 1
 
 	// sidecar specific defaults
-	SidecarContainerName        string = "envoy-sidecar"
-	SidecarBootstrapConfigMapV2 string = "envoy-sidecar-bootstrap"
-	SidecarBootstrapConfigMapV3 string = "envoy-sidecar-bootstrap-v3"
-	SidecarConfigVolume         string = "envoy-sidecar-bootstrap"
-	SidecarTLSVolume            string = "envoy-sidecar-tls"
-	SidecarClientCertificate    string = "envoy-sidecar-client-cert"
+	SidecarContainerName     string = "envoy-sidecar"
+	SidecarConfigVolume      string = "envoy-sidecar-bootstrap"
+	SidecarTLSVolume         string = "envoy-sidecar-tls"
+	SidecarClientCertificate string = "envoy-sidecar-client-cert"
 
 	// deployment specific defaults
-	DeploymentContainerName        string = "envoy"
-	DeploymentBootstrapConfigMapV2 string = "envoy-bootstrap"
-	DeploymentBootstrapConfigMapV3 string = "envoy-bootstrap-v3"
-	DeploymentConfigVolume         string = "envoy-bootstrap"
-	DeploymentTLSVolume            string = "envoy-tls"
-	DeploymentClientCertificate    string = "envoy-client-cert"
+	DeploymentContainerName     string = "envoy"
+	DeploymentConfigVolume      string = "envoy-bootstrap"
+	DeploymentTLSVolume         string = "envoy-tls"
+	DeploymentClientCertificate string = "envoy-client-cert"
 
 	// init manager defaults
 	InitMgrDefaultImageRegistry  string = "quay.io/3scale/marin3r"

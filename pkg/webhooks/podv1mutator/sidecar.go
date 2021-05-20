@@ -39,7 +39,6 @@ const (
 	paramPorts                = "ports"
 	paramHostPortMapings      = "host-port-mappings"
 	paramImage                = "envoy-image"
-	paramBootstrapConfigMap   = "ads-configmap"
 	paramConfigVolume         = "config-volume"
 	paramTLSVolume            = "tls-volume"
 	paramClientCertificate    = "client-certificate"

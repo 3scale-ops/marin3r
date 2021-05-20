@@ -33,11 +33,10 @@ type ContainerConfig struct {
 	ReadinessProbe     operatorv1alpha1.ProbeSpec
 
 	// Init manager container configuration
-	InitManagerImage   string
-	BootstrapConfigMap string
-	XdssHost           string
-	XdssPort           int
-	APIVersion         string
+	InitManagerImage string
+	XdssHost         string
+	XdssPort         int
+	APIVersion       string
 
 	// Shutdown manager container configuration
 	ShutdownManagerEnabled bool

@@ -3,7 +3,6 @@ package generators
 import (
 	"strings"
 
-	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
@@ -35,12 +34,6 @@ func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.Generat
 					ports[i] = p
 				}
 				return ports
-			}(),
-			BootstrapConfigMap: func() string {
-				if cfg.EnvoyAPIVersion == envoy.APIv2 {
-					return strings.Join([]string{defaults.DeploymentBootstrapConfigMapV2, cfg.InstanceName}, "-")
-				}
-				return strings.Join([]string{defaults.DeploymentBootstrapConfigMapV3, cfg.InstanceName}, "-")
 			}(),
 			ConfigBasePath:     defaults.EnvoyConfigBasePath,
 			ConfigFileName:     defaults.EnvoyConfigFileName,
