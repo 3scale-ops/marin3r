@@ -101,7 +101,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), r.APIVersion)
 
 		cacheReconciler := envoyconfigrevision.NewCacheReconciler(
-			ctx, r.Log, r.Client, r.XdsCache,
+			ctx, log, r.Client, r.XdsCache,
 			decoder,
 			envoy_resources.NewGenerator(r.APIVersion),
 		)
