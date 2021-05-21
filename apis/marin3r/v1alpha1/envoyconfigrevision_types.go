@@ -78,6 +78,11 @@ type EnvoyConfigRevisionStatus struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
 	Published *bool `json:"published,omitempty"`
+	// ProvidesVersions keeps track of the version that this revision
+	// publishes in the xDS server for each resource type
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
+	ProvidesVersions *VersionTracker `json:"providesVersions,omitempty"`
 	// LastPublishedAt indicates the last time this config review transitioned to
 	// published
 	// +operator-sdk:csv:customresourcedefinitions:type=status
@@ -108,6 +113,17 @@ func (status *EnvoyConfigRevisionStatus) IsTainted() bool {
 		return false
 	}
 	return *status.Tainted
+}
+
+// VersionTracker tracks the versions of the resources
+// that this revision publishes in the xDS server cache
+type VersionTracker struct {
+	Endpoints string `json:"endpoints,omitempty"`
+	Clusters  string `json:"clusters,omitempty"`
+	Routes    string `json:"routes,omitempty"`
+	Listeners string `json:"listeners,omitempty"`
+	Secrets   string `json:"secrets,omitempty"`
+	Runtimes  string `json:"runtimes,omitempty"`
 }
 
 // +kubebuilder:object:root=true

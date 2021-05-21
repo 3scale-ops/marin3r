@@ -95,9 +95,12 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	var vt *marin3rv1alpha1.VersionTracker = nil
+
 	// If this ecr has the RevisionPublishedCondition set to "True" pusblish the resources
 	// to the xds server cache
 	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+		var err error
 		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), r.APIVersion)
 
 		cacheReconciler := envoyconfigrevision.NewCacheReconciler(
@@ -106,13 +109,13 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 			envoy_resources.NewGenerator(r.APIVersion),
 		)
 
-		result, err := cacheReconciler.Reconcile(req.NamespacedName, ecr.Spec.EnvoyResources, ecr.Spec.NodeID, ecr.Spec.Version)
+		vt, err = cacheReconciler.Reconcile(req.NamespacedName, ecr.Spec.EnvoyResources, ecr.Spec.NodeID, ecr.Spec.Version)
 
 		// If a type errors.StatusError is returned it means that the config in spec.envoyResources is wrong
 		// and cannot be written into the xDS cache. This is true for any error loading all types of resources
 		// except for Secrets. Secrets are dynamically loaded from the API and transient failures are possible, so
 		// setting a permanent taint could occur for a transient failure, which is not desirable.
-		if result.Requeue || err != nil {
+		if err != nil {
 			switch err.(type) {
 			case *errors.StatusError:
 				log.Error(err, fmt.Sprintf("%v", err))
@@ -120,12 +123,12 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 					return ctrl.Result{}, err
 				}
 			default:
-				return result, err
+				return ctrl.Result{}, err
 			}
 		}
 	}
 
-	if ok := envoyconfigrevision.IsStatusReconciled(ecr, r.XdsCache); !ok {
+	if ok := envoyconfigrevision.IsStatusReconciled(ecr, vt, r.XdsCache); !ok {
 		if err := r.Client.Status().Update(ctx, ecr); err != nil {
 			log.Error(err, "unable to update EnvoyConfigRevision status")
 			return ctrl.Result{}, err

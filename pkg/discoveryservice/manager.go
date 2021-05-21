@@ -14,7 +14,6 @@ import (
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	marin3rcontroller "github.com/3scale-ops/marin3r/controllers/marin3r"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
-	rollback "github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/rollback"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	util_runtime "k8s.io/apimachinery/pkg/util/runtime"
@@ -92,7 +91,8 @@ func (dsm *Manager) Start(ctx context.Context) {
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			ClientCAs:    loadCA(dsm.CACertificatePath, setupLog),
 		},
-		rollback.OnError(mgr.GetClient()),
+		// rollback.OnError(mgr.GetClient()),
+		func(nodeID string, version string, msg string, envoyAPI envoy.APIVersion) error { return nil },
 		setupLog,
 	)
 

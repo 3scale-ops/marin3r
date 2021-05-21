@@ -2,10 +2,10 @@ package reconcilers
 
 import (
 	"fmt"
+	"reflect"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
-	"github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -14,9 +14,14 @@ import (
 )
 
 // IsStatusReconciled calculates the status of the resource
-func IsStatusReconciled(ecr *marin3rv1alpha1.EnvoyConfigRevision, xdssCache xdss.Cache) bool {
+func IsStatusReconciled(ecr *marin3rv1alpha1.EnvoyConfigRevision, vt *marin3rv1alpha1.VersionTracker, xdssCache xdss.Cache) bool {
 
 	ok := true
+
+	if vt != nil && (ecr.Status.ProvidesVersions == nil || !reflect.DeepEqual(ecr.Status.ProvidesVersions, vt)) {
+		ecr.Status.ProvidesVersions = vt
+		ok = false
+	}
 
 	inSyncCond := calculateResourcesInSyncCondition(ecr, xdssCache)
 	if inSyncCond != nil {
@@ -58,7 +63,7 @@ func calculateResourcesInSyncCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision,
 
 	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 		// Check what is currently written in the xds server cache
-		snap, err := xdssCache.GetSnapshot(ecr.Spec.NodeID)
+		_, err := xdssCache.GetSnapshot(ecr.Spec.NodeID)
 		// OutOfSync if NodeID not found or resources version different that expected
 		if err != nil {
 			return &status.Condition{
@@ -69,18 +74,9 @@ func calculateResourcesInSyncCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision,
 			}
 		}
 
-		if snap.GetVersion(envoy.Cluster) != ecr.Spec.Version {
-			return &status.Condition{
-				Type:    marin3rv1alpha1.ResourcesInSyncCondition,
-				Reason:  "SnapshotVersionDiffers",
-				Status:  corev1.ConditionFalse,
-				Message: fmt.Sprintf("The snapshot for nodeID %q holds resources version %q", ecr.Spec.NodeID, snap.GetVersion(envoy.Cluster)),
-			}
-		}
-
 		return &status.Condition{
 			Type:    marin3rv1alpha1.ResourcesInSyncCondition,
-			Reason:  "EnvoyConficRevisionResourcesSynced",
+			Reason:  "ResourcesSynced",
 			Status:  corev1.ConditionTrue,
 			Message: "EnvoyConfigRevision resources successfully synced with xDS server cache",
 		}
