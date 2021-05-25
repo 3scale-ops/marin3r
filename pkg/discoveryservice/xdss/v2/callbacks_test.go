@@ -16,10 +16,9 @@ package discoveryservice
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	"github.com/3scale-ops/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -126,9 +125,8 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 		{
 			"OnStreamRequest() NACK received",
 			&Callbacks{
-				OnError:       func(a, b, c string, d envoy.APIVersion) error { return nil },
-				SnapshotCache: fakeTestCache(),
-				Logger:        ctrl.Log,
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
 			},
 			args{1, &envoy_api_v2.DiscoveryRequest{
 				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
@@ -137,36 +135,6 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
 			}},
 			false,
-		},
-		{
-			"OnStreamRequest() error",
-			&Callbacks{
-				OnError:       func(a, b, c string, d envoy.APIVersion) error { return nil },
-				SnapshotCache: fakeTestCache(),
-				Logger:        ctrl.Log,
-			},
-			args{1, &envoy_api_v2.DiscoveryRequest{
-				Node:          &envoy_api_v2_core.Node{Id: "node2", Cluster: "cluster1"},
-				ResourceNames: []string{"string1", "string2"},
-				TypeUrl:       "some-type",
-				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
-			}},
-			true,
-		},
-		{
-			"OnStreamRequest() error calling OnErrorFn",
-			&Callbacks{
-				OnError:       func(a, b, c string, d envoy.APIVersion) error { return fmt.Errorf("err") },
-				SnapshotCache: fakeTestCache(),
-				Logger:        ctrl.Log,
-			},
-			args{1, &envoy_api_v2.DiscoveryRequest{
-				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
-				ResourceNames: []string{"string1", "string2"},
-				TypeUrl:       "some-type",
-				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
-			}},
-			true,
 		},
 	}
 	for _, tt := range tests {

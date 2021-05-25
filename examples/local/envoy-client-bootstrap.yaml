@@ -8,6 +8,8 @@ admin:
 node:
   cluster: envoy1
   id: envoy1
+  metadata:
+    pod_name: "local"
 dynamic_resources:
   ads_config:
     api_type: GRPC

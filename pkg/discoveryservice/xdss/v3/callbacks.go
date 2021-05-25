@@ -16,13 +16,12 @@ package discoveryservice
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -31,9 +30,8 @@ var logger = log.Log.WithName("xds_server").WithName("v3")
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
 type Callbacks struct {
-	OnError       func(nodeID, previousVersion, msg string, envoyAPI envoy.APIVersion) error
-	SnapshotCache *cache_v3.SnapshotCache
-	Logger        logr.Logger
+	Stats  *stats.Stats
+	Logger logr.Logger
 }
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
@@ -53,38 +51,58 @@ func (cb *Callbacks) OnStreamClosed(id int64) {
 // OnStreamRequest is called once a request is received on a stream.
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.DiscoveryRequest) error {
-	cb.Logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "Version", req.VersionInfo, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
-
-	if req.ErrorDetail != nil {
-		snap, err := (*cb.SnapshotCache).GetSnapshot(req.Node.Id)
-		if err != nil {
-			return err
-		}
-		// All resource types are always kept at the same version
-		failingVersion := snap.GetVersion(req.TypeUrl)
-		cb.Logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "CurrentVersion", req.VersionInfo, "FailingVersion", failingVersion, "NodeID", req.Node.Id, "StreamID", id)
-		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message, envoy.APIv3); err != nil {
-			cb.Logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
-			return err
-		}
+	// Try to get the Pod name associated with the request
+	podName, err := stats.GetStringValueFromMetadata(req.GetNode().Metadata.AsMap(), "pod_name")
+	if err != nil {
+		cb.Logger.Error(err, "an error ocurred, Pod name could not be retrieved", "NodeID", req.GetNode().GetId(), "StreamID", id)
 	}
+
+	log := cb.Logger.WithValues("TypeURL", req.GetTypeUrl(), "NodeID", req.GetNode().GetId(), "StreamID", id,
+		"Pod", podName, "ResourceNames", req.GetResourceNames(), "LastAcceptedVersion", req.GetVersionInfo())
+
+	if req.GetResponseNonce() != "" {
+		if req.GetErrorDetail() != nil {
+			log.Info("Discovery NACK")
+			if err := cb.Stats.ReportNACK(req.GetNode().GetId(), req.GetTypeUrl(), podName, req.GetResponseNonce()); err != nil {
+				log.Error(err, "error trying to report a response NACK")
+			}
+
+		} else {
+			log.Info("Discovery ACK")
+			cb.Stats.ReportACK(req.GetNode().GetId(), req.GetTypeUrl(), req.GetVersionInfo(), podName)
+		}
+
+	} else {
+		log.Info("Discovery Request")
+	}
+
 	return nil
 }
 
 // OnStreamResponse implements go-control-plane/pkgserver/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
 func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_service_discovery_v3.DiscoveryRequest, rsp *envoy_service_discovery_v3.DiscoveryResponse) {
+	log := cb.Logger.WithValues("TypeURL", req.GetTypeUrl(), "NodeID", req.GetNode().GetId(), "StreamID", id, "Version", rsp.GetVersionInfo())
+
+	// Track the nonce of this response in the stats cache
+	podName, err := stats.GetStringValueFromMetadata(req.GetNode().Metadata.AsMap(), "pod_name")
+	if err != nil {
+		log.Error(err, "an error ocurred, nonce won't be tracked")
+	} else {
+		cb.Stats.WriteResponseNonce(req.GetNode().GetId(), rsp.GetTypeUrl(), rsp.GetVersionInfo(), podName, rsp.GetNonce())
+	}
+
+	// Log resources when in debug mode
 	resources := []string{}
 	for _, r := range rsp.Resources {
 		j, _ := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoy.APIv3).Marshal(r)
 		resources = append(resources, string(j))
 	}
 	if rsp.TypeUrl == envoy_resources_v3.Mappings()[envoy.Secret] {
-		cb.Logger.V(1).Info("Response sent to gateway",
-			"ResourcesNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id, "Version", rsp.GetVersionInfo())
+		// Do not log secret contents
+		log.V(1).Info("Discovery Response", "ResourcesNames", req.ResourceNames, "Pod", podName)
 	} else {
-		cb.Logger.V(1).Info("Response sent to gateway",
-			"Resources", resources, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id, "Version", rsp.GetVersionInfo())
+		log.V(1).Info("Discovery Response", "Resources", resources, "Pod", podName)
 	}
 }
 

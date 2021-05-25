@@ -22,6 +22,7 @@ import (
 	"time"
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
@@ -53,8 +54,6 @@ type XdsServer interface {
 	GetCache(envoy.APIVersion) xdss.Cache
 }
 
-type onErrorFn func(nodeID, previousVersion, msg string, envoyAPI envoy.APIVersion) error
-
 // DualXdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server
 type DualXdsServer struct {
@@ -67,12 +66,15 @@ type DualXdsServer struct {
 	snapshotCacheV3 cache_v3.SnapshotCache
 	callbacksV2     *xdss_v2.Callbacks
 	callbacksV3     *xdss_v3.Callbacks
+	discoveryStats  *stats.Stats
 }
 
 // NewDualXdsServer creates a new DualXdsServer object fron the given params
-func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, fn onErrorFn, logger logr.Logger) *DualXdsServer {
+func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logger logr.Logger) *DualXdsServer {
 
 	xdsLogger := logger.WithName("xds")
+
+	discoveryStats := stats.New()
 
 	snapshotCacheV2 := cache_v2.NewSnapshotCache(
 		true,
@@ -86,14 +88,12 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 	)
 
 	callbacksV2 := &xdss_v2.Callbacks{
-		OnError:       fn,
-		SnapshotCache: &snapshotCacheV2,
-		Logger:        xdsLogger.WithName("server").WithName("v2"),
+		Stats:  discoveryStats,
+		Logger: xdsLogger.WithName("server").WithName("v2"),
 	}
 	callbacksV3 := &xdss_v3.Callbacks{
-		OnError:       fn,
-		SnapshotCache: &snapshotCacheV3,
-		Logger:        xdsLogger.WithName("server").WithName("v3"),
+		Stats:  discoveryStats,
+		Logger: xdsLogger.WithName("server").WithName("v3"),
 	}
 
 	srvV2 := server_v2.NewServer(ctx, snapshotCacheV2, callbacksV2)
@@ -109,6 +109,7 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 		snapshotCacheV3: snapshotCacheV3,
 		callbacksV2:     callbacksV2,
 		callbacksV3:     callbacksV3,
+		discoveryStats:  discoveryStats,
 	}
 }
 

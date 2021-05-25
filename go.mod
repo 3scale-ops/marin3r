@@ -13,6 +13,7 @@ require (
 	github.com/onsi/ginkgo v1.15.2
 	github.com/onsi/gomega v1.11.0
 	github.com/operator-framework/operator-lib v0.1.0
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/phayes/freeport v0.0.0-20180830031419-95f893ade6f2
 	github.com/prometheus/common v0.10.0
 	github.com/redhat-cop/operator-utils v1.1.2
