@@ -19,3 +19,9 @@ func New() *Stats {
 		store: kv.New(defaultExpiration, cleanupInterval),
 	}
 }
+
+func NewWithItems(items map[string]kv.Item) *Stats {
+	return &Stats{
+		store: kv.NewFrom(defaultExpiration, cleanupInterval, items),
+	}
+}

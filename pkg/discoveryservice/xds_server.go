@@ -57,16 +57,17 @@ type XdsServer interface {
 // DualXdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server
 type DualXdsServer struct {
-	ctx             context.Context
-	xDSPort         uint
-	tlsConfig       *tls.Config
-	serverV2        server_v2.Server
-	serverV3        server_v3.Server
-	snapshotCacheV2 cache_v2.SnapshotCache
-	snapshotCacheV3 cache_v3.SnapshotCache
-	callbacksV2     *xdss_v2.Callbacks
-	callbacksV3     *xdss_v3.Callbacks
-	discoveryStats  *stats.Stats
+	ctx              context.Context
+	xDSPort          uint
+	tlsConfig        *tls.Config
+	serverV2         server_v2.Server
+	serverV3         server_v3.Server
+	snapshotCacheV2  cache_v2.SnapshotCache
+	snapshotCacheV3  cache_v3.SnapshotCache
+	callbacksV2      *xdss_v2.Callbacks
+	callbacksV3      *xdss_v3.Callbacks
+	discoveryStatsV2 *stats.Stats
+	discoveryStatsV3 *stats.Stats
 }
 
 // NewDualXdsServer creates a new DualXdsServer object fron the given params
@@ -74,7 +75,8 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 
 	xdsLogger := logger.WithName("xds")
 
-	discoveryStats := stats.New()
+	discoveryStatsV2 := stats.New()
+	discoveryStatsV3 := stats.New()
 
 	snapshotCacheV2 := cache_v2.NewSnapshotCache(
 		true,
@@ -88,11 +90,11 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 	)
 
 	callbacksV2 := &xdss_v2.Callbacks{
-		Stats:  discoveryStats,
+		Stats:  discoveryStatsV2,
 		Logger: xdsLogger.WithName("server").WithName("v2"),
 	}
 	callbacksV3 := &xdss_v3.Callbacks{
-		Stats:  discoveryStats,
+		Stats:  discoveryStatsV3,
 		Logger: xdsLogger.WithName("server").WithName("v3"),
 	}
 
@@ -100,16 +102,17 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 	srvV3 := server_v3.NewServer(ctx, snapshotCacheV3, callbacksV3)
 
 	return &DualXdsServer{
-		ctx:             ctx,
-		xDSPort:         xDSPort,
-		tlsConfig:       tlsConfig,
-		serverV2:        srvV2,
-		serverV3:        srvV3,
-		snapshotCacheV2: snapshotCacheV2,
-		snapshotCacheV3: snapshotCacheV3,
-		callbacksV2:     callbacksV2,
-		callbacksV3:     callbacksV3,
-		discoveryStats:  discoveryStats,
+		ctx:              ctx,
+		xDSPort:          xDSPort,
+		tlsConfig:        tlsConfig,
+		serverV2:         srvV2,
+		serverV3:         srvV3,
+		snapshotCacheV2:  snapshotCacheV2,
+		snapshotCacheV3:  snapshotCacheV3,
+		callbacksV2:      callbacksV2,
+		callbacksV3:      callbacksV3,
+		discoveryStatsV2: discoveryStatsV2,
+		discoveryStatsV3: discoveryStatsV3,
 	}
 }
 
@@ -187,6 +190,14 @@ func (xdss *DualXdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
 		return xdss_v2.NewCache(xdss.snapshotCacheV2)
 	}
 	return xdss_v3.NewCache(xdss.snapshotCacheV3)
+}
+
+// GetCache returns the discovery stats
+func (xdss *DualXdsServer) GetDiscoveryStats(version envoy.APIVersion) *stats.Stats {
+	if version == envoy.APIv2 {
+		return xdss.discoveryStatsV2
+	}
+	return xdss.discoveryStatsV3
 }
 
 type clogger struct {

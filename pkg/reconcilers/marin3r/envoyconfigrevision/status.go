@@ -2,19 +2,23 @@ package reconcilers
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
+	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
+	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
 // IsStatusReconciled calculates the status of the resource
-func IsStatusReconciled(ecr *marin3rv1alpha1.EnvoyConfigRevision, vt *marin3rv1alpha1.VersionTracker, xdssCache xdss.Cache) bool {
+func IsStatusReconciled(ecr *marin3rv1alpha1.EnvoyConfigRevision, vt *marin3rv1alpha1.VersionTracker, xdssCache xdss.Cache, dStats *stats.Stats) bool {
 
 	ok := true
 
@@ -23,9 +27,24 @@ func IsStatusReconciled(ecr *marin3rv1alpha1.EnvoyConfigRevision, vt *marin3rv1a
 		ok = false
 	}
 
+	// Note: tainted condition is never automatically removed to avoid retrying a bad config in the case of
+	// loss of statistics (i.e. a restart)
+	var taintedCond *status.Condition
+	if vt != nil {
+		taintedCond = calculateRevisionTaintedCondition(ecr, ecr.Status.ProvidesVersions, dStats, 1)
+	}
+
+	if taintedCond != nil {
+		equal := k8sutil.ConditionsEqual(taintedCond, ecr.Status.Conditions.GetCondition(marin3rv1alpha1.RevisionTaintedCondition))
+		if !equal {
+			ecr.Status.Conditions.SetCondition(*taintedCond)
+			ok = false
+		}
+	}
+
 	inSyncCond := calculateResourcesInSyncCondition(ecr, xdssCache)
 	if inSyncCond != nil {
-		equal := equality.Semantic.DeepEqual(ecr.Status.Conditions.GetCondition(marin3rv1alpha1.ResourcesInSyncCondition), inSyncCond)
+		equal := k8sutil.ConditionsEqual(inSyncCond, ecr.Status.Conditions.GetCondition(marin3rv1alpha1.ResourcesInSyncCondition))
 		if !equal {
 			ecr.Status.Conditions.SetCondition(*inSyncCond)
 			ok = false
@@ -79,6 +98,25 @@ func calculateResourcesInSyncCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision,
 			Reason:  "ResourcesSynced",
 			Status:  corev1.ConditionTrue,
 			Message: "EnvoyConfigRevision resources successfully synced with xDS server cache",
+		}
+	}
+
+	return nil
+}
+
+func calculateRevisionTaintedCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision, vt *marin3rv1alpha1.VersionTracker, dStats *stats.Stats, threshold float64) *status.Condition {
+
+	if dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Endpoint, ecr.GetEnvoyAPIVersion()), vt.Endpoints) == threshold ||
+		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Cluster, ecr.GetEnvoyAPIVersion()), vt.Clusters) == threshold ||
+		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Route, ecr.GetEnvoyAPIVersion()), vt.Routes) == threshold ||
+		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Listener, ecr.GetEnvoyAPIVersion()), vt.Listeners) == threshold ||
+		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Secret, ecr.GetEnvoyAPIVersion()), vt.Secrets) == threshold ||
+		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Runtime, ecr.GetEnvoyAPIVersion()), vt.Runtimes) == threshold {
+		return &status.Condition{
+			Type:    marin3rv1alpha1.RevisionTaintedCondition,
+			Reason:  "ResourcesFailing",
+			Status:  corev1.ConditionTrue,
+			Message: fmt.Sprintf("EnvoyConfigRevision resources are being rejected by more than %d%% of the Envoy clients", int(math.Round(threshold*100))),
 		}
 	}
 

@@ -88,6 +88,7 @@ func TestDualXdsServer_Start(t *testing.T) {
 				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
 				stats.New(),
+				stats.New(),
 			},
 		},
 	}
@@ -128,6 +129,7 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
 				stats.New(),
+				stats.New(),
 			},
 			xdss_v2.NewCache(snapshotCacheV2),
 			envoy.APIv2,
@@ -144,6 +146,7 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 				snapshotCacheV3,
 				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
+				stats.New(),
 				stats.New(),
 			},
 			xdss_v3.NewCache(snapshotCacheV3),

@@ -3,6 +3,7 @@ package stats
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	kv "github.com/patrickmn/go-cache"
 )
@@ -199,7 +200,6 @@ func TestStats_GetString(t *testing.T) {
 }
 
 func TestStats_SetString(t *testing.T) {
-
 	type args struct {
 		nodeID  string
 		version string
@@ -237,6 +237,51 @@ func TestStats_SetString(t *testing.T) {
 			s.SetString(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID, tt.args.key, tt.args.value)
 			if got, _ := s.store.Get(NewKey(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID, tt.args.key).String()); got != tt.want.Object {
 				t.Errorf("Stats.SetString() = %v, want %v", got, tt.want.Object)
+			}
+		})
+	}
+}
+
+func TestStats_SetStringWithExpiration(t *testing.T) {
+	type args struct {
+		nodeID     string
+		rType      string
+		version    string
+		podID      string
+		key        string
+		value      string
+		expiration time.Duration
+	}
+	tests := []struct {
+		name       string
+		cacheItems map[string]kv.Item
+		args       args
+		want       kv.Item
+	}{
+		{
+			name:       "Writes a string key with expiration",
+			cacheItems: map[string]kv.Item{},
+			args: args{
+				nodeID:     "node",
+				rType:      "endpoint",
+				version:    "aaaa",
+				podID:      "pod-xxxx",
+				key:        "key",
+				value:      "value",
+				expiration: time.Duration(time.Second),
+			},
+			want: kv.Item{
+				Object:     "value",
+				Expiration: int64(time.Second),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
+			s.SetStringWithExpiration(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID, tt.args.key, tt.args.value, tt.args.expiration)
+			if got, _ := s.store.Get(NewKey(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID, tt.args.key).String()); got != tt.want.Object {
+				t.Errorf("Stats.SetStringWithExpiration() = %v, want %v", got, tt.want.Object)
 			}
 		})
 	}
@@ -333,6 +378,43 @@ func TestStats_FilterKeys(t *testing.T) {
 	}
 }
 
+func TestStats_GetCounter(t *testing.T) {
+	type fields struct {
+		store *kv.Cache
+	}
+	type args struct {
+		nodeID  string
+		rtype   string
+		version string
+		podID   string
+		key     string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    int64
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Stats{
+				store: tt.fields.store,
+			}
+			got, err := s.GetCounter(tt.args.nodeID, tt.args.rtype, tt.args.version, tt.args.podID, tt.args.key)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Stats.GetCounter() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Stats.GetCounter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestStats_IncrementCounter(t *testing.T) {
 	type args struct {
 		nodeID    string
@@ -384,6 +466,86 @@ func TestStats_IncrementCounter(t *testing.T) {
 			s.IncrementCounter(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID, tt.args.key, tt.args.increment)
 			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Stats.IncrementCounter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStats_DecrementCounter(t *testing.T) {
+	type args struct {
+		nodeID    string
+		rType     string
+		version   string
+		podID     string
+		key       string
+		decrement int64
+	}
+	tests := []struct {
+		name       string
+		cacheItems map[string]kv.Item
+		args       args
+		want       map[string]kv.Item
+	}{
+		{
+			name: "Decrements a value",
+			cacheItems: map[string]kv.Item{
+				"node:endpoint:aaaa:pod-xxxx:key": {Object: int64(4), Expiration: int64(defaultExpiration)}},
+			args: args{
+				nodeID:    "node",
+				rType:     "endpoint",
+				version:   "aaaa",
+				podID:     "pod-xxxx",
+				key:       "key",
+				decrement: 1,
+			},
+			want: map[string]kv.Item{
+				"node:endpoint:aaaa:pod-xxxx:key": {Object: int64(3), Expiration: int64(defaultExpiration)}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
+			s.DecrementCounter(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID, tt.args.key, tt.args.decrement)
+			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Stats.DecrementCounter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStats_DeleteKeysByFilter(t *testing.T) {
+	type args struct {
+		filters []string
+	}
+	tests := []struct {
+		name       string
+		cacheItems map[string]kv.Item
+		args       args
+		want       map[string]kv.Item
+	}{
+		{
+			name: "Deletes keys that match all the filters",
+			cacheItems: map[string]kv.Item{
+				"node1:endpoint:aaaa:pod-xxxx:key1": {Object: "item1", Expiration: int64(defaultExpiration)},
+				"node1:endpoint:aaaa:pod-xxxx:key2": {Object: "item2", Expiration: int64(defaultExpiration)},
+				"node1:cluster:aaaa:pod-xxxx:key2":  {Object: "item3", Expiration: int64(defaultExpiration)},
+				"node1:endpoint:bbbb:pod-xxxx:key1": {Object: "item4", Expiration: int64(defaultExpiration)},
+			},
+			args: args{
+				filters: []string{"endpoint", "aaaa"},
+			},
+			want: map[string]kv.Item{
+				"node1:cluster:aaaa:pod-xxxx:key2":  {Object: "item3", Expiration: int64(defaultExpiration)},
+				"node1:endpoint:bbbb:pod-xxxx:key1": {Object: "item4", Expiration: int64(defaultExpiration)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
+			s.DeleteKeysByFilter(tt.args.filters...)
+			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Stats.DeleteKeysByFilter() = %v, want %v", got, tt.want)
 			}
 		})
 	}

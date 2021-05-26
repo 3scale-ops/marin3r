@@ -19,7 +19,7 @@ func TestStats_WriteResponseNonce(t *testing.T) {
 		name       string
 		cacheItems map[string]kv.Item
 		args       args
-		want       map[string]kv.Item
+		wantKey    string
 	}{
 		{
 			name:       "Writes the nonce",
@@ -31,16 +31,15 @@ func TestStats_WriteResponseNonce(t *testing.T) {
 				podID:   "pod-xxxx",
 				nonce:   "7",
 			},
-			want: map[string]kv.Item{
-				"node:endpoint:aaaa:pod-xxxx:nonce:7": {Object: "", Expiration: int64(defaultExpiration)}},
+			wantKey: "node:endpoint:aaaa:pod-xxxx:nonce:7",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
 			s.WriteResponseNonce(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID, tt.args.nonce)
-			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Stats.WriteResponseNonce() = %v, want %v", got, tt.want)
+			if _, ok := s.store.Get(tt.wantKey); !ok {
+				t.Errorf("Stats.WriteResponseNonce() = key not found")
 			}
 		})
 	}
@@ -57,7 +56,7 @@ func TestStats_ReportNACK(t *testing.T) {
 		name       string
 		cacheItems map[string]kv.Item
 		args       args
-		want       map[string]kv.Item
+		want       int64
 		wantErr    bool
 	}{
 		{
@@ -72,10 +71,7 @@ func TestStats_ReportNACK(t *testing.T) {
 				podID:  "pod-xxxx",
 				nonce:  "7",
 			},
-			want: map[string]kv.Item{
-				"node:endpoint:aaaa:pod-xxxx:nonce:7":      {Object: "", Expiration: int64(defaultExpiration)},
-				"node:endpoint:aaaa:pod-xxxx:nack_counter": {Object: int64(6), Expiration: int64(defaultExpiration)},
-			},
+			want: 6,
 		},
 		{
 			name: "Creates a new NACK counter",
@@ -88,19 +84,18 @@ func TestStats_ReportNACK(t *testing.T) {
 				podID:  "pod-xxxx",
 				nonce:  "xyz",
 			},
-			want: map[string]kv.Item{
-				"node:endpoint:aaaa:pod-xxxx:nonce:xyz":    {Object: "", Expiration: int64(defaultExpiration)},
-				"node:endpoint:aaaa:pod-xxxx:nack_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
-			},
+			want: 1,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
-			if err := s.ReportNACK(tt.args.nodeID, tt.args.rType, tt.args.podID, tt.args.nonce); (err != nil) != tt.wantErr {
+			got, err := s.ReportNACK(tt.args.nodeID, tt.args.rType, tt.args.podID, tt.args.nonce)
+			if (err != nil) != tt.wantErr {
 				t.Errorf("Stats.ReportNACK() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
-			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
+			if got != tt.want {
 				t.Errorf("Stats.ReportNACK() = %v, want %v", got, tt.want)
 			}
 		})
@@ -110,9 +105,9 @@ func TestStats_ReportNACK(t *testing.T) {
 func TestStats_ReportACK(t *testing.T) {
 	type args struct {
 		nodeID  string
-		podID   string
-		version string
 		rType   string
+		version string
+		podID   string
 	}
 	tests := []struct {
 		name       string
@@ -121,26 +116,28 @@ func TestStats_ReportACK(t *testing.T) {
 		want       map[string]kv.Item
 	}{
 		{
-			name: "Increments a NACK counter",
+			name: "Increments an ACK counter",
 			cacheItems: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
 			},
 			args: args{
-				nodeID: "node",
-				rType:  "endpoint",
-				podID:  "pod-xxxx",
+				nodeID:  "node",
+				rType:   "endpoint",
+				version: "aaaa",
+				podID:   "pod-xxxx",
 			},
 			want: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(6), Expiration: int64(defaultExpiration)},
 			},
 		},
 		{
-			name:       "Creates a NACK counter",
+			name:       "Creates an ACK counter",
 			cacheItems: map[string]kv.Item{},
 			args: args{
-				nodeID: "node",
-				rType:  "endpoint",
-				podID:  "pod-xxxx",
+				nodeID:  "node",
+				rType:   "endpoint",
+				version: "aaaa",
+				podID:   "pod-xxxx",
 			},
 			want: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
@@ -150,7 +147,114 @@ func TestStats_ReportACK(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
-			s.ReportACK(tt.args.nodeID, tt.args.podID, tt.args.version, tt.args.rType)
+			s.ReportACK(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID)
+			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Stats.ReportACK() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStats_ReportRequest(t *testing.T) {
+	type args struct {
+		nodeID   string
+		rType    string
+		podID    string
+		streamID int64
+	}
+	tests := []struct {
+		name       string
+		cacheItems map[string]kv.Item
+		args       args
+		want       map[string]kv.Item
+	}{
+		{
+			name: "Increases counter",
+			cacheItems: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+			},
+			args: args{
+				nodeID:   "node",
+				rType:    "endpoint",
+				podID:    "pod-xxxx",
+				streamID: 10,
+			},
+			want: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(4), Expiration: int64(defaultExpiration)},
+			},
+		},
+		{
+			name: "Creates new counter",
+			cacheItems: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+			},
+			args: args{
+				nodeID:   "node",
+				rType:    "endpoint",
+				podID:    "pod-xxxx",
+				streamID: 11,
+			},
+			want: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter:stream_11": {Object: int64(1), Expiration: int64(defaultExpiration)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
+			s.ReportRequest(tt.args.nodeID, tt.args.rType, tt.args.podID, tt.args.streamID)
+			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Stats.ReportRequest() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStats_ReportStreamClosed(t *testing.T) {
+	type args struct {
+		streamID int64
+	}
+	tests := []struct {
+		name       string
+		cacheItems map[string]kv.Item
+		args       args
+		want       map[string]kv.Item
+	}{
+		{
+			name: "Deletes all request counters associates with the stream id",
+			cacheItems: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter:stream_11": {Object: int64(1), Expiration: int64(defaultExpiration)},
+				"node:cluster:*:pod-xxxx:request_counter:stream_11":  {Object: int64(1), Expiration: int64(defaultExpiration)},
+			},
+			args: args{
+				streamID: 11,
+			},
+			want: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+			},
+		},
+		{
+			name: "Does nothing",
+			cacheItems: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+			},
+			args: args{
+				streamID: 11,
+			},
+			want: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
+			s.ReportStreamClosed(tt.args.streamID)
+			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Stats.ReportRequest() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }

@@ -10,7 +10,7 @@ import (
 
 const (
 	defaultExpiration = 0
-	cleanupInterval   = 10 * time.Minute
+	cleanupInterval   = 300 * time.Second
 )
 
 type Key struct {
@@ -64,10 +64,35 @@ func (s *Stats) SetString(nodeID, rType, version, podID, key, value string) {
 	s.store.SetDefault(NewKey(nodeID, rType, version, podID, key).String(), value)
 }
 
+func (s *Stats) SetStringWithExpiration(nodeID, rType, version, podID, key, value string, expiration time.Duration) {
+	s.store.Set(NewKey(nodeID, rType, version, podID, key).String(), value, expiration)
+}
+
+func (s *Stats) GetCounter(nodeID, rtype, version, podID, key string) (int64, error) {
+	k := NewKey(nodeID, rtype, version, podID, key).String()
+	if v, ok := s.store.Get(k); ok {
+		if value, ok := v.(int64); !ok {
+			return 0, fmt.Errorf("value of key '%s' is not an int", k)
+		} else {
+			return value, nil
+		}
+
+	} else {
+		return 0, fmt.Errorf("key %s not found", k)
+	}
+}
+
 func (s *Stats) IncrementCounter(nodeID, rType, version, podID, key string, increment int64) {
 	if _, err := s.store.IncrementInt64(NewKey(nodeID, rType, version, podID, key).String(), increment); err != nil {
 		// The key does not exist yet in the kv store
 		s.store.SetDefault(NewKey(nodeID, rType, version, podID, key).String(), increment)
+	}
+}
+
+func (s *Stats) DecrementCounter(nodeID, rType, version, podID, key string, decrement int64) {
+	if _, err := s.store.DecrementInt64(NewKey(nodeID, rType, version, podID, key).String(), decrement); err != nil {
+		// The key does not exist yet in the kv store
+		s.store.SetDefault(NewKey(nodeID, rType, version, podID, key).String(), 0)
 	}
 }
 
@@ -86,4 +111,11 @@ func (s *Stats) FilterKeys(filters ...string) map[string]kv.Item {
 		}
 	}
 	return selected
+}
+
+func (s *Stats) DeleteKeysByFilter(filters ...string) {
+	keys := s.FilterKeys(filters...)
+	for k := range keys {
+		s.store.Delete(k)
+	}
 }

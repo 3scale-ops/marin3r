@@ -54,8 +54,6 @@ func (r *CacheReconciler) Reconcile(req types.NamespacedName, resources *marin3r
 			return nil, err
 		}
 
-	} else {
-		r.logger.V(1).Info("Snapshot has not changed, skipping writing to xDS cache", "NodeID", nodeID)
 	}
 
 	return &marin3rv1alpha1.VersionTracker{

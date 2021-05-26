@@ -23,10 +23,7 @@ import (
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
-
-var logger = log.Log.WithName("xds_server").WithName("v3")
 
 // Callbacks is a type that implements go-control-plane/pkg/server/Callbacks
 type Callbacks struct {
@@ -45,6 +42,7 @@ func (cb *Callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) err
 // OnStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
 func (cb *Callbacks) OnStreamClosed(id int64) {
 	cb.Logger.V(1).Info("Stream closed", "StreamID", id)
+	cb.Stats.ReportStreamClosed(id)
 }
 
 // OnStreamRequest implements go-control-plane/pkg/server/Callbacks.OnStreamRequest
@@ -55,6 +53,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.D
 	podName, err := stats.GetStringValueFromMetadata(req.GetNode().Metadata.AsMap(), "pod_name")
 	if err != nil {
 		cb.Logger.Error(err, "an error ocurred, Pod name could not be retrieved", "NodeID", req.GetNode().GetId(), "StreamID", id)
+		podName = "unknown"
 	}
 
 	log := cb.Logger.WithValues("TypeURL", req.GetTypeUrl(), "NodeID", req.GetNode().GetId(), "StreamID", id,
@@ -74,6 +73,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.D
 
 	} else {
 		log.Info("Discovery Request")
+		cb.Stats.ReportRequest(req.GetNode().GetId(), req.GetTypeUrl(), podName, id)
 	}
 
 	return nil

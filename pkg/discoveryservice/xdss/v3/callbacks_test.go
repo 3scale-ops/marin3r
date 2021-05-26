@@ -91,7 +91,10 @@ func TestCallbacks_OnStreamClosed(t *testing.T) {
 	}{
 		{
 			"OnStreamClosed()",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{1},
 		}}
 	for _, tt := range tests {
@@ -114,7 +117,10 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 	}{
 		{
 			"OnStreamRequest()",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{1, &envoy_service_discovery_v3.DiscoveryRequest{
 				Node:          &envoy_config_core_v3.Node{Id: "node1", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
@@ -160,7 +166,10 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 	}{
 		{
 			"OnStreamResponse()",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{1,
 				&envoy_service_discovery_v3.DiscoveryRequest{
 					Node:          &envoy_config_core_v3.Node{Id: "node1", Cluster: "cluster1"},
@@ -178,7 +187,10 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 		},
 		{
 			"OnStreamResponse() special treatment of secret resources",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{1,
 				&envoy_service_discovery_v3.DiscoveryRequest{
 					Node:          &envoy_config_core_v3.Node{Id: "node1", Cluster: "cluster1"},
