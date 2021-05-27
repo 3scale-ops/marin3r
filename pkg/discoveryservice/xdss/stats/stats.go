@@ -8,7 +8,7 @@ import (
 //   <node-id>:<version>:<resource-type>:<pod-id>:<key>
 //
 // Note that though currently revision and version have the same value for all
-// types (with the execption of secrets), this might change in the future and have
+// types (with the exeption of secrets), this might change in the future and have
 // each resource type follow its own versioning
 type Stats struct {
 	store *kv.Cache

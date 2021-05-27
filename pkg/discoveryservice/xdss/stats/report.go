@@ -15,7 +15,7 @@ func (s *Stats) ReportNACK(nodeID, rType, podID, nonce string) (int64, error) {
 		return 0, fmt.Errorf("error reporting failure: unexpected number of nonces in the cache")
 	}
 
-	// The value fo version is container in the key of the corresponding nonce stored
+	// The value of version is container in the key of the corresponding nonce stored
 	// in the cache
 	version := NewKeyFromString(func() string {
 		for k := range keys {
