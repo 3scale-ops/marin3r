@@ -17,7 +17,9 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +27,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -79,15 +82,34 @@ func runWebhook(cmd *cobra.Command, args []string) {
 
 	cfg := ctrl.GetConfigOrDie()
 
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+	watchNamespace, err := getWatchNamespace()
+	if err != nil {
+		setupLog.Error(err, "unable to get WatchNamespace, "+
+			"the webhook will watch and manage resources in all Namespaces")
+	}
+
+	options := ctrl.Options{
 		Scheme:                 webhookScheme,
 		MetricsBindAddress:     "0",
 		HealthProbeBindAddress: probeAddr,
 		Port:                   webhookPort,
 		LeaderElection:         false,
-	})
+	}
+
+	if strings.Contains(watchNamespace, ",") {
+		setupLog.Info(fmt.Sprintf("webhook in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
+		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
+	} else if watchNamespace == "" {
+		setupLog.Info("webhook in Cluster scope mode will be watching all namespaces")
+		options.Namespace = watchNamespace
+	} else {
+		setupLog.Info(fmt.Sprintf("webhook in Namespaced mode will be watching namespace %q", watchNamespace))
+		options.Namespace = watchNamespace
+	}
+
+	mgr, err := ctrl.NewManager(cfg, options)
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
+		setupLog.Error(err, "unable to start webhook")
 		os.Exit(1)
 	}
 

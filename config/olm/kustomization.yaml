@@ -70,6 +70,13 @@ patches:
       - --tls-dir=/apiserver.local.config/certificates
       - --tls-cert-name=apiserver.crt
       - --tls-key-name=apiserver.key
+    - op: add
+      path: /spec/template/spec/containers/0/env
+      value:
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.annotations['olm.targetNamespaces']
   target:
     group: apps
     kind: Deployment
