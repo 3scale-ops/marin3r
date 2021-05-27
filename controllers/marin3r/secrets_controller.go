@@ -92,7 +92,6 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 						if err := r.Client.Status().Patch(ctx, &ecr, patch); err != nil {
 							return reconcile.Result{}, err
 						}
-						log.V(1).Info("Condition should have been added ...")
 					}
 				}
 			}
