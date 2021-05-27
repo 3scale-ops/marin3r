@@ -3,7 +3,6 @@ package reconcilers
 import (
 	"context"
 	"reflect"
-	"strings"
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
@@ -15,7 +14,6 @@ import (
 	envoy_resources_v2 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v2"
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
@@ -35,50 +33,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func fakeCacheV2() xdss.Cache {
-	cache := xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil))
-	cache.SetSnapshot("node1", xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-		Resources: [6]cache_v2.Resources{
-			{Version: "xxxx", Items: map[string]cache_types.Resource{
-				"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
-			}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{
-				"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
-			}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-			{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-		}}),
-	)
-	return cache
-}
-
-func fakeCacheV3() xdss.Cache {
-	cache := xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil))
-	cache.SetSnapshot("node1", xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-		Resources: [6]cache_v3.Resources{
-			{Version: "xxxx", Items: map[string]cache_types.Resource{
-				"endpoint1": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"},
-			}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{
-				"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
-			}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-			{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
-			{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-		}}),
-	)
-	return cache
-}
 
 func TestNewCacheReconciler(t *testing.T) {
 	type args struct {
@@ -99,7 +57,7 @@ func TestNewCacheReconciler(t *testing.T) {
 			args: args{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -107,7 +65,7 @@ func TestNewCacheReconciler(t *testing.T) {
 			want: CacheReconciler{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -118,7 +76,7 @@ func TestNewCacheReconciler(t *testing.T) {
 			args: args{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
 				generator: envoy_resources_v3.Generator{},
@@ -126,7 +84,7 @@ func TestNewCacheReconciler(t *testing.T) {
 			want: CacheReconciler{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
 				generator: envoy_resources_v3.Generator{},
@@ -161,7 +119,7 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 		name        string
 		fields      fields
 		args        args
-		want        ctrl.Result
+		want        *marin3rv1alpha1.VersionTracker
 		wantErr     bool
 		wantSnap    xdss.Snapshot
 		wantVersion string
@@ -171,7 +129,7 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -186,17 +144,17 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 				nodeID:  "node2",
 			},
 
-			want:    reconcile.Result{},
+			want:    &marin3rv1alpha1.VersionTracker{Endpoints: "845f965864"},
 			wantErr: false,
 			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 				Resources: [6]cache_v2.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "845f965864", Items: map[string]cache_types.Resource{
 						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
 				}}),
 		},
 		{
@@ -204,7 +162,7 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
 				generator: envoy_resources_v3.Generator{},
@@ -219,53 +177,17 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 				nodeID:  "node2",
 			},
 
-			want:    reconcile.Result{},
+			want:    &marin3rv1alpha1.VersionTracker{Endpoints: "845f965864"},
 			wantErr: false,
 			wantSnap: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 				Resources: [6]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "845f965864", Items: map[string]cache_types.Resource{
 						"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-				}}),
-		},
-		{
-			name: "Does not write to cache if secret versions are equal",
-			fields: fields{
-				ctx:       context.TODO(),
-				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
-				xdsCache:  fakeCacheV3(),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
-				generator: envoy_resources_v3.Generator{},
-			},
-			args: args{
-				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Listeners: []marin3rv1alpha1.EnvoyResource{
-						{Name: "listener", Value: "{\"name\": \"endpoint\"}"},
-					}},
-				version: "xxxx",
-				nodeID:  "node1",
-			},
-
-			want:    reconcile.Result{},
-			wantErr: false,
-			wantSnap: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [6]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
-						"endpoint1": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"},
-					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
-						"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
-					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
 				}}),
 		},
 	}
@@ -289,7 +211,10 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 			}
 			gotSnap, _ := r.xdsCache.GetSnapshot(tt.args.nodeID)
 			if !testutil.SnapshotsAreEqual(gotSnap, tt.wantSnap) {
-				t.Errorf("CacheReconciler.GenerateSnapshot() Snapshot = %v, want %v", gotSnap, tt.wantSnap)
+				t.Errorf("CacheReconciler.Reconcile() Snapshot = E:%s C:%s R:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s L:%s S:%s RU:%s",
+					gotSnap.GetVersion(envoy.Endpoint), gotSnap.GetVersion(envoy.Cluster), gotSnap.GetVersion(envoy.Route), gotSnap.GetVersion(envoy.Listener), gotSnap.GetVersion(envoy.Secret), gotSnap.GetVersion(envoy.Runtime),
+					tt.wantSnap.GetVersion(envoy.Endpoint), tt.wantSnap.GetVersion(envoy.Cluster), tt.wantSnap.GetVersion(envoy.Route), tt.wantSnap.GetVersion(envoy.Listener), tt.wantSnap.GetVersion(envoy.Secret), tt.wantSnap.GetVersion(envoy.Runtime),
+				)
 			}
 		})
 	}
@@ -307,7 +232,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 	type args struct {
 		req       types.NamespacedName
 		resources *marin3rv1alpha1.EnvoyResources
-		version   string
 	}
 	tests := []struct {
 		name    string
@@ -321,7 +245,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -344,24 +268,23 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Runtimes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "runtime", Value: "{\"name\": \"runtime\"}"},
 					}},
-				version: "xxxx",
 			},
 			want: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 				Resources: [6]cache_v2.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "845f965864", Items: map[string]cache_types.Resource{
 						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"},
 					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "568989d74c", Items: map[string]cache_types.Resource{
 						"cluster": &envoy_api_v2.Cluster{Name: "cluster"},
 					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "6645547657", Items: map[string]cache_types.Resource{
 						"route": &envoy_api_v2.RouteConfiguration{Name: "route"},
 					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "7cb77864cf", Items: map[string]cache_types.Resource{
 						"listener": &envoy_api_v2.Listener{Name: "listener"},
 					}},
-					{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "7456685887", Items: map[string]cache_types.Resource{
 						"runtime": &envoy_service_discovery_v2.Runtime{Name: "runtime"},
 					}},
 				},
@@ -373,7 +296,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
 				generator: envoy_resources_v3.Generator{},
@@ -396,24 +319,23 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Runtimes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "runtime", Value: "{\"name\": \"runtime\"}"},
 					}},
-				version: "xxxx",
 			},
 			want: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 				Resources: [6]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "845f965864", Items: map[string]cache_types.Resource{
 						"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
 					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "568989d74c", Items: map[string]cache_types.Resource{
 						"cluster": &envoy_config_cluster_v3.Cluster{Name: "cluster"},
 					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "6645547657", Items: map[string]cache_types.Resource{
 						"route": &envoy_config_route_v3.RouteConfiguration{Name: "route"},
 					}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "7cb77864cf", Items: map[string]cache_types.Resource{
 						"listener": &envoy_config_listener_v3.Listener{Name: "listener"},
 					}},
-					{Version: "xxxx-557db659d4", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "7456685887", Items: map[string]cache_types.Resource{
 						"runtime": &envoy_service_runtime_v3.Runtime{Name: "runtime"},
 					}},
 				},
@@ -425,7 +347,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -436,7 +358,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
 						{Name: "endpoint", Value: "giberish"},
 					}},
-				version: "xxxx",
 			},
 			wantErr: true,
 			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
@@ -446,7 +367,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -457,7 +378,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Clusters: []marin3rv1alpha1.EnvoyResource{
 						{Name: "cluster", Value: "giberish"},
 					}},
-				version: "xxxx",
 			},
 			wantErr: true,
 			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
@@ -467,7 +387,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -478,7 +398,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Routes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "route", Value: "giberish"},
 					}},
-				version: "xxxx",
 			},
 			wantErr: true,
 			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
@@ -488,7 +407,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -499,7 +418,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Listeners: []marin3rv1alpha1.EnvoyResource{
 						{Name: "listener", Value: "giberish"},
 					}},
-				version: "xxxx",
 			},
 			wantErr: true,
 			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
@@ -509,7 +427,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
 				generator: envoy_resources_v2.Generator{},
@@ -520,7 +438,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Runtimes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "runtime", Value: "giberish"},
 					}},
-				version: "xxxx",
 			},
 			wantErr: true,
 			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
@@ -544,42 +461,26 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
 				},
-				version: "xxxx",
 			},
 			wantErr: false,
 			want: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 				Resources: [6]cache_v2.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{
-						// Version: "xxxx-6c68d58f5f",
-						Version: strings.Join([]string{"xxxx",
-							util.Hash(map[string]envoy.Resource{
-								"secret": &envoy_api_v2_auth.Secret{
-									Name: "secret",
-									Type: &envoy_api_v2_auth.Secret_TlsCertificate{
-										TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
-											PrivateKey: &envoy_api_v2_core.DataSource{
-												Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
-											},
-											CertificateChain: &envoy_api_v2_core.DataSource{
-												Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-											}}}}}),
-						}, "-"),
-						Items: map[string]cache_types.Resource{
-							"secret": &envoy_api_v2_auth.Secret{
-								Name: "secret",
-								Type: &envoy_api_v2_auth.Secret_TlsCertificate{
-									TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
-										PrivateKey: &envoy_api_v2_core.DataSource{
-											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
-										},
-										CertificateChain: &envoy_api_v2_core.DataSource{
-											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-										}}}}}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "56c6b8dc45", Items: map[string]cache_types.Resource{
+						"secret": &envoy_api_v2_auth.Secret{
+							Name: "secret",
+							Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+								TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+									PrivateKey: &envoy_api_v2_core.DataSource{
+										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
+									},
+									CertificateChain: &envoy_api_v2_core.DataSource{
+										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+									}}}}}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
 				},
 			}),
 		},
@@ -602,41 +503,26 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
 				},
-				version: "xxxx",
 			},
 			wantErr: false,
 			want: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 				Resources: [6]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
-					{
-						Version: strings.Join([]string{"xxxx",
-							util.Hash(map[string]envoy.Resource{
-								"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
-									Name: "secret",
-									Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-										TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-											PrivateKey: &envoy_config_core_v3.DataSource{
-												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
-											},
-											CertificateChain: &envoy_config_core_v3.DataSource{
-												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-											}}}}}),
-						}, "-"),
-						Items: map[string]cache_types.Resource{
-							"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
-								Name: "secret",
-								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-									TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-										PrivateKey: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
-										},
-										CertificateChain: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-										}}}}}},
-					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
+					{Version: "56c6b8dc45", Items: map[string]cache_types.Resource{
+						"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+							Name: "secret",
+							Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+								TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+									PrivateKey: &envoy_config_core_v3.DataSource{
+										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+									},
+									CertificateChain: &envoy_config_core_v3.DataSource{
+										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+									}}}}}},
+					{Version: "", Items: map[string]cache_types.Resource{}},
 				},
 			}),
 		},
@@ -660,7 +546,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{
 						{Name: "secret"}},
 				},
-				version: "xxxx",
 			},
 			wantErr: true,
 			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
@@ -668,7 +553,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 		{
 			name: "Fails when secret does not exist",
 			fields: fields{
-				client:    fake.NewFakeClient(),
+				client:    fake.NewClientBuilder().Build(),
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
 				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
@@ -681,7 +566,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Secrets: []marin3rv1alpha1.EnvoySecretResource{
 						{Name: "secret"}},
 				},
-				version: "xxxx",
 			},
 			wantErr: true,
 			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
@@ -697,71 +581,17 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				decoder:   tt.fields.decoder,
 				generator: tt.fields.generator,
 			}
-			got, err := r.GenerateSnapshot(tt.args.req, tt.args.resources, tt.args.version)
+			got, err := r.GenerateSnapshot(tt.args.req, tt.args.resources)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CacheReconciler.GenerateSnapshot() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
 			if !tt.wantErr && !testutil.SnapshotsAreEqual(got, tt.want) {
-				t.Errorf("CacheReconciler.GenerateSnapshot() = %v, want %v", got.GetVersion(envoy.Secret), tt.want.GetVersion(envoy.Secret))
-			}
-		})
-	}
-}
-
-func Test_resourceLoaderError(t *testing.T) {
-	type args struct {
-		req     types.NamespacedName
-		value   interface{}
-		resPath *field.Path
-		msg     string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := resourceLoaderError(tt.args.req, tt.args.value, tt.args.resPath, tt.args.msg); (err != nil) != tt.wantErr {
-				t.Errorf("resourceLoaderError() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func Test_calculateSecretsHash(t *testing.T) {
-	type args struct {
-		resources map[string]envoy.Resource
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{
-			name: "Calculates the hash of secret resources",
-			args: args{
-				resources: map[string]envoy.Resource{
-					"secret": &envoy_api_v2_auth.Secret{
-						Name: "secret",
-						Type: &envoy_api_v2_auth.Secret_TlsCertificate{
-							TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
-								PrivateKey: &envoy_api_v2_core.DataSource{
-									Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
-								},
-								CertificateChain: &envoy_api_v2_core.DataSource{
-									Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-								}}}}}},
-			want: "6c68d58f5f",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := util.Hash(tt.args.resources); got != tt.want {
-				t.Errorf("calculateSecretsHash() = %v, want %v", got, tt.want)
+				t.Errorf("CacheReconciler.GenerateSnapshot() = E:%s C:%s R:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s L:%s S:%s RU:%s",
+					got.GetVersion(envoy.Endpoint), got.GetVersion(envoy.Cluster), got.GetVersion(envoy.Route), got.GetVersion(envoy.Listener), got.GetVersion(envoy.Secret), got.GetVersion(envoy.Runtime),
+					tt.want.GetVersion(envoy.Endpoint), tt.want.GetVersion(envoy.Cluster), tt.want.GetVersion(envoy.Route), tt.want.GetVersion(envoy.Listener), tt.want.GetVersion(envoy.Secret), tt.want.GetVersion(envoy.Runtime),
+				)
 			}
 		})
 	}

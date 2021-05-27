@@ -3,6 +3,8 @@ package discoveryservice
 import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
+	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
@@ -34,29 +36,39 @@ func (s Snapshot) Consistent() error {
 	return s.v3.Consistent()
 }
 
-// SetResource writes the given v2 resource in the Snapshot object.
+// SetResource writes the given v3 resource in the Snapshot object.
 func (s Snapshot) SetResource(name string, res envoy.Resource) {
+	var rType envoy.Type
 
 	switch o := res.(type) {
 
 	case *envoy_config_endpoint_v3.ClusterLoadAssignment:
-		s.v3.Resources[v3CacheResources(envoy.Endpoint)].Items[name] = o
+		rType = envoy.Endpoint
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
 
 	case *envoy_config_cluster_v3.Cluster:
-		s.v3.Resources[v3CacheResources(envoy.Cluster)].Items[name] = o
+		rType = envoy.Cluster
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
 
 	case *envoy_config_route_v3.RouteConfiguration:
-		s.v3.Resources[v3CacheResources(envoy.Route)].Items[name] = o
+		rType = envoy.Route
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
 
 	case *envoy_config_listener_v3.Listener:
-		s.v3.Resources[v3CacheResources(envoy.Listener)].Items[name] = o
+		rType = envoy.Listener
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
 
 	case *envoy_extensions_transport_sockets_tls_v3.Secret:
-		s.v3.Resources[v3CacheResources(envoy.Secret)].Items[name] = o
+		rType = envoy.Secret
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
 
 	case *envoy_service_runtime_v3.Runtime:
-		s.v3.Resources[v3CacheResources(envoy.Runtime)].Items[name] = o
+		rType = envoy.Runtime
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
 	}
+
+	s.SetVersion(rType, s.recalculateVersion(rType))
+
 }
 
 // GetResources selects snapshot resources by type.
@@ -79,6 +91,19 @@ func (s Snapshot) GetVersion(rType envoy.Type) string {
 // SetVersion sets the version for a resource type.
 func (s Snapshot) SetVersion(rType envoy.Type, version string) {
 	s.v3.Resources[v3CacheResources(rType)].Version = version
+}
+
+func (s Snapshot) recalculateVersion(rType envoy.Type) string {
+	resources := map[string]string{}
+	encoder := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoy.APIv3)
+	for n, r := range s.v3.Resources[v3CacheResources(rType)].Items {
+		j, _ := encoder.Marshal(r)
+		resources[n] = string(j)
+	}
+	if len(resources) > 0 {
+		return util.Hash(resources)
+	}
+	return ""
 }
 
 func v3CacheResources(rType envoy.Type) int {

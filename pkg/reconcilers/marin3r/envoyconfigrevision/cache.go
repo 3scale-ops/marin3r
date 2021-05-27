@@ -9,14 +9,12 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,36 +38,38 @@ func NewCacheReconciler(ctx context.Context, logger logr.Logger, client client.C
 	return CacheReconciler{ctx, logger, client, xdsCache, decoder, generator}
 }
 
-func (r *CacheReconciler) Reconcile(req types.NamespacedName, resources *marin3rv1alpha1.EnvoyResources, nodeID, version string) (ctrl.Result, error) {
+func (r *CacheReconciler) Reconcile(req types.NamespacedName, resources *marin3rv1alpha1.EnvoyResources, nodeID, version string) (*marin3rv1alpha1.VersionTracker, error) {
 
-	snap, err := r.GenerateSnapshot(req, resources, version)
+	snap, err := r.GenerateSnapshot(req, resources)
 
 	if err != nil {
-		return ctrl.Result{}, err
+		return nil, err
 	}
 
 	oldSnap, err := r.xdsCache.GetSnapshot(nodeID)
-	// Publish the generated snapshot when the version is different from the published one. We look specifically
-	// for the version of the "Secret" resources because secrets can change even when the spec hasn't changed.
-	// Publish the snapshot when an error retrieving the published one occurs as it means that no snpshot has already
-	// been written to the cache for that specific nodeID.
-	if snap.GetVersion(envoy.Secret) != oldSnap.GetVersion(envoy.Secret) || err != nil {
+	if err != nil || areDifferent(snap, oldSnap) {
 
-		r.logger.Info("Writing new snapshot to xDS cache", "Version", version, "NodeID", nodeID, "Secrets Hash", snap.GetVersion(envoy.Secret))
-
+		r.logger.Info("Writing new snapshot to xDS cache", "Revision", version, "NodeID", nodeID)
 		if err := r.xdsCache.SetSnapshot(nodeID, snap); err != nil {
-			return ctrl.Result{}, err
+			return nil, err
 		}
 
 	} else {
 		r.logger.V(1).Info("Snapshot has not changed, skipping writing to xDS cache", "NodeID", nodeID)
 	}
 
-	return ctrl.Result{}, nil
+	return &marin3rv1alpha1.VersionTracker{
+		Endpoints: snap.GetVersion(envoy.Endpoint),
+		Clusters:  snap.GetVersion(envoy.Cluster),
+		Routes:    snap.GetVersion(envoy.Route),
+		Listeners: snap.GetVersion(envoy.Listener),
+		Secrets:   snap.GetVersion(envoy.Secret),
+		Runtimes:  snap.GetVersion(envoy.Runtime),
+	}, nil
 }
 
-func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *marin3rv1alpha1.EnvoyResources, version string) (xdss.Snapshot, error) {
-	snap := r.xdsCache.NewSnapshot(version)
+func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *marin3rv1alpha1.EnvoyResources) (xdss.Snapshot, error) {
+	snap := r.xdsCache.NewSnapshot("")
 
 	for idx, endpoint := range resources.Endpoints {
 		res := r.generator.New(envoy.Endpoint)
@@ -152,15 +152,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 		}
 	}
 
-	// Secrets are runtime calculated resourcesso its contents are not included in the spec. This means
-	// that changes in the content of secret resources wont be reflected in the hash of spec.envoyResources.
-	// To reflect changes to the content of secrets we append the hash of the runtime calculated secrets to
-	// the hash of sepc.envoyResources in the version of secret resources in the snapshot.
-	secretsHash := util.Hash(snap.GetResources(envoy.Secret))
-	snap.SetVersion(envoy.Secret, fmt.Sprintf("%s-%s", version, secretsHash))
-
 	return snap, nil
-
 }
 
 func resourceLoaderError(req types.NamespacedName, value interface{}, resPath *field.Path, msg string) error {
@@ -169,4 +161,13 @@ func resourceLoaderError(req types.NamespacedName, value interface{}, resPath *f
 		fmt.Sprintf("%s/%s", req.Namespace, req.Name),
 		field.ErrorList{field.Invalid(resPath, value, fmt.Sprint(msg))},
 	)
+}
+
+func areDifferent(a, b xdss.Snapshot) bool {
+	for _, rType := range []envoy.Type{envoy.Endpoint, envoy.Cluster, envoy.Route, envoy.Listener, envoy.Secret, envoy.Runtime} {
+		if a.GetVersion(rType) != b.GetVersion(rType) {
+			return true
+		}
+	}
+	return false
 }

@@ -51,13 +51,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		n := &v1.Namespace{}
-		Eventually(func() bool {
-			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
-			if err != nil {
-				return false
-			}
-			return true
-		}, 60*time.Second, 5*time.Second).Should(BeTrue())
+		Eventually(func() error {
+			return k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
+		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 	})
 
@@ -99,13 +95,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 			}
 			err := k8sClient.Create(context.Background(), ec)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() bool {
-				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
-				if err != nil {
-					return false
-				}
-				return true
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
+			Eventually(func() error {
+				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 		})
 
 		When("EnvoyConfig is created", func() {
@@ -131,13 +123,13 @@ var _ = Describe("EnvoyConfig controller", func() {
 				wantRevision := util.Hash(ec.Spec.EnvoyResources)
 				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 					Resources: [6]cache_v2.Resources{
-						{Version: wantRevision, Items: map[string]cache_types.Resource{
+						{Version: "845f965864", Items: map[string]cache_types.Resource{
 							"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
 					}})
 
 				// Wait for the revision to get written to the xDS cache
@@ -209,13 +201,13 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 					Resources: [6]cache_v2.Resources{
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "568989d74c", Items: map[string]cache_types.Resource{
 							"cluster": &envoy_api_v2.Cluster{Name: "cluster"}}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
 					}})
 
 				// Wait for the revision to get written to the xDS cache
@@ -263,13 +255,13 @@ var _ = Describe("EnvoyConfig controller", func() {
 				// Validate the cache for the nodeID
 				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 					Resources: [6]cache_v2.Resources{
-						{Version: wantRevision, Items: map[string]cache_types.Resource{
+						{Version: "845f965864", Items: map[string]cache_types.Resource{
 							"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
 					}})
 
 				// Wait for the revision to get written to the xDS cache
@@ -301,13 +293,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 			}
 			err := k8sClient.Create(context.Background(), ec)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() bool {
-				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
-				if err != nil {
-					return false
-				}
-				return true
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
+			Eventually(func() error {
+				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 		})
 
 		When("EnvoyConfig is created", func() {
@@ -333,13 +321,13 @@ var _ = Describe("EnvoyConfig controller", func() {
 				wantRevision := util.Hash(ec.Spec.EnvoyResources)
 				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 					Resources: [6]cache_v3.Resources{
-						{Version: wantRevision, Items: map[string]cache_types.Resource{
+						{Version: "845f965864", Items: map[string]cache_types.Resource{
 							"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
-						{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
 					}})
 
 				// Wait for the revision to get written to the xDS cache
@@ -541,13 +529,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 			}
 			err := k8sClient.Create(context.Background(), ec)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() bool {
-				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
-				if err != nil {
-					return false
-				}
-				return true
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
+			Eventually(func() error {
+				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
+			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 			By("waiting for status.cacheState to be 'InSync'", func() {
 				Eventually(func() bool {
@@ -613,16 +597,15 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				By("checking the v2 xDS server cache")
 				{
-					wantRevision := util.Hash(ec.Spec.EnvoyResources)
 					wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
 						Resources: [6]cache_v2.Resources{
-							{Version: wantRevision, Items: map[string]cache_types.Resource{
+							{Version: "845f965864", Items: map[string]cache_types.Resource{
 								"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
 						}})
 					gotV2Snap, err := ecrV2Reconciler.XdsCache.GetSnapshot(ec.Spec.NodeID)
 					Expect(err).ToNot(HaveOccurred())
@@ -631,16 +614,15 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				By("checking the v3 xDS server cache")
 				{
-					wantRevision := util.Hash(ec.Spec.EnvoyResources)
 					wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
 						Resources: [6]cache_v3.Resources{
-							{Version: wantRevision, Items: map[string]cache_types.Resource{
+							{Version: "845f965864", Items: map[string]cache_types.Resource{
 								"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision + "-557db659d4", Items: map[string]cache_types.Resource{}},
-							{Version: wantRevision, Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
+							{Version: "", Items: map[string]cache_types.Resource{}},
 						}})
 					gotV3Snap, err := ecrV3Reconciler.XdsCache.GetSnapshot(ec.Spec.NodeID)
 					Expect(err).ToNot(HaveOccurred())

@@ -8,32 +8,11 @@ import (
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
+	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 )
-
-func TestSnapshot_Consistent(t *testing.T) {
-	type fields struct {
-		v2 *cache_v2.Snapshot
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := Snapshot{
-				v2: tt.fields.v2,
-			}
-			if err := s.Consistent(); (err != nil) != tt.wantErr {
-				t.Errorf("Snapshot.Consistent() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
 
 func TestSnapshot_SetResource(t *testing.T) {
 	type fields struct {
@@ -63,7 +42,7 @@ func TestSnapshot_SetResource(t *testing.T) {
 			args: args{name: "endpoint", res: &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}},
 			wantSnap: Snapshot{v2: &cache_v2.Snapshot{
 				Resources: [6]cache_v2.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.Resource{
+					{Version: "845f965864", Items: map[string]cache_types.Resource{
 						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
@@ -252,6 +231,90 @@ func Test_v2CacheResources(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := v2CacheResources(tt.args.rType); got != tt.want {
 				t.Errorf("v2CacheResources() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSnapshot_recalculateVersion(t *testing.T) {
+	type fields struct {
+		v2 *cache_v2.Snapshot
+	}
+	type args struct {
+		rType envoy.Type
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+	}{
+		{
+			name: "computes the hash of endpoints",
+			fields: fields{
+				v2: &cache_v2.Snapshot{
+					Resources: [6]cache_v2.Resources{
+						{Version: "", Items: map[string]cache_types.Resource{
+							"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
+							"endpoint2": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint2"},
+						}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+					},
+				},
+			},
+			args: args{rType: envoy.Endpoint},
+			want: "5c8498c7db",
+		},
+		{
+			name: "computes the hash of secrets",
+			fields: fields{
+				v2: &cache_v2.Snapshot{
+					Resources: [6]cache_v2.Resources{
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+						{Version: "", Items: map[string]cache_types.Resource{
+							"secret1": &envoy_api_v2_auth.Secret{
+								Name: "secret1",
+								Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+									TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+										PrivateKey: &envoy_api_v2_core.DataSource{
+											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
+										},
+										CertificateChain: &envoy_api_v2_core.DataSource{
+											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+										}}}},
+							"secret2": &envoy_api_v2_auth.Secret{
+								Name: "secret",
+								Type: &envoy_api_v2_auth.Secret_TlsCertificate{
+									TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
+										PrivateKey: &envoy_api_v2_core.DataSource{
+											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("other-key")},
+										},
+										CertificateChain: &envoy_api_v2_core.DataSource{
+											Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("other-2cert")},
+										}}}},
+						}},
+						{Version: "", Items: map[string]cache_types.Resource{}},
+					},
+				},
+			},
+			args: args{rType: envoy.Secret},
+			want: "6b94bf4b8b",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Snapshot{
+				v2: tt.fields.v2,
+			}
+			if got := s.recalculateVersion(tt.args.rType); got != tt.want {
+				t.Errorf("Snapshot.recalculateVersion() = %v, want %v", got, tt.want)
 			}
 		})
 	}
