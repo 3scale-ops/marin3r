@@ -16,11 +16,13 @@ package discoveryservice
 
 import (
 	"context"
+	"time"
 
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources_v2 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v2"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util/backoff"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	"github.com/go-logr/logr"
 )
@@ -62,8 +64,16 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_api_v2.DiscoveryReques
 	if req.GetResponseNonce() != "" {
 		if req.GetErrorDetail() != nil {
 			log.Info("Discovery NACK")
-			if err := cb.Stats.ReportNACK(req.GetNode().GetId(), req.GetTypeUrl(), podName, req.GetResponseNonce()); err != nil {
+			failures, err := cb.Stats.ReportNACK(req.GetNode().GetId(), req.GetTypeUrl(), podName, req.GetResponseNonce())
+			if err != nil {
 				log.Error(err, "error trying to report a response NACK")
+			}
+
+			// Backoff
+			if failures == 0 {
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				time.Sleep(backoff.Default.Duration(int(failures)))
 			}
 
 		} else {
