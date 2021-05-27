@@ -22,6 +22,9 @@ spec:
       containers:
         - command:
             - /manager
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
           args:
             - webhook
             - --tls-dir=/tmp/k8s-webhook-server/serving-certs
