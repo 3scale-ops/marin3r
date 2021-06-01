@@ -16,10 +16,9 @@ package discoveryservice
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	"github.com/3scale-ops/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
@@ -66,7 +65,10 @@ func TestCallbacks_OnStreamOpen(t *testing.T) {
 	}{
 		{
 			"OnStreamOpen()",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{context.Background(), 1, "xxxx"},
 			false,
 		},
@@ -91,7 +93,10 @@ func TestCallbacks_OnStreamClosed(t *testing.T) {
 	}{
 		{
 			"OnStreamClosed()",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{1},
 		}}
 	for _, tt := range tests {
@@ -114,7 +119,10 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 	}{
 		{
 			"OnStreamRequest()",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{1, &envoy_api_v2.DiscoveryRequest{
 				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
 				ResourceNames: []string{"string1", "string2"},
@@ -126,9 +134,8 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 		{
 			"OnStreamRequest() NACK received",
 			&Callbacks{
-				OnError:       func(a, b, c string, d envoy.APIVersion) error { return nil },
-				SnapshotCache: fakeTestCache(),
-				Logger:        ctrl.Log,
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
 			},
 			args{1, &envoy_api_v2.DiscoveryRequest{
 				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
@@ -137,36 +144,6 @@ func TestCallbacks_OnStreamRequest(t *testing.T) {
 				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
 			}},
 			false,
-		},
-		{
-			"OnStreamRequest() error",
-			&Callbacks{
-				OnError:       func(a, b, c string, d envoy.APIVersion) error { return nil },
-				SnapshotCache: fakeTestCache(),
-				Logger:        ctrl.Log,
-			},
-			args{1, &envoy_api_v2.DiscoveryRequest{
-				Node:          &envoy_api_v2_core.Node{Id: "node2", Cluster: "cluster1"},
-				ResourceNames: []string{"string1", "string2"},
-				TypeUrl:       "some-type",
-				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
-			}},
-			true,
-		},
-		{
-			"OnStreamRequest() error calling OnErrorFn",
-			&Callbacks{
-				OnError:       func(a, b, c string, d envoy.APIVersion) error { return fmt.Errorf("err") },
-				SnapshotCache: fakeTestCache(),
-				Logger:        ctrl.Log,
-			},
-			args{1, &envoy_api_v2.DiscoveryRequest{
-				Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
-				ResourceNames: []string{"string1", "string2"},
-				TypeUrl:       "some-type",
-				ErrorDetail:   &status.Status{Code: 0, Message: "xxxx"},
-			}},
-			true,
 		},
 	}
 	for _, tt := range tests {
@@ -191,7 +168,10 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 	}{
 		{
 			"OnStreamResponse()",
-			&Callbacks{Logger: ctrl.Log},
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			},
 			args{1,
 				&envoy_api_v2.DiscoveryRequest{
 					Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
@@ -209,8 +189,10 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 		},
 		{
 			"OnStreamResponse() special treatment of secret resources",
-			&Callbacks{Logger: ctrl.Log},
-			args{1,
+			&Callbacks{
+				Stats:  stats.New(),
+				Logger: ctrl.Log,
+			}, args{1,
 				&envoy_api_v2.DiscoveryRequest{
 					Node:          &envoy_api_v2_core.Node{Id: "node1", Cluster: "cluster1"},
 					ResourceNames: []string{"string1", "string2"},

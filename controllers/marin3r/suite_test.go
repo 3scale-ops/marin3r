@@ -24,6 +24,7 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
@@ -106,22 +107,24 @@ var _ = BeforeSuite(func(done Done) {
 
 	// Add the EnvoyConfigRevision v2 controller
 	ecrV2Reconciler = &EnvoyConfigRevisionReconciler{
-		Client:     mgr.GetClient(),
-		Log:        ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v2"),
-		Scheme:     mgr.GetScheme(),
-		XdsCache:   xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-		APIVersion: envoy.APIv2,
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v2"),
+		Scheme:         mgr.GetScheme(),
+		XdsCache:       xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
+		APIVersion:     envoy.APIv2,
+		DiscoveryStats: stats.New(),
 	}
 	err = ecrV2Reconciler.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	// Add the EnvoyConfigRevision v2 controller
 	ecrV3Reconciler = &EnvoyConfigRevisionReconciler{
-		Client:     mgr.GetClient(),
-		Log:        ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v3"),
-		Scheme:     mgr.GetScheme(),
-		XdsCache:   xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
-		APIVersion: envoy.APIv3,
+		Client:         mgr.GetClient(),
+		Log:            ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v3"),
+		Scheme:         mgr.GetScheme(),
+		XdsCache:       xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+		APIVersion:     envoy.APIv3,
+		DiscoveryStats: stats.New(),
 	}
 	err = ecrV3Reconciler.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())

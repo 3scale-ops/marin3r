@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
@@ -45,7 +46,6 @@ func TestNewDualXdsServer(t *testing.T) {
 		ctx       context.Context
 		adsPort   uint
 		tlsConfig *tls.Config
-		fn        onErrorFn
 		logger    logr.Logger
 	}
 	tests := []struct {
@@ -54,12 +54,12 @@ func TestNewDualXdsServer(t *testing.T) {
 	}{
 		{
 			"Returns a new DualXdsServer from the given params",
-			args{context.Background(), 10000, &tls.Config{}, fn, ctrl.Log},
+			args{context.Background(), 10000, &tls.Config{}, ctrl.Log},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDualXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.fn, tt.args.logger)
+			got := NewDualXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.logger)
 			if got.snapshotCacheV2 == nil || got.snapshotCacheV3 == nil ||
 				got.serverV2 == nil || got.serverV3 == nil ||
 				got.callbacksV2 == nil || got.callbacksV3 == nil {
@@ -87,6 +87,8 @@ func TestDualXdsServer_Start(t *testing.T) {
 				snapshotCacheV3,
 				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
+				stats.New(),
+				stats.New(),
 			},
 		},
 	}
@@ -126,6 +128,8 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 				snapshotCacheV3,
 				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
+				stats.New(),
+				stats.New(),
 			},
 			xdss_v2.NewCache(snapshotCacheV2),
 			envoy.APIv2,
@@ -142,6 +146,8 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 				snapshotCacheV3,
 				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
+				stats.New(),
+				stats.New(),
 			},
 			xdss_v3.NewCache(snapshotCacheV3),
 			envoy.APIv3,

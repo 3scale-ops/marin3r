@@ -16,21 +16,21 @@ package discoveryservice
 
 import (
 	"context"
-	"fmt"
+	"time"
 
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources_v2 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v2"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util/backoff"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	"github.com/go-logr/logr"
 )
 
 // Callbacks is a type that implements "go-control-plane/pkg/server/".Callbacks
 type Callbacks struct {
-	OnError       func(nodeID, previousVersion, msg string, envoyAPI envoy.APIVersion) error
-	SnapshotCache *cache_v2.SnapshotCache
-	Logger        logr.Logger
+	Stats  *stats.Stats
+	Logger logr.Logger
 }
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
@@ -44,44 +44,75 @@ func (cb *Callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) err
 // OnStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
 func (cb *Callbacks) OnStreamClosed(id int64) {
 	cb.Logger.V(1).Info("Stream closed", "StreamID", id)
+	cb.Stats.ReportStreamClosed(id)
 }
 
 // OnStreamRequest implements go-control-plane/pkg/server/Callbacks.OnStreamRequest
 // OnStreamRequest is called once a request is received on a stream.
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
 func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_api_v2.DiscoveryRequest) error {
-	cb.Logger.V(1).Info("Received request", "ResourceNames", req.ResourceNames, "Version", req.VersionInfo, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id)
-
-	if req.ErrorDetail != nil {
-		snap, err := (*cb.SnapshotCache).GetSnapshot(req.Node.Id)
-		if err != nil {
-			return err
-		}
-		// All resource types are always kept at the same version
-		failingVersion := snap.GetVersion(req.TypeUrl)
-		cb.Logger.Error(fmt.Errorf(req.ErrorDetail.Message), "A gateway reported an error", "CurrentVersion", req.VersionInfo, "FailingVersion", failingVersion, "NodeID", req.Node.Id, "StreamID", id)
-		if err := cb.OnError(req.Node.Id, failingVersion, req.ErrorDetail.Message, envoy.APIv2); err != nil {
-			cb.Logger.Error(err, "Error calling OnErrorFn", "NodeID", req.Node.Id, "StreamID", id)
-			return err
-		}
+	// Try to get the Pod name associated with the request
+	podName, err := stats.GetStringValueFromMetadata(req.GetNode().Metadata.AsMap(), "pod_name")
+	if err != nil {
+		cb.Logger.Error(err, "an error ocurred, Pod name could not be retrieved", "NodeID", req.GetNode().GetId(), "StreamID", id)
+		podName = "unknown"
 	}
+
+	log := cb.Logger.WithValues("TypeURL", req.GetTypeUrl(), "NodeID", req.GetNode().GetId(), "StreamID", id,
+		"Pod", podName, "ResourceNames", req.GetResourceNames(), "LastAcceptedVersion", req.GetVersionInfo())
+
+	if req.GetResponseNonce() != "" {
+		if req.GetErrorDetail() != nil {
+			log.Info("Discovery NACK")
+			failures, err := cb.Stats.ReportNACK(req.GetNode().GetId(), req.GetTypeUrl(), podName, req.GetResponseNonce())
+			if err != nil {
+				log.Error(err, "error trying to report a response NACK")
+			}
+
+			// Backoff
+			if failures == 0 {
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				time.Sleep(backoff.Default.Duration(int(failures)))
+			}
+
+		} else {
+			log.Info("Discovery ACK")
+			cb.Stats.ReportACK(req.GetNode().GetId(), req.GetTypeUrl(), req.GetVersionInfo(), podName)
+		}
+
+	} else {
+		log.Info("Discovery Request")
+		cb.Stats.ReportRequest(req.GetNode().GetId(), req.GetTypeUrl(), podName, id)
+	}
+
 	return nil
 }
 
 // OnStreamResponse implements go-control-plane/pkgserver/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
 func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_api_v2.DiscoveryRequest, rsp *envoy_api_v2.DiscoveryResponse) {
+	log := cb.Logger.WithValues("TypeURL", req.GetTypeUrl(), "NodeID", req.GetNode().GetId(), "StreamID", id, "Version", rsp.GetVersionInfo())
+
+	// Track the nonce of this response in the stats cache
+	podName, err := stats.GetStringValueFromMetadata(req.GetNode().Metadata.AsMap(), "pod_name")
+	if err != nil {
+		log.Error(err, "an error ocurred, nonce won't be tracked")
+	} else {
+		cb.Stats.WriteResponseNonce(req.GetNode().GetId(), rsp.GetTypeUrl(), rsp.GetVersionInfo(), podName, rsp.GetNonce())
+	}
+
+	// Log resources when in debug mode
 	resources := []string{}
 	for _, r := range rsp.Resources {
 		j, _ := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoy.APIv2).Marshal(r)
 		resources = append(resources, string(j))
 	}
 	if rsp.TypeUrl == envoy_resources_v2.Mappings()[envoy.Secret] {
-		cb.Logger.V(1).Info("Response sent to gateway",
-			"ResourcesNames", req.ResourceNames, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id, "Version", rsp.GetVersionInfo())
+		// Do not log secret contents
+		log.V(1).Info("Discovery Response", "ResourcesNames", req.ResourceNames, "Pod", podName)
 	} else {
-		cb.Logger.V(1).Info("Response sent to gateway",
-			"Resources", resources, "TypeURL", req.TypeUrl, "NodeID", req.Node.Id, "StreamID", id, "Version", rsp.GetVersionInfo())
+		log.V(1).Info("Discovery Response", "Resources", resources, "Pod", podName)
 	}
 }
 

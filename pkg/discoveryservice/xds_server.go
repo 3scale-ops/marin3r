@@ -22,6 +22,7 @@ import (
 	"time"
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
@@ -53,26 +54,29 @@ type XdsServer interface {
 	GetCache(envoy.APIVersion) xdss.Cache
 }
 
-type onErrorFn func(nodeID, previousVersion, msg string, envoyAPI envoy.APIVersion) error
-
 // DualXdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server
 type DualXdsServer struct {
-	ctx             context.Context
-	xDSPort         uint
-	tlsConfig       *tls.Config
-	serverV2        server_v2.Server
-	serverV3        server_v3.Server
-	snapshotCacheV2 cache_v2.SnapshotCache
-	snapshotCacheV3 cache_v3.SnapshotCache
-	callbacksV2     *xdss_v2.Callbacks
-	callbacksV3     *xdss_v3.Callbacks
+	ctx              context.Context
+	xDSPort          uint
+	tlsConfig        *tls.Config
+	serverV2         server_v2.Server
+	serverV3         server_v3.Server
+	snapshotCacheV2  cache_v2.SnapshotCache
+	snapshotCacheV3  cache_v3.SnapshotCache
+	callbacksV2      *xdss_v2.Callbacks
+	callbacksV3      *xdss_v3.Callbacks
+	discoveryStatsV2 *stats.Stats
+	discoveryStatsV3 *stats.Stats
 }
 
 // NewDualXdsServer creates a new DualXdsServer object fron the given params
-func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, fn onErrorFn, logger logr.Logger) *DualXdsServer {
+func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logger logr.Logger) *DualXdsServer {
 
 	xdsLogger := logger.WithName("xds")
+
+	discoveryStatsV2 := stats.New()
+	discoveryStatsV3 := stats.New()
 
 	snapshotCacheV2 := cache_v2.NewSnapshotCache(
 		true,
@@ -86,29 +90,29 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 	)
 
 	callbacksV2 := &xdss_v2.Callbacks{
-		OnError:       fn,
-		SnapshotCache: &snapshotCacheV2,
-		Logger:        xdsLogger.WithName("server").WithName("v2"),
+		Stats:  discoveryStatsV2,
+		Logger: xdsLogger.WithName("server").WithName("v2"),
 	}
 	callbacksV3 := &xdss_v3.Callbacks{
-		OnError:       fn,
-		SnapshotCache: &snapshotCacheV3,
-		Logger:        xdsLogger.WithName("server").WithName("v3"),
+		Stats:  discoveryStatsV3,
+		Logger: xdsLogger.WithName("server").WithName("v3"),
 	}
 
 	srvV2 := server_v2.NewServer(ctx, snapshotCacheV2, callbacksV2)
 	srvV3 := server_v3.NewServer(ctx, snapshotCacheV3, callbacksV3)
 
 	return &DualXdsServer{
-		ctx:             ctx,
-		xDSPort:         xDSPort,
-		tlsConfig:       tlsConfig,
-		serverV2:        srvV2,
-		serverV3:        srvV3,
-		snapshotCacheV2: snapshotCacheV2,
-		snapshotCacheV3: snapshotCacheV3,
-		callbacksV2:     callbacksV2,
-		callbacksV3:     callbacksV3,
+		ctx:              ctx,
+		xDSPort:          xDSPort,
+		tlsConfig:        tlsConfig,
+		serverV2:         srvV2,
+		serverV3:         srvV3,
+		snapshotCacheV2:  snapshotCacheV2,
+		snapshotCacheV3:  snapshotCacheV3,
+		callbacksV2:      callbacksV2,
+		callbacksV3:      callbacksV3,
+		discoveryStatsV2: discoveryStatsV2,
+		discoveryStatsV3: discoveryStatsV3,
 	}
 }
 
@@ -186,6 +190,14 @@ func (xdss *DualXdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
 		return xdss_v2.NewCache(xdss.snapshotCacheV2)
 	}
 	return xdss_v3.NewCache(xdss.snapshotCacheV3)
+}
+
+// GetCache returns the discovery stats
+func (xdss *DualXdsServer) GetDiscoveryStats(version envoy.APIVersion) *stats.Stats {
+	if version == envoy.APIv2 {
+		return xdss.discoveryStatsV2
+	}
+	return xdss.discoveryStatsV3
 }
 
 type clogger struct {

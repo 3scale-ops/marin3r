@@ -142,12 +142,11 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 
 	shouldBeTrue, shouldBeFalse := r.isRevisionPublishedConditionReconciled(r.PublishedVersion())
 
-	if shouldBeFalse != nil {
-		for _, ecr := range shouldBeFalse {
-			if err := r.client.Status().Update(r.ctx, &ecr); err != nil {
-				log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "Name/Namespace", util.ObjectKey(&ecr))
-				return ctrl.Result{}, err
-			}
+	for _, ecr := range shouldBeFalse {
+
+		if err := r.client.Status().Update(r.ctx, &ecr); err != nil {
+			log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "Name/Namespace", util.ObjectKey(&ecr))
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -160,14 +159,12 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	}
 
 	shouldBeDeleted := r.isRevisionRetentionReconciled(maxRevisions)
-	if shouldBeDeleted != nil {
-		for _, ecr := range shouldBeDeleted {
-			if err := r.client.Delete(r.ctx, &ecr); err != nil {
-				log.Error(err, "unable to delete revision", "Phase", "ApplyRevisionRetention", "Name/Namespace", util.ObjectKey(&ecr))
-				return ctrl.Result{}, err
-			}
-			log.Info("deleted old EnvoyConfigRevision", "Namespace/Name", util.ObjectKey(&ecr))
+	for _, ecr := range shouldBeDeleted {
+		if err := r.client.Delete(r.ctx, &ecr); err != nil {
+			log.Error(err, "unable to delete revision", "Phase", "ApplyRevisionRetention", "Name/Namespace", util.ObjectKey(&ecr))
+			return ctrl.Result{}, err
 		}
+		log.Info("deleted old EnvoyConfigRevision", "Namespace/Name", util.ObjectKey(&ecr))
 	}
 
 	log.Info(fmt.Sprintf("CacheState is %s after revision reconcile", cacheState))
@@ -212,7 +209,6 @@ func (r *RevisionReconciler) isRevisionPublishedConditionReconciled(versionToPub
 
 	var shouldBeTrue *marin3rv1alpha1.EnvoyConfigRevision = nil
 	var shouldBeFalse []marin3rv1alpha1.EnvoyConfigRevision = []marin3rv1alpha1.EnvoyConfigRevision{}
-
 	for _, ecr := range r.revisionList.Items {
 
 		if ecr.Spec.Version != versionToPublish && ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
@@ -226,7 +222,7 @@ func (r *RevisionReconciler) isRevisionPublishedConditionReconciled(versionToPub
 				Reason:  status.ConditionReason("VersionPublished"),
 				Message: fmt.Sprintf("Version '%s' has been published", versionToPublish),
 			})
-			shouldBeTrue = &ecr
+			shouldBeTrue = ecr.DeepCopy()
 		}
 	}
 

@@ -19,9 +19,11 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
+	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
@@ -44,11 +46,12 @@ import (
 
 // EnvoyConfigRevisionReconciler reconciles a EnvoyConfigRevision object
 type EnvoyConfigRevisionReconciler struct {
-	Client     client.Client
-	Log        logr.Logger
-	Scheme     *runtime.Scheme
-	XdsCache   xdss.Cache
-	APIVersion envoy.APIVersion
+	Client         client.Client
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	XdsCache       xdss.Cache
+	APIVersion     envoy.APIVersion
+	DiscoveryStats *stats.Stats
 }
 
 // Reconcile progresses EnvoyConfigRevision resources to its desired state
@@ -85,7 +88,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		if !controllerutil.ContainsFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
 			return reconcile.Result{}, nil
 		}
-		envoyconfigrevision.CleanupLogic(ecr, r.XdsCache, log)
+		envoyconfigrevision.CleanupLogic(ecr, r.XdsCache, r.DiscoveryStats, log)
 		controllerutil.RemoveFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)
 		if err = r.Client.Update(ctx, ecr); err != nil {
 			log.Error(err, "unable to update EnvoyConfigRevision")
@@ -128,16 +131,19 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 	}
 
-	if ok := envoyconfigrevision.IsStatusReconciled(ecr, vt, r.XdsCache); !ok {
+	if ok := envoyconfigrevision.IsStatusReconciled(ecr, vt, r.XdsCache, r.DiscoveryStats); !ok {
 		if err := r.Client.Status().Update(ctx, ecr); err != nil {
 			log.Error(err, "unable to update EnvoyConfigRevision status")
-			return ctrl.Result{}, err
 		}
 		log.Info("status updated for EnvoyConfigRevision resource")
-		return reconcile.Result{}, nil
+	}
+
+	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+		return ctrl.Result{Requeue: true, RequeueAfter: 60 * time.Second}, nil
 	}
 
 	return ctrl.Result{}, nil
+
 }
 
 func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision,
