@@ -29,7 +29,7 @@ func TestConfig_GenerateStatic(t *testing.T) {
 					Metadata:                    map[string]string{"key1": "value1", "key2": "value2"},
 				},
 			},
-			want:    `{"node":{"id":"some-id","cluster":"some-cluster","metadata":{"key1":"value1","key2":"value2"}},"static_resources":{"clusters":[{"name":"xds_cluster","type":"STRICT_DNS","connect_timeout":"1s","load_assignment":{"cluster_name":"xds_cluster","endpoints":[{"lb_endpoints":[{"endpoint":{"address":{"socket_address":{"address":"localhost","port_value":10000}}}}]}]},"http2_protocol_options":{},"transport_socket":{"name":"envoy.transport_sockets.tls","typed_config":{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext","common_tls_context":{"tls_certificate_sds_secret_configs":[{"sds_config":{"path":"/sds-config-source.json"}}]}}}}]},"dynamic_resources":{"lds_config":{"ads":{},"resource_api_version":"V3"},"cds_config":{"ads":{},"resource_api_version":"V3"},"ads_config":{"api_type":"GRPC","transport_api_version":"V3","grpc_services":[{"envoy_grpc":{"cluster_name":"xds_cluster"}}]}},"layered_runtime":{"layers":[{"name":"runtime","rtds_layer":{"name":"runtime","rtds_config":{"ads":{},"resource_api_version":"V3"}}}]},"admin":{"access_log_path":"/dev/null","address":{"socket_address":{"address":"0.0.0.0","port_value":9001}}}}`,
+			want:    `{"node":{"id":"some-id","cluster":"some-cluster","metadata":{"key1":"value1","key2":"value2"}},"static_resources":{"clusters":[{"name":"xds_cluster","type":"STRICT_DNS","connect_timeout":"1s","load_assignment":{"cluster_name":"xds_cluster","endpoints":[{"lb_endpoints":[{"endpoint":{"address":{"socket_address":{"address":"localhost","port_value":10000}}}}]}]},"http2_protocol_options":{},"transport_socket":{"name":"envoy.transport_sockets.tls","typed_config":{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext","common_tls_context":{"tls_certificate_sds_secret_configs":[{"name":"xds_client_certificate","sds_config":{"path":"/sds-config-source.json"}}]}}}}]},"dynamic_resources":{"lds_config":{"ads":{},"resource_api_version":"V3"},"cds_config":{"ads":{},"resource_api_version":"V3"},"ads_config":{"api_type":"GRPC","transport_api_version":"V3","grpc_services":[{"envoy_grpc":{"cluster_name":"xds_cluster"}}]}},"layered_runtime":{"layers":[{"name":"runtime","rtds_layer":{"name":"runtime","rtds_config":{"ads":{},"resource_api_version":"V3"}}}]},"admin":{"access_log_path":"/dev/null","address":{"socket_address":{"address":"0.0.0.0","port_value":9001}}}}`,
 			wantErr: false,
 		},
 	}
@@ -66,7 +66,7 @@ func TestConfig_GenerateSdsResources(t *testing.T) {
 				},
 			},
 			want: map[string]string{
-				"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret","tls_certificate":{"certificate_chain":{"filename":"/tls.crt"},"private_key":{"filename":"/tls.key"}}}]}`,
+				"tls_certificate_sds_secret.json": `{"resources":[{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret","name":"xds_client_certificate","tls_certificate":{"certificate_chain":{"filename":"/tls.crt"},"private_key":{"filename":"/tls.key"}}}]}`,
 			},
 			wantErr: false,
 		},
