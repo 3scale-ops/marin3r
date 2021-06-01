@@ -124,7 +124,7 @@ var _ = Describe("Envoy sidecars", func() {
 
 			By("creating a Deployment with the required labels and annotations")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
-			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", "v1.16.0", envoyListenerPort)
+			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", envoyVersionV2V3, envoyListenerPort)
 			err = k8sClient.Create(context.Background(), dep)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -208,7 +208,7 @@ var _ = Describe("Envoy sidecars", func() {
 
 			By("creating a Deployment with the required labels and annotations")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
-			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v3", "v1.16.0", 8080)
+			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v3", envoyVersionV3, 8080)
 			err = k8sClient.Create(context.Background(), dep)
 			Expect(err).ToNot(HaveOccurred())
 
@@ -292,7 +292,7 @@ var _ = Describe("Envoy sidecars", func() {
 			By("creating a Deployment with the required labels and annotations")
 			{
 				key := types.NamespacedName{Name: "nginx", Namespace: testNamespace}
-				dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", "v1.16.0", envoyListenerPort)
+				dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", envoyVersionV2V3, envoyListenerPort)
 				err := k8sClient.Create(context.Background(), dep)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -394,7 +394,7 @@ var _ = Describe("Envoy sidecars", func() {
 				err := k8sClient.Get(context.Background(), key, dep)
 				Expect(err).ToNot(HaveOccurred())
 
-				dep.Spec = testutil.GenerateDeploymentWithInjection(key, nodeID, "v3", "v1.16.0", envoyListenerPort).Spec
+				dep.Spec = testutil.GenerateDeploymentWithInjection(key, nodeID, "v3", envoyVersionV3, envoyListenerPort).Spec
 				err = k8sClient.Update(context.Background(), dep)
 				Expect(err).ToNot(HaveOccurred())
 

@@ -121,7 +121,7 @@ var _ = Describe("Envoy pods", func() {
 
 			By("deploying a Pod that will consume the EnvoyConfig through xDS")
 			key = types.NamespacedName{Name: "test-pod", Namespace: testNamespace}
-			pod = testutil.GeneratePod(key, nodeID, "v3", "v1.16.0", "instance")
+			pod = testutil.GeneratePod(key, nodeID, "v3", envoyVersionV3, "instance")
 
 			err = k8sClient.Create(context.Background(), pod)
 			Expect(err).ToNot(HaveOccurred())
