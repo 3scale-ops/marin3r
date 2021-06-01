@@ -9,7 +9,7 @@ import (
 
 const (
 	// common defaults
-	Image                           string = "envoyproxy/envoy:v1.16.0"
+	Image                           string = "envoyproxy/envoy:v1.18.3"
 	EnvoyConfigBasePath             string = "/etc/envoy/bootstrap"
 	EnvoyConfigFileName             string = "config.json"
 	EnvoyExtraArgs                  string = ""

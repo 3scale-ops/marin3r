@@ -151,6 +151,7 @@ var _ = Describe("EnvoyDeployment", func() {
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
 					DiscoveryServiceRef: ds.GetName(),
 					EnvoyConfigRef:      ec.GetName(),
+					Image:               pointer.StringPtr("envoyproxy/envoy:" + envoyVersionV2V3),
 					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
 				},
 			}
@@ -283,6 +284,7 @@ var _ = Describe("EnvoyDeployment", func() {
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
 					DiscoveryServiceRef: ds.GetName(),
 					EnvoyConfigRef:      ec.GetName(),
+					Image:               pointer.StringPtr("envoyproxy/envoy:" + envoyVersionV3),
 					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
 				},
 			}
