@@ -36,6 +36,7 @@ Lighweight, CRD based Envoy control plane for Kubernetes:
   - [**Sidecar injection**](#sidecar-injection)
   - [**Operator**](#operator)
 - [**Development**](#development)
+- [**Release**](#release)
 
 ## **Overview**
 
@@ -593,3 +594,7 @@ For an in-depth look at how MARIN3R works, check the [design docs](/docs/design)
 ## **Development**
 
 You can find development documentation [here](/docs/development/README.md).
+
+## **Release**
+
+You can find release process documentation [here](/docs/release.md).

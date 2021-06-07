@@ -210,7 +210,7 @@ bundle-build:
 
 prepare-alpha-release: bump-release generate fmt vet manifests bundle
 
-prepare-release: bump-release generate fmt vet manifests bundle refdocs
+prepare-stable-release: bump-release generate fmt vet manifests bundle refdocs
 	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=alpha
 
 bump-release:
