@@ -18,8 +18,10 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
@@ -104,6 +106,14 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		return ctrl.Result{}, nil
 	}
 
+	deleted, err := r.cleanupEnvoyBootstrap(ctx,
+		types.NamespacedName{Name: fmt.Sprintf("%s-%s", "marin3r", ds.GetName()), Namespace: ds.GetNamespace()})
+	if err != nil {
+		return ctrl.Result{}, err
+	} else if deleted {
+		return ctrl.Result{Requeue: true, RequeueAfter: 1 * time.Second}, nil
+	}
+
 	generate := generators.GeneratorOptions{
 		InstanceName:                      ds.GetName(),
 		Namespace:                         ds.GetNamespace(),
@@ -167,6 +177,22 @@ func (r *DiscoveryServiceReconciler) calculateServerCertificateHash(ctx context.
 		return "", err
 	}
 	return serverDSC.Status.GetCertificateHash(), nil
+}
+
+func (r *DiscoveryServiceReconciler) cleanupEnvoyBootstrap(ctx context.Context, key types.NamespacedName) (bool, error) {
+	eb := &marin3rv1alpha1.EnvoyBootstrap{}
+	err := r.GetClient().Get(ctx, key, eb)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	if err = r.GetClient().Delete(ctx, eb); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // SetupWithManager adds the controller to the manager
