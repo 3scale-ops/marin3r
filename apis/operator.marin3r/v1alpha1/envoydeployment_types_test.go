@@ -348,7 +348,7 @@ func TestEnvoyDeployment_PodAffinity(t *testing.T) {
 	}{
 		{"Returns value",
 			func() *EnvoyDeployment {
-				return &EnvoyDeployment{Spec: EnvoyDeploymentSpec{PodAffinity: &corev1.Affinity{}}}
+				return &EnvoyDeployment{Spec: EnvoyDeploymentSpec{Affinity: &corev1.Affinity{}}}
 			},
 			&corev1.Affinity{},
 		},
@@ -356,7 +356,7 @@ func TestEnvoyDeployment_PodAffinity(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.testName, func(subT *testing.T) {
-			receivedResult := tc.envoyDeploymentFactory().PodAffinity()
+			receivedResult := tc.envoyDeploymentFactory().Affinity()
 			if !equality.Semantic.DeepEqual(tc.expectedResult, receivedResult) {
 				subT.Errorf("Expected result differs: Expected: %v, Received: %v", tc.expectedResult, receivedResult)
 			}

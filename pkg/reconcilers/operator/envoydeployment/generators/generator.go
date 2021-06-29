@@ -31,7 +31,7 @@ type GeneratorOptions struct {
 	Replicas                  operatorv1alpha1.ReplicasSpec
 	LivenessProbe             operatorv1alpha1.ProbeSpec
 	ReadinessProbe            operatorv1alpha1.ProbeSpec
-	PodAffinity               *corev1.Affinity
+	Affinity                  *corev1.Affinity
 	PodDisruptionBudget       operatorv1alpha1.PodDisruptionBudgetSpec
 	ShutdownManager           *operatorv1alpha1.ShutdownManager
 	InitManager               *operatorv1alpha1.InitManager

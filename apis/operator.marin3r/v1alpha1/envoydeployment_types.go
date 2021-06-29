@@ -117,7 +117,7 @@ type EnvoyDeploymentSpec struct {
 	// Affinity configuration for the envoy pods
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	PodAffinity *corev1.Affinity `json:"podAffinity,omitempty"`
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// Configures PodDisruptionBudget for the envoy Pods
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
@@ -197,8 +197,8 @@ func (ed *EnvoyDeployment) ReadinessProbe() ProbeSpec {
 	return *ed.Spec.ReadinessProbe
 }
 
-func (ed *EnvoyDeployment) PodAffinity() *corev1.Affinity {
-	return ed.Spec.PodAffinity
+func (ed *EnvoyDeployment) Affinity() *corev1.Affinity {
+	return ed.Spec.Affinity
 }
 
 func (ed *EnvoyDeployment) PodDisruptionBudget() PodDisruptionBudgetSpec {

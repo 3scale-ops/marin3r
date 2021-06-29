@@ -539,8 +539,8 @@ func (in *EnvoyDeploymentSpec) DeepCopyInto(out *EnvoyDeploymentSpec) {
 		*out = new(ProbeSpec)
 		**out = **in
 	}
-	if in.PodAffinity != nil {
-		in, out := &in.PodAffinity, &out.PodAffinity
+	if in.Affinity != nil {
+		in, out := &in.Affinity, &out.Affinity
 		*out = new(v1.Affinity)
 		(*in).DeepCopyInto(*out)
 	}

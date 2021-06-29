@@ -87,7 +87,7 @@ func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.Generat
 						Labels:            cfg.labels(),
 					},
 					Spec: corev1.PodSpec{
-						Affinity:                 cfg.PodAffinity,
+						Affinity:                 cfg.Affinity,
 						Volumes:                  cc.Volumes(),
 						InitContainers:           cc.InitContainers(),
 						Containers:               cc.Containers(),
