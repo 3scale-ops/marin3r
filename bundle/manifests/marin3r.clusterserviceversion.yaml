@@ -138,7 +138,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.8.0-alpha.10
+  name: marin3r.v0.8.0-alpha.15
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -384,6 +384,9 @@ spec:
       - description: LastPublishedAt indicates the last time this config review transitioned to published
         displayName: Last Published At
         path: lastPublishedAt
+      - description: ProvidesVersions keeps track of the version that this revision publishes in the xDS server for each resource type
+        displayName: Provides Versions
+        path: providesVersions
       - description: Published signals if the EnvoyConfigRevision is the one currently published in the xds server cache
         displayName: Published
         path: published
@@ -502,6 +505,9 @@ spec:
       - description: Configures envoy's admin port. Defaults to 9901.
         displayName: Admin Port
         path: adminPort
+      - description: Affinity configuration for the envoy pods
+        displayName: Affinity
+        path: affinity
       - description: Defines the local service cluster name where Envoy is running. Defaults to the NodeID in the EnvoyConfig if unset
         displayName: Cluster ID
         path: clusterID
@@ -520,6 +526,12 @@ spec:
       - description: Image is the envoy image and tag to use
         displayName: Image
         path: image
+      - description: InitManager defines configuration for Envoy's init manager, which handles initialization for Envoy pods
+        displayName: Init Manager
+        path: initManager
+      - description: Image is the init manager image and tag to use
+        displayName: Image
+        path: initManager.image
       - description: Liveness probe for the envoy pods
         displayName: Liveness Probe
         path: livenessProbe
@@ -538,9 +550,6 @@ spec:
       - description: Number of seconds after which the probe times out
         displayName: Timeout Seconds
         path: livenessProbe.timeoutSeconds
-      - description: Affinity configuration for the envoy pods
-        displayName: Pod Affinity
-        path: podAffinity
       - description: Configures PodDisruptionBudget for the envoy Pods
         displayName: Pod Disruption Budget
         path: podDisruptionBudget
@@ -601,7 +610,7 @@ spec:
       - description: Resources holds the resource requirements to use for the Envoy Deployment. Defaults to no resource requests nor limits.
         displayName: Resources
         path: resources
-      - description: ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy Pods
+      - description: ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy pods
         displayName: Shutdown Manager
         path: shutdownManager
       - description: Image is the shutdown manager image and tag to use
@@ -696,7 +705,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.10
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.15
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -741,7 +750,12 @@ spec:
                 - --tls-key-name=apiserver.key
                 command:
                 - /manager
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.10
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.15
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -768,6 +782,7 @@ spec:
                     memory: 30Mi
                 securityContext:
                   allowPrivilegeEscalation: false
+              serviceAccountName: marin3r-controller-manager
       permissions:
       - rules:
         - apiGroups:
@@ -1057,7 +1072,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.8.0-alpha.10
+  version: 0.8.0-alpha.15
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

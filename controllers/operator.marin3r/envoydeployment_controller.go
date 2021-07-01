@@ -143,7 +143,7 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		Replicas:                  ed.Replicas(),
 		LivenessProbe:             ed.LivenessProbe(),
 		ReadinessProbe:            ed.ReadinessProbe(),
-		PodAffinity:               ed.PodAffinity(),
+		Affinity:                  ed.Affinity(),
 		PodDisruptionBudget:       ed.PodDisruptionBudget(),
 		ShutdownManager:           ed.Spec.ShutdownManager,
 		InitManager:               ed.Spec.InitManager,

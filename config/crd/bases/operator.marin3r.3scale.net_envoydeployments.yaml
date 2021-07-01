@@ -44,73 +44,7 @@ spec:
                 description: Configures envoy's admin port. Defaults to 9901.
                 format: int32
                 type: integer
-              clusterID:
-                description: Defines the local service cluster name where Envoy is
-                  running. Defaults to the NodeID in the EnvoyConfig if unset
-                type: string
-              discoveryServiceRef:
-                description: DiscoveryServiceRef points to a DiscoveryService in the
-                  same namespace
-                type: string
-              duration:
-                description: Defines the duration of the client certificate that is
-                  used to authenticate with the DiscoveryService
-                type: string
-              envoyConfigRef:
-                description: EnvoyConfigRef points to an EnvoyConfig in the same namespace
-                  that holds the envoy resources for this Deployment
-                type: string
-              extraArgs:
-                description: Allows the user to define extra command line arguments
-                  for the Envoy process
-                items:
-                  type: string
-                type: array
-              image:
-                description: Image is the envoy image and tag to use
-                type: string
-              initManager:
-                description: InitManager defines configuration for Envoy's init manager,
-                  which handles initialization for Envoy pods
-                properties:
-                  image:
-                    description: Image is the init manager image and tag to use
-                    type: string
-                type: object
-              livenessProbe:
-                description: Liveness probe for the envoy pods
-                properties:
-                  failureThreshold:
-                    description: Minimum consecutive failures for the probe to be
-                      considered failed after having succeeded
-                    format: int32
-                    type: integer
-                  initialDelaySeconds:
-                    description: Number of seconds after the container has started
-                      before liveness probes are initiated
-                    format: int32
-                    type: integer
-                  periodSeconds:
-                    description: How often (in seconds) to perform the probe
-                    format: int32
-                    type: integer
-                  successThreshold:
-                    description: Minimum consecutive successes for the probe to be
-                      considered successful after having failed
-                    format: int32
-                    type: integer
-                  timeoutSeconds:
-                    description: Number of seconds after which the probe times out
-                    format: int32
-                    type: integer
-                required:
-                - failureThreshold
-                - initialDelaySeconds
-                - periodSeconds
-                - successThreshold
-                - timeoutSeconds
-                type: object
-              podAffinity:
+              affinity:
                 description: Affinity configuration for the envoy pods
                 properties:
                   nodeAffinity:
@@ -700,6 +634,72 @@ spec:
                           type: object
                         type: array
                     type: object
+                type: object
+              clusterID:
+                description: Defines the local service cluster name where Envoy is
+                  running. Defaults to the NodeID in the EnvoyConfig if unset
+                type: string
+              discoveryServiceRef:
+                description: DiscoveryServiceRef points to a DiscoveryService in the
+                  same namespace
+                type: string
+              duration:
+                description: Defines the duration of the client certificate that is
+                  used to authenticate with the DiscoveryService
+                type: string
+              envoyConfigRef:
+                description: EnvoyConfigRef points to an EnvoyConfig in the same namespace
+                  that holds the envoy resources for this Deployment
+                type: string
+              extraArgs:
+                description: Allows the user to define extra command line arguments
+                  for the Envoy process
+                items:
+                  type: string
+                type: array
+              image:
+                description: Image is the envoy image and tag to use
+                type: string
+              initManager:
+                description: InitManager defines configuration for Envoy's init manager,
+                  which handles initialization for Envoy pods
+                properties:
+                  image:
+                    description: Image is the init manager image and tag to use
+                    type: string
+                type: object
+              livenessProbe:
+                description: Liveness probe for the envoy pods
+                properties:
+                  failureThreshold:
+                    description: Minimum consecutive failures for the probe to be
+                      considered failed after having succeeded
+                    format: int32
+                    type: integer
+                  initialDelaySeconds:
+                    description: Number of seconds after the container has started
+                      before liveness probes are initiated
+                    format: int32
+                    type: integer
+                  periodSeconds:
+                    description: How often (in seconds) to perform the probe
+                    format: int32
+                    type: integer
+                  successThreshold:
+                    description: Minimum consecutive successes for the probe to be
+                      considered successful after having failed
+                    format: int32
+                    type: integer
+                  timeoutSeconds:
+                    description: Number of seconds after which the probe times out
+                    format: int32
+                    type: integer
+                required:
+                - failureThreshold
+                - initialDelaySeconds
+                - periodSeconds
+                - successThreshold
+                - timeoutSeconds
                 type: object
               podDisruptionBudget:
                 description: Configures PodDisruptionBudget for the envoy Pods

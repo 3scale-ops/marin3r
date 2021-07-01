@@ -216,6 +216,22 @@ spec:
                 description: LastPublishedAt indicates the last time this config review transitioned to published
                 format: date-time
                 type: string
+              providesVersions:
+                description: ProvidesVersions keeps track of the version that this revision publishes in the xDS server for each resource type
+                properties:
+                  clusters:
+                    type: string
+                  endpoints:
+                    type: string
+                  listeners:
+                    type: string
+                  routes:
+                    type: string
+                  runtimes:
+                    type: string
+                  secrets:
+                    type: string
+                type: object
               published:
                 description: Published signals if the EnvoyConfigRevision is the one currently published in the xds server cache
                 type: boolean
