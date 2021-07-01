@@ -145,7 +145,8 @@ func runInitManager(cmd *cobra.Command, args []string) {
 		setupLog.Error(err, "")
 		os.Exit(-1)
 	}
-	setupLog.Info(fmt.Sprintf("Created %s", initmgrConfigPath))
+	setupLog.Info("Config succesfully generated", "config", config)
+	setupLog.Info(fmt.Sprintf("Created file '%s' with config", initmgrConfigPath))
 
 	// Write the resource files
 	for file, contents := range sdsResources {
@@ -162,7 +163,8 @@ func runInitManager(cmd *cobra.Command, args []string) {
 			os.Exit(-1)
 		}
 		rf.Close()
-		setupLog.Info(fmt.Sprintf("Created %s/%s", initmgrSdsConfigSourcePath, file))
+		setupLog.Info("Config succesfully generated", "config", contents)
+		setupLog.Info(fmt.Sprintf("Created file '%s/%s' with config", initmgrSdsConfigSourcePath, file))
 	}
 
 }
