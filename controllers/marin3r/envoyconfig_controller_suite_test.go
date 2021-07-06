@@ -520,7 +520,8 @@ var _ = Describe("EnvoyConfig controller", func() {
 			ec = &marin3rv1alpha1.EnvoyConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: namespace},
 				Spec: marin3rv1alpha1.EnvoyConfigSpec{
-					NodeID: nodeID,
+					EnvoyAPI: pointer.StringPtr("v2"),
+					NodeID:   nodeID,
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
 							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
@@ -542,10 +543,6 @@ var _ = Describe("EnvoyConfig controller", func() {
 					return false
 				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
-		})
-
-		Specify("spec.envoyAPI should be automatically set to 'v2' (the default value)", func() {
-			Expect(ec.Spec.EnvoyAPI).To(Equal(pointer.StringPtr("v2")))
 		})
 
 		When("the EnvoyConfig is updated to v3", func() {
