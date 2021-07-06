@@ -138,7 +138,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.8.0-alpha.15
+  name: marin3r.v0.8.0-alpha.16
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -306,7 +306,7 @@ spec:
       kind: EnvoyConfigRevision
       name: envoyconfigrevisions.marin3r.3scale.net
       specDescriptors:
-      - description: EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+      - description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
         displayName: Envoy API
         path: envoyAPI
       - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
@@ -403,7 +403,7 @@ spec:
         name: ""
         version: v1alpha1
       specDescriptors:
-      - description: EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+      - description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
         displayName: Envoy API
         path: envoyAPI
       - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
@@ -705,7 +705,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.15
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.16
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -755,7 +755,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.15
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.16
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1072,7 +1072,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.8.0-alpha.15
+  version: 0.8.0-alpha.16
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

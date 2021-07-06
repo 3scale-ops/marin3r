@@ -57,7 +57,7 @@ spec:
             description: EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
             properties:
               envoyAPI:
-                description: EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+                description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
                 enum:
                 - v2
                 - v3
