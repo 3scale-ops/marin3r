@@ -12,7 +12,6 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
-	rollback "github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/rollback"
 	"github.com/3scale-ops/marin3r/pkg/util"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
@@ -663,55 +662,5 @@ var _ = Describe("EnvoyConfig controller", func() {
 			})
 		})
 
-	})
-
-	Context("calling OnError() triggers a rollback", func() {
-		var ec *marin3rv1alpha1.EnvoyConfig
-
-		BeforeEach(func() {
-			By("creating an EnvoyConfig")
-			ec = &marin3rv1alpha1.EnvoyConfig{
-				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: namespace},
-				Spec: marin3rv1alpha1.EnvoyConfigSpec{
-					NodeID: nodeID,
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-						}}},
-			}
-			err := k8sClient.Create(context.Background(), ec)
-			Expect(err).ToNot(HaveOccurred())
-
-			By("waiting for the EnvoyConfig to be 'InSync'")
-			Eventually(func() bool {
-				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
-				if err != nil {
-					return false
-				}
-				if ec.Status.CacheState == nil || *ec.Status.CacheState != marin3rv1alpha1.InSyncState {
-					return false
-				}
-				return true
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
-		})
-
-		When("OnError is called", func() {
-
-			BeforeEach(func() {
-				OnErrorFn := rollback.OnError(k8sClient)
-				version := util.Hash(ec.Spec.EnvoyResources)
-				err := OnErrorFn(nodeID, version, "msg", envoy.APIv2)
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			Specify("EnvoyConfig should have RollbackFailed condition", func() {
-
-				Eventually(func() bool {
-					err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "ec", Namespace: namespace}, ec)
-					Expect(err).ToNot(HaveOccurred())
-					return ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition)
-				}, 60*time.Second, 5*time.Second).Should(BeTrue())
-			})
-		})
 	})
 })
