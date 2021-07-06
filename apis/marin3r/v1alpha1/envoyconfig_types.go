@@ -70,7 +70,7 @@ type EnvoyConfigSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Serialization *string `json:"serialization,omitempty"`
-	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+	// EnvoyAPI is the version of envoy's API to use. Defaults to v3.
 	// +kubebuilder:validation:Enum=v2;v3
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
@@ -224,7 +224,7 @@ type EnvoyConfig struct {
 // GetEnvoyAPIVersion returns envoy's API version for the EnvoyConfigRevision
 func (ec *EnvoyConfig) GetEnvoyAPIVersion() envoy.APIVersion {
 	if ec.Spec.EnvoyAPI == nil {
-		return envoy.APIv2
+		return envoy.APIv3
 	}
 	return envoy.APIVersion(*ec.Spec.EnvoyAPI)
 }

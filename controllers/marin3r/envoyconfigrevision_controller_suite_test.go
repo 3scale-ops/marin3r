@@ -83,8 +83,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			ecr = &marin3rv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-					NodeID:  nodeID,
-					Version: "xxxx",
+					EnvoyAPI: pointer.StringPtr("v2"),
+					NodeID:   nodeID,
+					Version:  "xxxx",
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
 							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
@@ -408,16 +409,16 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 				By("waiting for the EnvoyConfigRevision to get published")
 				Eventually(func() error {
-					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					_, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 					return err
-				}, 300*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
+				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 				Expect(k8sClient.Delete(context.Background(), ecr)).Should(Succeed())
 			})
 
 			Specify("Snapshot for the nodeID should have been cleared in the xDS cache", func() {
 				Eventually(func() error {
-					_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
+					_, err := ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
 					return err
 				}, 60*time.Second, 5*time.Second).Should(HaveOccurred())
 			})

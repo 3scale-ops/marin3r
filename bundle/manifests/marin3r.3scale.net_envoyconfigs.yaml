@@ -49,7 +49,7 @@ spec:
             description: EnvoyConfigSpec defines the desired state of EnvoyConfig
             properties:
               envoyAPI:
-                description: EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+                description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
                 enum:
                 - v2
                 - v3

@@ -14,7 +14,7 @@ const (
 	EnvoyConfigFileName             string = "config.json"
 	EnvoyExtraArgs                  string = ""
 	EnvoyTLSBasePath                string = "/etc/envoy/tls/client"
-	EnvoyAPIVersion                 string = string(envoy.APIv2)
+	EnvoyAPIVersion                 string = string(envoy.APIv3)
 	TlsCertificateSdsSecretFileName string = "tls_certificate_sds_secret.json"
 	EnvoyAdminPort                  uint32 = 9901
 	EnvoyAdminBindAddress           string = "0.0.0.0"

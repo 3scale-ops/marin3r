@@ -38,17 +38,17 @@ func TestEnvoyConfig_GetEnvoyAPIVersion(t *testing.T) {
 			func() *EnvoyConfig {
 				return &EnvoyConfig{}
 			},
-			envoy.APIv2,
+			envoy.APIv3,
 		},
 		{"With explicitly set value",
 			func() *EnvoyConfig {
 				return &EnvoyConfig{
 					Spec: EnvoyConfigSpec{
-						EnvoyAPI: pointer.StringPtr("v3"),
+						EnvoyAPI: pointer.StringPtr("v2"),
 					},
 				}
 			},
-			envoy.APIv3,
+			envoy.APIv2,
 		},
 	}
 

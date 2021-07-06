@@ -55,7 +55,7 @@ type EnvoyConfigRevisionSpec struct {
 	// Version is a hash of the EnvoyResources field
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Version string `json:"version"`
-	// EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+	// EnvoyAPI is the version of envoy's API to use. Defaults to v3.
 	// +kubebuilder:validation:Enum=v2;v3
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
@@ -152,7 +152,7 @@ type EnvoyConfigRevision struct {
 // GetEnvoyAPIVersion returns envoy's API version for the EnvoyConfigRevision
 func (ecr *EnvoyConfigRevision) GetEnvoyAPIVersion() envoy.APIVersion {
 	if ecr.Spec.EnvoyAPI == nil {
-		return envoy.APIv2
+		return envoy.APIv3
 	}
 	return envoy.APIVersion(*ecr.Spec.EnvoyAPI)
 }
