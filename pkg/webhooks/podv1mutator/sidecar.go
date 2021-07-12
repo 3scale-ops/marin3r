@@ -63,9 +63,10 @@ const (
 
 	// Annotations to allow configuration of the shutdown manager for
 	// Envoy sidecards (to allow graceful termination of the envoy server)
-	paramShtdnMgrEnabled    = "shutdown-manager.enabled"
-	paramShtdnMgrServerPort = "shutdown-manager.port"
-	paramShtdnMgrImage      = "shutdown-manager.image"
+	paramShtdnMgrEnabled             = "shutdown-manager.enabled"
+	paramShtdnMgrServerPort          = "shutdown-manager.port"
+	paramShtdnMgrImage               = "shutdown-manager.image"
+	paramShtdnMgrExtraLifecycleHooks = "shutdown-manager.extraLifecycleHooks"
 
 	// Annotations to allow configuration of the init manager for
 	// Envoy sidecards
@@ -370,6 +371,15 @@ func isShtdnMgrEnabled(annotations map[string]string) bool {
 		return false
 	}
 	return b
+}
+
+func parseExtraLifecycleHooksAnnotation(annotations map[string]string) []string {
+	c := getStringParam(paramShtdnMgrExtraLifecycleHooks, annotations)
+	if c == "" {
+		return []string{}
+	}
+	hooks := strings.Split(c, ",")
+	return hooks
 }
 
 func (esc *envoySidecarConfig) containers() []corev1.Container {

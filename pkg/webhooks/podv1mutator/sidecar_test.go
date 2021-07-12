@@ -8,7 +8,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
-	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -893,6 +893,41 @@ func Test_envoySidecarConfig_GetDiscoveryServiceAddress(t *testing.T) {
 			}
 			if gotPort != tt.wantPort {
 				t.Errorf("envoySidecarConfig.GetDiscoveryServiceAddress() got1 = %v, want %v", gotPort, tt.wantPort)
+			}
+		})
+	}
+}
+
+func Test_parseExtraLifecycleHooksAnnotation(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want []string
+	}{
+		{
+			name: "Parses a list of containers",
+			args: args{
+				annotations: map[string]string{
+					"marin3r.3scale.net/shutdown-manager.extraLifecycleHooks": "container1,container2",
+				},
+			},
+			want: []string{"container1", "container2"},
+		},
+		{
+			name: "Returns empty slice if unset",
+			args: args{
+				annotations: map[string]string{},
+			},
+			want: []string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseExtraLifecycleHooksAnnotation(tt.args.annotations); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("extraLifecycleHooks() = %v, want %v", got, tt.want)
 			}
 		})
 	}
