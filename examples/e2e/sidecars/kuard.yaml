@@ -26,7 +26,7 @@ spec:
         marin3r.3scale.net/envoy-api-version: v3
         marin3r.3scale.net/shutdown-manager.enabled: "true"
         marin3r.3scale.net/shutdown-manager.image: quay.io/3scale/marin3r:test
-        marin3r.3scale.net/shutdown-manager.extra-lifecycle-hooks: kuard,other
+        marin3r.3scale.net/shutdown-manager.extra-lifecycle-hooks: kuard
         marin3r.3scale.net/init-manager.image: quay.io/3scale/marin3r:test
     spec:
       containers:
