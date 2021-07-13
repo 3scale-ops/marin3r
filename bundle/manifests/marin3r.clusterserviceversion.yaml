@@ -138,7 +138,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.8.0-alpha.16
+  name: marin3r.v0.8.0-alpha.17
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -705,7 +705,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.16
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.17
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -755,7 +755,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.8.0-alpha.16
+                image: quay.io/3scale/marin3r:v0.8.0-alpha.17
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1072,7 +1072,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.8.0-alpha.16
+  version: 0.8.0-alpha.17
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

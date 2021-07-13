@@ -9,10 +9,12 @@ import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/shutdownmanager"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -911,7 +913,7 @@ func Test_parseExtraLifecycleHooksAnnotation(t *testing.T) {
 			name: "Parses a list of containers",
 			args: args{
 				annotations: map[string]string{
-					"marin3r.3scale.net/shutdown-manager.extraLifecycleHooks": "container1,container2",
+					"marin3r.3scale.net/shutdown-manager.extra-lifecycle-hooks": "container1,container2",
 				},
 			},
 			want: []string{"container1", "container2"},
@@ -927,7 +929,139 @@ func Test_parseExtraLifecycleHooksAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := parseExtraLifecycleHooksAnnotation(tt.args.annotations); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("extraLifecycleHooks() = %v, want %v", got, tt.want)
+				t.Errorf("extra-lifecycle-hooks() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getContainerByName(t *testing.T) {
+	type args struct {
+		name       string
+		containers []corev1.Container
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want1   corev1.Container
+		want2   int
+		wantErr bool
+	}{
+		{
+			name: "Returns the container",
+			args: args{
+				name: "c2",
+				containers: []corev1.Container{
+					{Name: "c1"}, {Name: "c2"},
+				},
+			},
+			want1:   corev1.Container{Name: "c2"},
+			want2:   1,
+			wantErr: false,
+		},
+		{
+			name: "Container not found",
+			args: args{
+				name: "c3",
+				containers: []corev1.Container{
+					{Name: "c1"}, {Name: "c2"},
+				},
+			},
+			want1:   corev1.Container{},
+			want2:   -1,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got1, _, err := getContainerByName(tt.args.name, tt.args.containers)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getContainerByName() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("getContainerByName() = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func Test_envoySidecarConfig_addExtraLifecycleHooks(t *testing.T) {
+	type fields struct {
+		generator envoy_container.ContainerConfig
+	}
+	type args struct {
+		containers  []corev1.Container
+		annotations map[string]string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []corev1.Container
+		wantErr bool
+	}{
+		{
+			name: "Injects the lifecycle hook into containers that match provided names",
+			fields: fields{
+				generator: envoy_container.ContainerConfig{
+					ShutdownManagerPort: int32(defaults.ShtdnMgrDefaultServerPort),
+				},
+			},
+			args: args{
+				containers: []corev1.Container{
+					{Name: "c1"}, {Name: "c2"},
+				},
+				annotations: map[string]string{
+					"marin3r.3scale.net/shutdown-manager.extra-lifecycle-hooks": "c1",
+				},
+			},
+			want: []corev1.Container{
+				{Name: "c1",
+					Lifecycle: &corev1.Lifecycle{
+						PreStop: &corev1.Handler{
+							HTTPGet: &corev1.HTTPGetAction{
+								Path:   shutdownmanager.DrainEndpoint,
+								Port:   intstr.FromInt(int(defaults.ShtdnMgrDefaultServerPort)),
+								Scheme: corev1.URISchemeHTTP,
+							},
+						},
+					}},
+				{Name: "c2"},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Specified container does not exist",
+			fields: fields{
+				generator: envoy_container.ContainerConfig{
+					ShutdownManagerPort: int32(defaults.ShtdnMgrDefaultServerPort),
+				},
+			},
+			args: args{
+				containers: []corev1.Container{
+					{Name: "c1"}, {Name: "c2"},
+				},
+				annotations: map[string]string{
+					"marin3r.3scale.net/shutdown-manager.extra-lifecycle-hooks": "zzzz",
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			esc := &envoySidecarConfig{
+				generator: tt.fields.generator,
+			}
+			got, err := esc.addExtraLifecycleHooks(tt.args.containers, tt.args.annotations)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("envoySidecarConfig.addExtraLifecycleHooks() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("envoySidecarConfig.addExtraLifecycleHooks() = %v, want %v", got, tt.want)
 			}
 		})
 	}

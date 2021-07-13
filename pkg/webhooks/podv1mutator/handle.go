@@ -54,10 +54,16 @@ func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 	pod.Spec.Containers = append(pod.Spec.Containers, config.containers()...)
 	pod.Spec.Volumes = append(pod.Spec.Volumes, config.volumes()...)
 
-	// Increase the TerminationGracePeriodSeconds parameter if shutdown
-	// manager is enabled
 	if isShtdnMgrEnabled(pod.GetAnnotations()) {
+		// Increase the TerminationGracePeriodSeconds parameter if shutdown
+		// manager is enabled
 		pod.Spec.TerminationGracePeriodSeconds = pointer.Int64Ptr(defaults.GracefulShutdownTimeoutSeconds)
+		// Add extra container lifecycle hooks
+		containers, err := config.addExtraLifecycleHooks(pod.Spec.Containers, pod.GetAnnotations())
+		if err != nil {
+			return admission.Errored(http.StatusBadRequest, err)
+		}
+		pod.Spec.Containers = containers
 	}
 
 	marshaledPod, err := json.Marshal(pod)

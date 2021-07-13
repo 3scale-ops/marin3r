@@ -23,9 +23,11 @@ import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/shutdownmanager"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,7 +68,7 @@ const (
 	paramShtdnMgrEnabled             = "shutdown-manager.enabled"
 	paramShtdnMgrServerPort          = "shutdown-manager.port"
 	paramShtdnMgrImage               = "shutdown-manager.image"
-	paramShtdnMgrExtraLifecycleHooks = "shutdown-manager.extraLifecycleHooks"
+	paramShtdnMgrExtraLifecycleHooks = "shutdown-manager.extra-lifecycle-hooks"
 
 	// Annotations to allow configuration of the init manager for
 	// Envoy sidecards
@@ -373,15 +375,6 @@ func isShtdnMgrEnabled(annotations map[string]string) bool {
 	return b
 }
 
-func parseExtraLifecycleHooksAnnotation(annotations map[string]string) []string {
-	c := getStringParam(paramShtdnMgrExtraLifecycleHooks, annotations)
-	if c == "" {
-		return []string{}
-	}
-	hooks := strings.Split(c, ",")
-	return hooks
-}
-
 func (esc *envoySidecarConfig) containers() []corev1.Container {
 
 	return esc.generator.Containers()
@@ -395,4 +388,42 @@ func (esc *envoySidecarConfig) initContainers() []corev1.Container {
 func (esc *envoySidecarConfig) volumes() []corev1.Volume {
 
 	return esc.generator.Volumes()
+}
+
+func parseExtraLifecycleHooksAnnotation(annotations map[string]string) []string {
+	c := getStringParam(paramShtdnMgrExtraLifecycleHooks, annotations)
+	if c == "" {
+		return []string{}
+	}
+	hooks := strings.Split(c, ",")
+	return hooks
+}
+
+func getContainerByName(name string, containers []corev1.Container) (corev1.Container, int, error) {
+	for pos, c := range containers {
+		if c.Name == name {
+			return c, pos, nil
+		}
+	}
+	return corev1.Container{}, -1, fmt.Errorf("Container '%s' specified in the 'shutdown-manager.extra-lifecycle-hooks' annotation was not found", name)
+}
+
+func (esc *envoySidecarConfig) addExtraLifecycleHooks(containers []corev1.Container, annotations map[string]string) ([]corev1.Container, error) {
+	names := parseExtraLifecycleHooksAnnotation(annotations)
+	for _, name := range names {
+		_, pos, err := getContainerByName(name, containers)
+		if err != nil {
+			return nil, err
+		}
+		containers[pos].Lifecycle = &corev1.Lifecycle{
+			PreStop: &corev1.Handler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path:   shutdownmanager.DrainEndpoint,
+					Port:   intstr.FromInt(int(esc.generator.ShutdownManagerPort)),
+					Scheme: corev1.URISchemeHTTP,
+				},
+			},
+		}
+	}
+	return containers, nil
 }
