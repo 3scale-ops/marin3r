@@ -100,7 +100,7 @@ gocovmerge:
 # Download kind locally if necessary
 KIND = $(shell pwd)/bin/kind
 kind:
-	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.9.0)
+	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.11.1)
 
 # Download crd-ref-docs locally if necessary
 CRD_REFDOCS = $(shell pwd)/bin/crd-ref-docs
