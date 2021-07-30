@@ -233,7 +233,7 @@ EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
 | Field | Description
 | *`nodeID`* __string__ | NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
 | *`version`* __string__ | Version is a hash of the EnvoyResources field
-| *`envoyAPI`* __string__ | EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+| *`envoyAPI`* __string__ | EnvoyAPI is the version of envoy's API to use. Defaults to v3.
 | *`serialization`* __string__ | Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
 | *`envoyResources`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresources[$$EnvoyResources$$]__ | EnvoyResources holds the different types of resources suported by the envoy discovery service
 |===
@@ -275,7 +275,7 @@ EnvoyConfigSpec defines the desired state of EnvoyConfig
 | Field | Description
 | *`nodeID`* __string__ | NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
 | *`serialization`* __string__ | Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
-| *`envoyAPI`* __string__ | EnvoyAPI is the version of envoy's API to use. Defaults to v2.
+| *`envoyAPI`* __string__ | EnvoyAPI is the version of envoy's API to use. Defaults to v3.
 | *`envoyResources`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresources[$$EnvoyResources$$]__ | EnvoyResources holds the different types of resources suported by the envoy discovery service
 |===
 
@@ -765,7 +765,7 @@ EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
 | *`replicas`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-replicasspec[$$ReplicasSpec$$]__ | Replicas configures the number of replicas in the Deployment. One of 'static', 'dynamic' can be set. If both are set, static has precedence.
 | *`livenessProbe`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-probespec[$$ProbeSpec$$]__ | Liveness probe for the envoy pods
 | *`readinessProbe`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-probespec[$$ProbeSpec$$]__ | Readiness probe for the envoy pods
-| *`podAffinity`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#affinity-v1-core[$$Affinity$$]__ | Affinity configuration for the envoy pods
+| *`affinity`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#affinity-v1-core[$$Affinity$$]__ | Affinity configuration for the envoy pods
 | *`podDisruptionBudget`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-poddisruptionbudgetspec[$$PodDisruptionBudgetSpec$$]__ | Configures PodDisruptionBudget for the envoy Pods
 | *`shutdownManager`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-shutdownmanager[$$ShutdownManager$$]__ | ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy pods
 | *`initManager`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-initmanager[$$InitManager$$]__ | InitManager defines configuration for Envoy's init manager, which handles initialization for Envoy pods
