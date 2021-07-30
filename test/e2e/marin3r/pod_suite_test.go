@@ -116,15 +116,18 @@ var _ = Describe("Envoy pods", func() {
 				},
 				nil,
 			)
-			err = k8sClient.Create(context.Background(), ec)
-			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), ec)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			By("deploying a Pod that will consume the EnvoyConfig through xDS")
 			key = types.NamespacedName{Name: "test-pod", Namespace: testNamespace}
 			pod = testutil.GeneratePod(key, nodeID, "v3", envoyVersionV3, "instance")
 
-			err = k8sClient.Create(context.Background(), pod)
-			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), pod)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			selector := client.MatchingLabels{testutil.PodLabelKey: testutil.PodLabelValue}
 			Eventually(func() int {

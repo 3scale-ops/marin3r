@@ -253,6 +253,7 @@ EnvoyConfigRevisionStatus defines the observed state of EnvoyConfigRevision
 |===
 | Field | Description
 | *`published`* __boolean__ | Published signals if the EnvoyConfigRevision is the one currently published in the xds server cache
+| *`providesVersions`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-versiontracker[$$VersionTracker$$]__ | ProvidesVersions keeps track of the version that this revision publishes in the xDS server for each resource type
 | *`lastPublishedAt`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#time-v1-meta[$$Time$$]__ | LastPublishedAt indicates the last time this config review transitioned to published
 | *`tainted`* __boolean__ | Tainted indicates whether the EnvoyConfigRevision is eligible for publishing or not
 | *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-lib-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
@@ -384,6 +385,28 @@ EnvoyStaticConfig allows specifying envoy static config options
 
 
 
+
+
+[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-versiontracker"]
+==== VersionTracker 
+
+VersionTracker tracks the versions of the resources that this revision publishes in the xDS server cache
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfigrevisionstatus[$$EnvoyConfigRevisionStatus$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`endpoints`* __string__ | 
+| *`clusters`* __string__ | 
+| *`routes`* __string__ | 
+| *`listeners`* __string__ | 
+| *`secrets`* __string__ | 
+| *`runtimes`* __string__ | 
+|===
 
 
 
@@ -744,10 +767,28 @@ EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
 | *`readinessProbe`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-probespec[$$ProbeSpec$$]__ | Readiness probe for the envoy pods
 | *`podAffinity`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#affinity-v1-core[$$Affinity$$]__ | Affinity configuration for the envoy pods
 | *`podDisruptionBudget`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-poddisruptionbudgetspec[$$PodDisruptionBudgetSpec$$]__ | Configures PodDisruptionBudget for the envoy Pods
-| *`shutdownManager`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-shutdownmanager[$$ShutdownManager$$]__ | ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy Pods
+| *`shutdownManager`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-shutdownmanager[$$ShutdownManager$$]__ | ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy pods
+| *`initManager`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-initmanager[$$InitManager$$]__ | InitManager defines configuration for Envoy's init manager, which handles initialization for Envoy pods
 |===
 
 
+
+
+[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-initmanager"]
+==== InitManager 
+
+InitManager defines configuration for Envoy's shutdown manager, which handles initialization for Envoy pods
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-envoydeploymentspec[$$EnvoyDeploymentSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`image`* __string__ | Image is the init manager image and tag to use
+|===
 
 
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-pkiconfig"]
