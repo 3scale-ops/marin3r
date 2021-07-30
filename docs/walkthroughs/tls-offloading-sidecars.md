@@ -1,6 +1,6 @@
 # **TLS offloading with Envoy sidecars**
 
-In this walkthrough we will be deploying the [Kubernetes Up And Running Demo app](https://github.com/kubernetes-up-and-running/kuard) and setting TLS offloading for it using Envoy sidecar containers that will be automatically injected by MARIN3R in the pods. We will also see how automatic certificate updates occur, providing an easy way to automate the process of certificate renewal.
+In this walkthrough, we will be deploying the [Kubernetes Up And Running Demo app](https://github.com/kubernetes-up-and-running/kuard) and setting TLS offloading for it using Envoy sidecar containers that will be automatically injected by MARIN3R in the pods. We will also see how automatic certificate updates occur, providing an easy way to automate the process of certificate renewal.
 
 ## **Preparation**
 
@@ -42,7 +42,7 @@ spec:
 EOF
 ```
 
-Note that we have added some labels and annotations to the Pod's metadata in order to activate sidecar injection for the Deployment, specifically the label `marin3r.3scale.net/status=enabled` and the annotation `marin3r.3scale.net/node-id=kuard`. The presence of these in a Pod makes the Pod creation request to be modified by MARIN3R's mutating webhook, which will inject an Envoy sidecar in the Pod's spec. The sidecar injection can be further configured with several other annotations, like for example the `marin3r.3scale.net/envoy-api-version` we are using to specify the Envoy API version we want to use. See the [configuration section](../../README.md#sidecar-injection-configuration) for a comprehensive list of the sidecar configuration annotations.
+Note that we have added some labels and annotations to the Pod's metadata to activate sidecar injection for the Deployment, specifically the label `marin3r.3scale.net/status=enabled` and the annotation `marin3r.3scale.net/node-id=kuard`. The presence of these in a Pod makes the Pod creation request to be modified by MARIN3R's mutating webhook, which will inject an Envoy sidecar in the Pod's spec. The sidecar injection can be further configured with several other annotations, like the `marin3r.3scale.net/envoy-api-version` we are using to specify the Envoy API version we want to use. See the [configuration section](../../README.md#sidecar-injection-configuration) for a comprehensive list of the sidecar configuration annotations.
 
 You should see that a new Pod is running, but it has 2 containers instead of the one we declared. An Envoy container just got added to the pod by MARIN3R:
 
@@ -293,7 +293,7 @@ If we execute the same curl again we will see that we get the new certificate in
 
 ## **Conclusion**
 
-We have seen how we can easily configure TLS offloading using MARIN3R with Envoy sidecar containers. This idea can be extended to support a fully GitOps certificate management solution in a production environment, using [cert-manager](https://cert-manager.io) as the certificate provider. In this scenario, you [declaratively create certificates using cert-manager custom resources](https://cert-manager.io/docs/usage/certificate/), using any of the supported certificate providers, for example Let's Encrypt. If configured properly, cert-manager can renew certificates when required (certificates are stored as kubernetes Secrets) and certificate changes will be picked up by MARIN3R and distributed to the Envoy proxies for automatic reload of certificates in the servers.
+We have seen how we can easily configure TLS offloading using MARIN3R with Envoy sidecar containers. This idea can be extended to support a fully GitOps certificate management solution in a production environment, using [cert-manager](https://cert-manager.io) as the certificate provider. In this scenario, you [declaratively create certificates using cert-manager custom resources](https://cert-manager.io/docs/usage/certificate/), using any of the supported certificate providers like Let's Encrypt. If configured properly, cert-manager can renew certificates when required (certificates are stored as kubernetes Secrets) and certificate changes will be picked up by MARIN3R and distributed to the Envoy proxies for automatic reload of certificates in the servers.
 
 ## **Cleanup**
 

@@ -8,7 +8,7 @@ You need to have MARIN3R operator installed in the cluster and a DiscoveryServic
 
 ## **Deploy an EnvoyConfig**
 
-Let's see what happens when we try to create an EnvoyConfig resource that contains an envoy cluster with a wrong configuration (in this case the error is in the connect_timeout units used):
+Let's see what happens when we try to create an EnvoyConfig resource that contains an envoy cluster with a wrong configuration (in this case the error is in the `connect_timeout` units used):
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -40,7 +40,7 @@ spec:
 EOF
 ```
 
-We get an error specifying that the units we are trying to use are not correct and the operation is rejected so the resource never gets created in the kubernetes api server. This provides quick feedback to the user, very useful when developing new configurations, and avoids having to troubleshoot problems by inspecting the Envoy logs.
+We get an error specifying that the units we are trying to use are not correct and the operation is rejected so the resource never gets created in the Kubernetes API server. This provides quick feedback to the user that's very useful when developing new configurations, and avoids having to troubleshoot problems by inspecting the Envoy logs.
 
 ```bash
 Error from server ({"validationErrors":["Error deserializing resource: 'bad Duration: time: unknown unit \" miliseconds\" in duration \"10 miliseconds\"'"]}): error when creating "STDIN": admission webhook "envoyconfig.marin3r.3scale.net" denied the request: {"validationErrors":["Error deserializing resource: 'bad Duration: time: unknown unit \" miliseconds\" in duration \"10 miliseconds\"'"]}
@@ -48,4 +48,4 @@ Error from server ({"validationErrors":["Error deserializing resource: 'bad Dura
 
 Beware though, that even with the webhook performing this validation, there are times that even if the config is perfectly right from an API spec standpoint, not all versions of envoy support a given API spec exactly, as there may be deprecations and additions to the API between different versions of Envoy.
 
-It's specially important that you check the [Envoy release notes](https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history) when you are switching between Envoy versions in order to validate that all your EnvoyConfigs will still work after the change.
+It's especially important that you check the [Envoy release notes](https://www.envoyproxy.io/docs/envoy/latest/version_history/version_history) when you are switching between Envoy versions in order to validate that all your EnvoyConfigs will still work after the change.

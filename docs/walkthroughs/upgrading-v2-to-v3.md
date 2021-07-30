@@ -1,6 +1,6 @@
 # **Upgrade from Envoy API v2 to v3**
 
-MARIN3R discovery services support both v2 and v3 API at the same time, which allows for non disruptive upgrades from Envoy v2 API to v3. This walkthrough describes the process of upgrading between API versions.
+MARIN3R discovery services support both v2 and v3 APIs, which allows for non disruptive upgrades from Envoy v2 API to v3. This walkthrough describes the process of upgrading between API versions.
 
 ## **Preparation**
 
@@ -143,7 +143,7 @@ kubectl delete envoyconfig envoy
 
 ## **Procedure for Envoy sidecars**
 
-The process to upgrade Envoy sidecars from v2 to v3 involves an extra step due to the fact that when using sidecars the operator has no control over the lifecycle of the pods themselves, it just injects sidecar containers whenever a new Pod is created.
+The process to upgrade Envoy sidecars from v2 to v3 involves an extra step since when using sidecars the operator has no control over the lifecycle of the pods themselves, it just injects sidecar containers whenever a new Pod is created.
 
 
 ### Create a Deployment with Envoy sidecars

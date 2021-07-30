@@ -1,6 +1,6 @@
 # **Path based routing using an EnvoyDeployment**
 
-In this walkthrough we will show how you can use the MARIN3R EnvoyDeployment custom resouce to deploy Envoy as a Kubernetes Deployment and dynamically configure it to proxy requests to a couple of different applications based on the path of the request. We will first configure it with just one upstream application and then add the second one to see how the config is updated without the need of restarting the Envoy proxies at any time.
+In this walkthrough, we will show how you can use the MARIN3R EnvoyDeployment custom resource to deploy Envoy as a Kubernetes Deployment and dynamically configure it to proxy requests to a couple of different applications based on the path of the request. We will first configure it with just one upstream application and then add the second one to see how the config is updated without the need of restarting the Envoy proxies at any time.
 
 ## **Preparation**
 
@@ -8,7 +8,7 @@ You need to have MARIN3R operator installed in the cluster and a DiscoveryServic
 
 ## **Deploy two applications that we will use as upstreams to proxy requests to**
 
-We will be using `nginxdemos/hello:plain-text` to deploy our two upstream applications
+We will be using `nginxdemos/hello:plain-text` to deploy our two upstream applications:
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -96,7 +96,7 @@ spec:
 EOF
 ```
 
-Now we will prepare the config to make an Envoy proxypass all requests with path matching `/a` to the Deployment we named as `upstream-a`. As usual, we will deploy this config as an EnvoyConfig.
+Now we will prepare the config to make an Envoy forward all requests with path matching `/a` to the Deployment we named as `upstream-a`. As usual, we will deploy this config as an EnvoyConfig.
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -223,7 +223,7 @@ content-length: 0
 
 ## **Modify the configuration to include a route for upstream B**
 
-Apply the following EnvoyConfig. This is exactly the same that we used before, but with an extra route to proxypass requests to path `/b` to the "upstream B" and a new cluster that points to the `upstream-b` Service.
+Apply the following EnvoyConfig. This is exactly the same that we used before, but with an extra route to forward requests to path `/b` to the "upstream B" and a new cluster that points to the `upstream-b` Service.
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -338,7 +338,7 @@ Request ID: f4a0c6f4651fe5529e79311b05a38356
 
 ## **Conclusion**
 
-We have seen how we can use MARIN3R to use Envoy in front of several applications to distribute traffic among them based on the path of the incoming request. Traffic distribution could also be done by hostname, by inspecting headers, etc. The configuration management for the Envoy proxy is completely declarative as manual operations are not required when modifying the configuration. You could go further and develop your own domain specific ingress leveraging the EnvoyConfig and EnvoyDeployment resource, adding a layer of abstraction that properly adapts your requirements.
+We have seen how we can use MARIN3R to use Envoy in front of several applications to distribute traffic among them based on the path of the incoming request. Traffic distribution could also be done by hostname, by inspecting headers, etc. The configuration management for the Envoy proxy is completely declarative as manual operations are not required when modifying the configuration. You could go further and develop your own domain-specific ingress leveraging the EnvoyConfig and EnvoyDeployment resource, adding a layer of abstraction that properly adapts your requirements.
 
 ## **Cleanup**
 

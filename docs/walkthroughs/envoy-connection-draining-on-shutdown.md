@@ -1,10 +1,10 @@
 # **Connection draining on Pod shutdown**
 
-When a container is terminated in kubernetes, by default a SIGTERM signal is sent to the PID 1 of the container to indicate that the process must stop. Envoy, by default, immediatly closes all connections and exits upon receiving a SIGTERM, which can cause errors for the connections that are in flight. To avoid this MARIN3R provides a mechanism to perform connection draining before shutting down the Envoy process.
+When a container is terminated in Kubernetes, by default a SIGTERM signal is sent to the PID 1 of the container to indicate that the process must stop. Envoy, by default, immediately closes all connections and exits upon receiving a SIGTERM, which can cause errors for the connections that are in flight. To avoid this MARIN3R provides a mechanism to perform connection draining before shutting down the Envoy process.
 
-This mechanism is called the **shutdown manager** and consists of an extra container that runs alongside the Envoy container and is in charge of draining connections by calling Envoy's admin API whenever the Envoy process is signaled to stop. The shutdown manager is not enabled by default, but you can activate it (and we strongly advise you to do so in production environments) both for Envoy sidecars and for envoydeployments.
+This mechanism is called the **shutdown manager** and consists of an extra container that runs alongside the Envoy container and is in charge of draining connections by calling Envoy's admin API whenever the Envoy process is signaled to stop. The shutdown manager is not enabled by default, but you can activate it (and we strongly advise you to do so in production environments) both for Envoy sidecars and for EnvoyDeployments.
 
-In this walkthrough we are going to enable the shutdown manager for an EnvoyDeployment resource and validate the functionality with a simple test.
+In this walkthrough, we are going to enable the shutdown manager for an EnvoyDeployment resource and validate the functionality with a simple test.
 
 ## **Preparation**
 
@@ -100,7 +100,7 @@ server: envoy
 content-length: 0
 ```
 
-Let's now set our EnvoyDeployment to zero replicas and see what happens. Before doing so, we will be opening a persistent connetion to the server using telnet. Open another shell and execute:
+Let's now set our EnvoyDeployment to zero replicas and see what happens. Before doing so, we will be opening a persistent connection to the server using telnet. Open another shell and execute:
 
 ```bash
 ▶ telnet localhost 8080
@@ -153,11 +153,11 @@ marin3r-discoveryservice-f8bc788bd-2296r   1/1     Running   0          24m
 
 ## **Conclusion**
 
-In this walkthrough we have showcased how we can use the shutdown manager component of MARIN3R to ensure proper ordered shutdown of our proxies with connection draining, which is something usally desirable in production environments. Take into account that even with connection draining, MARIN3R configures the Envoy pods to be terminated anyway after 5 minutes if connection draining has not completed past that time.
+In this walkthrough, we have showcased how we can use the shutdown manager component of MARIN3R to ensure properly ordered shutdown of our proxies with connection draining, which is something usually desirable in production environments. Take into account that even with connection draining, MARIN3R configures the Envoy pods to be terminated anyway after 5 minutes if connection draining has not been completed past that time.
 
 ## **Cleanup**
 
-Execute the following commands to delete the resources created in this walkthough:
+Execute the following commands to delete the resources created in this walkthrough:
 
 ```bash
 kubectl delete envoydeployment envoy
