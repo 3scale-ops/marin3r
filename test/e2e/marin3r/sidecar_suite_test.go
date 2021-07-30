@@ -119,14 +119,17 @@ var _ = Describe("Envoy sidecars", func() {
 				},
 				nil,
 			)
-			err := k8sClient.Create(context.Background(), ec)
-			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), ec)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			By("creating a Deployment with the required labels and annotations")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
 			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", envoyVersionV2V3, envoyListenerPort)
-			err = k8sClient.Create(context.Background(), dep)
-			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), dep)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 			Eventually(func() int {
@@ -135,7 +138,7 @@ var _ = Describe("Envoy sidecars", func() {
 
 			By("checking that the Pods were mutated to add the envoy sidecar")
 			podList := &corev1.PodList{}
-			err = k8sClient.List(context.Background(), podList,
+			err := k8sClient.List(context.Background(), podList,
 				[]client.ListOption{selector, client.InNamespace(testNamespace)}...)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(podList.Items)).To(Equal(1))
@@ -203,14 +206,17 @@ var _ = Describe("Envoy sidecars", func() {
 				},
 				nil,
 			)
-			err := k8sClient.Create(context.Background(), ec)
-			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), ec)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			By("creating a Deployment with the required labels and annotations")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
 			dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v3", envoyVersionV3, 8080)
-			err = k8sClient.Create(context.Background(), dep)
-			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), dep)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 			Eventually(func() int {
@@ -219,7 +225,7 @@ var _ = Describe("Envoy sidecars", func() {
 
 			By("checking that the Pods were mutated to add the envoy sidecar")
 			podList := &corev1.PodList{}
-			err = k8sClient.List(context.Background(), podList,
+			err := k8sClient.List(context.Background(), podList,
 				[]client.ListOption{selector, client.InNamespace(testNamespace)}...)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(podList.Items)).To(Equal(1))
@@ -285,16 +291,18 @@ var _ = Describe("Envoy sidecars", func() {
 					},
 					nil,
 				)
-				err := k8sClient.Create(context.Background(), ec)
-				Expect(err).NotTo(HaveOccurred())
+				Eventually(func() error {
+					return k8sClient.Create(context.Background(), ec)
+				}, timeout, poll).ShouldNot(HaveOccurred())
 			}
 
 			By("creating a Deployment with the required labels and annotations")
 			{
 				key := types.NamespacedName{Name: "nginx", Namespace: testNamespace}
 				dep := testutil.GenerateDeploymentWithInjection(key, nodeID, "v2", envoyVersionV2V3, envoyListenerPort)
-				err := k8sClient.Create(context.Background(), dep)
-				Expect(err).ToNot(HaveOccurred())
+				Eventually(func() error {
+					return k8sClient.Create(context.Background(), dep)
+				}, timeout, poll).ShouldNot(HaveOccurred())
 
 				selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
 				Eventually(func() int {

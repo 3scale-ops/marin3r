@@ -116,13 +116,15 @@ var _ = Describe("EnvoyDeployment", func() {
 				},
 				nil,
 			)
-			err := k8sClient.Create(context.Background(), ec)
-			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), ec)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			By("creating an nginx Deployment")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
 			dep := testutil.GenerateDeployment(key)
-			err = k8sClient.Create(context.Background(), dep)
+			err := k8sClient.Create(context.Background(), dep)
 			Expect(err).ToNot(HaveOccurred())
 
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
@@ -155,8 +157,10 @@ var _ = Describe("EnvoyDeployment", func() {
 					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
 				},
 			}
-			err = k8sClient.Create(context.Background(), edep)
-			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), edep)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			selector = client.MatchingLabels{
 				"app.kubernetes.io/name":       "marin3r",
@@ -249,13 +253,14 @@ var _ = Describe("EnvoyDeployment", func() {
 				},
 				nil,
 			)
-			err := k8sClient.Create(context.Background(), ec)
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), ec)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			By("creating an nginx Deployment")
 			key = types.NamespacedName{Name: "nginx", Namespace: testNamespace}
 			dep := testutil.GenerateDeployment(key)
-			err = k8sClient.Create(context.Background(), dep)
+			err := k8sClient.Create(context.Background(), dep)
 			Expect(err).ToNot(HaveOccurred())
 
 			selector := client.MatchingLabels{testutil.DeploymentLabelKey: testutil.DeploymentLabelValue}
@@ -288,8 +293,10 @@ var _ = Describe("EnvoyDeployment", func() {
 					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
 				},
 			}
-			err = k8sClient.Create(context.Background(), edep)
-			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() error {
+				return k8sClient.Create(context.Background(), edep)
+			}, timeout, poll).ShouldNot(HaveOccurred())
 
 			selector = client.MatchingLabels{
 				"app.kubernetes.io/name":       "marin3r",
