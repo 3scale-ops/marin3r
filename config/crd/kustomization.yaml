@@ -6,7 +6,6 @@ resources:
 - bases/operator.marin3r.3scale.net_discoveryservicecertificates.yaml
 - bases/marin3r.3scale.net_envoyconfigs.yaml
 - bases/marin3r.3scale.net_envoyconfigrevisions.yaml
-- bases/marin3r.3scale.net_envoybootstraps.yaml
 - bases/operator.marin3r.3scale.net_envoydeployments.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
@@ -17,7 +16,6 @@ patchesStrategicMerge:
 #- patches/webhook_in_discoveryservicecertificates.yaml
 #- patches/webhook_in_envoyconfigs.yaml
 #- patches/webhook_in_envoyconfigrevisions.yaml
-#- patches/webhook_in_envoybootstraps.yaml
 #- patches/webhook_in_envoydeployments.yaml
 # +kubebuilder:scaffold:crdkustomizewebhookpatch
 
@@ -27,7 +25,6 @@ patchesStrategicMerge:
 #- patches/cainjection_in_discoveryservicecertificates.yaml
 #- patches/cainjection_in_envoyconfigs.yaml
 #- patches/cainjection_in_envoyconfigrevisions.yaml
-#- patches/cainjection_in_envoybootstraps.yaml
 #- patches/cainjection_in_envoydeployments.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
 

@@ -56,7 +56,7 @@ type EnvoyConfigRevisionSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Version string `json:"version"`
 	// EnvoyAPI is the version of envoy's API to use. Defaults to v3.
-	// +kubebuilder:validation:Enum=v2;v3
+	// +kubebuilder:validation:Enum=v3
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	EnvoyAPI *string `json:"envoyAPI,omitempty"`

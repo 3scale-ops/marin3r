@@ -7,16 +7,13 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
-	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
-	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -75,86 +72,6 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
-	Context("using v2 envoy API version", func() {
-		var ecr *marin3rv1alpha1.EnvoyConfigRevision
-
-		BeforeEach(func() {
-			By("creating a v2 EnvoyConfigRevision")
-			ecr = &marin3rv1alpha1.EnvoyConfigRevision{
-				ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: namespace},
-				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-					EnvoyAPI: pointer.StringPtr("v2"),
-					NodeID:   nodeID,
-					Version:  "xxxx",
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-						}}},
-			}
-			err := k8sClient.Create(context.Background(), ecr)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() error {
-				return k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
-			}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
-		})
-
-		When("RevisionPublished condition is false in EnvoyConfigRevision", func() {
-
-			It("should not make changes to the xDS cache", func() {
-
-				_, err := ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		When("RevisionPublished condition is true in EnvoyConfigRevision", func() {
-
-			It("should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
-
-				By("setting ECR RevisionPublished condition to true")
-				ecr = &marin3rv1alpha1.EnvoyConfigRevision{}
-				Eventually(func() error {
-					return k8sClient.Get(context.Background(), types.NamespacedName{Name: "ecr", Namespace: namespace}, ecr)
-				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
-
-				patch := client.MergeFrom(ecr.DeepCopy())
-				ecr.Status.Conditions.SetCondition(status.Condition{
-					Type:   marin3rv1alpha1.RevisionPublishedCondition,
-					Status: corev1.ConditionTrue,
-				})
-
-				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)).To(BeTrue())
-
-				By("checking that a snapshot for spec.nodeId exists in the v2 xDS cache")
-				var gotV2Snap xdss.Snapshot
-				Eventually(func() error {
-					gotV2Snap, err = ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
-					return err
-				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
-
-				wantSnap := xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-					Resources: [6]cache_v2.Resources{
-						{Version: "845f965864", Items: map[string]cache_types.Resource{
-							"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-						{Version: "", Items: map[string]cache_types.Resource{}},
-						{Version: "", Items: map[string]cache_types.Resource{}},
-						{Version: "", Items: map[string]cache_types.Resource{}},
-						{Version: "", Items: map[string]cache_types.Resource{}},
-						{Version: "", Items: map[string]cache_types.Resource{}},
-					}})
-				Expect(testutil.SnapshotsAreEqual(gotV2Snap, wantSnap)).To(BeTrue())
-
-				By("checking that a snapshot for spec.nodeId does not exist in the v3 xDS cache")
-				_, err = ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
-				Expect(err).To(HaveOccurred())
-
-			})
-
-		})
-	})
-
 	Context("using v3 envoy API version", func() {
 		var ecr *marin3rv1alpha1.EnvoyConfigRevision
 
@@ -207,7 +124,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
-				By("checking that a snapshot for spec.nodeId exists in the v2 xDS cache")
+				By("checking that a snapshot for spec.nodeId exists in the v3 xDS cache")
 				var gotV3Snap xdss.Snapshot
 				Eventually(func() error {
 					gotV3Snap, err = ecrV3Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
@@ -225,10 +142,6 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						{Version: "", Items: map[string]cache_types.Resource{}},
 					}})
 				Expect(testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)).To(BeTrue())
-
-				By("checking that a snapshot for spec.nodeId does not exist in the v2 xDS cache")
-				_, err = ecrV2Reconciler.XdsCache.GetSnapshot(ecr.Spec.NodeID)
-				Expect(err).To(HaveOccurred())
 
 			})
 

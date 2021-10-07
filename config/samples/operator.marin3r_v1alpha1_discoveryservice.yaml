@@ -1,6 +1,6 @@
 apiVersion: operator.marin3r.3scale.net/v1alpha1
 kind: DiscoveryService
 metadata:
-  name: example
+  name: discoveryservice-example
   namespace: my-namespace
 spec: {}

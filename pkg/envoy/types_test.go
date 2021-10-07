@@ -8,7 +8,6 @@ func TestAPIVersion_String(t *testing.T) {
 		version APIVersion
 		want    string
 	}{
-		{"Returns v2", APIv2, "v2"},
 		{"Returns v3", APIv3, "v3"},
 	}
 	for _, tt := range tests {
@@ -27,7 +26,6 @@ func TestParseAPIVersion(t *testing.T) {
 		want    APIVersion
 		wantErr bool
 	}{
-		{"Returns APIv2", "v2", APIv2, false},
 		{"Returns APIv3", "v3", APIv3, false},
 		{"Returns error", "xx", "", true},
 	}

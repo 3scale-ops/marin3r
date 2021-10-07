@@ -39,8 +39,6 @@ const (
 	image             string = "quay.io/3scale/marin3r:test"
 	targetNamespace   string = "default"
 	envoyListenerPort uint32 = 8080
-	// v1.16.4 is the last version to support both v2 and v3 APIs
-	envoyVersionV2V3 string = "v1.16.4"
 	// From v1.17.0 forwards only v3 API is supported
 	envoyVersionV3 string = "v1.18.3"
 )

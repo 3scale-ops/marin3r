@@ -2,10 +2,10 @@ apiVersion: operator.marin3r.3scale.net/v1alpha1
 kind: EnvoyDeployment
 metadata:
   name: envoydeployment-sample
+  namespace: my-namespace
 spec:
-  envoyConfigRef: example
+  discoveryServiceRef: discoveryservice-example
+  envoyConfigRef: envoyconfig-example
   ports:
-    - name: http
-      port: 8080
     - name: https
       port: 8443

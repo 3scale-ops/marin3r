@@ -260,12 +260,7 @@ func popRevision(list *[]marin3rv1alpha1.EnvoyConfigRevision) marin3rv1alpha1.En
 func (r *RevisionReconciler) newRevisionForCurrentResources() *marin3rv1alpha1.EnvoyConfigRevision {
 	return &marin3rv1alpha1.EnvoyConfigRevision{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: func() string {
-				if r.EnvoyAPI() == envoy.APIv2 {
-					return fmt.Sprintf("%s-%s", r.NodeID(), r.DesiredVersion())
-				}
-				return fmt.Sprintf("%s-%s-%s", r.NodeID(), r.EnvoyAPI(), r.DesiredVersion())
-			}(),
+			Name:      fmt.Sprintf("%s-%s-%s", r.NodeID(), r.EnvoyAPI(), r.DesiredVersion()),
 			Namespace: r.Namespace(),
 			Labels: map[string]string{
 				filters.NodeIDTag:   r.NodeID(),

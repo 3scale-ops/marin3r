@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
-	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
+	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
+	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +37,7 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 		r := &EnvoyConfigRevisionReconciler{
 			Client:   fake.NewFakeClient(ecr),
 			Scheme:   scheme.Scheme,
-			XdsCache: xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
+			XdsCache: xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		if err := r.taintSelf(context.TODO(), ecr, "test", "test", r.Log); err != nil {
@@ -61,19 +61,6 @@ func Test_filterByAPIVersion(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "V2 EnvoyConfigRevision with V2 controller returns true",
-			args: args{
-				obj: &marin3rv1alpha1.EnvoyConfigRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
-					Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
-					},
-				},
-				version: envoy.APIv2,
-			},
-			want: true,
-		},
-		{
 			name: "V3 EnvoyConfigRevision with V3 controller returns true",
 			args: args{
 				obj: &marin3rv1alpha1.EnvoyConfigRevision{
@@ -87,25 +74,12 @@ func Test_filterByAPIVersion(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "V2 EnvoyConfigRevision with V3 controller returns false",
+			name: "XX EnvoyConfigRevision with V3 controller returns false",
 			args: args{
 				obj: &marin3rv1alpha1.EnvoyConfigRevision{
 					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
 					Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
-					},
-				},
-				version: envoy.APIv3,
-			},
-			want: false,
-		},
-		{
-			name: "V3 EnvoyConfigRevision with V2 controller returns false",
-			args: args{
-				obj: &marin3rv1alpha1.EnvoyConfigRevision{
-					ObjectMeta: metav1.ObjectMeta{Name: "xx", Namespace: "xx"},
-					Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr(string(envoy.APIv2)),
+						EnvoyAPI: pointer.StringPtr("XX"),
 					},
 				},
 				version: envoy.APIv3,

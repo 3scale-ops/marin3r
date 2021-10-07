@@ -4,7 +4,8 @@ import (
 	"testing"
 
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	envoyapi "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 )
 
 func Test_ResourcesEqual(t *testing.T) {
@@ -21,12 +22,12 @@ func Test_ResourcesEqual(t *testing.T) {
 			name: "Returns true if snapshot resources are equal",
 			args: args{
 				a: map[string]envoy.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+					"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
 				},
 				b: map[string]envoy.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+					"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
 				},
 			},
 			want: true,
@@ -35,13 +36,13 @@ func Test_ResourcesEqual(t *testing.T) {
 			name: "Returns false, different number of resources",
 			args: args{
 				a: map[string]envoy.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-					"cluster2": &envoyapi.Cluster{Name: "cluster2"},
+					"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
+					"cluster2": &envoy_config_cluster_v3.Cluster{Name: "cluster2"},
 				},
 				b: map[string]envoy.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1": &envoyapi.Cluster{Name: "cluster1"},
+					"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
 				},
 			},
 			want: false,
@@ -50,14 +51,14 @@ func Test_ResourcesEqual(t *testing.T) {
 			name: "Returns false, different resource name",
 			args: args{
 				a: map[string]envoy.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-					"cluster2": &envoyapi.Cluster{Name: "cluster2"},
+					"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
+					"cluster2": &envoy_config_cluster_v3.Cluster{Name: "cluster2"},
 				},
 				b: map[string]envoy.Resource{
-					"endpoint":  &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1":  &envoyapi.Cluster{Name: "cluster1"},
-					"different": &envoyapi.Cluster{Name: "cluster2"},
+					"endpoint":  &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1":  &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
+					"different": &envoy_config_cluster_v3.Cluster{Name: "cluster2"},
 				},
 			},
 			want: false,
@@ -66,14 +67,14 @@ func Test_ResourcesEqual(t *testing.T) {
 			name: "Returns false, different proto message",
 			args: args{
 				a: map[string]envoy.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-					"cluster2": &envoyapi.Cluster{Name: "cluster2"},
+					"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
+					"cluster2": &envoy_config_cluster_v3.Cluster{Name: "cluster2"},
 				},
 				b: map[string]envoy.Resource{
-					"endpoint": &envoyapi.ClusterLoadAssignment{ClusterName: "endpoint"},
-					"cluster1": &envoyapi.Cluster{Name: "cluster1"},
-					"cluster2": &envoyapi.Cluster{Name: "different"},
+					"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+					"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
+					"cluster2": &envoy_config_cluster_v3.Cluster{Name: "different"},
 				},
 			},
 			want: false,

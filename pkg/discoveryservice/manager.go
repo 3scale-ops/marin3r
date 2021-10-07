@@ -115,18 +115,6 @@ func (dsm *Manager) Start(ctx context.Context) {
 
 	if err := (&marin3rcontroller.EnvoyConfigRevisionReconciler{
 		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv2))),
-		Scheme:         mgr.GetScheme(),
-		XdsCache:       xdss.GetCache(envoy.APIv2),
-		APIVersion:     envoy.APIv2,
-		DiscoveryStats: xdss.GetDiscoveryStats(envoy.APIv2),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv2)))
-		os.Exit(1)
-	}
-
-	if err := (&marin3rcontroller.EnvoyConfigRevisionReconciler{
-		Client:         mgr.GetClient(),
 		Log:            ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv3))),
 		Scheme:         mgr.GetScheme(),
 		XdsCache:       xdss.GetCache(envoy.APIv3),

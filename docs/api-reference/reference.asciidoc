@@ -15,32 +15,11 @@
 Package v1alpha1 contains API Schema definitions for the envoy v1alpha1 API group
 
 .Resource Types
-- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrap[$$EnvoyBootstrap$$]
-- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstraplist[$$EnvoyBootstrapList$$]
 - xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfig[$$EnvoyConfig$$]
 - xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfiglist[$$EnvoyConfigList$$]
 - xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfigrevision[$$EnvoyConfigRevision$$]
 - xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfigrevisionlist[$$EnvoyConfigRevisionList$$]
 
-
-
-[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-clientcertificate"]
-==== ClientCertificate 
-
-ClientCertificate allows specifying options for the client certificate used to authenticate with the discovery service
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrapspec[$$EnvoyBootstrapSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`directory`* __string__ | Directory defines the directory in the envoy container where the certificate will be mounted
-| *`secretName`* __string__ | The Secret where the certificate will be stored
-| *`duration`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#duration-v1-meta[$$Duration$$]__ | The requested ‘duration’ (i.e. lifetime) of the Certificate
-|===
 
 
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-configrevisionref"]
@@ -58,83 +37,6 @@ ConfigRevisionRef holds a reference to EnvoyConfigRevision object
 | Field | Description
 | *`version`* __string__ | Version is a hash of the EnvoyResources field
 | *`ref`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#objectreference-v1-core[$$ObjectReference$$]__ | Ref is a reference to the EnvoyConfigRevision object that holds the configuration matching the Version field.
-|===
-
-
-[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrap"]
-==== EnvoyBootstrap 
-
-EnvoyBootstrap is the Schema for the envoybootstraps API
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstraplist[$$EnvoyBootstrapList$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`apiVersion`* __string__ | `marin3r.3scale.net/v1alpha1`
-| *`kind`* __string__ | `EnvoyBootstrap`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#objectmeta-v1-meta[$$ObjectMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
-
-| *`spec`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrapspec[$$EnvoyBootstrapSpec$$]__ | 
-| *`status`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrapstatus[$$EnvoyBootstrapStatus$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstraplist"]
-==== EnvoyBootstrapList 
-
-EnvoyBootstrapList contains a list of EnvoyBootstrap
-
-
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`apiVersion`* __string__ | `marin3r.3scale.net/v1alpha1`
-| *`kind`* __string__ | `EnvoyBootstrapList`
-| *`metadata`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#listmeta-v1-meta[$$ListMeta$$]__ | Refer to Kubernetes API documentation for fields of `metadata`.
-
-| *`items`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrap[$$EnvoyBootstrap$$]__ | 
-|===
-
-
-[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrapspec"]
-==== EnvoyBootstrapSpec 
-
-EnvoyBootstrapSpec defines the desired state of EnvoyBootstrap
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrap[$$EnvoyBootstrap$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`discoveryService`* __string__ | DiscoveryService is the name of the DiscoveryService resource the envoy will be a client of
-| *`clientCertificate`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-clientcertificate[$$ClientCertificate$$]__ | ClientCertificate is a struct containing options for the certificate used to authenticate with the discovery service
-| *`envoyStaticConfig`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoystaticconfig[$$EnvoyStaticConfig$$]__ | EnvoyStaticConfig is a struct that controls options for the envoy's static config file
-|===
-
-
-[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrapstatus"]
-==== EnvoyBootstrapStatus 
-
-EnvoyBootstrapStatus defines the observed state of EnvoyBootstrap
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrap[$$EnvoyBootstrap$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`configHashV2`* __string__ | ConfigHashV2 stores the hash of the current V2 bootstrap config generated for the given EnvoyBootstrap parameters
-| *`configHashV3`* __string__ | ConfigHashV3 stores the hash of the current V3 bootstrap config generated for the given EnvoyBootstrap parameters
 |===
 
 
@@ -333,11 +235,11 @@ EnvoyResources holds each envoy api resource type
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`endpoints`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$] array__ | Endpoints is a list of the envoy ClusterLoadAssignment resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
-| *`clusters`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Clusters is a list of the envoy Cluster resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
-| *`routes`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Routes is a list of the envoy Route resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
-| *`listeners`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Listeners is a list of the envoy Listener resource type. V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
-| *`runtimes`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
+| *`endpoints`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$] array__ | Endpoints is a list of the envoy ClusterLoadAssignment resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
+| *`clusters`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Clusters is a list of the envoy Cluster resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
+| *`routes`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Routes is a list of the envoy Route resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
+| *`listeners`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Listeners is a list of the envoy Listener resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
+| *`runtimes`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Runtimes is a list of the envoy Runtime resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
 | *`secrets`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoysecretresource[$$EnvoySecretResource$$] array__ | Secrets is a list of references to Kubernetes Secret objects.
 |===
 
@@ -357,29 +259,6 @@ EnvoySecretResource holds a reference to a k8s Secret from where to take a secre
 | Field | Description
 | *`name`* __string__ | Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
 | *`ref`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.17/#secretreference-v1-core[$$SecretReference$$]__ | Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
-|===
-
-
-[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoystaticconfig"]
-==== EnvoyStaticConfig 
-
-EnvoyStaticConfig allows specifying envoy static config options
-
-.Appears In:
-****
-- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoybootstrapspec[$$EnvoyBootstrapSpec$$]
-****
-
-[cols="25a,75a", options="header"]
-|===
-| Field | Description
-| *`configMapNameV2`* __string__ | The ConfigMap where the envoy client v2 static config will be stored
-| *`configMapNameV3`* __string__ | The ConfigMap where the envoy client v3 static config will be stored
-| *`configFile`* __string__ | ConfigFile is the path of envoy's bootstrap config file
-| *`resourcesDir`* __string__ | ResourcesDir is the path where resource files are loaded from. It is used to load discovery messages directly from the filesystem, for example in order to be able to bootstrap certificates and support rotation when they are modified.
-| *`rtdsLayerResourceName`* __string__ | RtdsLayerResourceName is the resource name that the envoy client will request when askikng the discovery service for Runtime resources.
-| *`adminBindAddress`* __string__ | AdminBindAddress is where envoy's admin server binds to.
-| *`adminAccessLogPath`* __string__ | AdminAccessLogPath configures where the envoy's admin server logs are written to
 |===
 
 

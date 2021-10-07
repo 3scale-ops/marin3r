@@ -108,11 +108,11 @@ func TestEnvoyConfigRevision_GetEnvoyAPIVersion(t *testing.T) {
 			func() *EnvoyConfigRevision {
 				return &EnvoyConfigRevision{
 					Spec: EnvoyConfigRevisionSpec{
-						EnvoyAPI: pointer.StringPtr("v2"),
+						EnvoyAPI: pointer.StringPtr("v3"),
 					},
 				}
 			},
-			envoy.APIv2,
+			envoy.APIv3,
 		},
 	}
 

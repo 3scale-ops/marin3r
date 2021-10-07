@@ -2,7 +2,6 @@ package envoy
 
 import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	envoy_serializer_v2 "github.com/3scale-ops/marin3r/pkg/envoy/serializer/v2"
 	envoy_serializer_v3 "github.com/3scale-ops/marin3r/pkg/envoy/serializer/v3"
 )
 
@@ -30,35 +29,19 @@ type ResourceUnmarshaller interface {
 
 // NewResourceMarshaller returns a ResourceMarshaller for the given API version and encoding
 func NewResourceMarshaller(encoding Serialization, version envoy.APIVersion) ResourceMarshaller {
-	if version == envoy.APIv2 {
-		return envoy_serializer_v2.JSON{}
-	}
-
-	return envoy_serializer_v2.JSON{}
+	return envoy_serializer_v3.JSON{}
 
 }
 
 // NewResourceUnmarshaller returns a ResourceUnmarshaller for the given api version and encoding
 func NewResourceUnmarshaller(encoding Serialization, version envoy.APIVersion) ResourceUnmarshaller {
-	if version == envoy.APIv2 {
-		switch encoding {
-		case JSON:
-			return envoy_serializer_v2.JSON{}
-		case YAML:
-			return envoy_serializer_v2.YAML{}
-		case B64JSON:
-			return envoy_serializer_v2.B64JSON{}
-
-		}
-	} else {
-		switch encoding {
-		case JSON:
-			return envoy_serializer_v3.JSON{}
-		case YAML:
-			return envoy_serializer_v3.YAML{}
-		case B64JSON:
-			return envoy_serializer_v3.B64JSON{}
-		}
+	switch encoding {
+	case JSON:
+		return envoy_serializer_v3.JSON{}
+	case YAML:
+		return envoy_serializer_v3.YAML{}
+	case B64JSON:
+		return envoy_serializer_v3.B64JSON{}
 	}
 	return nil
 }

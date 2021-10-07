@@ -19,12 +19,12 @@ import (
 	"testing"
 
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
-	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
+	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-
 	"github.com/golang/protobuf/ptypes/any"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,10 +37,10 @@ func fakeTestCache() *cache_v3.SnapshotCache {
 	snapshotCache.SetSnapshot("node1", cache_v3.Snapshot{
 		Resources: [6]cache_v3.Resources{
 			{Version: "1", Items: map[string]cache_types.Resource{
-				"endpoint1": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint1"},
+				"endpoint1": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"},
 			}},
 			{Version: "1", Items: map[string]cache_types.Resource{
-				"cluster1": &envoy_api_v2.Cluster{Name: "cluster1"},
+				"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
 			}},
 			{Version: "1", Items: map[string]cache_types.Resource{}},
 			{Version: "1", Items: map[string]cache_types.Resource{}},
