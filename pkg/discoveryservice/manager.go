@@ -75,7 +75,7 @@ func (dsm *Manager) Start(ctx context.Context) {
 	var wait sync.WaitGroup
 
 	// Start envoy's aggregated discovery service
-	xdss := NewDualXdsServer(
+	xdss := NewXdsServer(
 		ctx,
 		uint(dsm.XdsServerPort),
 		&tls.Config{

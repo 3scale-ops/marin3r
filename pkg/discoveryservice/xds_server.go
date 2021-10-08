@@ -44,15 +44,9 @@ const (
 	grpcKeepaliveEnforcementPolicyPermitWithoutStream = false
 )
 
-// XdsServer in an interface that any xDS server should implement
-type XdsServer interface {
-	Start(<-chan struct{}) error
-	GetCache(envoy.APIVersion) xdss.Cache
-}
-
-// DualXdsServer is a type that holds configuration
+// XdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server
-type DualXdsServer struct {
+type XdsServer struct {
 	ctx              context.Context
 	xDSPort          uint
 	tlsConfig        *tls.Config
@@ -62,8 +56,8 @@ type DualXdsServer struct {
 	discoveryStatsV3 *stats.Stats
 }
 
-// NewDualXdsServer creates a new DualXdsServer object fron the given params
-func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logger logr.Logger) *DualXdsServer {
+// NewXdsServer creates a new XdsServer object fron the given params
+func NewXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logger logr.Logger) *XdsServer {
 
 	xdsLogger := logger.WithName("xds")
 
@@ -82,7 +76,7 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 
 	srvV3 := server_v3.NewServer(ctx, snapshotCacheV3, callbacksV3)
 
-	return &DualXdsServer{
+	return &XdsServer{
 		ctx:              ctx,
 		xDSPort:          xDSPort,
 		tlsConfig:        tlsConfig,
@@ -94,7 +88,7 @@ func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, 
 }
 
 // Start starts an xDS server at the given port.
-func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
+func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
@@ -161,12 +155,12 @@ func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
 }
 
 // GetCache returns the Cache
-func (xdss *DualXdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
+func (xdss *XdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
 	return xdss_v3.NewCache(xdss.snapshotCacheV3)
 }
 
 // GetCache returns the discovery stats
-func (xdss *DualXdsServer) GetDiscoveryStats(version envoy.APIVersion) *stats.Stats {
+func (xdss *XdsServer) GetDiscoveryStats(version envoy.APIVersion) *stats.Stats {
 	return xdss.discoveryStatsV3
 }
 
