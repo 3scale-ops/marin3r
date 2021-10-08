@@ -57,7 +57,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(operatorScheme))
 	utilruntime.Must(operatorv1alpha1.AddToScheme(operatorScheme))
 	utilruntime.Must(marin3rv1alpha1.AddToScheme(operatorScheme))
-	utilruntime.Must(operatorv1alpha1.AddToScheme(operatorScheme))
 	// +kubebuilder:scaffold:scheme
 
 	rootCmd.AddCommand(operatorCmd)

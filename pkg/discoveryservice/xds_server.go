@@ -28,6 +28,7 @@ import (
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 
@@ -42,6 +43,10 @@ const (
 	grpcMaxConnectionAgeGrace                         = 300   // 5 min
 	grpcKeepaliveEnforcementPolicyMinTime             = 50
 	grpcKeepaliveEnforcementPolicyPermitWithoutStream = false
+)
+
+var (
+	setupLog = ctrl.Log.WithName("xds_server")
 )
 
 // XdsServer is a type that holds configuration
