@@ -5,7 +5,7 @@ go 1.15
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.9.8
+	github.com/envoyproxy/go-control-plane v0.9.9
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.3.0
 	github.com/golang/protobuf v1.4.3
@@ -19,7 +19,7 @@ require (
 	github.com/redhat-cop/operator-utils v1.1.3-0.20210602122509-2eaf121122d2
 	github.com/spf13/cobra v1.1.3
 	google.golang.org/genproto v0.0.0-20200701001935-0939c5918c31
-	google.golang.org/grpc v1.30.0
+	google.golang.org/grpc v1.36.0
 	google.golang.org/protobuf v1.25.0
 	k8s.io/api v0.20.0
 	k8s.io/apimachinery v0.20.0

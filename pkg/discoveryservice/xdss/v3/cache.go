@@ -41,13 +41,14 @@ func (c Cache) ClearSnapshot(nodeID string) {
 // NewSnapshot returns a Snapshot object
 func (c Cache) NewSnapshot(resourcesVersion string) xdss.Snapshot {
 
-	snap := &cache_v3.Snapshot{Resources: [6]cache_v3.Resources{}}
+	snap := &cache_v3.Snapshot{Resources: [7]cache_v3.Resources{}}
 	snap.Resources[cache_types.Listener] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Endpoint] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Cluster] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Route] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Secret] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Runtime] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
+	snap.Resources[cache_types.ExtensionConfig] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 
 	return Snapshot{v3: snap}
 }

@@ -11,6 +11,7 @@ import (
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
+	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
 
@@ -44,27 +45,27 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 
 	case *envoy_config_endpoint_v3.ClusterLoadAssignment:
 		rType = envoy.Endpoint
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
 
 	case *envoy_config_cluster_v3.Cluster:
 		rType = envoy.Cluster
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
 
 	case *envoy_config_route_v3.RouteConfiguration:
 		rType = envoy.Route
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
 
 	case *envoy_config_listener_v3.Listener:
 		rType = envoy.Listener
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
 
 	case *envoy_extensions_transport_sockets_tls_v3.Secret:
 		rType = envoy.Secret
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
 
 	case *envoy_service_runtime_v3.Runtime:
 		rType = envoy.Runtime
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = o
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
 	}
 
 	s.SetVersion(rType, s.recalculateVersion(rType))
@@ -97,7 +98,7 @@ func (s Snapshot) recalculateVersion(rType envoy.Type) string {
 	resources := map[string]string{}
 	encoder := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoy.APIv3)
 	for n, r := range s.v3.Resources[v3CacheResources(rType)].Items {
-		j, _ := encoder.Marshal(r)
+		j, _ := encoder.Marshal(r.Resource)
 		resources[n] = string(j)
 	}
 	if len(resources) > 0 {
@@ -108,12 +109,13 @@ func (s Snapshot) recalculateVersion(rType envoy.Type) string {
 
 func v3CacheResources(rType envoy.Type) int {
 	types := map[envoy.Type]int{
-		envoy.Endpoint: 0,
-		envoy.Cluster:  1,
-		envoy.Route:    2,
-		envoy.Listener: 3,
-		envoy.Secret:   4,
-		envoy.Runtime:  5,
+		envoy.Endpoint:        0,
+		envoy.Cluster:         1,
+		envoy.Route:           2,
+		envoy.Listener:        3,
+		envoy.Secret:          4,
+		envoy.Runtime:         5,
+		envoy.ExtensionConfig: 6,
 	}
 
 	return types[rType]
