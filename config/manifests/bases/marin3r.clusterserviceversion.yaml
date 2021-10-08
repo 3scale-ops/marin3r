@@ -8,6 +8,7 @@ metadata:
     containerImage: quay.io/3scale/marin3r
     description: Manage an Envoy Discovery Service and a fleet of Envoy proxies.
     operators.operatorframework.io/builder: operator-sdk-v1.1.0
+    operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
@@ -122,58 +123,6 @@ spec:
         displayName: Conditions
         path: conditions
       version: v1alpha1
-    - description: EnvoyBootstrap is the Schema for the envoybootstraps API
-      displayName: EnvoyBootstrap
-      kind: EnvoyBootstrap
-      name: envoybootstraps.marin3r.3scale.net
-      specDescriptors:
-      - description: ClientCertificate is a struct containing options for the certificate used to authenticate with the discovery service
-        displayName: Client Certificate
-        path: clientCertificate
-      - description: Directory defines the directory in the envoy container where the certificate will be mounted
-        displayName: Directory
-        path: clientCertificate.directory
-      - description: The requested ‘duration’ (i.e. lifetime) of the Certificate
-        displayName: Duration
-        path: clientCertificate.duration
-      - description: The Secret where the certificate will be stored
-        displayName: Secret Name
-        path: clientCertificate.secretName
-      - description: DiscoveryService is the name of the DiscoveryService resource the envoy will be a client of
-        displayName: Discovery Service
-        path: discoveryService
-      - description: EnvoyStaticConfig is a struct that controls options for the envoy's static config file
-        displayName: Envoy Static Config
-        path: envoyStaticConfig
-      - description: AdminAccessLogPath configures where the envoy's admin server logs are written to
-        displayName: Admin Access Log Path
-        path: envoyStaticConfig.adminAccessLogPath
-      - description: AdminBindAddress is where envoy's admin server binds to.
-        displayName: Admin Bind Address
-        path: envoyStaticConfig.adminBindAddress
-      - description: ConfigFile is the path of envoy's bootstrap config file
-        displayName: Config File
-        path: envoyStaticConfig.configFile
-      - description: The ConfigMap where the envoy client v2 static config will be stored
-        displayName: Config Map Name V2
-        path: envoyStaticConfig.configMapNameV2
-      - description: The ConfigMap where the envoy client v3 static config will be stored
-        displayName: Config Map Name V3
-        path: envoyStaticConfig.configMapNameV3
-      - description: ResourcesDir is the path where resource files are loaded from. It is used to load discovery messages directly from the filesystem, for example in order to be able to bootstrap certificates and support rotation when they are modified.
-        displayName: Resources Dir
-        path: envoyStaticConfig.resourcesDir
-      - description: RtdsLayerResourceName is the resource name that the envoy client will request when askikng the discovery service for Runtime resources.
-        displayName: Rtds Layer Resource Name
-        path: envoyStaticConfig.rtdsLayerResourceName
-      statusDescriptors:
-      - description: ConfigHashV2 stores the hash of the current V2 bootstrap config generated for the given EnvoyBootstrap parameters
-        displayName: Config Hash V2
-        path: configHashV2
-      - description: ConfigHashV3 stores the hash of the current V3 bootstrap config generated for the given EnvoyBootstrap parameters
-        displayName: Config Hash V3
-        path: configHashV3
-      version: v1alpha1
     - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig resources. EnvoyConfigRevisions are automatically created and deleted  by the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig objects instead.
       displayName: EnvoyConfigRevision
       kind: EnvoyConfigRevision
@@ -185,7 +134,7 @@ spec:
       - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
         displayName: Envoy Resources
         path: envoyResources
-      - description: 'Clusters is a list of the envoy Cluster resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
+      - description: 'Clusters is a list of the envoy Cluster resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
         displayName: Clusters
         path: envoyResources.clusters
       - description: Name of the envoy resource
@@ -194,7 +143,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.clusters[0].value
-      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
         displayName: Endpoints
         path: envoyResources.endpoints
       - description: Name of the envoy resource
@@ -203,7 +152,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.endpoints[0].value
-      - description: 'Listeners is a list of the envoy Listener resource type. V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
+      - description: 'Listeners is a list of the envoy Listener resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
         displayName: Listeners
         path: envoyResources.listeners
       - description: Name of the envoy resource
@@ -212,7 +161,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.listeners[0].value
-      - description: 'Routes is a list of the envoy Route resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
+      - description: 'Routes is a list of the envoy Route resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
         displayName: Routes
         path: envoyResources.routes
       - description: Name of the envoy resource
@@ -221,7 +170,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.routes[0].value
-      - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
+      - description: 'Runtimes is a list of the envoy Runtime resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
         path: envoyResources.runtimes
       - description: Name of the envoy resource
@@ -282,7 +231,7 @@ spec:
       - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
         displayName: Envoy Resources
         path: envoyResources
-      - description: 'Clusters is a list of the envoy Cluster resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
+      - description: 'Clusters is a list of the envoy Cluster resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
         displayName: Clusters
         path: envoyResources.clusters
       - description: Name of the envoy resource
@@ -291,7 +240,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.clusters[0].value
-      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
         displayName: Endpoints
         path: envoyResources.endpoints
       - description: Name of the envoy resource
@@ -300,7 +249,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.endpoints[0].value
-      - description: 'Listeners is a list of the envoy Listener resource type. V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
+      - description: 'Listeners is a list of the envoy Listener resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
         displayName: Listeners
         path: envoyResources.listeners
       - description: Name of the envoy resource
@@ -309,7 +258,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.listeners[0].value
-      - description: 'Routes is a list of the envoy Route resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
+      - description: 'Routes is a list of the envoy Route resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
         displayName: Routes
         path: envoyResources.routes
       - description: Name of the envoy resource
@@ -318,7 +267,7 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.routes[0].value
-      - description: 'Runtimes is a list of the envoy Runtime resource type. V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
+      - description: 'Runtimes is a list of the envoy Runtime resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
         path: envoyResources.runtimes
       - description: Name of the envoy resource
@@ -497,7 +446,7 @@ spec:
     MARIN3R is an operator to manage an Envoy discovery service and a fleet of Envoy proxies that
     connect to it to fetch their configurations dynamically. It's main purpose is to provide
     an easy way to deploy a discovery service with the basic functionality already in place so you
-    can focus on developing your Envoy configurationss or even your own domain specifig CRDs leveraging
+    can focus on developing your Envoy configurations or even your own domain specifig CRDs leveraging
     the ones that MARIN3R provides.
 
 
@@ -513,7 +462,7 @@ spec:
 
     * Each EnvoyConfig object holds Envoy resources that will be "pushed" to the appropriate set of pods
     * Control which config goes to which pod directly using annotations on the pod
-    * The whole Envoy v2 API is supported
+    * Envoy v3 API supported
     * Envoy resources can be both expressed as json or yaml
     * A history of the last 10 configurations is kept per EnvoyConfig object
     * Self-healing is attempted when the Envoy sidecars are not able to load the resources defined in the

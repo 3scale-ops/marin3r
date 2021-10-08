@@ -9,27 +9,30 @@ node:
   cluster: envoy1
   id: envoy1
   metadata:
-    pod_name: "local"
+    envoy_image: "envoyproxy/envoy:v1.18.3"
+    host_name: localhost
+    pod_name: local
+    pod_namespace: test
 dynamic_resources:
-  ads_config:
-    api_type: GRPC
-    transport_api_version: V2
-    grpc_services:
-      - envoy_grpc:
-          cluster_name: marin3r
-  cds_config:
-    ads: {}
   lds_config:
     ads: {}
+    resource_api_version: V3
+  cds_config:
+    ads: {}
+    resource_api_version: V3
+  ads_config:
+    api_type: GRPC
+    transport_api_version: V3
+    grpc_services:
+      - envoy_grpc:
+          cluster_name: xds_cluster
 static_resources:
   clusters:
-    # The xDS cluster
-    - name: marin3r
+    - name: xds_cluster
+      type: STRICT_DNS
       connect_timeout: 1s
-      type: strict_dns
-      http2_protocol_options: {}
       load_assignment:
-        cluster_name: marin3r
+        cluster_name: xds_cluster
         endpoints:
           - lb_endpoints:
               - endpoint:
@@ -37,12 +40,13 @@ static_resources:
                     socket_address:
                       address: marin3r.default.svc
                       port_value: 18000
+      http2_protocol_options: {}
       transport_socket:
         name: envoy.transport_sockets.tls
         typed_config:
-          "@type": type.googleapis.com/envoy.api.v2.auth.UpstreamTlsContext
+          "@type": >-
+            type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
           common_tls_context:
-            # mTLS is necessary for sds
             tls_certificates:
               - certificate_chain:
                   filename: /etc/envoy/tls/envoy-client.crt

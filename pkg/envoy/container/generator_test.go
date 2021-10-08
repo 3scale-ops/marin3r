@@ -376,7 +376,7 @@ func TestContainerConfig_InitContainers(t *testing.T) {
 				AdminPort:          5000,
 				XdssHost:           "discovery-service.com",
 				XdssPort:           30000,
-				APIVersion:         "v2",
+				APIVersion:         "v3",
 				InitManagerImage:   "init-manager:test",
 			},
 			want: []corev1.Container{{
@@ -412,7 +412,7 @@ func TestContainerConfig_InitContainers(t *testing.T) {
 					"init-manager",
 					"--admin-access-log-path", "/dev/stdout",
 					"--admin-bind-address", "127.0.0.1:5000",
-					"--api-version", "v2",
+					"--api-version", "v3",
 					"--client-certificate-path", "/tls",
 					"--config-file", "/config/config.json",
 					"--resources-path", "/config",

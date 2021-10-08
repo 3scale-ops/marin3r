@@ -45,7 +45,7 @@ Lighweight, CRD based Envoy control plane for Kubernetes:
 
 MARIN3R is a Kubernetes operator to manage a fleet of Envoy proxies within a Kubernetes cluster. It takes care of the deployment of the proxies and manages their configuration, feeding it to them through a discovery service using Envoy's [xDS protocol](https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol). This allows for dynamic reconfiguration of the proxies without any reloads or restarts, favoring the ability to perform configuration changes in a non-disruptive way.
 
-Users can write their Envoy configurations by making use of [Kubernetes Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) that the operator will watch and make available to the proxies through the discovery service. Configurations are defined making direct use of Envoy's v2/v3 APIs so anything supported in the Envoy APIs is available in MARIN3R. See the [configuration section](#configuration) or the [API reference](docs/api-reference/reference.asciidoc) for more details.
+Users can write their Envoy configurations by making use of [Kubernetes Custom Resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) that the operator will watch and make available to the proxies through the discovery service. Configurations are defined making direct use of Envoy's v3 APIs so anything supported in the Envoy APIs is available in MARIN3R. See the [configuration section](#configuration) or the [API reference](docs/api-reference/reference.asciidoc) for more details.
 
 A great way to use this project is to have your own operator generating the Envoy configurations that your platform/service requires by making use of MARIN3R APIs. This way you can just focus on developing the Envoy configurations you need and let MARIN3R take care of the rest.
 
@@ -167,8 +167,7 @@ spec:
   # Resources can be written either in json or in yaml, being json the default if
   # not specified
   serialization: json
-  # Resources can be written using either v2 Envoy API or v3 Envoy API. Mixing v2 and v3 resources
-  # in the same EnvoyConfig is not allowed. Default is v2.
+  # Resources can be written using Envoy API v3.
   envoyAPI: v3
   # envoyResources is where users can write the different type of resources supported by MARIN3R
   envoyResources:
@@ -177,36 +176,31 @@ spec:
     # resource (for example a listener or a cluster) needs to be present here so marin3r
     # knows where to get the certificate from.
     secrets:
-        # name is the name of the kubernetes Secret that holds the certificate and by which it can be 
+        # name is the name of the kubernetes Secret that holds the certificate and by which it can be
         # referenced to from other resources
       - name: certificate
     # Endpoints is a list of the Envoy ClusterLoadAssignment resource type.
-    # V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/endpoint.proto
-    # V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
+    # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
     endpoints:
       - name: endpoint1
         value: {"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}
     # Clusters is a list of the Envoy Cluster resource type.
-    # V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/cluster.proto
-    # V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
+    # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
     clusters:
       - name: cluster1
         value: {"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1","endpoints":[]}}
     # Routes is a list of the Envoy Route resource type.
-    # V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route.proto
-    # V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
+    # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
     routes:
       - name: route1
         value: {"name":"route1","virtual_hosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"direct_response":{"status":200}}]}]}
     # Listeners is a list of the Envoy Listener resource type.
-    # V2 referece: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/listener.proto
-    # V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
+    # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
     listeners:
       - name: listener1
         value: {"name":"listener1","address":{"socketAddress":{"address":"0.0.0.0","portValue":8443}}}
     # Runtimes is a list of the Envoy Runtime resource type.
-    # V2 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v2/service/discovery/v2/rtds.proto
-    # V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
+    # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
     runtimes:
       - name: runtime1
         value: {"name":"runtime1","layer":{"static_layer_0":"value"}}
@@ -233,12 +227,11 @@ This certificate can then be referenced in an Envoy cluster/listener with the fo
 transport_socket:
   name: envoy.transport_sockets.tls
   typed_config:
-    "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
+    "@type": "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext"
     common_tls_context:
       tls_certificate_sds_secret_configs:
         - name: certificate
-          sds_config:
-            ads: {}
+          sds_config: { ads: {}, resource_api_version: "V3" }
 ```
 
 ### **Sidecar injection configuration**
@@ -249,7 +242,7 @@ The MARIN3R mutating admission webhook will inject Envoy containers in any Pod a
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | marin3r.3scale.net/node-id                                | Envoy's node-id                                                                                                                                                                                                | N/A                                                      |
 | marin3r.3scale.net/cluster-id                             | Envoy's cluster-id                                                                                                                                                                                             | same as node-id                                          |
-| marin3r.3scale.net/envoy-api-version                      | Envoy's API version (v2/v3)                                                                                                                                                                                    | v2                                                       |
+| marin3r.3scale.net/envoy-api-version                      | Envoy's API version (only v3 allowed)                                                                                                                                                                          | v3                                                       |
 | marin3r.3scale.net/container-name                         | the name of the Envoy sidecar                                                                                                                                                                                  | envoy-sidecar                                            |
 | marin3r.3scale.net/ports                                  | the exposed ports in the Envoy sidecar                                                                                                                                                                         | N/A                                                      |
 | marin3r.3scale.net/host-port-mappings                     | Envoy sidecar ports that will be mapped to the host. This is used for local development, no recommended for production use.                                                                                    | N/A                                                      |

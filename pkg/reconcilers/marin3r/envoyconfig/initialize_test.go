@@ -26,7 +26,7 @@ func TestIsInitialized(t *testing.T) {
 			func() *marin3rv1alpha1.EnvoyConfig {
 				return &marin3rv1alpha1.EnvoyConfig{
 					Spec: marin3rv1alpha1.EnvoyConfigSpec{
-						EnvoyAPI:      pointer.StringPtr("v2"),
+						EnvoyAPI:      pointer.StringPtr("v3"),
 						Serialization: pointer.StringPtr("json"),
 					},
 				}
@@ -41,7 +41,7 @@ func TestIsInitialized(t *testing.T) {
 						Finalizers: []string{marin3rv1alpha1.EnvoyConfigRevisionFinalizer},
 					},
 					Spec: marin3rv1alpha1.EnvoyConfigSpec{
-						EnvoyAPI:      pointer.StringPtr("v2"),
+						EnvoyAPI:      pointer.StringPtr("v3"),
 						Serialization: pointer.StringPtr("json"),
 					},
 				}

@@ -23,24 +23,19 @@ import (
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
-	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	server_v2 "github.com/envoyproxy/go-control-plane/pkg/server/v2"
 	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 var (
-	snapshotCacheV2 = cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)
 	snapshotCacheV3 = cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-	fn              = func(a, b, c string, d envoy.APIVersion) error { return nil }
 )
 
-func TestNewDualXdsServer(t *testing.T) {
+func TestNewXdsServer(t *testing.T) {
 
 	type args struct {
 		ctx       context.Context
@@ -53,41 +48,35 @@ func TestNewDualXdsServer(t *testing.T) {
 		args args
 	}{
 		{
-			"Returns a new DualXdsServer from the given params",
+			"Returns a new XdsServer from the given params",
 			args{context.Background(), 10000, &tls.Config{}, ctrl.Log},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDualXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.logger)
-			if got.snapshotCacheV2 == nil || got.snapshotCacheV3 == nil ||
-				got.serverV2 == nil || got.serverV3 == nil ||
-				got.callbacksV2 == nil || got.callbacksV3 == nil {
-				t.Errorf("TestNewDualXdsServer = expected non-empty caches")
+			got := NewXdsServer(tt.args.ctx, tt.args.adsPort, tt.args.tlsConfig, tt.args.logger)
+			if got.snapshotCacheV3 == nil || got.serverV3 == nil || got.callbacksV3 == nil {
+				t.Errorf("TestNewXdsServer = expected non-empty caches")
 			}
 		})
 	}
 }
 
-func TestDualXdsServer_Start(t *testing.T) {
+func TestXdsServer_Start(t *testing.T) {
 
 	tests := []struct {
 		name string
-		xdss *DualXdsServer
+		xdss *XdsServer
 	}{
 		{
 			"Runs the ads server",
-			&DualXdsServer{
+			&XdsServer{
 				context.Background(),
 				10000,
 				&tls.Config{},
-				server_v2.NewServer(context.Background(), snapshotCacheV2, &xdss_v2.Callbacks{Logger: ctrl.Log}),
 				server_v3.NewServer(context.Background(), snapshotCacheV3, &xdss_v3.Callbacks{Logger: ctrl.Log}),
-				snapshotCacheV2,
 				snapshotCacheV3,
-				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
-				stats.New(),
 				stats.New(),
 			},
 		},
@@ -99,7 +88,7 @@ func TestDualXdsServer_Start(t *testing.T) {
 			wait.Add(1)
 			go func() {
 				if err := tt.xdss.Start(stopCh); err != nil {
-					t.Errorf("TestDualXdsServer_Start = non nil error: '%s'", err)
+					t.Errorf("TestXdsServer_Start = non nil error: '%s'", err)
 				}
 				wait.Done()
 			}()
@@ -109,44 +98,22 @@ func TestDualXdsServer_Start(t *testing.T) {
 	}
 }
 
-func TestDualXdsServer_GetCache(t *testing.T) {
+func TestXdsServer_GetCache(t *testing.T) {
 	tests := []struct {
 		name    string
-		xdss    *DualXdsServer
+		xdss    *XdsServer
 		want    xdss.Cache
 		version envoy.APIVersion
 	}{
 		{
 			"Gets the server's Cache",
-			&DualXdsServer{
+			&XdsServer{
 				context.Background(),
 				10000,
 				&tls.Config{},
-				server_v2.NewServer(context.Background(), snapshotCacheV2, &xdss_v2.Callbacks{Logger: ctrl.Log}),
 				server_v3.NewServer(context.Background(), snapshotCacheV3, &xdss_v3.Callbacks{Logger: ctrl.Log}),
-				snapshotCacheV2,
 				snapshotCacheV3,
-				&xdss_v2.Callbacks{Logger: ctrl.Log},
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
-				stats.New(),
-				stats.New(),
-			},
-			xdss_v2.NewCache(snapshotCacheV2),
-			envoy.APIv2,
-		},
-		{
-			"Gets the server's Cache",
-			&DualXdsServer{
-				context.Background(),
-				10000,
-				&tls.Config{},
-				server_v2.NewServer(context.Background(), snapshotCacheV2, &xdss_v2.Callbacks{Logger: ctrl.Log}),
-				server_v3.NewServer(context.Background(), snapshotCacheV3, &xdss_v3.Callbacks{Logger: ctrl.Log}),
-				snapshotCacheV2,
-				snapshotCacheV3,
-				&xdss_v2.Callbacks{Logger: ctrl.Log},
-				&xdss_v3.Callbacks{Logger: ctrl.Log},
-				stats.New(),
 				stats.New(),
 			},
 			xdss_v3.NewCache(snapshotCacheV3),
@@ -156,7 +123,7 @@ func TestDualXdsServer_GetCache(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.xdss.GetCache(tt.version); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DualXdsServer.GetCache() = %v, want %v", got, tt.want)
+				t.Errorf("XdsServer.GetCache() = %v, want %v", got, tt.want)
 			}
 		})
 	}

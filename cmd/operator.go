@@ -35,7 +35,6 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	marin3rcontroller "github.com/3scale-ops/marin3r/controllers/marin3r"
 	operatorcontroller "github.com/3scale-ops/marin3r/controllers/operator.marin3r"
 	// +kubebuilder:scaffold:imports
 )
@@ -58,7 +57,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(operatorScheme))
 	utilruntime.Must(operatorv1alpha1.AddToScheme(operatorScheme))
 	utilruntime.Must(marin3rv1alpha1.AddToScheme(operatorScheme))
-	utilruntime.Must(operatorv1alpha1.AddToScheme(operatorScheme))
 	// +kubebuilder:scaffold:scheme
 
 	rootCmd.AddCommand(operatorCmd)
@@ -126,15 +124,6 @@ func runOperator(cmd *cobra.Command, args []string) {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
-		os.Exit(1)
-	}
-
-	if err = (&marin3rcontroller.EnvoyBootstrapReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("envoybootstrap"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "envoybootstrap")
 		os.Exit(1)
 	}
 

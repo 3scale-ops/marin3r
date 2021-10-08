@@ -73,7 +73,7 @@ func init() {
 	initManagerServiceCmd.Flags().StringVar(&initmgrRtdsLayerResourceName, "rtds-resource-name", defaults.InitMgrRtdsLayerResourceName, "Name of the 'Runtime' resource to request from the xDS server.")
 	initManagerServiceCmd.Flags().StringVar(&initmgrAdminBindAddress, "admin-bind-address", fmt.Sprintf("%s:%d", defaults.EnvoyAdminBindAddress, defaults.EnvoyAdminPort), "Address to bind the admin port to.")
 	initManagerServiceCmd.Flags().StringVar(&initmgrAdminAccessLogPath, "admin-access-log-path", defaults.EnvoyAdminAccessLogPath, "Path for the admin access logs.")
-	initManagerServiceCmd.Flags().StringVar(&initmgrAPIVersion, "api-version", "v2", "Envoy API version to use.")
+	initManagerServiceCmd.Flags().StringVar(&initmgrAPIVersion, "api-version", "v3", "Envoy API version to use.")
 	initManagerServiceCmd.Flags().StringVar(&initmgrEnvoyImage, "envoy-image", "", "Envoy image being used.")
 }
 

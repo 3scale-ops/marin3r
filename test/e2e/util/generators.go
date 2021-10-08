@@ -18,16 +18,9 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
-	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
-	envoy_api_v2_endpoint "github.com/envoyproxy/go-control-plane/envoy/api/v2/endpoint"
-	envoy_api_v2_listener "github.com/envoyproxy/go-control-plane/envoy/api/v2/listener"
-	envoy_api_v2_route "github.com/envoyproxy/go-control-plane/envoy/api/v2/route"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	http_connection_manager_v2 "github.com/envoyproxy/go-control-plane/envoy/config/filter/network/http_connection_manager/v2"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	http_connection_manager_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
@@ -263,16 +256,6 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 
 }
 
-func GetAddressV2(host string, port uint32) *envoy_api_v2_core.Address {
-	return &envoy_api_v2_core.Address{
-		Address: &envoy_api_v2_core.Address_SocketAddress{
-			SocketAddress: &envoy_api_v2_core.SocketAddress{
-				Address: host,
-				PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
-					PortValue: port,
-				}}}}
-}
-
 func GetAddressV3(host string, port uint32) *envoy_config_core_v3.Address {
 	return &envoy_config_core_v3.Address{
 		Address: &envoy_config_core_v3.Address_SocketAddress{
@@ -281,35 +264,6 @@ func GetAddressV3(host string, port uint32) *envoy_config_core_v3.Address {
 				PortSpecifier: &envoy_config_core_v3.SocketAddress_PortValue{
 					PortValue: port,
 				}}}}
-}
-
-func TransportSocketV2(secretName string) *envoy_api_v2_core.TransportSocket {
-	return &envoy_api_v2_core.TransportSocket{
-		Name: "envoy.transport_sockets.tls",
-		ConfigType: &envoy_api_v2_core.TransportSocket_TypedConfig{
-			TypedConfig: func() *any.Any {
-				any, err := ptypes.MarshalAny(&envoy_api_v2_auth.DownstreamTlsContext{
-					CommonTlsContext: &envoy_api_v2_auth.CommonTlsContext{
-						TlsCertificateSdsSecretConfigs: []*envoy_api_v2_auth.SdsSecretConfig{
-							{
-								Name: secretName,
-								SdsConfig: &envoy_api_v2_core.ConfigSource{
-									ConfigSourceSpecifier: &envoy_api_v2_core.ConfigSource_Ads{
-										Ads: &envoy_api_v2_core.AggregatedConfigSource{},
-									},
-									ResourceApiVersion: envoy_api_v2_core.ApiVersion_V2,
-								},
-							},
-						},
-					},
-				})
-				if err != nil {
-					panic(err)
-				}
-				return any
-			}(),
-		},
-	}
 }
 
 func TransportSocketV3(secretName string) *envoy_config_core_v3.TransportSocket {
@@ -338,48 +292,6 @@ func TransportSocketV3(secretName string) *envoy_config_core_v3.TransportSocket 
 				return any
 			}(),
 		},
-	}
-}
-
-func HTTPListenerWithRdsV2(listenerName, routeName string, address, transportSocket proto.Message) (string, *envoy_api_v2.Listener) {
-	return listenerName, &envoy_api_v2.Listener{
-		Name:    listenerName,
-		Address: address.(*envoy_api_v2_core.Address),
-		FilterChains: []*envoy_api_v2_listener.FilterChain{{
-			Filters: []*envoy_api_v2_listener.Filter{{
-				Name: "envoy.http_connection_manager",
-				ConfigType: &envoy_api_v2_listener.Filter_TypedConfig{
-					TypedConfig: func() *any.Any {
-						any, err := ptypes.MarshalAny(
-							&http_connection_manager_v2.HttpConnectionManager{
-								StatPrefix: listenerName,
-								RouteSpecifier: &http_connection_manager_v2.HttpConnectionManager_Rds{
-									Rds: &http_connection_manager_v2.Rds{
-										ConfigSource: &envoy_api_v2_core.ConfigSource{
-											ConfigSourceSpecifier: &envoy_api_v2_core.ConfigSource_Ads{
-												Ads: &envoy_api_v2_core.AggregatedConfigSource{},
-											},
-											ResourceApiVersion: envoy_api_v2_core.ApiVersion_V2,
-										},
-										RouteConfigName: routeName,
-									},
-								},
-								HttpFilters: []*http_connection_manager_v2.HttpFilter{{Name: "envoy.filters.http.router"}},
-							})
-						if err != nil {
-							panic(err)
-						}
-						return any
-					}(),
-				},
-			}},
-			TransportSocket: func() *envoy_api_v2_core.TransportSocket {
-				if transportSocket != nil {
-					return transportSocket.(*envoy_api_v2_core.TransportSocket)
-				}
-				return nil
-			}(),
-		}},
 	}
 }
 
@@ -425,25 +337,6 @@ func HTTPListenerWithRdsV3(listenerName, routeName string, address, transportSoc
 	}
 }
 
-func ProxyPassRouteV2(routeName, clusterName string) (string, *envoy_api_v2.RouteConfiguration) {
-	return routeName, &envoy_api_v2.RouteConfiguration{
-		Name: routeName,
-		VirtualHosts: []*envoy_api_v2_route.VirtualHost{{
-			Name:    routeName,
-			Domains: []string{"*"},
-			Routes: []*envoy_api_v2_route.Route{{
-				Match: &envoy_api_v2_route.RouteMatch{
-					PathSpecifier: &envoy_api_v2_route.RouteMatch_Prefix{Prefix: "/"}},
-				Action: &envoy_api_v2_route.Route_Route{
-					Route: &envoy_api_v2_route.RouteAction{
-						ClusterSpecifier: &envoy_api_v2_route.RouteAction_Cluster{Cluster: clusterName},
-					},
-				},
-			}},
-		}},
-	}
-}
-
 func ProxyPassRouteV3(routeName, clusterName string) (string, *envoy_config_route_v3.RouteConfiguration) {
 	return routeName, &envoy_config_route_v3.RouteConfiguration{
 		Name: routeName,
@@ -458,27 +351,6 @@ func ProxyPassRouteV3(routeName, clusterName string) (string, *envoy_config_rout
 						ClusterSpecifier: &envoy_config_route_v3.RouteAction_Cluster{Cluster: clusterName},
 					},
 				},
-			}},
-		}},
-	}
-}
-
-func DirectResponseRouteV2(routeName, msg string) (string, *envoy_api_v2.RouteConfiguration) {
-	return routeName, &envoy_api_v2.RouteConfiguration{
-		Name: routeName,
-		VirtualHosts: []*envoy_api_v2_route.VirtualHost{{
-			Name:    routeName,
-			Domains: []string{"*"},
-			Routes: []*envoy_api_v2_route.Route{{
-				Match: &envoy_api_v2_route.RouteMatch{
-					PathSpecifier: &envoy_api_v2_route.RouteMatch_Prefix{Prefix: "/"}},
-				Action: &envoy_api_v2_route.Route_DirectResponse{
-					DirectResponse: &envoy_api_v2_route.DirectResponseAction{
-						Status: 200,
-						Body: &envoy_api_v2_core.DataSource{
-							Specifier: &envoy_api_v2_core.DataSource_InlineString{InlineString: msg},
-						},
-					}},
 			}},
 		}},
 	}
@@ -505,25 +377,6 @@ func DirectResponseRouteV3(routeName, msg string) (string, *envoy_config_route_v
 	}
 }
 
-func EndpointV2(clusterName, host string, port uint32) (string, *envoy_api_v2.ClusterLoadAssignment) {
-	return clusterName, &envoy_api_v2.ClusterLoadAssignment{
-		ClusterName: clusterName,
-		Endpoints: []*envoy_api_v2_endpoint.LocalityLbEndpoints{
-			{
-				LbEndpoints: []*envoy_api_v2_endpoint.LbEndpoint{
-					{
-						HostIdentifier: &envoy_api_v2_endpoint.LbEndpoint_Endpoint{
-							Endpoint: &envoy_api_v2_endpoint.Endpoint{
-								Address: &envoy_api_v2_core.Address{
-									Address: &envoy_api_v2_core.Address_SocketAddress{
-										SocketAddress: &envoy_api_v2_core.SocketAddress{
-											Address: host,
-											PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
-												PortValue: port,
-											}}}}}}}}}},
-	}
-}
-
 func EndpointV3(clusterName, host string, port uint32) (string, *envoy_config_endpoint_v3.ClusterLoadAssignment) {
 	return clusterName, &envoy_config_endpoint_v3.ClusterLoadAssignment{
 		ClusterName: clusterName,
@@ -543,24 +396,6 @@ func EndpointV3(clusterName, host string, port uint32) (string, *envoy_config_en
 	}
 }
 
-func ClusterWithEdsV2(clusterName string) (string, *envoy_api_v2.Cluster) {
-	return clusterName, &envoy_api_v2.Cluster{
-		Name:           clusterName,
-		ConnectTimeout: ptypes.DurationProto(10 * time.Millisecond),
-		ClusterDiscoveryType: &envoy_api_v2.Cluster_Type{
-			Type: envoy_api_v2.Cluster_EDS,
-		},
-		EdsClusterConfig: &envoy_api_v2.Cluster_EdsClusterConfig{
-			EdsConfig: &envoy_api_v2_core.ConfigSource{
-				ConfigSourceSpecifier: &envoy_api_v2_core.ConfigSource_Ads{
-					Ads: &envoy_api_v2_core.AggregatedConfigSource{},
-				},
-				ResourceApiVersion: envoy_api_v2_core.ApiVersion_V2,
-			}},
-		LbPolicy: envoy_api_v2.Cluster_ROUND_ROBIN,
-	}
-}
-
 func ClusterWithEdsV3(clusterName string) (string, *envoy_config_cluster_v3.Cluster) {
 	return clusterName, &envoy_config_cluster_v3.Cluster{
 		Name:           clusterName,
@@ -576,33 +411,6 @@ func ClusterWithEdsV3(clusterName string) (string, *envoy_config_cluster_v3.Clus
 				},
 				ResourceApiVersion: envoy_config_core_v3.ApiVersion_V3,
 			}},
-	}
-}
-
-func ClusterWithStrictDNSV2(clusterName, host string, port uint32) (string, *envoy_api_v2.Cluster) {
-	return clusterName, &envoy_api_v2.Cluster{
-		Name:           clusterName,
-		ConnectTimeout: ptypes.DurationProto(10 * time.Millisecond),
-		ClusterDiscoveryType: &envoy_api_v2.Cluster_Type{
-			Type: envoy_api_v2.Cluster_STRICT_DNS,
-		},
-		LbPolicy: envoy_api_v2.Cluster_ROUND_ROBIN,
-		LoadAssignment: &envoy_api_v2.ClusterLoadAssignment{
-			ClusterName: clusterName,
-			Endpoints: []*envoy_api_v2_endpoint.LocalityLbEndpoints{
-				{
-					LbEndpoints: []*envoy_api_v2_endpoint.LbEndpoint{
-						{
-							HostIdentifier: &envoy_api_v2_endpoint.LbEndpoint_Endpoint{
-								Endpoint: &envoy_api_v2_endpoint.Endpoint{
-									Address: &envoy_api_v2_core.Address{
-										Address: &envoy_api_v2_core.Address_SocketAddress{
-											SocketAddress: &envoy_api_v2_core.SocketAddress{
-												Address: host,
-												PortSpecifier: &envoy_api_v2_core.SocketAddress_PortValue{
-													PortValue: port,
-												}}}}}}}}}},
-		},
 	}
 }
 

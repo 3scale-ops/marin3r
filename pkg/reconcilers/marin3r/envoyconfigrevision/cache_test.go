@@ -7,27 +7,20 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
-	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
-	envoy_resources_v2 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v2"
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
-	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
-	envoy_api_v2_auth "github.com/envoyproxy/go-control-plane/envoy/api/v2/auth"
-	envoy_api_v2_core "github.com/envoyproxy/go-control-plane/envoy/api/v2/core"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -52,25 +45,6 @@ func TestNewCacheReconciler(t *testing.T) {
 		args args
 		want CacheReconciler
 	}{
-		{
-			name: "Returns a CacheReconciler (v2)",
-			args: args{
-				ctx:       context.TODO(),
-				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
-			},
-			want: CacheReconciler{
-				ctx:       context.TODO(),
-				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
-			},
-		},
 		{
 			name: "Returns a CacheReconciler (v3)",
 			args: args{
@@ -124,39 +98,6 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 		wantSnap    xdss.Snapshot
 		wantVersion string
 	}{
-		{
-			name: "Reconciles cache (v2)",
-			fields: fields{
-				ctx:       context.TODO(),
-				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
-			},
-			args: args{
-				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-					}},
-				version: "xxxx",
-				nodeID:  "node2",
-			},
-
-			want:    &marin3rv1alpha1.VersionTracker{Endpoints: "845f965864"},
-			wantErr: false,
-			wantSnap: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-				Resources: [6]cache_v2.Resources{
-					{Version: "845f965864", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-				}}),
-		},
 		{
 			name: "Reconciles cache (v3)",
 			fields: fields{
@@ -241,57 +182,6 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Loads v2 resources into the snapshot",
-			fields: fields{
-				ctx:       context.TODO(),
-				logger:    ctrl.Log.WithName("test"),
-				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
-			},
-			args: args{
-				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
-					},
-					Clusters: []marin3rv1alpha1.EnvoyResource{
-						{Name: "cluster", Value: "{\"name\": \"cluster\"}"},
-					},
-					Routes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "route", Value: "{\"name\": \"route\"}"},
-					},
-					Listeners: []marin3rv1alpha1.EnvoyResource{
-						{Name: "listener", Value: "{\"name\": \"listener\"}"},
-					},
-					Runtimes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "runtime", Value: "{\"name\": \"runtime\"}"},
-					}},
-			},
-			want: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-				Resources: [6]cache_v2.Resources{
-					{Version: "845f965864", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"},
-					}},
-					{Version: "568989d74c", Items: map[string]cache_types.Resource{
-						"cluster": &envoy_api_v2.Cluster{Name: "cluster"},
-					}},
-					{Version: "6645547657", Items: map[string]cache_types.Resource{
-						"route": &envoy_api_v2.RouteConfiguration{Name: "route"},
-					}},
-					{Version: "7cb77864cf", Items: map[string]cache_types.Resource{
-						"listener": &envoy_api_v2.Listener{Name: "listener"},
-					}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "7456685887", Items: map[string]cache_types.Resource{
-						"runtime": &envoy_service_discovery_v2.Runtime{Name: "runtime"},
-					}},
-				},
-			}),
-			wantErr: false,
-		},
-		{
 			name: "Loads v3 resources into the snapshot",
 			fields: fields{
 				ctx:       context.TODO(),
@@ -348,9 +238,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
 				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
@@ -360,7 +250,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					}},
 			},
 			wantErr: true,
-			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
 		},
 		{
 			name: "Error, bad cluster value",
@@ -368,9 +258,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
 				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
@@ -380,7 +270,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					}},
 			},
 			wantErr: true,
-			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
 		},
 		{
 			name: "Error, bad route value",
@@ -388,9 +278,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
 				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
@@ -400,7 +290,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					}},
 			},
 			wantErr: true,
-			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
 		},
 		{
 			name: "Error, bad listener value",
@@ -408,9 +298,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
 				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
@@ -420,7 +310,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					}},
 			},
 			wantErr: true,
-			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
 		},
 		{
 			name: "Error, bad runtime value",
@@ -428,9 +318,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
 				client:    fake.NewClientBuilder().Build(),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
@@ -440,49 +330,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					}},
 			},
 			wantErr: true,
-			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
-		},
-		{
-			name: "Loads secret resources into the snapshot (v2)",
-			fields: fields{
-				ctx:    context.TODO(),
-				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClient(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "xx"},
-					Type:       corev1.SecretTypeTLS,
-					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
-				}),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
-			},
-			args: args{
-				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
-				},
-			},
-			wantErr: false,
-			want: xdss_v2.NewSnapshot(&cache_v2.Snapshot{
-				Resources: [6]cache_v2.Resources{
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "56c6b8dc45", Items: map[string]cache_types.Resource{
-						"secret": &envoy_api_v2_auth.Secret{
-							Name: "secret",
-							Type: &envoy_api_v2_auth.Secret_TlsCertificate{
-								TlsCertificate: &envoy_api_v2_auth.TlsCertificate{
-									PrivateKey: &envoy_api_v2_core.DataSource{
-										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("key")},
-									},
-									CertificateChain: &envoy_api_v2_core.DataSource{
-										Specifier: &envoy_api_v2_core.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-									}}}}}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-				},
-			}),
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
 		},
 		{
 			name: "Loads secret resources into the snapshot (v3)",
@@ -536,9 +384,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				}),
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
@@ -548,7 +396,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				},
 			},
 			wantErr: true,
-			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
 		},
 		{
 			name: "Fails when secret does not exist",
@@ -556,9 +404,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				client:    fake.NewClientBuilder().Build(),
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
-				xdsCache:  xdss_v2.NewCache(cache_v2.NewSnapshotCache(true, cache_v2.IDHash{}, nil)),
-				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv2),
-				generator: envoy_resources_v2.Generator{},
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
@@ -568,7 +416,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				},
 			},
 			wantErr: true,
-			want:    xdss_v2.NewSnapshot(&cache_v2.Snapshot{}),
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
 		},
 	}
 	for _, tt := range tests {

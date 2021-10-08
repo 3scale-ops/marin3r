@@ -1,5 +1,7 @@
 # **Upgrade from Envoy API v2 to v3**
 
+**NOTE: API v2 is deprecated in MARIN3R releases > 0.9.0**
+
 MARIN3R discovery services support both v2 and v3 APIs, which allows for non disruptive upgrades from Envoy v2 API to v3. This walkthrough describes the process of upgrading between API versions.
 
 ## **Preparation**

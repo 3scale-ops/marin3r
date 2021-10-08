@@ -5,7 +5,7 @@ import (
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
-	envoy_api_v2 "github.com/envoyproxy/go-control-plane/envoy/api/v2"
+	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
@@ -31,7 +31,7 @@ func TestCache_SetSnapshot(t *testing.T) {
 			args: args{nodeID: "node", snap: Snapshot{v3: &cache_v3.Snapshot{
 				Resources: [6]cache_v3.Resources{
 					{Version: "xxxx", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+						"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
@@ -42,7 +42,7 @@ func TestCache_SetSnapshot(t *testing.T) {
 			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
 				Resources: [6]cache_v3.Resources{
 					{Version: "xxxx", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+						"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
@@ -89,7 +89,7 @@ func TestCache_GetSnapshot(t *testing.T) {
 					c.SetSnapshot("node", cache_v3.Snapshot{
 						Resources: [6]cache_v3.Resources{
 							{Version: "xxxx", Items: map[string]cache_types.Resource{
-								"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+								"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
@@ -103,7 +103,7 @@ func TestCache_GetSnapshot(t *testing.T) {
 			want: Snapshot{v3: &cache_v3.Snapshot{
 				Resources: [6]cache_v3.Resources{
 					{Version: "xxxx", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+						"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 					{Version: "xxxx", Items: map[string]cache_types.Resource{}},
@@ -120,7 +120,7 @@ func TestCache_GetSnapshot(t *testing.T) {
 					c.SetSnapshot("node", cache_v3.Snapshot{
 						Resources: [6]cache_v3.Resources{
 							{Version: "xxxx", Items: map[string]cache_types.Resource{
-								"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+								"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
@@ -172,7 +172,7 @@ func TestCache_ClearSnapshot(t *testing.T) {
 					c.SetSnapshot("node", cache_v3.Snapshot{
 						Resources: [6]cache_v3.Resources{
 							{Version: "xxxx", Items: map[string]cache_types.Resource{
-								"endpoint": &envoy_api_v2.ClusterLoadAssignment{ClusterName: "endpoint"}}},
+								"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},
 							{Version: "xxxx", Items: map[string]cache_types.Resource{}},

@@ -23,16 +23,13 @@ import (
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
-	xdss_v2 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v2"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
-	cache_v2 "github.com/envoyproxy/go-control-plane/pkg/cache/v2"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	server_v2 "github.com/envoyproxy/go-control-plane/pkg/server/v2"
 	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
+	ctrl "sigs.k8s.io/controller-runtime"
 
-	envoy_service_discovery_v2 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v2"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 
 	"google.golang.org/grpc"
@@ -48,76 +45,55 @@ const (
 	grpcKeepaliveEnforcementPolicyPermitWithoutStream = false
 )
 
-// XdsServer in an interface that any xDS server should implement
-type XdsServer interface {
-	Start(<-chan struct{}) error
-	GetCache(envoy.APIVersion) xdss.Cache
-}
+var (
+	setupLog = ctrl.Log.WithName("xds_server")
+)
 
-// DualXdsServer is a type that holds configuration
+// XdsServer is a type that holds configuration
 // and runtime objects for the envoy xds server
-type DualXdsServer struct {
+type XdsServer struct {
 	ctx              context.Context
 	xDSPort          uint
 	tlsConfig        *tls.Config
-	serverV2         server_v2.Server
 	serverV3         server_v3.Server
-	snapshotCacheV2  cache_v2.SnapshotCache
 	snapshotCacheV3  cache_v3.SnapshotCache
-	callbacksV2      *xdss_v2.Callbacks
 	callbacksV3      *xdss_v3.Callbacks
-	discoveryStatsV2 *stats.Stats
 	discoveryStatsV3 *stats.Stats
 }
 
-// NewDualXdsServer creates a new DualXdsServer object fron the given params
-func NewDualXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logger logr.Logger) *DualXdsServer {
+// NewXdsServer creates a new XdsServer object fron the given params
+func NewXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logger logr.Logger) *XdsServer {
 
 	xdsLogger := logger.WithName("xds")
 
-	discoveryStatsV2 := stats.New()
 	discoveryStatsV3 := stats.New()
 
-	snapshotCacheV2 := cache_v2.NewSnapshotCache(
-		true,
-		cache_v2.IDHash{},
-		clogger{Logger: xdsLogger.WithName("cache").WithName("v2")},
-	)
 	snapshotCacheV3 := cache_v3.NewSnapshotCache(
 		true,
 		cache_v3.IDHash{},
 		clogger{Logger: xdsLogger.WithName("cache").WithName("v3")},
 	)
 
-	callbacksV2 := &xdss_v2.Callbacks{
-		Stats:  discoveryStatsV2,
-		Logger: xdsLogger.WithName("server").WithName("v2"),
-	}
 	callbacksV3 := &xdss_v3.Callbacks{
 		Stats:  discoveryStatsV3,
 		Logger: xdsLogger.WithName("server").WithName("v3"),
 	}
 
-	srvV2 := server_v2.NewServer(ctx, snapshotCacheV2, callbacksV2)
 	srvV3 := server_v3.NewServer(ctx, snapshotCacheV3, callbacksV3)
 
-	return &DualXdsServer{
+	return &XdsServer{
 		ctx:              ctx,
 		xDSPort:          xDSPort,
 		tlsConfig:        tlsConfig,
-		serverV2:         srvV2,
 		serverV3:         srvV3,
-		snapshotCacheV2:  snapshotCacheV2,
 		snapshotCacheV3:  snapshotCacheV3,
-		callbacksV2:      callbacksV2,
 		callbacksV3:      callbacksV3,
-		discoveryStatsV2: discoveryStatsV2,
 		discoveryStatsV3: discoveryStatsV3,
 	}
 }
 
 // Start starts an xDS server at the given port.
-func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
+func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
@@ -145,7 +121,6 @@ func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
 	errCh := make(chan error)
 
 	// goroutine to run server
-	envoy_service_discovery_v2.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.serverV2)
 	envoy_service_discovery_v3.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.serverV3)
 
 	go func() {
@@ -185,18 +160,12 @@ func (xdss *DualXdsServer) Start(stopCh <-chan struct{}) error {
 }
 
 // GetCache returns the Cache
-func (xdss *DualXdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
-	if version == envoy.APIv2 {
-		return xdss_v2.NewCache(xdss.snapshotCacheV2)
-	}
+func (xdss *XdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
 	return xdss_v3.NewCache(xdss.snapshotCacheV3)
 }
 
 // GetCache returns the discovery stats
-func (xdss *DualXdsServer) GetDiscoveryStats(version envoy.APIVersion) *stats.Stats {
-	if version == envoy.APIv2 {
-		return xdss.discoveryStatsV2
-	}
+func (xdss *XdsServer) GetDiscoveryStats(version envoy.APIVersion) *stats.Stats {
 	return xdss.discoveryStatsV3
 }
 

@@ -35,7 +35,7 @@ func TestSecretGenerator_New(t *testing.T) {
 		want *envoy_extensions_transport_sockets_tls_v3.Secret
 	}{
 		{
-			name: "Return v2 secret",
+			name: "Return v3 secret",
 			g:    Generator{},
 			args: args{
 				name:             "cert1",
