@@ -2,7 +2,6 @@ package revisions
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
@@ -132,7 +131,7 @@ func TestGetRevision(t *testing.T) {
 		wantErr   bool
 	}{
 		{
-			"Returns all the EnvoyConfigRevision that matches the given filters",
+			"Returns all the EnvoyConfigRevisions that match the given filters",
 			fake.NewFakeClientWithScheme(s,
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
@@ -200,8 +199,8 @@ func TestGetRevision(t *testing.T) {
 				t.Errorf("GetRevision() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetRevision() = %v, want %v", got, tt.want)
+			if got != nil && (got.GetName() != tt.want.GetName()) {
+				t.Errorf("GetRevision() = %s, want %s", got.GetName(), tt.want.GetName())
 			}
 		})
 	}

@@ -1,0 +1,22 @@
+# This patch injects custom arguments required by marin3r operator
+# to run in the controller manager main container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          args:
+            - operator
+            - --leader-elect
+          resources:
+            limits:
+              cpu: 300m
+              memory: 300Mi
+            requests:
+              cpu: 50m
+              memory: 100Mi

@@ -2,7 +2,6 @@ apiVersion: operator.marin3r.3scale.net/v1alpha1
 kind: DiscoveryService
 metadata:
   name: instance
-  namespace: default
 spec:
   image: quay.io/3scale/marin3r:test
   debug: true

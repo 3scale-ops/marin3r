@@ -1,0 +1,5 @@
+- op: replace
+  path: /kind
+  value: ClusterRole
+- op: remove
+  path: /metadata/namespace
