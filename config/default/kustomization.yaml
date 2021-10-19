@@ -43,8 +43,15 @@ patchesStrategicMerge:
 # 'CERTMANAGER' needs to be enabled to use ca injection
 - webhookcainjection_patch.yaml
 
+patches:
+# [CUSTOM] Change the port to http for the metrics Service
+- path: custom/metrics_service_patch.yaml
+  target:
+    group: ""
+    kind: Service
+    name: controller-manager-metrics-service
+    version: v1
 # [CUSTOM: cluster scope] Uncomment this for cluster scoped installations
-patches: []
 # - path: custom/clusterrole_patch.yaml
 #   target:
 #     group: rbac.authorization.k8s.io

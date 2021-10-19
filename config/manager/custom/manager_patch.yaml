@@ -1,5 +1,5 @@
 # This patch injects custom arguments required by marin3r operator
-# to run in the controller manager main container
+# to run in the controller manager main container. Also adds metrics port.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,3 +20,7 @@ spec:
             requests:
               cpu: 50m
               memory: 100Mi
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+              name: metrics

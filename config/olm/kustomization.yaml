@@ -16,3 +16,9 @@ patches:
     kind: Deployment
     name: controller-webhook
     version: v1
+- path: metrics_service_patch.yaml
+  target:
+    group: ""
+    kind: Service
+    name: controller-manager-metrics-service
+    version: v1
