@@ -9,6 +9,8 @@ resources:
 namespace: marin3r-system
 namePrefix: marin3r-
 
+patchesStrategicMerge:
+  - manager_patch.yaml
 patches:
 - path: webhook_patch.yaml
   target:
