@@ -121,14 +121,15 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 			want:    &marin3rv1alpha1.VersionTracker{Endpoints: "845f965864"},
 			wantErr: false,
 			wantSnap: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [6]cache_v3.Resources{
-					{Version: "845f965864", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
+				Resources: [7]cache_v3.Resources{
+					{Version: "845f965864", Items: map[string]cache_types.ResourceWithTtl{
+						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
 				}}),
 		},
 	}
@@ -211,23 +212,24 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					}},
 			},
 			want: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [6]cache_v3.Resources{
-					{Version: "845f965864", Items: map[string]cache_types.Resource{
-						"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+				Resources: [7]cache_v3.Resources{
+					{Version: "845f965864", Items: map[string]cache_types.ResourceWithTtl{
+						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}},
 					}},
-					{Version: "568989d74c", Items: map[string]cache_types.Resource{
-						"cluster": &envoy_config_cluster_v3.Cluster{Name: "cluster"},
+					{Version: "568989d74c", Items: map[string]cache_types.ResourceWithTtl{
+						"cluster": {Resource: &envoy_config_cluster_v3.Cluster{Name: "cluster"}},
 					}},
-					{Version: "6645547657", Items: map[string]cache_types.Resource{
-						"route": &envoy_config_route_v3.RouteConfiguration{Name: "route"},
+					{Version: "6645547657", Items: map[string]cache_types.ResourceWithTtl{
+						"route": {Resource: &envoy_config_route_v3.RouteConfiguration{Name: "route"}},
 					}},
-					{Version: "7cb77864cf", Items: map[string]cache_types.Resource{
-						"listener": &envoy_config_listener_v3.Listener{Name: "listener"},
+					{Version: "7cb77864cf", Items: map[string]cache_types.ResourceWithTtl{
+						"listener": {Resource: &envoy_config_listener_v3.Listener{Name: "listener"}},
 					}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "7456685887", Items: map[string]cache_types.Resource{
-						"runtime": &envoy_service_runtime_v3.Runtime{Name: "runtime"},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "7456685887", Items: map[string]cache_types.ResourceWithTtl{
+						"runtime": {Resource: &envoy_service_runtime_v3.Runtime{Name: "runtime"}},
 					}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
 				},
 			}),
 			wantErr: false,
@@ -354,13 +356,13 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			wantErr: false,
 			want: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [6]cache_v3.Resources{
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
-					{Version: "56c6b8dc45", Items: map[string]cache_types.Resource{
-						"secret": &envoy_extensions_transport_sockets_tls_v3.Secret{
+				Resources: [7]cache_v3.Resources{
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "56c6b8dc45", Items: map[string]cache_types.ResourceWithTtl{
+						"secret": {Resource: &envoy_extensions_transport_sockets_tls_v3.Secret{
 							Name: "secret",
 							Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
 								TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
@@ -369,8 +371,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 									},
 									CertificateChain: &envoy_config_core_v3.DataSource{
 										Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-									}}}}}},
-					{Version: "", Items: map[string]cache_types.Resource{}},
+									}}}}}}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
 				},
 			}),
 		},

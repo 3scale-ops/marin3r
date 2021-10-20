@@ -35,17 +35,18 @@ func fakeTestCache() *cache_v3.SnapshotCache {
 	snapshotCache := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
 
 	snapshotCache.SetSnapshot("node1", cache_v3.Snapshot{
-		Resources: [6]cache_v3.Resources{
-			{Version: "1", Items: map[string]cache_types.Resource{
-				"endpoint1": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"},
+		Resources: [7]cache_v3.Resources{
+			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{
+				"endpoint1": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"}},
 			}},
-			{Version: "1", Items: map[string]cache_types.Resource{
-				"cluster1": &envoy_config_cluster_v3.Cluster{Name: "cluster1"},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{
+				"cluster1": {Resource: &envoy_config_cluster_v3.Cluster{Name: "cluster1"}},
 			}},
-			{Version: "1", Items: map[string]cache_types.Resource{}},
-			{Version: "1", Items: map[string]cache_types.Resource{}},
-			{Version: "1", Items: map[string]cache_types.Resource{}},
-			{Version: "1", Items: map[string]cache_types.Resource{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
 		}},
 	)
 

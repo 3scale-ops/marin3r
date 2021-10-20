@@ -4,7 +4,6 @@ metadata:
   labels:
     control-plane: controller-manager
   name: system
-
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -23,19 +22,12 @@ spec:
       labels:
         control-plane: controller-manager
     spec:
-      serviceAccountName: controller-manager
-      # kube-rbac-proxy 0.5.0 fails to start with
-      # this directive
-      # securityContext:
-      #   runAsNonRoot: true
+      securityContext:
+        runAsNonRoot: true
       containers:
       - command:
         - /manager
-        env:
-          - name: WATCH_NAMESPACE
-            value: ""
         args:
-        - operator
         - --leader-elect
         image: controller:latest
         name: manager
@@ -55,16 +47,10 @@ spec:
           periodSeconds: 10
         resources:
           limits:
-            cpu: 300m
-            memory: 300Mi
-          requests:
-            cpu: 50m
+            cpu: 200m
             memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+      serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
-
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: controller-manager
-  namespace: system

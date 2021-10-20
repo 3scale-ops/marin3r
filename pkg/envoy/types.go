@@ -52,4 +52,6 @@ const (
 	Secret Type = "Secret"
 	// Runtime is an envoy runtime resource
 	Runtime Type = "Runtime"
+	// ExtensionConfig is an envoy extension config resource
+	ExtensionConfig Type = "ExtensionConfig"
 )

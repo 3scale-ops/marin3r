@@ -74,23 +74,29 @@ metadata:
     certified: "false"
     containerImage: quay.io/3scale/marin3r
     description: Manage an Envoy Discovery Service and a fleet of Envoy proxies.
-    operators.operatorframework.io/builder: operator-sdk-v1.4.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.9.0+git
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.9.0-alpha1
+  name: marin3r.v0.9.0-alpha.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: DiscoveryServiceCertificate is used to create certificates, either self-signed or by using a cert-manager CA issuer. This object is used by the DiscoveryService controller to create the required certificates for the different components of the discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
+    - description: DiscoveryServiceCertificate is used to create certificates, either
+        self-signed or by using a cert-manager CA issuer. This object is used by the
+        DiscoveryService controller to create the required certificates for the different
+        components of the discovery service. Direct use of DiscoveryServiceCertificate
+        objects is discouraged.
       displayName: DiscoveryServiceCertificate
       kind: DiscoveryServiceCertificate
       name: discoveryservicecertificates.operator.marin3r.3scale.net
       specDescriptors:
-      - description: CertificateRenewalConfig configures the certificate renewal process. If unset default behavior is to renew the certificate but not notify of renewals.
+      - description: CertificateRenewalConfig configures the certificate renewal process.
+          If unset default behavior is to renew the certificate but not notify of
+          renewals.
         displayName: Certificate Renewal Config
         path: certificateRenewal
       - description: Enabled is a flag to enable or disable renewal of the certificate
@@ -99,19 +105,24 @@ spec:
       - description: CommonName is the CommonName of the certificate
         displayName: Common Name
         path: commonName
-      - description: Hosts is the list of hosts the certificate is valid for. Only use when 'IsServerCertificate' is true. If unset, the CommonName field will be used to populate the valid hosts of the certificate.
+      - description: Hosts is the list of hosts the certificate is valid for. Only
+          use when 'IsServerCertificate' is true. If unset, the CommonName field will
+          be used to populate the valid hosts of the certificate.
         displayName: Hosts
         path: hosts
       - description: IsCA is a boolean specifying that the certificate is a CA
         displayName: Is CA
         path: isCA
-      - description: SecretRef is a reference to the secret that will hold the certificate and the private key.
+      - description: SecretRef is a reference to the secret that will hold the certificate
+          and the private key.
         displayName: Secret Ref
         path: secretRef
-      - description: IsServerCertificate is a boolean specifying if the certificate should be issued with server auth usage enabled
+      - description: IsServerCertificate is a boolean specifying if the certificate
+          should be issued with server auth usage enabled
         displayName: Is Server Certificate
         path: server
-      - description: Signer specifies  the signer to use to create this certificate. Supported signers are CertManager and SelfSigned.
+      - description: Signer specifies  the signer to use to create this certificate.
+          Supported signers are CertManager and SelfSigned.
         displayName: Signer
         path: signer
       - description: CASigned holds specific configuration for the CASigned signer
@@ -127,10 +138,12 @@ spec:
         displayName: Valid For
         path: validFor
       statusDescriptors:
-      - description: CertificateHash stores the current hash of the certificate. It is used for other controllers to validate if a certificate has been re-issued.
+      - description: CertificateHash stores the current hash of the certificate. It
+          is used for other controllers to validate if a certificate has been re-issued.
         displayName: Certificate Hash
         path: certificateHash
-      - description: Conditions represent the latest available observations of an object's state
+      - description: Conditions represent the latest available observations of an
+          object's state
         displayName: Conditions
         path: conditions
       - description: NotAfter is the time at which the certificate expires
@@ -139,25 +152,30 @@ spec:
       - description: NotBefore is the time at which the certificate starts being valid
         displayName: Not Before
         path: notBefore
-      - description: Ready is a boolean that specifies if the certificate is ready to be used
+      - description: Ready is a boolean that specifies if the certificate is ready
+          to be used
         displayName: Ready
         path: ready
       version: v1alpha1
-    - description: DiscoveryService represents an envoy discovery service server. Currently only one DiscoveryService per cluster is supported.
+    - description: DiscoveryService represents an envoy discovery service server.
+        Currently only one DiscoveryService per cluster is supported.
       displayName: DiscoveryService
       kind: DiscoveryService
       name: discoveryservices.operator.marin3r.3scale.net
       specDescriptors:
-      - description: Debug enables debugging log level for the discovery service controllers. It is safe to use since secret data is never shown in the logs.
+      - description: Debug enables debugging log level for the discovery service controllers.
+          It is safe to use since secret data is never shown in the logs.
         displayName: Debug
         path: debug
       - description: Image holds the image to use for the discovery service Deployment
         displayName: Image
         path: image
-      - description: MetricsPort is the port where metrics are served. Defaults to 8383.
+      - description: MetricsPort is the port where metrics are served. Defaults to
+          8383.
         displayName: Metrics Port
         path: metricsPort
-      - description: PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
+      - description: PKIConfig has configuration for the PKI that marin3r manages
+          for the different certificates it requires
         displayName: PKIConfig
         path: pkiConfg
       - displayName: Root Certificate Authority
@@ -172,25 +190,33 @@ spec:
         path: pkiConfg.serverCertificate.duration
       - displayName: Secret Name
         path: pkiConfg.serverCertificate.secretName
-      - description: Resources holds the Resource Requirements to use for the discovery service Deployment. When not set it defaults to no resource requests nor limits. CPU and Memory resources are supported.
+      - description: Resources holds the Resource Requirements to use for the discovery
+          service Deployment. When not set it defaults to no resource requests nor
+          limits. CPU and Memory resources are supported.
         displayName: Resources
         path: resources
-      - description: ServiceConfig configures the way the DiscoveryService endpoints are exposed
+      - description: ServiceConfig configures the way the DiscoveryService endpoints
+          are exposed
         displayName: Service Config
         path: serviceConfig
       - displayName: Name
         path: serviceConfig.name
       - displayName: Type
         path: serviceConfig.type
-      - description: XdsServerPort is the port where the xDS server listens. Defaults to 18000.
+      - description: XdsServerPort is the port where the xDS server listens. Defaults
+          to 18000.
         displayName: Xds Server Port
         path: xdsServerPort
       statusDescriptors:
-      - description: Conditions represent the latest available observations of an object's state
+      - description: Conditions represent the latest available observations of an
+          object's state
         displayName: Conditions
         path: conditions
       version: v1alpha1
-    - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig resources. EnvoyConfigRevisions are automatically created and deleted  by the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig objects instead.
+    - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig
+        resources. EnvoyConfigRevisions are automatically created and deleted  by
+        the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig
+        objects instead.
       displayName: EnvoyConfigRevision
       kind: EnvoyConfigRevision
       name: envoyconfigrevisions.marin3r.3scale.net
@@ -198,10 +224,12 @@ spec:
       - description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
         displayName: Envoy API
         path: envoyAPI
-      - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
+      - description: EnvoyResources holds the different types of resources suported
+          by the envoy discovery service
         displayName: Envoy Resources
         path: envoyResources
-      - description: 'Clusters is a list of the envoy Cluster resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
+      - description: 'Clusters is a list of the envoy Cluster resource type. API V3
+          reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
         displayName: Clusters
         path: envoyResources.clusters
       - description: Name of the envoy resource
@@ -210,7 +238,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.clusters[0].value
-      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource
+          type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
         displayName: Endpoints
         path: envoyResources.endpoints
       - description: Name of the envoy resource
@@ -219,7 +248,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.endpoints[0].value
-      - description: 'Listeners is a list of the envoy Listener resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
+      - description: 'Listeners is a list of the envoy Listener resource type. API
+          V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
         displayName: Listeners
         path: envoyResources.listeners
       - description: Name of the envoy resource
@@ -228,7 +258,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.listeners[0].value
-      - description: 'Routes is a list of the envoy Route resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
+      - description: 'Routes is a list of the envoy Route resource type. API V3 reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
         displayName: Routes
         path: envoyResources.routes
       - description: Name of the envoy resource
@@ -237,7 +268,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.routes[0].value
-      - description: 'Runtimes is a list of the envoy Runtime resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
+      - description: 'Runtimes is a list of the envoy Runtime resource type. API V3
+          reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
         path: envoyResources.runtimes
       - description: Name of the envoy resource
@@ -249,41 +281,54 @@ spec:
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
-      - description: Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
+      - description: Name of the envoy resource. If ref is not set, a Secret with
+          this same name will be fetched from within the namespace.
         displayName: Name
         path: envoyResources.secrets[0].name
-      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls".
+          The value of 'ref' cannot point to a different namespace.
         displayName: Ref
         path: envoyResources.secrets[0].ref
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes:SecretReference
-      - description: NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
+      - description: NodeID holds the envoy identifier for the discovery service to
+          know which set of resources to send to each of the envoy clients that connect
+          to it.
         displayName: Node ID
         path: nodeID
-      - description: Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
+      - description: Serialization specicifies the serialization format used to describe
+          the resources. "json" and "yaml" are supported. "json" is used if unset.
         displayName: Serialization
         path: serialization
       - description: Version is a hash of the EnvoyResources field
         displayName: Version
         path: version
       statusDescriptors:
-      - description: Conditions represent the latest available observations of an object's state
+      - description: Conditions represent the latest available observations of an
+          object's state
         displayName: Conditions
         path: conditions
-      - description: LastPublishedAt indicates the last time this config review transitioned to published
+      - description: LastPublishedAt indicates the last time this config review transitioned
+          to published
         displayName: Last Published At
         path: lastPublishedAt
-      - description: ProvidesVersions keeps track of the version that this revision publishes in the xDS server for each resource type
+      - description: ProvidesVersions keeps track of the version that this revision
+          publishes in the xDS server for each resource type
         displayName: Provides Versions
         path: providesVersions
-      - description: Published signals if the EnvoyConfigRevision is the one currently published in the xds server cache
+      - description: Published signals if the EnvoyConfigRevision is the one currently
+          published in the xds server cache
         displayName: Published
         path: published
-      - description: Tainted indicates whether the EnvoyConfigRevision is eligible for publishing or not
+      - description: Tainted indicates whether the EnvoyConfigRevision is eligible
+          for publishing or not
         displayName: Tainted
         path: tainted
       version: v1alpha1
-    - description: EnvoyConfig holds the configuration for a given envoy nodeID. The spec of an EnvoyConfig object holds the envoy resources that conform the desired configuration for the given nodeID and that the discovery service will send to any envoy client that identifies itself with that nodeID.
+    - description: EnvoyConfig holds the configuration for a given envoy nodeID. The
+        spec of an EnvoyConfig object holds the envoy resources that conform the desired
+        configuration for the given nodeID and that the discovery service will send
+        to any envoy client that identifies itself with that nodeID.
       displayName: EnvoyConfig
       kind: EnvoyConfig
       name: envoyconfigs.marin3r.3scale.net
@@ -295,10 +340,12 @@ spec:
       - description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
         displayName: Envoy API
         path: envoyAPI
-      - description: EnvoyResources holds the different types of resources suported by the envoy discovery service
+      - description: EnvoyResources holds the different types of resources suported
+          by the envoy discovery service
         displayName: Envoy Resources
         path: envoyResources
-      - description: 'Clusters is a list of the envoy Cluster resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
+      - description: 'Clusters is a list of the envoy Cluster resource type. API V3
+          reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
         displayName: Clusters
         path: envoyResources.clusters
       - description: Name of the envoy resource
@@ -307,7 +354,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.clusters[0].value
-      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
+      - description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource
+          type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
         displayName: Endpoints
         path: envoyResources.endpoints
       - description: Name of the envoy resource
@@ -316,7 +364,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.endpoints[0].value
-      - description: 'Listeners is a list of the envoy Listener resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
+      - description: 'Listeners is a list of the envoy Listener resource type. API
+          V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
         displayName: Listeners
         path: envoyResources.listeners
       - description: Name of the envoy resource
@@ -325,7 +374,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.listeners[0].value
-      - description: 'Routes is a list of the envoy Route resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
+      - description: 'Routes is a list of the envoy Route resource type. API V3 reference:
+          https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
         displayName: Routes
         path: envoyResources.routes
       - description: Name of the envoy resource
@@ -334,7 +384,8 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.routes[0].value
-      - description: 'Runtimes is a list of the envoy Runtime resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
+      - description: 'Runtimes is a list of the envoy Runtime resource type. API V3
+          reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
         path: envoyResources.runtimes
       - description: Name of the envoy resource
@@ -346,37 +397,51 @@ spec:
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
-      - description: Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
+      - description: Name of the envoy resource. If ref is not set, a Secret with
+          this same name will be fetched from within the namespace.
         displayName: Name
         path: envoyResources.secrets[0].name
-      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
+      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls".
+          The value of 'ref' cannot point to a different namespace.
         displayName: Ref
         path: envoyResources.secrets[0].ref
         x-descriptors:
         - urn:alm:descriptor:io.kubernetes:SecretReference
-      - description: NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
+      - description: NodeID holds the envoy identifier for the discovery service to
+          know which set of resources to send to each of the envoy clients that connect
+          to it.
         displayName: Node ID
         path: nodeID
-      - description: Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
+      - description: Serialization specicifies the serialization format used to describe
+          the resources. "json" and "yaml" are supported. "json" is used if unset.
         displayName: Serialization
         path: serialization
       statusDescriptors:
-      - description: CacheState summarizes all the observations about the EnvoyConfig to give the user a concrete idea on the general status of the discovery servie cache. It is intended only for human consumption. Other controllers should relly on conditions to determine the status of the discovery server cache.
+      - description: CacheState summarizes all the observations about the EnvoyConfig
+          to give the user a concrete idea on the general status of the discovery
+          servie cache. It is intended only for human consumption. Other controllers
+          should relly on conditions to determine the status of the discovery server
+          cache.
         displayName: Cache State
         path: cacheState
-      - description: Conditions represent the latest available observations of an object's state
+      - description: Conditions represent the latest available observations of an
+          object's state
         displayName: Conditions
         path: conditions
-      - description: DesiredVersion represents the resources version described in the spec of the EnvoyConfig object
+      - description: DesiredVersion represents the resources version described in
+          the spec of the EnvoyConfig object
         displayName: Desired Version
         path: desiredVersion
-      - description: PublishedVersion is the config version currently served by the envoy discovery service for the give nodeID
+      - description: PublishedVersion is the config version currently served by the
+          envoy discovery service for the give nodeID
         displayName: Published Version
         path: publishedVersion
-      - description: ConfigRevisions is an ordered list of references to EnvoyConfigRevision objects
+      - description: ConfigRevisions is an ordered list of references to EnvoyConfigRevision
+          objects
         displayName: Config Revisions
         path: revisions
-      - description: Ref is a reference to the EnvoyConfigRevision object that holds the configuration matching the Version field.
+      - description: Ref is a reference to the EnvoyConfigRevision object that holds
+          the configuration matching the Version field.
         displayName: Ref
         path: revisions[0].ref
       - description: Version is a hash of the EnvoyResources field
@@ -397,25 +462,31 @@ spec:
       - description: Affinity configuration for the envoy pods
         displayName: Affinity
         path: affinity
-      - description: Defines the local service cluster name where Envoy is running. Defaults to the NodeID in the EnvoyConfig if unset
+      - description: Defines the local service cluster name where Envoy is running.
+          Defaults to the NodeID in the EnvoyConfig if unset
         displayName: Cluster ID
         path: clusterID
-      - description: DiscoveryServiceRef points to a DiscoveryService in the same namespace
+      - description: DiscoveryServiceRef points to a DiscoveryService in the same
+          namespace
         displayName: Discovery Service Ref
         path: discoveryServiceRef
-      - description: Defines the duration of the client certificate that is used to authenticate with the DiscoveryService
+      - description: Defines the duration of the client certificate that is used to
+          authenticate with the DiscoveryService
         displayName: Client Certificate Duration
         path: duration
-      - description: EnvoyConfigRef points to an EnvoyConfig in the same namespace that holds the envoy resources for this Deployment
+      - description: EnvoyConfigRef points to an EnvoyConfig in the same namespace
+          that holds the envoy resources for this Deployment
         displayName: Envoy Config Ref
         path: envoyConfigRef
-      - description: Allows the user to define extra command line arguments for the Envoy process
+      - description: Allows the user to define extra command line arguments for the
+          Envoy process
         displayName: Extra Args
         path: extraArgs
       - description: Image is the envoy image and tag to use
         displayName: Image
         path: image
-      - description: InitManager defines configuration for Envoy's init manager, which handles initialization for Envoy pods
+      - description: InitManager defines configuration for Envoy's init manager, which
+          handles initialization for Envoy pods
         displayName: Init Manager
         path: initManager
       - description: Image is the init manager image and tag to use
@@ -424,16 +495,19 @@ spec:
       - description: Liveness probe for the envoy pods
         displayName: Liveness Probe
         path: livenessProbe
-      - description: Minimum consecutive failures for the probe to be considered failed after having succeeded
+      - description: Minimum consecutive failures for the probe to be considered failed
+          after having succeeded
         displayName: Failure Threshold
         path: livenessProbe.failureThreshold
-      - description: Number of seconds after the container has started before liveness probes are initiated
+      - description: Number of seconds after the container has started before liveness
+          probes are initiated
         displayName: Initial Delay Seconds
         path: livenessProbe.initialDelaySeconds
       - description: How often (in seconds) to perform the probe
         displayName: Period Seconds
         path: livenessProbe.periodSeconds
-      - description: Minimum consecutive successes for the probe to be considered successful after having failed
+      - description: Minimum consecutive successes for the probe to be considered
+          successful after having failed
         displayName: Success Threshold
         path: livenessProbe.successThreshold
       - description: Number of seconds after which the probe times out
@@ -442,10 +516,16 @@ spec:
       - description: Configures PodDisruptionBudget for the envoy Pods
         displayName: Pod Disruption Budget
         path: podDisruptionBudget
-      - description: An eviction is allowed if at most "maxUnavailable" pods selected by "selector" are unavailable after the eviction, i.e. even in absence of the evicted pod. For example, one can prevent all voluntary evictions by specifying 0. This is a mutually exclusive setting with "minAvailable".
+      - description: An eviction is allowed if at most "maxUnavailable" pods selected
+          by "selector" are unavailable after the eviction, i.e. even in absence of
+          the evicted pod. For example, one can prevent all voluntary evictions by
+          specifying 0. This is a mutually exclusive setting with "minAvailable".
         displayName: Max Unavailable
         path: podDisruptionBudget.maxUnavailable
-      - description: An eviction is allowed if at least "minAvailable" pods selected by "selector" will still be available after the eviction, i.e. even in the absence of the evicted pod.  So for example you can prevent all voluntary evictions by specifying "100%".
+      - description: An eviction is allowed if at least "minAvailable" pods selected
+          by "selector" will still be available after the eviction, i.e. even in the
+          absence of the evicted pod.  So for example you can prevent all voluntary
+          evictions by specifying "100%".
         displayName: Min Available
         path: podDisruptionBudget.minAvailable
       - description: Ports exposed by the Envoy container
@@ -463,43 +543,63 @@ spec:
       - description: Readiness probe for the envoy pods
         displayName: Readiness Probe
         path: readinessProbe
-      - description: Minimum consecutive failures for the probe to be considered failed after having succeeded
+      - description: Minimum consecutive failures for the probe to be considered failed
+          after having succeeded
         displayName: Failure Threshold
         path: readinessProbe.failureThreshold
-      - description: Number of seconds after the container has started before liveness probes are initiated
+      - description: Number of seconds after the container has started before liveness
+          probes are initiated
         displayName: Initial Delay Seconds
         path: readinessProbe.initialDelaySeconds
       - description: How often (in seconds) to perform the probe
         displayName: Period Seconds
         path: readinessProbe.periodSeconds
-      - description: Minimum consecutive successes for the probe to be considered successful after having failed
+      - description: Minimum consecutive successes for the probe to be considered
+          successful after having failed
         displayName: Success Threshold
         path: readinessProbe.successThreshold
       - description: Number of seconds after which the probe times out
         displayName: Timeout Seconds
         path: readinessProbe.timeoutSeconds
-      - description: Replicas configures the number of replicas in the Deployment. One of 'static', 'dynamic' can be set. If both are set, static has precedence.
+      - description: Replicas configures the number of replicas in the Deployment.
+          One of 'static', 'dynamic' can be set. If both are set, static has precedence.
         displayName: Replicas
         path: replicas
-      - description: Configure a min and max value for the number of pods to autoscale dynamically.
+      - description: Configure a min and max value for the number of pods to autoscale
+          dynamically.
         displayName: Dynamic
         path: replicas.dynamic
-      - description: behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used.
+      - description: behavior configures the scaling behavior of the target in both
+          Up and Down directions (scaleUp and scaleDown fields respectively). If not
+          set, the default HPAScalingRules for scale up and scale down are used.
         displayName: Behavior
         path: replicas.dynamic.behavior
-      - description: metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization.
+      - description: metrics contains the specifications for which to use to calculate
+          the desired replica count (the maximum replica count across all metrics
+          will be used).  The desired replica count is calculated multiplying the
+          ratio between the target value and the current value by the current number
+          of pods.  Ergo, metrics used must decrease as the pod count is increased,
+          and vice-versa.  See the individual metric source types for more information
+          about how each type of metric must respond. If not set, the default metric
+          will be set to 80% average CPU utilization.
         displayName: Metrics
         path: replicas.dynamic.metrics
-      - description: minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available.
+      - description: minReplicas is the lower limit for the number of replicas to
+          which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas
+          is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and
+          at least one Object or External metric is configured.  Scaling is active
+          as long as at least one metric value is available.
         displayName: Min Replicas
         path: replicas.dynamic.minReplicas
       - description: Configure a static number of replicas. Defaults to 1.
         displayName: Static
         path: replicas.static
-      - description: Resources holds the resource requirements to use for the Envoy Deployment. Defaults to no resource requests nor limits.
+      - description: Resources holds the resource requirements to use for the Envoy
+          Deployment. Defaults to no resource requests nor limits.
         displayName: Resources
         path: resources
-      - description: ShutdownManager defines configuration for Envoy's shutdown manager, which handles graceful termination of Envoy pods
+      - description: ShutdownManager defines configuration for Envoy's shutdown manager,
+          which handles graceful termination of Envoy pods
         displayName: Shutdown Manager
         path: shutdownManager
       - description: Image is the shutdown manager image and tag to use
@@ -573,19 +673,7 @@ spec:
             spec:
               containers:
               - args:
-                - --secure-listen-address=0.0.0.0:8443
-                - --upstream=http://127.0.0.1:8080/
-                - --logtostderr=true
-                - --v=10
-                image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
-                name: kube-rbac-proxy
-                ports:
-                - containerPort: 8443
-                  name: https
-                resources: {}
-              - args:
                 - operator
-                - --metrics-bind-address=127.0.0.1:8080
                 - --leader-elect
                 command:
                 - /manager
@@ -594,7 +682,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.9.0-alpha1
+                image: quay.io/3scale/marin3r:v0.9.0-alpha.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -602,6 +690,10 @@ spec:
                   initialDelaySeconds: 15
                   periodSeconds: 20
                 name: manager
+                ports:
+                - containerPort: 8080
+                  name: metrics
+                  protocol: TCP
                 readinessProbe:
                   httpGet:
                     path: /readyz
@@ -617,6 +709,8 @@ spec:
                     memory: 100Mi
                 securityContext:
                   allowPrivilegeEscalation: false
+              securityContext:
+                runAsNonRoot: true
               serviceAccountName: marin3r-controller-manager
               terminationGracePeriodSeconds: 10
       - name: marin3r-controller-webhook
@@ -644,7 +738,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.9.0-alpha1
+                image: quay.io/3scale/marin3r:v0.9.0-alpha.1
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -687,13 +781,17 @@ spec:
           - patch
           - delete
         - apiGroups:
-          - ""
+          - coordination.k8s.io
           resources:
-          - configmaps/status
+          - leases
           verbs:
           - get
+          - list
+          - watch
+          - create
           - update
           - patch
+          - delete
         - apiGroups:
           - ""
           resources:
@@ -930,12 +1028,12 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.9.0-alpha1
+  version: 0.9.0-alpha.1
   webhookdefinitions:
   - admissionReviewVersions:
     - v1
     - v1beta1
-    containerPort: 9443
+    containerPort: 443
     deploymentName: marin3r-controller-webhook
     failurePolicy: Fail
     generateName: envoyconfig.marin3r.3scale.net
@@ -956,7 +1054,7 @@ spec:
   - admissionReviewVersions:
     - v1
     - v1beta1
-    containerPort: 9443
+    containerPort: 443
     deploymentName: marin3r-controller-webhook
     failurePolicy: Fail
     generateName: envoydeployment.operator.marin3r.3scale.net
@@ -977,7 +1075,7 @@ spec:
   - admissionReviewVersions:
     - v1
     - v1beta1
-    containerPort: 9443
+    containerPort: 443
     deploymentName: marin3r-controller-webhook
     failurePolicy: Fail
     generateName: sidecar-injector.marin3r.3scale.net

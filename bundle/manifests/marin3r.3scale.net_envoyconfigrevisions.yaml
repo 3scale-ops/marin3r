@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.4.1
+    controller-gen.kubebuilder.io/version: v0.6.1
   creationTimestamp: null
   name: envoyconfigrevisions.marin3r.3scale.net
 spec:
@@ -43,13 +43,20 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: EnvoyConfigRevision holds an specific version of the EnvoyConfig resources. EnvoyConfigRevisions are automatically created and deleted  by the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig objects instead.
+        description: EnvoyConfigRevision holds an specific version of the EnvoyConfig
+          resources. EnvoyConfigRevisions are automatically created and deleted  by
+          the EnvoyConfig controller and are not intended to be directly used. Use
+          EnvoyConfig objects instead.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
             type: string
           metadata:
             type: object
@@ -57,23 +64,28 @@ spec:
             description: EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
             properties:
               envoyAPI:
-                description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
+                description: EnvoyAPI is the version of envoy's API to use. Defaults
+                  to v3.
                 enum:
                 - v3
                 type: string
               envoyResources:
-                description: EnvoyResources holds the different types of resources suported by the envoy discovery service
+                description: EnvoyResources holds the different types of resources
+                  suported by the envoy discovery service
                 properties:
                   clusters:
-                    description: 'Clusters is a list of the envoy Cluster resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
+                    description: 'Clusters is a list of the envoy Cluster resource
+                      type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
                     items:
-                      description: EnvoyResource holds serialized representation of an envoy resource
+                      description: EnvoyResource holds serialized representation of
+                        an envoy resource
                       properties:
                         name:
                           description: Name of the envoy resource
                           type: string
                         value:
-                          description: Value is the serialized representation of the envoy resource
+                          description: Value is the serialized representation of the
+                            envoy resource
                           type: string
                       required:
                       - name
@@ -81,15 +93,18 @@ spec:
                       type: object
                     type: array
                   endpoints:
-                    description: 'Endpoints is a list of the envoy ClusterLoadAssignment resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
+                    description: 'Endpoints is a list of the envoy ClusterLoadAssignment
+                      resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
                     items:
-                      description: EnvoyResource holds serialized representation of an envoy resource
+                      description: EnvoyResource holds serialized representation of
+                        an envoy resource
                       properties:
                         name:
                           description: Name of the envoy resource
                           type: string
                         value:
-                          description: Value is the serialized representation of the envoy resource
+                          description: Value is the serialized representation of the
+                            envoy resource
                           type: string
                       required:
                       - name
@@ -97,15 +112,18 @@ spec:
                       type: object
                     type: array
                   listeners:
-                    description: 'Listeners is a list of the envoy Listener resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
+                    description: 'Listeners is a list of the envoy Listener resource
+                      type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
                     items:
-                      description: EnvoyResource holds serialized representation of an envoy resource
+                      description: EnvoyResource holds serialized representation of
+                        an envoy resource
                       properties:
                         name:
                           description: Name of the envoy resource
                           type: string
                         value:
-                          description: Value is the serialized representation of the envoy resource
+                          description: Value is the serialized representation of the
+                            envoy resource
                           type: string
                       required:
                       - name
@@ -113,15 +131,18 @@ spec:
                       type: object
                     type: array
                   routes:
-                    description: 'Routes is a list of the envoy Route resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
+                    description: 'Routes is a list of the envoy Route resource type.
+                      API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
                     items:
-                      description: EnvoyResource holds serialized representation of an envoy resource
+                      description: EnvoyResource holds serialized representation of
+                        an envoy resource
                       properties:
                         name:
                           description: Name of the envoy resource
                           type: string
                         value:
-                          description: Value is the serialized representation of the envoy resource
+                          description: Value is the serialized representation of the
+                            envoy resource
                           type: string
                       required:
                       - name
@@ -129,15 +150,18 @@ spec:
                       type: object
                     type: array
                   runtimes:
-                    description: 'Runtimes is a list of the envoy Runtime resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
+                    description: 'Runtimes is a list of the envoy Runtime resource
+                      type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
                     items:
-                      description: EnvoyResource holds serialized representation of an envoy resource
+                      description: EnvoyResource holds serialized representation of
+                        an envoy resource
                       properties:
                         name:
                           description: Name of the envoy resource
                           type: string
                         value:
-                          description: Value is the serialized representation of the envoy resource
+                          description: Value is the serialized representation of the
+                            envoy resource
                           type: string
                       required:
                       - name
@@ -145,21 +169,30 @@ spec:
                       type: object
                     type: array
                   secrets:
-                    description: Secrets is a list of references to Kubernetes Secret objects.
+                    description: Secrets is a list of references to Kubernetes Secret
+                      objects.
                     items:
-                      description: EnvoySecretResource holds a reference to a k8s Secret from where to take a secret from. Only Secrets within the same namespace can be referred.
+                      description: EnvoySecretResource holds a reference to a k8s
+                        Secret from where to take a secret from. Only Secrets within
+                        the same namespace can be referred.
                       properties:
                         name:
-                          description: Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
+                          description: Name of the envoy resource. If ref is not set,
+                            a Secret with this same name will be fetched from within
+                            the namespace.
                           type: string
                         ref:
-                          description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
+                          description: Ref is a reference to a Kubernetes Secret of
+                            type "kubernetes.io/tls". The value of 'ref' cannot point
+                            to a different namespace.
                           properties:
                             name:
-                              description: Name is unique within a namespace to reference a secret resource.
+                              description: Name is unique within a namespace to reference
+                                a secret resource.
                               type: string
                             namespace:
-                              description: Namespace defines the space within which the secret name must be unique.
+                              description: Namespace defines the space within which
+                                the secret name must be unique.
                               type: string
                           type: object
                       required:
@@ -168,10 +201,14 @@ spec:
                     type: array
                 type: object
               nodeID:
-                description: NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
+                description: NodeID holds the envoy identifier for the discovery service
+                  to know which set of resources to send to each of the envoy clients
+                  that connect to it.
                 type: string
               serialization:
-                description: Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
+                description: Serialization specicifies the serialization format used
+                  to describe the resources. "json" and "yaml" are supported. "json"
+                  is used if unset.
                 enum:
                 - json
                 - b64json
@@ -189,9 +226,19 @@ spec:
             description: EnvoyConfigRevisionStatus defines the observed state of EnvoyConfigRevision
             properties:
               conditions:
-                description: Conditions represent the latest available observations of an object's state
+                description: Conditions represent the latest available observations
+                  of an object's state
                 items:
-                  description: "Condition represents an observation of an object's state. Conditions are an extension mechanism intended to be used when the details of an observation are not a priori known or would not apply to all instances of a given Kind. \n Conditions should be added to explicitly convey properties that users and components care about rather than requiring those properties to be inferred from other observations. Once defined, the meaning of a Condition can not be changed arbitrarily - it becomes part of the API, and has the same backwards- and forwards-compatibility concerns of any other part of the API."
+                  description: "Condition represents an observation of an object's
+                    state. Conditions are an extension mechanism intended to be used
+                    when the details of an observation are not a priori known or would
+                    not apply to all instances of a given Kind. \n Conditions should
+                    be added to explicitly convey properties that users and components
+                    care about rather than requiring those properties to be inferred
+                    from other observations. Once defined, the meaning of a Condition
+                    can not be changed arbitrarily - it becomes part of the API, and
+                    has the same backwards- and forwards-compatibility concerns of
+                    any other part of the API."
                   properties:
                     lastTransitionTime:
                       format: date-time
@@ -199,12 +246,20 @@ spec:
                     message:
                       type: string
                     reason:
-                      description: ConditionReason is intended to be a one-word, CamelCase representation of the category of cause of the current status. It is intended to be used in concise output, such as one-line kubectl get output, and in summarizing occurrences of causes.
+                      description: ConditionReason is intended to be a one-word, CamelCase
+                        representation of the category of cause of the current status.
+                        It is intended to be used in concise output, such as one-line
+                        kubectl get output, and in summarizing occurrences of causes.
                       type: string
                     status:
                       type: string
                     type:
-                      description: "ConditionType is the type of the condition and is typically a CamelCased word or short phrase. \n Condition types should indicate state in the \"abnormal-true\" polarity. For example, if the condition indicates when a policy is invalid, the \"is valid\" case is probably the norm, so the condition should be called \"Invalid\"."
+                      description: "ConditionType is the type of the condition and
+                        is typically a CamelCased word or short phrase. \n Condition
+                        types should indicate state in the \"abnormal-true\" polarity.
+                        For example, if the condition indicates when a policy is invalid,
+                        the \"is valid\" case is probably the norm, so the condition
+                        should be called \"Invalid\"."
                       type: string
                   required:
                   - status
@@ -212,11 +267,13 @@ spec:
                   type: object
                 type: array
               lastPublishedAt:
-                description: LastPublishedAt indicates the last time this config review transitioned to published
+                description: LastPublishedAt indicates the last time this config review
+                  transitioned to published
                 format: date-time
                 type: string
               providesVersions:
-                description: ProvidesVersions keeps track of the version that this revision publishes in the xDS server for each resource type
+                description: ProvidesVersions keeps track of the version that this
+                  revision publishes in the xDS server for each resource type
                 properties:
                   clusters:
                     type: string
@@ -232,10 +289,12 @@ spec:
                     type: string
                 type: object
               published:
-                description: Published signals if the EnvoyConfigRevision is the one currently published in the xds server cache
+                description: Published signals if the EnvoyConfigRevision is the one
+                  currently published in the xds server cache
                 type: boolean
               tainted:
-                description: Tainted indicates whether the EnvoyConfigRevision is eligible for publishing or not
+                description: Tainted indicates whether the EnvoyConfigRevision is
+                  eligible for publishing or not
                 type: boolean
             type: object
         type: object

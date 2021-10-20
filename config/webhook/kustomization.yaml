@@ -1,7 +1,7 @@
 resources:
 - manifests.yaml
 - service.yaml
-- deployment.yaml
+- custom/webhook.yaml
 
 configurations:
 - kustomizeconfig.yaml
@@ -10,18 +10,9 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/3scale/marin3r
-  newTag: v0.9.0-alpha1
+  newTag: v0.9.0-alpha.1
 
+# [CUSTOM: pod mutating webhook config] This patch adds a label selector to the MutatingWebhookConfig
 patchesStrategicMerge:
-- |-
-  apiVersion: admissionregistration.k8s.io/v1
-  kind: MutatingWebhookConfiguration
-  metadata:
-    name: mutating-webhook-configuration
-  webhooks:
-    - name: sidecar-injector.marin3r.3scale.net
-      reinvocationPolicy: Never
-      matchPolicy: Equivalent
-      objectSelector:
-        matchLabels:
-          marin3r.3scale.net/status: enabled
+- custom/mutatingwebhookconfig_patch.yaml
+- custom/service_patch.yaml

@@ -127,3 +127,20 @@ func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *envoy_service_disc
 // OnFetchResponse is called immediately prior to sending a response.
 func (cb *Callbacks) OnFetchResponse(req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
 }
+
+// OnDeltaStreamOpen is called once an incremental xDS stream is open with a stream ID and the type URL (or "" for ADS).
+// Returning an error will end processing and close the stream. OnStreamClosed will still be called.
+func (cb *Callbacks) OnDeltaStreamOpen(context.Context, int64, string) error { return nil }
+
+// OnDeltaStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
+func (cb *Callbacks) OnDeltaStreamClosed(int64) {}
+
+// OnStreamDeltaRequest is called once a request is received on a stream.
+// Returning an error will end processing and close the stream. OnStreamClosed will still be called.
+func (cb *Callbacks) OnStreamDeltaRequest(int64, *envoy_service_discovery_v3.DeltaDiscoveryRequest) error {
+	return nil
+}
+
+// OnStreamDelatResponse is called immediately prior to sending a response on a stream.
+func (cb *Callbacks) OnStreamDeltaResponse(int64, *envoy_service_discovery_v3.DeltaDiscoveryRequest, *envoy_service_discovery_v3.DeltaDiscoveryResponse) {
+}

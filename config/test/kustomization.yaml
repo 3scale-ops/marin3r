@@ -3,20 +3,20 @@ kind: Kustomization
 resources:
   - ../default
 images:
-- name: quay.io/3scale/marin3r
-  newTag: test
+  - name: quay.io/3scale/marin3r
+    newTag: test
+patchesStrategicMerge:
+  - manager_patch.yaml
 patches:
-  - target:
-      group: apps
+  - path: clusterrole_patch.yaml
+    target:
+      group: rbac.authorization.k8s.io
+      kind: Role
+      name: manager-role
       version: v1
-      kind: Deployment
-      name: controller-manager
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/1/args
-        value:
-          - operator
-          - --debug
-          - --leader-elect
-      - op: remove
-        path: /spec/template/spec/containers/0
+  - path: clusterrolebinding_patch.yaml
+    target:
+      group: rbac.authorization.k8s.io
+      kind: RoleBinding
+      name: manager-rolebinding
+      version: v1

@@ -17,7 +17,7 @@ import (
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/any"
-	"google.golang.org/protobuf/types/known/structpb"
+	_struct "github.com/golang/protobuf/ptypes/struct"
 )
 
 // Config is a struct with options and methods to generate an envoy bootstrap config
@@ -163,9 +163,13 @@ func (c *Config) GenerateStatic() (string, error) {
 	}
 
 	if len(c.Options.Metadata) > 0 {
-		cfg.Node.Metadata = &structpb.Struct{Fields: map[string]*structpb.Value{}}
+		cfg.Node.Metadata = &_struct.Struct{Fields: map[string]*_struct.Value{}}
 		for key, value := range c.Options.Metadata {
-			cfg.Node.Metadata.Fields[key] = structpb.NewStringValue(value)
+			cfg.Node.Metadata.Fields[key] = &_struct.Value{
+				Kind: &_struct.Value_StringValue{
+					StringValue: value,
+				},
+			}
 		}
 	}
 

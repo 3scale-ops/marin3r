@@ -2,7 +2,6 @@ apiVersion: marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
   name: kuard
-  namespace: default
 spec:
   nodeID: kuard
   serialization: yaml

@@ -1,0 +1,8 @@
+- op: replace
+  path: /kind
+  value: ClusterRoleBinding
+- op: replace
+  path: /roleRef/kind
+  value: ClusterRole
+- op: remove
+  path: /metadata/namespace

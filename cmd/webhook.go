@@ -69,7 +69,7 @@ func init() {
 	rootCmd.AddCommand(webhookCmd)
 
 	// Webhook flags
-	webhookCmd.Flags().IntVar(&webhookPort, "webhook-port", int(operatorv1alpha1.DefaultWebhookPort), "The port where the pod mutator webhook server will listen.")
+	webhookCmd.Flags().IntVar(&webhookPort, "webhook-port", 9443, "The port where the pod mutator webhook server will listen.")
 	webhookCmd.Flags().StringVar(&webhookTLSCertDir, "tls-dir", "/apiserver.local.config/certificates", "The path where the certificate and key for the webhook are located.")
 	webhookCmd.Flags().StringVar(&webhookTLSCertName, "tls-cert-name", "apiserver.crt", "The file name of the certificate for the webhook.")
 	webhookCmd.Flags().StringVar(&webhookTLSKeyName, "tls-key-name", "apiserver.key", "The file name of the private key for the webhook.")
@@ -140,7 +140,7 @@ func runWebhook(cmd *cobra.Command, args []string) {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("check", healthz.Ping); err != nil {
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}

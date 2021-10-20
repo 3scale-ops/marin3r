@@ -48,8 +48,6 @@ const (
 
 	// DefaultMetricsPort is the default port where the discovery service metrics server listens
 	DefaultMetricsPort uint32 = 8383
-	// DefaultWebhookPort is the default port where the discovery service webhook server listens
-	DefaultWebhookPort uint32 = 9443
 	// DefaultXdsServerPort is the default port where the discovery service xds server port listens
 	DefaultXdsServerPort uint32 = 18000
 	// DefaultRootCertificateDuration is the default root CA certificate duration
