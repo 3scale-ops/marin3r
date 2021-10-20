@@ -263,10 +263,14 @@ BUNDLE_IMGS ?= $(BUNDLE_IMG)
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
 CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
 
+# Default catalog base image to append bundles to
+CATALOG_BASE_IMG ?= $(IMAGE_TAG_BASE)-catalog:latest
+
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)
 FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
 endif
+
 
 deploy-cert-manager: ## Deployes cert-manager in the K8s cluster specified in ~/.kube/config.
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
@@ -325,21 +329,14 @@ prepare-stable-release: bump-release generate fmt vet manifests bundle refdocs #
 bump-release: ## Bumps release in the version package
 	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
 
-index-build: $(OPM) ## Builds the OLM index image
-	$(OPM) index add \
-		--build-tool docker \
-		--mode semver \
-		--bundles $(BUNDLE_IMG) \
-		--from-index $(INDEX_IMG) \
-		--tag $(INDEX_IMG)
-
-index-push: ## Push the OLM index image to the registry
-	docker push $(INDEX_IMG)
-
-bundle-publish: docker-build docker-push bundle-build bundle-push index-build index-push ## Generates and pushes all required images for a release
+bundle-publish: docker-build docker-push bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
 
 get-new-release: ## Checks if a release with the name $(VERSION) already exists in https://github.com/3scale-ops/marin3r/releases
 	@hack/new-release.sh v$(VERSION)
+
+catalog-retag-latest:
+	docker tag $(CATALOG_IMG) $(IMAGE_TAG_BASE)-catalog:latest
+	$(MAKE) docker-push IMG=$(IMAGE_TAG_BASE)-catalog:latest
 
 ##@ Other
 
