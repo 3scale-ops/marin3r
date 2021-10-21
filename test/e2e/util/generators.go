@@ -16,6 +16,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -43,7 +44,7 @@ func GeneratePod(key types.NamespacedName, nodeID, envoyAPI, envoyVersion, disco
 			"init-manager",
 			"--api-version", envoyAPI,
 			"--xdss-host", fmt.Sprintf("marin3r-%s.%s.svc", discoveryService, key.Namespace),
-			"--envoy-image", "envoyproxy/envoy:v1.16.0",
+			"--envoy-image", fmt.Sprintf("%s:%s", defaults.ImageRepo, envoyVersion),
 		},
 		Env: []corev1.EnvVar{
 			{Name: "POD_NAME",
@@ -65,7 +66,7 @@ func GeneratePod(key types.NamespacedName, nodeID, envoyAPI, envoyVersion, disco
 
 	containers := []corev1.Container{{
 		Name:    "envoy",
-		Image:   fmt.Sprintf("envoyproxy/envoy:%s", envoyVersion),
+		Image:   fmt.Sprintf("%s:%s", defaults.ImageRepo, envoyVersion),
 		Command: []string{"envoy"},
 		Args: []string{
 			"-c", "/etc/envoy/bootstrap/config.json",
@@ -155,7 +156,7 @@ func GenerateDeploymentWithInjection(key types.NamespacedName, nodeID, envoyAPI,
 	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-extra-args"] = "--component-log-level config:debug"
 	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/ports"] = fmt.Sprintf("envoy-http:%v", envoyPort)
 	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-api-version"] = envoyAPI
-	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-image"] = fmt.Sprintf("envoyproxy/envoy:%s", envoyVersion)
+	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/envoy-image"] = fmt.Sprintf("%s:%s", defaults.ImageRepo, envoyVersion)
 	dep.Spec.Template.ObjectMeta.Annotations["marin3r.3scale.net/init-manager.image"] = "quay.io/3scale/marin3r:test"
 
 	return dep

@@ -10,6 +10,7 @@ import (
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	testutil "github.com/3scale-ops/marin3r/test/e2e/util"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -152,7 +153,7 @@ var _ = Describe("EnvoyDeployment", func() {
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
 					DiscoveryServiceRef: ds.GetName(),
 					EnvoyConfigRef:      ec.GetName(),
-					Image:               pointer.StringPtr("envoyproxy/envoy:" + envoyVersionV3),
+					Image:               pointer.StringPtr(defaults.ImageRepo + ":" + envoyVersionV3),
 					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
 				},
 			}

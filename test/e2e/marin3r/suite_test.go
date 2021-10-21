@@ -33,6 +33,7 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 )
 
 const (
@@ -40,7 +41,7 @@ const (
 	targetNamespace   string = "default"
 	envoyListenerPort uint32 = 8080
 	// From v1.17.0 forwards only v3 API is supported
-	envoyVersionV3 string = "v1.18.3"
+	envoyVersionV3 string = defaults.EnvoyRelease
 )
 
 var (
