@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.9.0
+VERSION ?= 0.9.1-alpha.1
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -337,6 +337,41 @@ get-new-release: ## Checks if a release with the name $(VERSION) already exists 
 catalog-retag-latest:
 	docker tag $(CATALOG_IMG) $(IMAGE_TAG_BASE)-catalog:latest
 	$(MAKE) docker-push IMG=$(IMAGE_TAG_BASE)-catalog:latest
+
+##@ Run components locally
+
+EASYRSA_VERSION ?= v3.0.6
+certs:
+	hack/gen-certs.sh $(EASYRSA_VERSION)
+
+ENVOY_VERSION ?= v1.18.3
+
+run-ds: ## locally starts a discovery service
+run-ds: certs
+	WATCH_NAMESPACE="default" go run main.go \
+		discovery-service \
+		--server-certificate-path certs/server \
+		--ca-certificate-path certs/ca \
+		--debug
+
+run-envoy: ## runs an envoy process in a container that will try to connect to a local discovery service
+run-envoy: certs
+	docker run -ti --rm \
+		--network=host \
+		--add-host marin3r.default.svc:127.0.0.1 \
+		-v $$(pwd)/certs:/etc/envoy/tls \
+		-v $$(pwd)/examples/local:/config \
+		envoyproxy/envoy:$(ENVOY_VERSION) \
+		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
+
+test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: "make test-envoy-config CONFIG=example/config.yaml". To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
+test-envoy-config:
+	@test -f $$(pwd)/$(CONFIG)
+	docker run -ti --rm \
+		--network=host \
+		-v $$(pwd)/$(CONFIG):/config.yaml \
+		envoyproxy/envoy:$(ENVOY_VERSION) \
+		envoy -c /config.yaml $(ARGS)
 
 ##@ Other
 
