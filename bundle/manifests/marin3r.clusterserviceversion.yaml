@@ -74,7 +74,7 @@ metadata:
     certified: "false"
     containerImage: quay.io/3scale/marin3r
     description: Manage an Envoy Discovery Service and a fleet of Envoy proxies.
-    operators.operatorframework.io/builder: operator-sdk-v1.9.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.13.0+git
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
@@ -1036,6 +1036,31 @@ spec:
     containerPort: 443
     deploymentName: marin3r-controller-webhook
     failurePolicy: Fail
+    generateName: sidecar-injector.marin3r.3scale.net
+    matchPolicy: Equivalent
+    objectSelector:
+      matchLabels:
+        marin3r.3scale.net/status: enabled
+    reinvocationPolicy: Never
+    rules:
+    - apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      resources:
+      - pods
+    sideEffects: None
+    targetPort: 9443
+    type: MutatingAdmissionWebhook
+    webhookPath: /pod-v1-mutate
+  - admissionReviewVersions:
+    - v1
+    - v1beta1
+    containerPort: 443
+    deploymentName: marin3r-controller-webhook
+    failurePolicy: Fail
     generateName: envoyconfig.marin3r.3scale.net
     rules:
     - apiGroups:
@@ -1072,28 +1097,3 @@ spec:
     targetPort: 9443
     type: ValidatingAdmissionWebhook
     webhookPath: /validate-operator-marin3r-3scale-net-v1alpha1-envoydeployment
-  - admissionReviewVersions:
-    - v1
-    - v1beta1
-    containerPort: 443
-    deploymentName: marin3r-controller-webhook
-    failurePolicy: Fail
-    generateName: sidecar-injector.marin3r.3scale.net
-    matchPolicy: Equivalent
-    objectSelector:
-      matchLabels:
-        marin3r.3scale.net/status: enabled
-    reinvocationPolicy: Never
-    rules:
-    - apiGroups:
-      - ""
-      apiVersions:
-      - v1
-      operations:
-      - CREATE
-      resources:
-      - pods
-    sideEffects: None
-    targetPort: 9443
-    type: MutatingAdmissionWebhook
-    webhookPath: /pod-v1-mutate
