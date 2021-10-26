@@ -6,21 +6,15 @@ import (
 	"fmt"
 
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
+	_ "github.com/3scale-ops/marin3r/pkg/envoy/protos/v3"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
-
 	"github.com/ghodss/yaml"
 	"github.com/golang/protobuf/jsonpb"
-
-	// This is the list of imports so all proto types are registered.
-	// Generated with the following command in go-control-plane@v0.9.7
-	//
-	// for proto in $(find envoy -name '*.pb.go' | grep v3 | grep -v v3alpha); do echo "_ \"github.com/envoyproxy/go-control-plane/$(dirname $proto)\""; done | sort | uniq
-	_ "github.com/3scale-ops/marin3r/pkg/envoy/protos/v3"
 )
 
 type JSON struct{}
