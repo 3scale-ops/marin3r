@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.9.0
+VERSION ?= 0.9.1-alpha.1
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -87,6 +87,9 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+go-generate: gen-pkg-envoy-proto
+	PATH=$$PATH:$$PWD/bin go generate ./...
+
 ##@ Test
 
 test: unit-test integration-test e2e-test coverprofile ## Run tests and coverage
@@ -162,10 +165,10 @@ ginkgo: ## Download ginkgo locally if necessary
 
 ##@ Build
 
-build: generate fmt vet ## Build manager binary.
+build: generate fmt vet go-generate ## Build manager binary.
 	go build -o bin/manager main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests generate fmt vet go-generate ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: ## Build docker image with the manager.
@@ -321,9 +324,9 @@ kind: ## Download kind locally if necessary
 
 ##@ Release
 
-prepare-alpha-release: bump-release generate fmt vet manifests bundle ## Generates bundle manifests for alpha channel release
+prepare-alpha-release: bump-release generate fmt vet manifests go-generate bundle ## Generates bundle manifests for alpha channel release
 
-prepare-stable-release: bump-release generate fmt vet manifests bundle refdocs ## Generates bundle manifests for stable channel release
+prepare-stable-release: bump-release generate fmt vet manifests go-generate bundle refdocs ## Generates bundle manifests for stable channel release
 	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=alpha
 
 bump-release: ## Bumps release in the version package
@@ -337,6 +340,32 @@ get-new-release: ## Checks if a release with the name $(VERSION) already exists 
 catalog-retag-latest:
 	docker tag $(CATALOG_IMG) $(IMAGE_TAG_BASE)-catalog:latest
 	$(MAKE) docker-push IMG=$(IMAGE_TAG_BASE)-catalog:latest
+
+##@ Run components locally
+
+EASYRSA_VERSION ?= v3.0.6
+certs:
+	hack/gen-certs.sh $(EASYRSA_VERSION)
+
+ENVOY_VERSION ?= v1.18.3
+
+run-ds: ## locally starts a discovery service
+run-ds: manifests generate fmt vet go-generate certs
+	WATCH_NAMESPACE="default" go run main.go \
+		discovery-service \
+		--server-certificate-path certs/server \
+		--ca-certificate-path certs/ca \
+		--debug
+
+run-envoy: ## runs an envoy process in a container that will try to connect to a local discovery service
+run-envoy: certs
+	docker run -ti --rm \
+		--network=host \
+		--add-host marin3r.default.svc:127.0.0.1 \
+		-v $$(pwd)/certs:/etc/envoy/tls \
+		-v $$(pwd)/examples/local:/config \
+		envoyproxy/envoy:$(ENVOY_VERSION) \
+		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
 
 ##@ Other
 
@@ -373,3 +402,7 @@ refdocs: crd-ref-docs
 		--templates-dir=docs/api-reference/templates/asciidoctor \
 		--renderer=asciidoctor \
 		--output-path=docs/api-reference/reference.asciidoc
+
+gen-pkg-envoy-proto: export TARGET_PATH = $(PWD)/bin
+gen-pkg-envoy-proto: ## builds the gen-pkg-envoy-proto binary
+	 cd generators/pkg-envoy-proto && go build -o $${TARGET_PATH}/gen-pkg-envoy-proto main.go
