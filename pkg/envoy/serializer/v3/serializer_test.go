@@ -19,8 +19,8 @@ import (
 )
 
 var (
-	listenerJSON    string = `{"name":"listener1","address":{"socket_address":{"address":"0.0.0.0","port_value":8443}}}`
-	listenerB64JSON string = "eyJuYW1lIjoibGlzdGVuZXIxIiwiYWRkcmVzcyI6eyJzb2NrZXRfYWRkcmVzcyI6eyJhZGRyZXNzIjoiMC4wLjAuMCIsInBvcnRfdmFsdWUiOjg0NDN9fX0K"
+	listenerJSON    string = `{"name":"listener1","address":{"socket_address":{"address":"0.0.0.0","port_value":8443}},"filter_chains":[{"transport_socket":{"name":"envoy.transport_sockets.tls","typed_config":{"@type":"type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext","common_tls_context":{"tls_certificate_sds_secret_configs":[{"name":"secret","sds_config":{"ads":{},"resource_api_version":"V3"}}]}}}}]}`
+	listenerB64JSON string = "eyJuYW1lIjoibGlzdGVuZXIxIiwiYWRkcmVzcyI6eyJzb2NrZXRfYWRkcmVzcyI6eyJhZGRyZXNzIjoiMC4wLjAuMCIsInBvcnRfdmFsdWUiOjg0NDN9fSwiZmlsdGVyX2NoYWlucyI6W3sidHJhbnNwb3J0X3NvY2tldCI6eyJuYW1lIjoiZW52b3kudHJhbnNwb3J0X3NvY2tldHMudGxzIiwidHlwZWRfY29uZmlnIjp7IkB0eXBlIjoidHlwZS5nb29nbGVhcGlzLmNvbS9lbnZveS5leHRlbnNpb25zLnRyYW5zcG9ydF9zb2NrZXRzLnRscy52My5Eb3duc3RyZWFtVGxzQ29udGV4dCIsImNvbW1vbl90bHNfY29udGV4dCI6eyJ0bHNfY2VydGlmaWNhdGVfc2RzX3NlY3JldF9jb25maWdzIjpbeyJuYW1lIjoic2VjcmV0Iiwic2RzX2NvbmZpZyI6eyJhZHMiOnt9LCJyZXNvdXJjZV9hcGlfdmVyc2lvbiI6IlYzIn19XX19fX1dfQo="
 	listenerYAML    string = `
         name: listener1
         address:
