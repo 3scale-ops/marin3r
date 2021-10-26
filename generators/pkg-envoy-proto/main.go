@@ -32,8 +32,7 @@ var (
 )
 
 var cmd = &cobra.Command{
-	Use:   "marin3r",
-	Short: "Lightweight, CRD based envoy control plane for kubernetes",
+	Use: "gen-pkg-envoy-proto",
 	Run: func(cmd *cobra.Command, args []string) {
 		generate()
 	},
