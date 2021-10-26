@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.9.1-alpha.2
+VERSION ?= 0.9.1-alpha.3
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -87,8 +87,8 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-go-generate: gen-pkg-envoy-proto
-	PATH=$$PATH:$$PWD/bin go generate ./...
+go-generate: gen-pkg-version gen-pkg-envoy-proto
+	VERSION=$(VERSION) PATH=$$PATH:$$PWD/bin go generate ./...
 
 ##@ Test
 
@@ -324,13 +324,10 @@ kind: ## Download kind locally if necessary
 
 ##@ Release
 
-prepare-alpha-release: bump-release generate fmt vet manifests go-generate bundle ## Generates bundle manifests for alpha channel release
+prepare-alpha-release: generate fmt vet manifests go-generate bundle ## Generates bundle manifests for alpha channel release
 
-prepare-stable-release: bump-release generate fmt vet manifests go-generate bundle refdocs ## Generates bundle manifests for stable channel release
+prepare-stable-release: generate fmt vet manifests go-generate bundle refdocs ## Generates bundle manifests for stable channel release
 	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=alpha
-
-bump-release: ## Bumps release in the version package
-	sed -i 's/version string = "v\(.*\)"/version string = "v$(VERSION)"/g' pkg/version/version.go
 
 bundle-publish: docker-build docker-push bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
 
@@ -407,3 +404,7 @@ refdocs: crd-ref-docs
 gen-pkg-envoy-proto: export TARGET_PATH = $(PWD)/bin
 gen-pkg-envoy-proto: ## builds the gen-pkg-envoy-proto binary
 	 cd generators/pkg-envoy-proto && go build -o $${TARGET_PATH}/gen-pkg-envoy-proto main.go
+
+gen-pkg-version: export TARGET_PATH = $(PWD)/bin
+gen-pkg-version: ## builds the gen-pkg-version binary
+	 cd generators/pkg-version && go build -o $${TARGET_PATH}/gen-pkg-version main.go
