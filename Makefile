@@ -87,6 +87,9 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+go-generate: gen-pkg-envoy-proto
+	PATH=$$PATH:$$PWD/bin go generate ./...
+
 ##@ Test
 
 test: unit-test integration-test e2e-test coverprofile ## Run tests and coverage
@@ -162,10 +165,10 @@ ginkgo: ## Download ginkgo locally if necessary
 
 ##@ Build
 
-build: generate fmt vet ## Build manager binary.
+build: generate fmt vet go-generate ## Build manager binary.
 	go build -o bin/manager main.go
 
-run: manifests generate fmt vet ## Run a controller from your host.
+run: manifests generate fmt vet go-generate ## Run a controller from your host.
 	go run ./main.go
 
 docker-build: ## Build docker image with the manager.
@@ -321,9 +324,9 @@ kind: ## Download kind locally if necessary
 
 ##@ Release
 
-prepare-alpha-release: bump-release generate fmt vet manifests bundle ## Generates bundle manifests for alpha channel release
+prepare-alpha-release: bump-release generate fmt vet manifests go-generate bundle ## Generates bundle manifests for alpha channel release
 
-prepare-stable-release: bump-release generate fmt vet manifests bundle refdocs ## Generates bundle manifests for stable channel release
+prepare-stable-release: bump-release generate fmt vet manifests go-generate bundle refdocs ## Generates bundle manifests for stable channel release
 	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=alpha
 
 bump-release: ## Bumps release in the version package
@@ -347,7 +350,7 @@ certs:
 ENVOY_VERSION ?= v1.18.3
 
 run-ds: ## locally starts a discovery service
-run-ds: certs
+run-ds: manifests generate fmt vet go-generate certs
 	WATCH_NAMESPACE="default" go run main.go \
 		discovery-service \
 		--server-certificate-path certs/server \
@@ -363,15 +366,6 @@ run-envoy: certs
 		-v $$(pwd)/examples/local:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
-
-test-envoy-config: ## Run a local envoy container with the configuration passed in var CONFIG: "make test-envoy-config CONFIG=example/config.yaml". To debug problems with configs, increase envoy components log levels: make test-envoy-config CONFIG=example/envoy-ratelimit.yaml ARGS="--component-log-level http:debug"
-test-envoy-config:
-	@test -f $$(pwd)/$(CONFIG)
-	docker run -ti --rm \
-		--network=host \
-		-v $$(pwd)/$(CONFIG):/config.yaml \
-		envoyproxy/envoy:$(ENVOY_VERSION) \
-		envoy -c /config.yaml $(ARGS)
 
 ##@ Other
 
@@ -408,3 +402,7 @@ refdocs: crd-ref-docs
 		--templates-dir=docs/api-reference/templates/asciidoctor \
 		--renderer=asciidoctor \
 		--output-path=docs/api-reference/reference.asciidoc
+
+gen-pkg-envoy-proto: export TARGET_PATH = $(PWD)/bin
+gen-pkg-envoy-proto: ## builds the gen-pkg-envoy-proto binary
+	 cd generators/pkg-envoy-proto && go build -o $${TARGET_PATH}/gen-pkg-envoy-proto main.go
