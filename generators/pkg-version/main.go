@@ -22,7 +22,7 @@ var (
 )
 
 var cmd = &cobra.Command{
-	Use: "gen-pkg-envoy-proto",
+	Use: "gen-pkg-version",
 	Run: func(cmd *cobra.Command, args []string) {
 		generate()
 	},
@@ -30,7 +30,7 @@ var cmd = &cobra.Command{
 
 func init() {
 	// flags
-	cmd.Flags().StringVar(&version, "version", "", "The version")
+	cmd.Flags().StringVar(&version, "version", "", "The version (only the number, without the leading 'v')")
 	cmd.MarkFlagRequired("version")
 	cmd.Flags().StringVar(&packageName, "package-name", "version", "The package name")
 	cmd.Flags().StringVar(&packageFile, "package-file", "zz_generated.go", "The package file")
