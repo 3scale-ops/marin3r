@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.9.1-alpha.1
+VERSION ?= 0.9.1-alpha.2
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -372,22 +372,23 @@ run-envoy: certs
 $(shell pwd)/bin:
 	mkdir -p $(shell pwd)/bin
 
-OS=$(shell uname | awk '{print tolower($$0)}')
-ARCH = $(shell arch)
-ifeq ($(shell arch),x86_64)
-ARCH := amd64
-endif
-ifeq ($(shell arch),aarch64)
-ARCH := arm64
-endif
-
 .PHONY: operator-sdk
-OPERATOR_SDK_RELEASE = v1.10.0
-OPERATOR_SDK = $(shell pwd)/bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
-OPERATOR_SDK_DL_URL = https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_RELEASE)/operator-sdk_$(OS)_$(ARCH)
-operator-sdk: $(shell pwd)/bin ## Download locally a pinned release of operator-sdk if needed
-	curl -sL -o $(OPERATOR_SDK) $(OPERATOR_SDK_DL_URL)
-	chmod +x $(OPERATOR_SDK)
+OPERATOR_SDK_RELEASE = v1.13.1
+OPERATOR_SDK = bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
+operator-sdk: ## Download operator-sdk locally if necessary.
+ifeq (,$(wildcard $(OPERATOR_SDK)))
+ifeq (,$(shell which $(OPERATOR_SDK) 2>/dev/null))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPERATOR_SDK)) ;\
+	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
+	curl -sSLo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v1.13.1/operator-sdk_$${OS}_$${ARCH};\
+	chmod +x $(OPERATOR_SDK) ;\
+	}
+else
+OPERATOR_SDK = $(shell which $(OPERATOR_SDK))
+endif
+endif
 
 .PHONY: crd-ref-docs
 CRD_REFDOCS = $(shell pwd)/bin/crd-ref-docs
