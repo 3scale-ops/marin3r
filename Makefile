@@ -92,7 +92,7 @@ go-generate: gen-pkg-version gen-pkg-envoy-proto
 
 ##@ Test
 
-test: unit-test integration-test e2e-test coverprofile ## Run tests and coverage
+test: generate fmt vet manifests go-generate unit-test integration-test e2e-test coverprofile ## Run tests and coverage
 
 
 COVERPKGS = ./controllers/...,./apis/...,./pkg/...
@@ -110,7 +110,7 @@ fix-cover:
 UNIT_COVERPROFILE = unit.coverprofile
 unit-test: export COVERPROFILE=$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE)
 unit-test: export RUN_ENVTEST=0
-unit-test: fmt vet $(COVER_OUTPUT_DIR) ## Run unit tests
+unit-test: $(COVER_OUTPUT_DIR) ## Run unit tests
 	mkdir -p $(shell dirname $(COVERPROFILE))
 	go test -p $(TEST_CPUS) ./controllers/... ./apis/... ./pkg/... -race -coverpkg="$(COVERPKGS)" -coverprofile=$(COVERPROFILE)
 
@@ -120,7 +120,7 @@ MARIN3R_COVERPROFILE = marin3r.coverprofile
 MARIN3R_WEBHOOK_COVERPROFILE = marin3r.webhook.coverprofile
 OPERATOR_WEBHOOK_COVERPROFILE = operator.webhook.coverprofile
 export ACK_GINKGO_DEPRECATIONS=1.16.4
-integration-test: generate fmt vet manifests ginkgo $(COVER_OUTPUT_DIR) ## Run integration tests
+integration-test: ginkgo $(COVER_OUTPUT_DIR) ## Run integration tests
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || \
 		curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.8.3/hack/setup-envtest.sh
