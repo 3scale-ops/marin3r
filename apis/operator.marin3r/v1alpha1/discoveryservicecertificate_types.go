@@ -190,12 +190,11 @@ func (status *DiscoveryServiceCertificateStatus) GetCertificateHash() string {
 
 // +kubebuilder:object:root=true
 
-// DiscoveryServiceCertificate is used to create certificates, either self-signed
-// or by using a cert-manager CA issuer. This object is used by the DiscoveryService
-// controller to create the required certificates for the different components of the
-// discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
+// DiscoveryServiceCertificate is an internal resource used to create certificates. This resource
+// is used by the DiscoveryService controller to create the required certificates for the different
+// components. Direct use of DiscoveryServiceCertificate objects is discouraged.
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced,shortName=dsc
+// +kubebuilder:resource:path=discoveryservicecertificates,scope=Namespaced
 // +kubebuilder:printcolumn:JSONPath=".status.ready",name="Ready",type=boolean
 // +kubebuilder:printcolumn:JSONPath=".status.notBefore",name=Not Before,type=string,format=date-time
 // +kubebuilder:printcolumn:JSONPath=".status.notAfter",name=Not After,type=string,format=date-time

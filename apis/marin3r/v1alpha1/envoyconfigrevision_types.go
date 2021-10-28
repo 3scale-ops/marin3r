@@ -128,8 +128,8 @@ type VersionTracker struct {
 
 // +kubebuilder:object:root=true
 
-// EnvoyConfigRevision holds an specific version of the EnvoyConfig resources.
-// EnvoyConfigRevisions are automatically created and deleted  by the EnvoyConfig
+// EnvoyConfigRevision is an internal resource that stores a specific version of an EnvoyConfig
+// resource. EnvoyConfigRevisions are automatically created and deleted by the EnvoyConfig
 // controller and are not intended to be directly used. Use EnvoyConfig objects instead.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=envoyconfigrevisions,scope=Namespaced,shortName=ecr

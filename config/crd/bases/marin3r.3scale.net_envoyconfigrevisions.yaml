@@ -45,10 +45,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: EnvoyConfigRevision holds an specific version of the EnvoyConfig
-          resources. EnvoyConfigRevisions are automatically created and deleted  by
-          the EnvoyConfig controller and are not intended to be directly used. Use
-          EnvoyConfig objects instead.
+        description: EnvoyConfigRevision is an internal resource that stores a specific
+          version of an EnvoyConfig resource. EnvoyConfigRevisions are automatically
+          created and deleted by the EnvoyConfig controller and are not intended to
+          be directly used. Use EnvoyConfig objects instead.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

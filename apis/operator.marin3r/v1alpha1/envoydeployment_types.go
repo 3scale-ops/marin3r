@@ -362,15 +362,17 @@ func (im *InitManager) GetImage() string {
 }
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment
-type EnvoyDeploymentStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
+type EnvoyDeploymentStatus struct{}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// EnvoyDeployment is the Schema for the envoydeployments API
+// EnvoyDeployment is a resource to deploy and manage a Kubernetes Deployment
+// of Envoy Pods.
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=envoydeployments,scope=Namespaced
+// +operator-sdk:csv:customresourcedefinitions:displayName="EnvoyDeployment"
+// +operator-sdk:csv:customresourcedefinitions.resources={{Deployment,v1}}
 type EnvoyDeployment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

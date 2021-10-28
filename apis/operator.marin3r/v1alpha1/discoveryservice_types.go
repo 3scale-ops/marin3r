@@ -149,12 +149,12 @@ type ServiceConfig struct {
 
 // +kubebuilder:object:root=true
 
-// DiscoveryService represents an envoy discovery service server. Currently
-// only one DiscoveryService per cluster is supported.
+// DiscoveryService represents an envoy discovery service server. Only one
+// instance per namespace is currently supported.
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=discoveryservices,scope=Namespaced
 // +operator-sdk:csv:customresourcedefinitions:displayName="DiscoveryService"
-// +operator-sdk:csv:customresourcedefinitions.resources={{Deployment,v1},{Service,v1},{DiscoveryServiceCertificate,v1alpha1}
+// +operator-sdk:csv:customresourcedefinitions.resources={{Deployment,v1},{Service,v1},{DiscoveryServiceCertificate,v1alpha1}}
 type DiscoveryService struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

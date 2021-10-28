@@ -2,14 +2,11 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: '[]'
-    capabilities: Basic Install
+    capabilities: Full Lifecycle
     certified: "false"
     containerImage: quay.io/3scale/marin3r
-    description: Manage an Envoy Discovery Service and a fleet of Envoy proxies.
-    operators.operatorframework.io/builder: operator-sdk-v1.1.0
+    description: Lighweight, CRD based Envoy control plane for Kubernetes
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
-    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
   name: marin3r.v0.0.0
@@ -18,11 +15,10 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: DiscoveryServiceCertificate is used to create certificates, either
-        self-signed or by using a cert-manager CA issuer. This object is used by the
-        DiscoveryService controller to create the required certificates for the different
-        components of the discovery service. Direct use of DiscoveryServiceCertificate
-        objects is discouraged.
+    - description: DiscoveryServiceCertificate is an internal resource used to create
+        certificates. This resource is used by the DiscoveryService controller to
+        create the required certificates for the different components. Direct use
+        of DiscoveryServiceCertificate objects is discouraged.
       displayName: DiscoveryServiceCertificate
       kind: DiscoveryServiceCertificate
       name: discoveryservicecertificates.operator.marin3r.3scale.net
@@ -91,7 +87,7 @@ spec:
         path: ready
       version: v1alpha1
     - description: DiscoveryService represents an envoy discovery service server.
-        Currently only one DiscoveryService per cluster is supported.
+        Only one instance per namespace is currently supported.
       displayName: DiscoveryService
       kind: DiscoveryService
       name: discoveryservices.operator.marin3r.3scale.net
@@ -146,10 +142,10 @@ spec:
         displayName: Conditions
         path: conditions
       version: v1alpha1
-    - description: EnvoyConfigRevision holds an specific version of the EnvoyConfig
-        resources. EnvoyConfigRevisions are automatically created and deleted  by
-        the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig
-        objects instead.
+    - description: EnvoyConfigRevision is an internal resource that stores a specific
+        version of an EnvoyConfig resource. EnvoyConfigRevisions are automatically
+        created and deleted by the EnvoyConfig controller and are not intended to
+        be directly used. Use EnvoyConfig objects instead.
       displayName: EnvoyConfigRevision
       kind: EnvoyConfigRevision
       name: envoyconfigrevisions.marin3r.3scale.net
@@ -259,7 +255,7 @@ spec:
         path: tainted
       version: v1alpha1
     - description: EnvoyConfig holds the configuration for a given envoy nodeID. The
-        spec of an EnvoyConfig object holds the envoy resources that conform the desired
+        spec of an EnvoyConfig object holds the Envoy resources that conform the desired
         configuration for the given nodeID and that the discovery service will send
         to any envoy client that identifies itself with that nodeID.
       displayName: EnvoyConfig
@@ -381,8 +377,9 @@ spec:
         displayName: Version
         path: revisions[0].version
       version: v1alpha1
-    - description: EnvoyDeployment is the Schema for the envoydeployments API
-      displayName: Envoy Deployment
+    - description: EnvoyDeployment is a resource to deploy and manage a Kubernetes
+        Deployment of Envoy Pods.
+      displayName: EnvoyDeployment
       kind: EnvoyDeployment
       name: envoydeployments.operator.marin3r.3scale.net
       specDescriptors:
@@ -543,30 +540,21 @@ spec:
         path: shutdownManager.serverPort
       version: v1alpha1
   description: |
-    MARIN3R is an operator to manage an Envoy discovery service and a fleet of Envoy proxies that
-    connect to it to fetch their configurations dynamically. It's main purpose is to provide
-    an easy way to deploy a discovery service with the basic functionality already in place so you
-    can focus on developing your Envoy configurations or even your own domain specifig CRDs leveraging
-    the ones that MARIN3R provides.
+    MARIN3R implements a control plane to deploy, configure and operate a fleet of envoy instances within a Kubernetes cluster.
+    It operates a group of gateways and Pod sidecar containers to provide general purpose functionality required to operate production systems.
 
+    Features:
 
-    ## Managed installation (kind DiscoveryService)
+    * Deploy and manage an Envoy xDS server using the DiscoveryService custom resource.
+    * Inject Envoy sidecar containers based on Pod annotations.
+    * Deploy Envoy as a Kubernetes Deployment using the EnvoyDeployment custom resource.
+    * Dynamic Envoy configuration and re-configuration using the EnvoyConfig custom resource.
+    * Use Kubernetes Secrets as certificate sources.
+    * Syntactic validation of Envoy configurations.
+    * Lifecycle management of Envoy containers (graceful shutdown and connection draining).
+    * Self-healing.
 
-    * Basic installation and setup of an Envoy discovery service
-    * Automatic deployment of a kubernetes mutating admission webhook to inject Envoy sidecars in your pods
-    * Automatic configuration of Envoy sidecars to find the discovery service within the cluster
-    * Mututal TLS authentication between Envoy sidecars and the discovery service
-    * The discovery service and the Envoy proxies that conenct to it must live in the same namespace
-
-    ## Deploy Envoy configurations as kubernetes custom resources (kind EnvoyConfig)
-
-    * Each EnvoyConfig object holds Envoy resources that will be "pushed" to the appropriate set of pods
-    * Control which config goes to which pod directly using annotations on the pod
-    * Envoy v3 API supported
-    * Envoy resources can be both expressed as json or yaml
-    * A history of the last 10 configurations is kept per EnvoyConfig object
-    * Self-healing is attempted when the Envoy sidecars are not able to load the resources defined in the
-      EnvoyConfig by rolling back to a previous working config version
+    Check the [docs](https://github.com/3scale-ops/marin3r#readme) for more information.
 
     ## License
     MARIN3R is licensed under the [Apache 2.0 license](https://github.com/3scale/prometheus-exporter-operator/blob/master/LICENSE)
@@ -595,6 +583,7 @@ spec:
   - sidecar
   - xds
   - network
+  - gateway
   links:
   - name: GitHub
     url: https://github.com/3scale-ops/marin3r
