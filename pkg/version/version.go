@@ -1,8 +1,7 @@
 package version
 
-const (
-	version string = "v0.9.1-alpha.2"
-)
+//go:generate echo "[INFO] Generating files for pkg/version package"
+//go:generate gen-pkg-version --version ${VERSION}
 
 // Current returns the current marin3r operator version
 func Current() string { return version }

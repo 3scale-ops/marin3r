@@ -88,7 +88,6 @@ func listProtoPackages(version string) []string {
 
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           "https://" + sourceModuleName,
-		Progress:      os.Stdout,
 		Depth:         1,
 		ReferenceName: plumbing.NewTagReferenceName(version),
 		SingleBranch:  true,
