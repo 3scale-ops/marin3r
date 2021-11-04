@@ -13,8 +13,6 @@ spec:
     kind: DiscoveryServiceCertificate
     listKind: DiscoveryServiceCertificateList
     plural: discoveryservicecertificates
-    shortNames:
-    - dsc
     singular: discoveryservicecertificate
   scope: Namespaced
   versions:
@@ -33,11 +31,10 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: DiscoveryServiceCertificate is used to create certificates, either
-          self-signed or by using a cert-manager CA issuer. This object is used by
-          the DiscoveryService controller to create the required certificates for
-          the different components of the discovery service. Direct use of DiscoveryServiceCertificate
-          objects is discouraged.
+        description: DiscoveryServiceCertificate is an internal resource used to create
+          certificates. This resource is used by the DiscoveryService controller to
+          create the required certificates for the different components. Direct use
+          of DiscoveryServiceCertificate objects is discouraged.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

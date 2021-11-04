@@ -196,7 +196,7 @@ type ConfigRevisionRef struct {
 // +kubebuilder:object:root=true
 
 // EnvoyConfig holds the configuration for a given envoy nodeID. The spec of an EnvoyConfig
-// object holds the envoy resources that conform the desired configuration for the given nodeID
+// object holds the Envoy resources that conform the desired configuration for the given nodeID
 // and that the discovery service will send to any envoy client that identifies itself with that
 // nodeID.
 // +kubebuilder:subresource:status

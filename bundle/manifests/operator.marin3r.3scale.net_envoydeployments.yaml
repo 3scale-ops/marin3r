@@ -17,7 +17,8 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: EnvoyDeployment is the Schema for the envoydeployments API
+        description: EnvoyDeployment is a resource to deploy and manage a Kubernetes
+          Deployment of Envoy Pods.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
