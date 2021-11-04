@@ -43,7 +43,7 @@ ConfigRevisionRef holds a reference to EnvoyConfigRevision object
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfig"]
 ==== EnvoyConfig 
 
-EnvoyConfig holds the configuration for a given envoy nodeID. The spec of an EnvoyConfig object holds the envoy resources that conform the desired configuration for the given nodeID and that the discovery service will send to any envoy client that identifies itself with that nodeID.
+EnvoyConfig holds the configuration for a given envoy nodeID. The spec of an EnvoyConfig object holds the Envoy resources that conform the desired configuration for the given nodeID and that the discovery service will send to any envoy client that identifies itself with that nodeID.
 
 .Appears In:
 ****
@@ -83,7 +83,7 @@ EnvoyConfigList contains a list of EnvoyConfig
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfigrevision"]
 ==== EnvoyConfigRevision 
 
-EnvoyConfigRevision holds an specific version of the EnvoyConfig resources. EnvoyConfigRevisions are automatically created and deleted  by the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig objects instead.
+EnvoyConfigRevision is an internal resource that stores a specific version of an EnvoyConfig resource. EnvoyConfigRevisions are automatically created and deleted by the EnvoyConfig controller and are not intended to be directly used. Use EnvoyConfig objects instead.
 
 .Appears In:
 ****
@@ -378,7 +378,7 @@ ContainerPort defines port for the Marin3r sidecar container
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-discoveryservice"]
 ==== DiscoveryService 
 
-DiscoveryService represents an envoy discovery service server. Currently only one DiscoveryService per cluster is supported.
+DiscoveryService represents an envoy discovery service server. Only one instance per namespace is currently supported.
 
 .Appears In:
 ****
@@ -400,7 +400,7 @@ DiscoveryService represents an envoy discovery service server. Currently only on
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-discoveryservicecertificate"]
 ==== DiscoveryServiceCertificate 
 
-DiscoveryServiceCertificate is used to create certificates, either self-signed or by using a cert-manager CA issuer. This object is used by the DiscoveryService controller to create the required certificates for the different components of the discovery service. Direct use of DiscoveryServiceCertificate objects is discouraged.
+DiscoveryServiceCertificate is an internal resource used to create certificates. This resource is used by the DiscoveryService controller to create the required certificates for the different components. Direct use of DiscoveryServiceCertificate objects is discouraged.
 
 .Appears In:
 ****
@@ -581,7 +581,7 @@ DiscoveryServiceStatus defines the observed state of DiscoveryService
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-envoydeployment"]
 ==== EnvoyDeployment 
 
-EnvoyDeployment is the Schema for the envoydeployments API
+EnvoyDeployment is a resource to deploy and manage a Kubernetes Deployment of Envoy Pods.
 
 .Appears In:
 ****

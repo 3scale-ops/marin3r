@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.9.1-alpha.5
+VERSION ?= 0.9.1
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -327,7 +327,7 @@ kind: ## Download kind locally if necessary
 prepare-alpha-release: generate fmt vet manifests go-generate bundle ## Generates bundle manifests for alpha channel release
 
 prepare-stable-release: generate fmt vet manifests go-generate bundle refdocs ## Generates bundle manifests for stable channel release
-	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=alpha
+	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=stable
 
 bundle-publish: docker-build docker-push bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
 
