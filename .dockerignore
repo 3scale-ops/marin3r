@@ -2,3 +2,9 @@
 # Ignore build and test binaries.
 bin/
 testbin/
+# Ignore temporary stuff
+tmp/
+# Ignore docs - they're not needed in the images
+docs/
+# Ignore anything in the build dir
+build/*
