@@ -1,11 +1,10 @@
 package v1alpha1
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/3scale-ops/marin3r/pkg/version"
+	"github.com/3scale-ops/marin3r/pkg/image"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -266,7 +265,7 @@ func TestDiscoveryService_GetImage(t *testing.T) {
 			func() *DiscoveryService {
 				return &DiscoveryService{}
 			},
-			fmt.Sprintf("%s:%s", DefaultImageRegistry, version.Current()),
+			image.Current(),
 		},
 		{"With explicitly set value",
 			func() *DiscoveryService {

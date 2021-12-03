@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/3scale-ops/marin3r/pkg/version"
+	"github.com/3scale-ops/marin3r/pkg/image"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -181,7 +181,7 @@ func (d *DiscoveryService) GetImage() string {
 }
 
 func (d *DiscoveryService) defaultImage() string {
-	return fmt.Sprintf("%s:%s", DefaultImageRegistry, version.Current())
+	return image.Current()
 }
 
 // Debug returns a boolean value that indicates if debug loggin is enabled
