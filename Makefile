@@ -126,7 +126,7 @@ integration-test: envtest ginkgo $(COVER_OUTPUT_DIR) ## Run integration tests
 		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_WEBHOOK_COVERPROFILE) ./apis/marin3r
 		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_WEBHOOK_COVERPROFILE) ./apis/operator.marin3r
 
-coverprofile: gocovmerge ## Calculates test  coverage from unit and integration tests
+coverprofile: unit-test integration-test gocovmerge ## Calculates test  coverage from unit and integration tests
 	$(GOCOVMERGE) \
 		$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) \
 		$(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) \
