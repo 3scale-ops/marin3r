@@ -5,21 +5,29 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/image"
 )
 
+type DrainStrategy string
+
+const (
+	DrainStrategyGradual   DrainStrategy = "gradual"
+	DrainStrategyImmediate DrainStrategy = "immediate"
+)
+
 const (
 	// common defaults
-	EnvoyRelease                    string = "v1.20.1"
-	ImageRepo                       string = "envoyproxy/envoy"
-	Image                           string = ImageRepo + ":" + EnvoyRelease
-	EnvoyConfigBasePath             string = "/etc/envoy/bootstrap"
-	EnvoyConfigFileName             string = "config.json"
-	EnvoyExtraArgs                  string = ""
-	EnvoyTLSBasePath                string = "/etc/envoy/tls/client"
-	EnvoyAPIVersion                 string = string(envoy.APIv3)
-	TlsCertificateSdsSecretFileName string = "tls_certificate_sds_secret.json"
-	EnvoyAdminPort                  uint32 = 9901
-	EnvoyAdminBindAddress           string = "0.0.0.0"
-	EnvoyAdminAccessLogPath         string = "/dev/null"
-	GracefulShutdownTimeoutSeconds  int64  = 300
+	EnvoyRelease                    string        = "v1.20.1"
+	ImageRepo                       string        = "envoyproxy/envoy"
+	Image                           string        = ImageRepo + ":" + EnvoyRelease
+	EnvoyConfigBasePath             string        = "/etc/envoy/bootstrap"
+	EnvoyConfigFileName             string        = "config.json"
+	EnvoyExtraArgs                  string        = ""
+	EnvoyTLSBasePath                string        = "/etc/envoy/tls/client"
+	EnvoyAPIVersion                 string        = string(envoy.APIv3)
+	TlsCertificateSdsSecretFileName string        = "tls_certificate_sds_secret.json"
+	EnvoyAdminPort                  uint32        = 9901
+	EnvoyAdminBindAddress           string        = "0.0.0.0"
+	EnvoyAdminAccessLogPath         string        = "/dev/null"
+	GracefulShutdownTimeoutSeconds  int64         = 300
+	GracefulShutdownStrategy        DrainStrategy = DrainStrategyGradual
 
 	LivenessInitialDelaySeconds int32 = 30
 	LivenessTimeoutSeconds      int32 = 1

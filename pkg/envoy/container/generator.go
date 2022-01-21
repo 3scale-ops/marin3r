@@ -39,9 +39,11 @@ type ContainerConfig struct {
 	APIVersion       string
 
 	// Shutdown manager container configuration
-	ShutdownManagerEnabled bool
-	ShutdownManagerPort    int32
-	ShutdownManagerImage   string
+	ShutdownManagerEnabled       bool
+	ShutdownManagerPort          int32
+	ShutdownManagerImage         string
+	ShutdownManagerDrainSeconds  int64
+	ShutdownManagerDrainStrategy defaults.DrainStrategy
 }
 
 func (cc *ContainerConfig) Containers() []corev1.Container {
@@ -57,6 +59,12 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 				cc.NodeID,
 				"--service-cluster",
 				cc.ClusterID,
+			}
+			if cc.ShutdownManagerEnabled {
+				args = append(args,
+					"--drain-time-s", fmt.Sprintf("%d", cc.ShutdownManagerDrainSeconds),
+					"--drain-strategy", string(cc.ShutdownManagerDrainStrategy),
+				)
 			}
 			if len(cc.ExtraArgs) > 0 {
 				args = append(args, cc.ExtraArgs...)

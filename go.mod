@@ -8,6 +8,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.9.9
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
+	github.com/go-test/deep v1.0.8
 	github.com/golang/protobuf v1.5.2
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
 	github.com/onsi/ginkgo v1.16.5
