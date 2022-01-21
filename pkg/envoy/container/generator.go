@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 type ContainerConfig struct {
@@ -75,6 +76,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 		Ports: append(cc.Ports, corev1.ContainerPort{
 			Name:          "admin",
 			ContainerPort: cc.AdminPort,
+			Protocol:      corev1.ProtocolTCP,
 		}),
 		VolumeMounts: []corev1.VolumeMount{
 			{
@@ -91,8 +93,9 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 		LivenessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/ready",
-					Port: intstr.IntOrString{IntVal: cc.AdminPort},
+					Path:   "/ready",
+					Port:   intstr.IntOrString{IntVal: cc.AdminPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
 			InitialDelaySeconds: cc.LivenessProbe.InitialDelaySeconds,
@@ -104,8 +107,9 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 		ReadinessProbe: &corev1.Probe{
 			Handler: corev1.Handler{
 				HTTPGet: &corev1.HTTPGetAction{
-					Path: "/ready",
-					Port: intstr.IntOrString{IntVal: cc.AdminPort},
+					Path:   "/ready",
+					Port:   intstr.IntOrString{IntVal: cc.AdminPort},
+					Scheme: corev1.URISchemeHTTP,
 				},
 			},
 			InitialDelaySeconds: cc.ReadinessProbe.InitialDelaySeconds,
@@ -186,7 +190,8 @@ func (cc *ContainerConfig) InitContainers() []corev1.Container {
 				Name: "POD_NAME",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.name",
+						FieldPath:  "metadata.name",
+						APIVersion: "v1",
 					},
 				},
 			},
@@ -194,7 +199,8 @@ func (cc *ContainerConfig) InitContainers() []corev1.Container {
 				Name: "POD_NAMESPACE",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "metadata.namespace",
+						FieldPath:  "metadata.namespace",
+						APIVersion: "v1",
 					},
 				},
 			},
@@ -202,7 +208,8 @@ func (cc *ContainerConfig) InitContainers() []corev1.Container {
 				Name: "HOST_NAME",
 				ValueFrom: &corev1.EnvVarSource{
 					FieldRef: &corev1.ObjectFieldSelector{
-						FieldPath: "spec.nodeName",
+						FieldPath:  "spec.nodeName",
+						APIVersion: "v1",
 					},
 				},
 			},
@@ -227,6 +234,9 @@ func (cc *ContainerConfig) InitContainers() []corev1.Container {
 				MountPath: cc.ConfigBasePath,
 			},
 		},
+		ImagePullPolicy:          corev1.PullIfNotPresent,
+		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 	}}
 
 	return containers
@@ -239,7 +249,8 @@ func (cc *ContainerConfig) Volumes() []corev1.Volume {
 			Name: cc.TLSVolume,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: cc.ClientCertSecret,
+					SecretName:  cc.ClientCertSecret,
+					DefaultMode: pointer.Int32(420),
 				},
 			},
 		},

@@ -7,9 +7,9 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/go-test/deep"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
@@ -88,7 +88,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									Name: defaults.DeploymentTLSVolume,
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
-											SecretName: defaults.DeploymentClientCertificate + "-instance",
+											SecretName:  defaults.DeploymentClientCertificate + "-instance",
+											DefaultMode: pointer.Int32(420),
 										},
 									},
 								},
@@ -107,7 +108,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										Name: "POD_NAME",
 										ValueFrom: &corev1.EnvVarSource{
 											FieldRef: &corev1.ObjectFieldSelector{
-												FieldPath: "metadata.name",
+												FieldPath:  "metadata.name",
+												APIVersion: "v1",
 											},
 										},
 									},
@@ -115,7 +117,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										Name: "POD_NAMESPACE",
 										ValueFrom: &corev1.EnvVarSource{
 											FieldRef: &corev1.ObjectFieldSelector{
-												FieldPath: "metadata.namespace",
+												FieldPath:  "metadata.namespace",
+												APIVersion: "v1",
 											},
 										},
 									},
@@ -123,7 +126,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										Name: "HOST_NAME",
 										ValueFrom: &corev1.EnvVarSource{
 											FieldRef: &corev1.ObjectFieldSelector{
-												FieldPath: "spec.nodeName",
+												FieldPath:  "spec.nodeName",
+												APIVersion: "v1",
 											},
 										},
 									},
@@ -148,6 +152,9 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										MountPath: defaults.EnvoyConfigBasePath,
 									},
 								},
+								ImagePullPolicy:          corev1.PullIfNotPresent,
+								TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 							}},
 							Containers: []corev1.Container{
 								{
@@ -171,6 +178,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										{
 											Name:          "admin",
 											ContainerPort: int32(9901),
+											Protocol:      corev1.ProtocolTCP,
 										},
 									},
 									VolumeMounts: []corev1.VolumeMount{
@@ -188,8 +196,9 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									LivenessProbe: &corev1.Probe{
 										Handler: corev1.Handler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/ready",
-												Port: intstr.IntOrString{IntVal: 9901},
+												Path:   "/ready",
+												Port:   intstr.IntOrString{IntVal: 9901},
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 										InitialDelaySeconds: 30,
@@ -201,8 +210,9 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									ReadinessProbe: &corev1.Probe{
 										Handler: corev1.Handler{
 											HTTPGet: &corev1.HTTPGetAction{
-												Path: "/ready",
-												Port: intstr.IntOrString{IntVal: 9901},
+												Path:   "/ready",
+												Port:   intstr.IntOrString{IntVal: 9901},
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 										InitialDelaySeconds: 15,
@@ -247,8 +257,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.opts
-			if got := cfg.Deployment(tt.args.replicas)(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.Deployment() = %v, want %v", got, tt.want)
+			if diff := deep.Equal(cfg.Deployment(tt.args.replicas)(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.Deployment() = diff %v", diff)
 			}
 		})
 	}
