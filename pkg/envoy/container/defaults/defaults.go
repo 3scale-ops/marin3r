@@ -1,10 +1,8 @@
 package defaults
 
 import (
-	"strings"
-
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	"github.com/3scale-ops/marin3r/pkg/version"
+	"github.com/3scale-ops/marin3r/pkg/image"
 )
 
 const (
@@ -48,11 +46,9 @@ const (
 	DeploymentClientCertificate string = "envoy-client-cert"
 
 	// init manager defaults
-	InitMgrDefaultImageRegistry  string = "quay.io/3scale/marin3r"
 	InitMgrRtdsLayerResourceName string = "runtime"
 
 	// shutdown manager defaults
-	ShtdnMgrDefaultImageRegistry      string = "quay.io/3scale/marin3r"
 	ShtdnMgrDefaultServerPort         uint32 = 8090
 	ShtdnMgrDefaultReadyFile          string = "/tmp/shutdown-ok"
 	ShtdnMgrDefaultReadyCheckInterval int    = 1
@@ -67,9 +63,9 @@ const (
 )
 
 func ShtdnMgrImage() string {
-	return strings.Join([]string{ShtdnMgrDefaultImageRegistry, version.Current()}, ":")
+	return image.Current()
 }
 
 func InitMgrImage() string {
-	return strings.Join([]string{InitMgrDefaultImageRegistry, version.Current()}, ":")
+	return image.Current()
 }
