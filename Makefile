@@ -336,7 +336,7 @@ EASYRSA_VERSION ?= v3.0.6
 certs:
 	hack/gen-certs.sh $(EASYRSA_VERSION)
 
-ENVOY_VERSION ?= v1.18.3
+ENVOY_VERSION ?= v1.20.1
 
 run-ds: ## locally starts a discovery service
 run-ds: manifests generate fmt vet go-generate certs

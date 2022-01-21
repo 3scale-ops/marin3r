@@ -7,7 +7,7 @@ import (
 
 const (
 	// common defaults
-	EnvoyRelease                    string = "v1.20.0"
+	EnvoyRelease                    string = "v1.20.1"
 	ImageRepo                       string = "envoyproxy/envoy"
 	Image                           string = ImageRepo + ":" + EnvoyRelease
 	EnvoyConfigBasePath             string = "/etc/envoy/bootstrap"
