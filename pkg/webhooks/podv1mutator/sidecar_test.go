@@ -10,6 +10,7 @@ import (
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/shutdownmanager"
+	"github.com/go-test/deep"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -22,6 +23,7 @@ import (
 
 func init() {
 	operatorv1alpha1.AddToScheme(scheme.Scheme)
+	deep.CompareUnexportedFields = true
 }
 
 func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
@@ -70,31 +72,33 @@ func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 				}},
 			&envoySidecarConfig{
 				generator: envoy_container.ContainerConfig{
-					Name:                   "container",
-					Image:                  "image",
-					ConfigBasePath:         defaults.EnvoyConfigBasePath,
-					ConfigFileName:         defaults.EnvoyConfigFileName,
-					ConfigVolume:           "config-volume",
-					TLSBasePath:            defaults.EnvoyTLSBasePath,
-					TLSVolume:              "tls-volume",
-					NodeID:                 "node-id",
-					ClusterID:              "cluster-id",
-					ClientCertSecret:       "client-cert",
-					ExtraArgs:              []string{"--log-level", "debug"},
-					Resources:              corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("500m"), corev1.ResourceMemory: resource.MustParse("700Mi")}, Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1000m"), corev1.ResourceMemory: resource.MustParse("900Mi")}},
-					AdminBindAddress:       "127.0.0.1",
-					AdminPort:              2000,
-					AdminAccessLogPath:     "/dev/stdout",
-					Ports:                  []corev1.ContainerPort{{Name: "xxxx", ContainerPort: 1111, HostPort: 3000}},
-					LivenessProbe:          operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
-					ReadinessProbe:         operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
-					InitManagerImage:       defaults.InitMgrImage(),
-					XdssHost:               "marin3r-ds.test.svc",
-					XdssPort:               18000,
-					APIVersion:             "v3",
-					ShutdownManagerEnabled: false,
-					ShutdownManagerPort:    int32(defaults.ShtdnMgrDefaultServerPort),
-					ShutdownManagerImage:   defaults.ShtdnMgrImage(),
+					Name:                         "container",
+					Image:                        "image",
+					ConfigBasePath:               defaults.EnvoyConfigBasePath,
+					ConfigFileName:               defaults.EnvoyConfigFileName,
+					ConfigVolume:                 "config-volume",
+					TLSBasePath:                  defaults.EnvoyTLSBasePath,
+					TLSVolume:                    "tls-volume",
+					NodeID:                       "node-id",
+					ClusterID:                    "cluster-id",
+					ClientCertSecret:             "client-cert",
+					ExtraArgs:                    []string{"--log-level", "debug"},
+					Resources:                    corev1.ResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("500m"), corev1.ResourceMemory: resource.MustParse("700Mi")}, Limits: corev1.ResourceList{corev1.ResourceCPU: resource.MustParse("1000m"), corev1.ResourceMemory: resource.MustParse("900Mi")}},
+					AdminBindAddress:             "127.0.0.1",
+					AdminPort:                    2000,
+					AdminAccessLogPath:           "/dev/stdout",
+					Ports:                        []corev1.ContainerPort{{Name: "xxxx", ContainerPort: 1111, HostPort: 3000}},
+					LivenessProbe:                operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
+					ReadinessProbe:               operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
+					InitManagerImage:             defaults.InitMgrImage(),
+					XdssHost:                     "marin3r-ds.test.svc",
+					XdssPort:                     18000,
+					APIVersion:                   "v3",
+					ShutdownManagerEnabled:       false,
+					ShutdownManagerPort:          int32(defaults.ShtdnMgrDefaultServerPort),
+					ShutdownManagerImage:         defaults.ShtdnMgrImage(),
+					ShutdownManagerDrainSeconds:  300,
+					ShutdownManagerDrainStrategy: defaults.DrainStrategyGradual,
 				},
 			},
 			false,
@@ -113,30 +117,32 @@ func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 				}},
 			&envoySidecarConfig{
 				generator: envoy_container.ContainerConfig{
-					Name:                   defaults.SidecarContainerName,
-					Image:                  defaults.Image,
-					ConfigBasePath:         defaults.EnvoyConfigBasePath,
-					ConfigFileName:         defaults.EnvoyConfigFileName,
-					ConfigVolume:           defaults.SidecarConfigVolume,
-					TLSBasePath:            defaults.EnvoyTLSBasePath,
-					TLSVolume:              defaults.SidecarTLSVolume,
-					NodeID:                 "node-id",
-					ClusterID:              "node-id",
-					ClientCertSecret:       defaults.SidecarClientCertificate,
-					Resources:              corev1.ResourceRequirements{},
-					AdminBindAddress:       defaults.EnvoyAdminBindAddress,
-					AdminPort:              int32(defaults.EnvoyAdminPort),
-					AdminAccessLogPath:     defaults.EnvoyAdminAccessLogPath,
-					Ports:                  []corev1.ContainerPort{},
-					LivenessProbe:          operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
-					ReadinessProbe:         operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
-					InitManagerImage:       defaults.InitMgrImage(),
-					XdssHost:               "marin3r-ds.test.svc",
-					XdssPort:               18000,
-					APIVersion:             defaults.EnvoyAPIVersion,
-					ShutdownManagerEnabled: false,
-					ShutdownManagerPort:    int32(defaults.ShtdnMgrDefaultServerPort),
-					ShutdownManagerImage:   defaults.ShtdnMgrImage(),
+					Name:                         defaults.SidecarContainerName,
+					Image:                        defaults.Image,
+					ConfigBasePath:               defaults.EnvoyConfigBasePath,
+					ConfigFileName:               defaults.EnvoyConfigFileName,
+					ConfigVolume:                 defaults.SidecarConfigVolume,
+					TLSBasePath:                  defaults.EnvoyTLSBasePath,
+					TLSVolume:                    defaults.SidecarTLSVolume,
+					NodeID:                       "node-id",
+					ClusterID:                    "node-id",
+					ClientCertSecret:             defaults.SidecarClientCertificate,
+					Resources:                    corev1.ResourceRequirements{},
+					AdminBindAddress:             defaults.EnvoyAdminBindAddress,
+					AdminPort:                    int32(defaults.EnvoyAdminPort),
+					AdminAccessLogPath:           defaults.EnvoyAdminAccessLogPath,
+					Ports:                        []corev1.ContainerPort{},
+					LivenessProbe:                operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
+					ReadinessProbe:               operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
+					InitManagerImage:             defaults.InitMgrImage(),
+					XdssHost:                     "marin3r-ds.test.svc",
+					XdssPort:                     18000,
+					APIVersion:                   defaults.EnvoyAPIVersion,
+					ShutdownManagerEnabled:       false,
+					ShutdownManagerPort:          int32(defaults.ShtdnMgrDefaultServerPort),
+					ShutdownManagerImage:         defaults.ShtdnMgrImage(),
+					ShutdownManagerDrainSeconds:  300,
+					ShutdownManagerDrainStrategy: defaults.DrainStrategyGradual,
 				},
 			},
 			false,
@@ -151,37 +157,41 @@ func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 				).Build(),
 				namespace: "test",
 				annotations: map[string]string{
-					"marin3r.3scale.net/node-id":                  "node-id",
-					"marin3r.3scale.net/shutdown-manager.enabled": "true",
-					"marin3r.3scale.net/shutdown-manager.port":    "30000",
-					"marin3r.3scale.net/shutdown-manager.image":   "image:test",
+					"marin3r.3scale.net/node-id":                         "node-id",
+					"marin3r.3scale.net/shutdown-manager.enabled":        "true",
+					"marin3r.3scale.net/shutdown-manager.port":           "30000",
+					"marin3r.3scale.net/shutdown-manager.image":          "image:test",
+					"marin3r.3scale.net/shutdown-manager.drain-time":     "50",
+					"marin3r.3scale.net/shutdown-manager.drain-strategy": "immediate",
 				}},
 			&envoySidecarConfig{
 				generator: envoy_container.ContainerConfig{
-					Name:                   defaults.SidecarContainerName,
-					Image:                  defaults.Image,
-					ConfigBasePath:         defaults.EnvoyConfigBasePath,
-					ConfigFileName:         defaults.EnvoyConfigFileName,
-					ConfigVolume:           defaults.SidecarConfigVolume,
-					TLSBasePath:            defaults.EnvoyTLSBasePath,
-					TLSVolume:              defaults.SidecarTLSVolume,
-					NodeID:                 "node-id",
-					ClusterID:              "node-id",
-					ClientCertSecret:       defaults.SidecarClientCertificate,
-					Resources:              corev1.ResourceRequirements{},
-					AdminBindAddress:       defaults.EnvoyAdminBindAddress,
-					AdminPort:              int32(defaults.EnvoyAdminPort),
-					AdminAccessLogPath:     defaults.EnvoyAdminAccessLogPath,
-					Ports:                  []corev1.ContainerPort{},
-					LivenessProbe:          operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
-					ReadinessProbe:         operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
-					InitManagerImage:       defaults.InitMgrImage(),
-					XdssHost:               "marin3r-ds.test.svc",
-					XdssPort:               18000,
-					APIVersion:             defaults.EnvoyAPIVersion,
-					ShutdownManagerEnabled: true,
-					ShutdownManagerPort:    30000,
-					ShutdownManagerImage:   "image:test",
+					Name:                         defaults.SidecarContainerName,
+					Image:                        defaults.Image,
+					ConfigBasePath:               defaults.EnvoyConfigBasePath,
+					ConfigFileName:               defaults.EnvoyConfigFileName,
+					ConfigVolume:                 defaults.SidecarConfigVolume,
+					TLSBasePath:                  defaults.EnvoyTLSBasePath,
+					TLSVolume:                    defaults.SidecarTLSVolume,
+					NodeID:                       "node-id",
+					ClusterID:                    "node-id",
+					ClientCertSecret:             defaults.SidecarClientCertificate,
+					Resources:                    corev1.ResourceRequirements{},
+					AdminBindAddress:             defaults.EnvoyAdminBindAddress,
+					AdminPort:                    int32(defaults.EnvoyAdminPort),
+					AdminAccessLogPath:           defaults.EnvoyAdminAccessLogPath,
+					Ports:                        []corev1.ContainerPort{},
+					LivenessProbe:                operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
+					ReadinessProbe:               operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
+					InitManagerImage:             defaults.InitMgrImage(),
+					XdssHost:                     "marin3r-ds.test.svc",
+					XdssPort:                     18000,
+					APIVersion:                   defaults.EnvoyAPIVersion,
+					ShutdownManagerEnabled:       true,
+					ShutdownManagerPort:          30000,
+					ShutdownManagerImage:         "image:test",
+					ShutdownManagerDrainSeconds:  50,
+					ShutdownManagerDrainStrategy: defaults.DrainStrategyImmediate,
 				},
 			},
 			false,
@@ -192,8 +202,8 @@ func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 			if err := tt.esc.PopulateFromAnnotations(tt.args.ctx, tt.args.clnt, tt.args.namespace, tt.args.annotations); (err != nil) != tt.wantErr {
 				t.Errorf("envoySidecarConfig.PopulateFromAnnotations() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !reflect.DeepEqual(tt.esc, tt.want) {
-				t.Errorf("envoySidecarConfig.PopulateFromAnnotations() = '%v', want '%v'", tt.esc, tt.want)
+			if diff := deep.Equal(tt.esc, tt.want); len(diff) > 0 {
+				t.Errorf("envoySidecarConfig.PopulateFromAnnotations() = diff %v", diff)
 
 			}
 		})
@@ -1062,6 +1072,98 @@ func Test_envoySidecarConfig_addExtraLifecycleHooks(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("envoySidecarConfig.addExtraLifecycleHooks() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getInt64Param(t *testing.T) {
+	type args struct {
+		key         string
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want int64
+	}{
+		{
+			name: "Returns an int",
+			args: args{
+				key: "shutdown-manager.drain-time",
+				annotations: map[string]string{
+					"marin3r.3scale.net/shutdown-manager.drain-time": "100",
+				},
+			},
+			want: 100,
+		},
+		{
+			name: "Returns default if not present",
+			args: args{
+				key:         "shutdown-manager.drain-time",
+				annotations: map[string]string{},
+			},
+			want: defaults.GracefulShutdownTimeoutSeconds,
+		},
+		{
+			name: "Returns default if error",
+			args: args{
+				key: "shutdown-manager.drain-time",
+				annotations: map[string]string{
+					"marin3r.3scale.net/shutdown-manager.drain-time": "xxx",
+				},
+			},
+			want: defaults.GracefulShutdownTimeoutSeconds,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getInt64Param(tt.args.key, tt.args.annotations); got != tt.want {
+				t.Errorf("getInt64Param() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getDrainStrategy(t *testing.T) {
+	type args struct {
+		annotations map[string]string
+	}
+	tests := []struct {
+		name string
+		args args
+		want defaults.DrainStrategy
+	}{
+		{
+			name: "Returns drain strategy",
+			args: args{
+				annotations: map[string]string{
+					"marin3r.3scale.net/shutdown-manager.drain-strategy": "immediate",
+				},
+			},
+			want: defaults.DrainStrategyImmediate,
+		},
+		{
+			name: "Returns default value if not annotation present",
+			args: args{
+				annotations: map[string]string{},
+			},
+			want: defaults.DrainStrategyGradual,
+		},
+		{
+			name: "Returns default value if user provides wrong value",
+			args: args{
+				annotations: map[string]string{
+					"marin3r.3scale.net/shutdown-manager.drain-strategy": "xxx",
+				},
+			},
+			want: defaults.DrainStrategyGradual,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getDrainStrategy(tt.args.annotations); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getDrainStrategy() = %v, want %v", got, tt.want)
 			}
 		})
 	}

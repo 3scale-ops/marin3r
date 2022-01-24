@@ -2,15 +2,16 @@ package container
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/shutdownmanager"
+	"github.com/go-test/deep"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 func TestContainerConfig_Containers(t *testing.T) {
@@ -88,6 +89,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 					{
 						Name:          "admin",
 						ContainerPort: 5000,
+						Protocol:      corev1.ProtocolTCP,
 					},
 				},
 				VolumeMounts: []corev1.VolumeMount{
@@ -105,8 +107,9 @@ func TestContainerConfig_Containers(t *testing.T) {
 				LivenessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 5000},
+							Path:   "/ready",
+							Port:   intstr.IntOrString{IntVal: 5000},
+							Scheme: corev1.URISchemeHTTP,
 						},
 					},
 					InitialDelaySeconds: 1,
@@ -118,8 +121,9 @@ func TestContainerConfig_Containers(t *testing.T) {
 				ReadinessProbe: &corev1.Probe{
 					Handler: corev1.Handler{
 						HTTPGet: &corev1.HTTPGetAction{
-							Path: "/ready",
-							Port: intstr.IntOrString{IntVal: 5000},
+							Path:   "/ready",
+							Port:   intstr.IntOrString{IntVal: 5000},
+							Scheme: corev1.URISchemeHTTP,
 						},
 					},
 					InitialDelaySeconds: 1,
@@ -174,9 +178,11 @@ func TestContainerConfig_Containers(t *testing.T) {
 					SuccessThreshold:    1,
 					FailureThreshold:    1,
 				},
-				ShutdownManagerEnabled: true,
-				ShutdownManagerPort:    30000,
-				ShutdownManagerImage:   "image:shtdnmgr",
+				ShutdownManagerEnabled:       true,
+				ShutdownManagerPort:          30000,
+				ShutdownManagerImage:         "image:shtdnmgr",
+				ShutdownManagerDrainSeconds:  360,
+				ShutdownManagerDrainStrategy: defaults.DrainStrategyGradual,
 			},
 			want: []corev1.Container{
 				{
@@ -190,6 +196,10 @@ func TestContainerConfig_Containers(t *testing.T) {
 						"test-id",
 						"--service-cluster",
 						"test-id",
+						"--drain-time-s",
+						"360",
+						"--drain-strategy",
+						"gradual",
 						"--some-arg",
 						"some-value",
 					},
@@ -206,6 +216,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 						{
 							Name:          "admin",
 							ContainerPort: 5000,
+							Protocol:      corev1.ProtocolTCP,
 						},
 					},
 					VolumeMounts: []corev1.VolumeMount{
@@ -223,8 +234,9 @@ func TestContainerConfig_Containers(t *testing.T) {
 					LivenessProbe: &corev1.Probe{
 						Handler: corev1.Handler{
 							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/ready",
-								Port: intstr.IntOrString{IntVal: 5000},
+								Path:   "/ready",
+								Port:   intstr.IntOrString{IntVal: 5000},
+								Scheme: corev1.URISchemeHTTP,
 							},
 						},
 						InitialDelaySeconds: 1,
@@ -236,8 +248,9 @@ func TestContainerConfig_Containers(t *testing.T) {
 					ReadinessProbe: &corev1.Probe{
 						Handler: corev1.Handler{
 							HTTPGet: &corev1.HTTPGetAction{
-								Path: "/ready",
-								Port: intstr.IntOrString{IntVal: 5000},
+								Path:   "/ready",
+								Port:   intstr.IntOrString{IntVal: 5000},
+								Scheme: corev1.URISchemeHTTP,
 							},
 						},
 						InitialDelaySeconds: 1,
@@ -307,8 +320,8 @@ func TestContainerConfig_Containers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			if got := tt.cc.Containers(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ContainerConfig.Container() = %v, want %v", got, tt.want)
+			if diff := deep.Equal(tt.cc.Containers(), tt.want); len(diff) > 0 {
+				t.Errorf("ContainerConfig.Container() = diff %v", diff)
 			}
 		})
 	}
@@ -332,7 +345,8 @@ func TestContainerConfig_Volumes(t *testing.T) {
 					Name: "tls",
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
-							SecretName: "client-secret",
+							SecretName:  "client-secret",
+							DefaultMode: pointer.Int32(420),
 						},
 					},
 				},
@@ -347,8 +361,8 @@ func TestContainerConfig_Volumes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.cc.Volumes(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ContainerConfig.Volumes() = %v, want %v", got, tt.want)
+			if diff := deep.Equal(tt.cc.Volumes(), tt.want); len(diff) > 0 {
+				t.Errorf("ContainerConfig.Volumes() = diff %v", diff)
 			}
 		})
 	}
@@ -387,7 +401,8 @@ func TestContainerConfig_InitContainers(t *testing.T) {
 						Name: "POD_NAME",
 						ValueFrom: &corev1.EnvVarSource{
 							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.name",
+								FieldPath:  "metadata.name",
+								APIVersion: "v1",
 							},
 						},
 					},
@@ -395,7 +410,8 @@ func TestContainerConfig_InitContainers(t *testing.T) {
 						Name: "POD_NAMESPACE",
 						ValueFrom: &corev1.EnvVarSource{
 							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "metadata.namespace",
+								FieldPath:  "metadata.namespace",
+								APIVersion: "v1",
 							},
 						},
 					},
@@ -403,7 +419,8 @@ func TestContainerConfig_InitContainers(t *testing.T) {
 						Name: "HOST_NAME",
 						ValueFrom: &corev1.EnvVarSource{
 							FieldRef: &corev1.ObjectFieldSelector{
-								FieldPath: "spec.nodeName",
+								FieldPath:  "spec.nodeName",
+								APIVersion: "v1",
 							},
 						},
 					},
@@ -428,13 +445,16 @@ func TestContainerConfig_InitContainers(t *testing.T) {
 						MountPath: "/config",
 					},
 				},
+				ImagePullPolicy:          corev1.PullIfNotPresent,
+				TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+				TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 			}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.cc.InitContainers(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ContainerConfig.InitContainers() = %v, want %v", got, tt.want)
+			if diff := deep.Equal(tt.cc.InitContainers(), tt.want); len(diff) > 0 {
+				t.Errorf("ContainerConfig.InitContainers() = diff %v", diff)
 			}
 		})
 	}

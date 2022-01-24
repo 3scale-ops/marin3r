@@ -69,6 +69,8 @@ const (
 	paramShtdnMgrServerPort          = "shutdown-manager.port"
 	paramShtdnMgrImage               = "shutdown-manager.image"
 	paramShtdnMgrExtraLifecycleHooks = "shutdown-manager.extra-lifecycle-hooks"
+	paramShtdnMgrDrainTime           = "shutdown-manager.drain-time"
+	paramShtdnMgrDrainStrategy       = "shutdown-manager.drain-strategy"
 
 	// Annotations to allow configuration of the init manager for
 	// Envoy sidecards
@@ -128,6 +130,8 @@ func (esc *envoySidecarConfig) PopulateFromAnnotations(ctx context.Context, clnt
 	esc.generator.ShutdownManagerEnabled = isShtdnMgrEnabled(annotations)
 	esc.generator.ShutdownManagerPort = getPortOrDefault(paramShtdnMgrServerPort, annotations, defaults.ShtdnMgrDefaultServerPort)
 	esc.generator.ShutdownManagerImage = getStringParam(paramShtdnMgrImage, annotations)
+	esc.generator.ShutdownManagerDrainSeconds = getInt64Param(paramShtdnMgrDrainTime, annotations)
+	esc.generator.ShutdownManagerDrainStrategy = getDrainStrategy(annotations)
 
 	esc.generator.InitManagerImage = getStringParam(paramInitMgrImage, annotations)
 
@@ -202,6 +206,32 @@ func getStringParam(key string, annotations map[string]string) string {
 
 	// return a default value
 	return defaults[key]
+}
+
+func getInt64Param(key string, annotations map[string]string) int64 {
+
+	var defaults = map[string]int64{
+		paramShtdnMgrDrainTime: defaults.GracefulShutdownTimeoutSeconds,
+	}
+
+	if s, ok := lookupMarin3rAnnotation(key, annotations); ok {
+		i, err := strconv.Atoi(s)
+		if err == nil {
+			return int64(i)
+		}
+	}
+
+	// return default value if annotation not present or error during parsing
+	return defaults[key]
+}
+
+func getDrainStrategy(annotations map[string]string) defaults.DrainStrategy {
+	if value, ok := lookupMarin3rAnnotation(paramShtdnMgrDrainStrategy, annotations); ok {
+		if value == string(defaults.DrainStrategyGradual) || value == string(defaults.DrainStrategyImmediate) {
+			return defaults.DrainStrategy(value)
+		}
+	}
+	return defaults.GracefulShutdownStrategy
 }
 
 func getNodeID(annotations map[string]string) string {
@@ -405,7 +435,7 @@ func getContainerByName(name string, containers []corev1.Container) (corev1.Cont
 			return c, pos, nil
 		}
 	}
-	return corev1.Container{}, -1, fmt.Errorf("Container '%s' specified in the 'shutdown-manager.extra-lifecycle-hooks' annotation was not found", name)
+	return corev1.Container{}, -1, fmt.Errorf("container '%s' specified in the 'shutdown-manager.extra-lifecycle-hooks' annotation was not found", name)
 }
 
 func (esc *envoySidecarConfig) addExtraLifecycleHooks(containers []corev1.Container, annotations map[string]string) ([]corev1.Container, error) {

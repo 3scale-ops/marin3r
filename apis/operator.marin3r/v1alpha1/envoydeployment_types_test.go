@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -429,6 +430,86 @@ func TestInitManager_GetImage(t *testing.T) {
 			}
 			if got := im.GetImage(); got != tt.want {
 				t.Errorf("InitManager.GetImage() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestShutdownManager_GetDrainTime(t *testing.T) {
+	type fields struct {
+		Image         *string
+		ServerPort    *uint32
+		DrainTime     *int64
+		DrainStrategy *defaults.DrainStrategy
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   int64
+	}{
+		{
+			name: "Returns value",
+			fields: fields{
+				DrainTime: pointer.Int64(100),
+			},
+			want: 100,
+		},
+		{
+			name:   "Returns default",
+			fields: fields{},
+			want:   300,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sm := &ShutdownManager{
+				Image:         tt.fields.Image,
+				ServerPort:    tt.fields.ServerPort,
+				DrainTime:     tt.fields.DrainTime,
+				DrainStrategy: tt.fields.DrainStrategy,
+			}
+			if got := sm.GetDrainTime(); got != tt.want {
+				t.Errorf("ShutdownManager.GetDrainTime() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestShutdownManager_GetDrainStrategy(t *testing.T) {
+	type fields struct {
+		Image         *string
+		ServerPort    *uint32
+		DrainTime     *int64
+		DrainStrategy *defaults.DrainStrategy
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   defaults.DrainStrategy
+	}{
+		{
+			name: "Returns value",
+			fields: fields{
+				DrainStrategy: func() *defaults.DrainStrategy { s := defaults.DrainStrategyImmediate; return &s }(),
+			},
+			want: defaults.DrainStrategyImmediate,
+		},
+		{
+			name:   "Returns default",
+			fields: fields{},
+			want:   defaults.DrainStrategyGradual,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sm := &ShutdownManager{
+				Image:         tt.fields.Image,
+				ServerPort:    tt.fields.ServerPort,
+				DrainTime:     tt.fields.DrainTime,
+				DrainStrategy: tt.fields.DrainStrategy,
+			}
+			if got := sm.GetDrainStrategy(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ShutdownManager.GetDrainStrategy() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -60,6 +60,8 @@ func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.Generat
 			cc.ShutdownManagerImage = cfg.ShutdownManager.GetImage()
 			cc.ShutdownManagerEnabled = true
 			cc.ShutdownManagerPort = int32(defaults.ShtdnMgrDefaultServerPort)
+			cc.ShutdownManagerDrainSeconds = cfg.ShutdownManager.GetDrainTime()
+			cc.ShutdownManagerDrainStrategy = cfg.ShutdownManager.GetDrainStrategy()
 		}
 
 		if cfg.InitManager != nil {
@@ -96,10 +98,11 @@ func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.Generat
 						ServiceAccountName:       "default",
 						DeprecatedServiceAccount: "default",
 						TerminationGracePeriodSeconds: func() *int64 {
-							// Increase the TerminationGracePeriod timeout if the shutdown manager
-							// is enabled (for graceful termination)
+							// Match the Popd's TerminationGracePeriodSeconds to the
+							// configured Envoy DrainTime
 							if cfg.ShutdownManager != nil {
-								return pointer.Int64Ptr(defaults.GracefulShutdownTimeoutSeconds)
+								d := cfg.ShutdownManager.GetDrainTime()
+								return &d
 							}
 							return pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds)
 						}(),

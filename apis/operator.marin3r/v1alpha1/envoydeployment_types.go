@@ -329,6 +329,31 @@ type ShutdownManager struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ServerPort *uint32 `json:"serverPort,omitempty"`
+	// The time in seconds that Envoy will drain connections during shutdown.
+	// It also affects drain behaviour when listeners are modified or removed via LDS.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	DrainTime *int64 `json:"drainTime,omitempty"`
+	// The drain strategy for the graceful shutdown. It also affects
+	// drain when listeners are modified or removed via LDS.
+	// +kubebuilder:validation:Enum=gradual;immediate
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	DrainStrategy *defaults.DrainStrategy `json:"drainStrategy,omitempty"`
+}
+
+func (sm *ShutdownManager) GetDrainTime() int64 {
+	if sm.DrainTime != nil {
+		return *sm.DrainTime
+	}
+	return defaults.GracefulShutdownTimeoutSeconds
+}
+
+func (sm *ShutdownManager) GetDrainStrategy() defaults.DrainStrategy {
+	if sm.DrainStrategy != nil {
+		return *sm.DrainStrategy
+	}
+	return defaults.GracefulShutdownStrategy
 }
 
 func (sm *ShutdownManager) GetImage() string {

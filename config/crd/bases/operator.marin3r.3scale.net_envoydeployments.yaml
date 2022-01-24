@@ -1707,6 +1707,20 @@ spec:
                 description: ShutdownManager defines configuration for Envoy's shutdown
                   manager, which handles graceful termination of Envoy pods
                 properties:
+                  drainStrategy:
+                    description: The drain strategy for the graceful shutdown. It
+                      also affects drain when listeners are modified or removed via
+                      LDS.
+                    enum:
+                    - gradual
+                    - immediate
+                    type: string
+                  drainTime:
+                    description: The time in seconds that Envoy will drain connections
+                      during shutdown. It also affects drain behaviour when listeners
+                      are modified or removed via LDS.
+                    format: int64
+                    type: integer
                   image:
                     description: Image is the shutdown manager image and tag to use
                     type: string

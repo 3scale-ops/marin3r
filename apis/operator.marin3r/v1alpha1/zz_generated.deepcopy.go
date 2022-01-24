@@ -21,6 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/operator-framework/operator-lib/status"
 	"k8s.io/api/autoscaling/v2beta2"
 	"k8s.io/api/core/v1"
@@ -737,6 +738,16 @@ func (in *ShutdownManager) DeepCopyInto(out *ShutdownManager) {
 	if in.ServerPort != nil {
 		in, out := &in.ServerPort, &out.ServerPort
 		*out = new(uint32)
+		**out = **in
+	}
+	if in.DrainTime != nil {
+		in, out := &in.DrainTime, &out.DrainTime
+		*out = new(int64)
+		**out = **in
+	}
+	if in.DrainStrategy != nil {
+		in, out := &in.DrainStrategy, &out.DrainStrategy
+		*out = new(defaults.DrainStrategy)
 		**out = **in
 	}
 }
