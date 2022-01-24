@@ -28,6 +28,9 @@ func (g Generator) New(rType envoy.Type) envoy.Resource {
 	case envoy.Route:
 		return &envoy_config_route_v3.RouteConfiguration{}
 
+	case envoy.ScopedRoute:
+		return &envoy_config_route_v3.ScopedRouteConfiguration{}
+
 	case envoy.Listener:
 		return &envoy_config_listener_v3.Listener{}
 

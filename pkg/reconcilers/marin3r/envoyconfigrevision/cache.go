@@ -58,12 +58,13 @@ func (r *CacheReconciler) Reconcile(ctx context.Context, req types.NamespacedNam
 	}
 
 	return &marin3rv1alpha1.VersionTracker{
-		Endpoints: snap.GetVersion(envoy.Endpoint),
-		Clusters:  snap.GetVersion(envoy.Cluster),
-		Routes:    snap.GetVersion(envoy.Route),
-		Listeners: snap.GetVersion(envoy.Listener),
-		Secrets:   snap.GetVersion(envoy.Secret),
-		Runtimes:  snap.GetVersion(envoy.Runtime),
+		Endpoints:    snap.GetVersion(envoy.Endpoint),
+		Clusters:     snap.GetVersion(envoy.Cluster),
+		Routes:       snap.GetVersion(envoy.Route),
+		ScopedRoutes: snap.GetVersion(envoy.ScopedRoute),
+		Listeners:    snap.GetVersion(envoy.Listener),
+		Secrets:      snap.GetVersion(envoy.Secret),
+		Runtimes:     snap.GetVersion(envoy.Runtime),
 	}, nil
 }
 
@@ -104,6 +105,18 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 				)
 		}
 		snap.SetResource(route.Name, res)
+	}
+
+	for idx, scopedRoute := range resources.Routes {
+		res := r.generator.New(envoy.ScopedRoute)
+		if err := r.decoder.Unmarshal(scopedRoute.Value, res); err != nil {
+			return nil,
+				resourceLoaderError(
+					req, scopedRoute.Value, field.NewPath("spec", "resources").Child("scopedRoutes").Index(idx).Child("value"),
+					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
+				)
+		}
+		snap.SetResource(scopedRoute.Name, res)
 	}
 
 	for idx, listener := range resources.Listeners {
@@ -163,7 +176,7 @@ func resourceLoaderError(req types.NamespacedName, value interface{}, resPath *f
 }
 
 func areDifferent(a, b xdss.Snapshot) bool {
-	for _, rType := range []envoy.Type{envoy.Endpoint, envoy.Cluster, envoy.Route, envoy.Listener, envoy.Secret, envoy.Runtime} {
+	for _, rType := range []envoy.Type{envoy.Endpoint, envoy.Cluster, envoy.Route, envoy.ScopedRoute, envoy.Listener, envoy.Secret, envoy.Runtime} {
 		if a.GetVersion(rType) != b.GetVersion(rType) {
 			return true
 		}

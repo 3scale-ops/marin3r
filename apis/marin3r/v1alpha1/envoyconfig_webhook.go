@@ -82,6 +82,12 @@ func (r *EnvoyConfig) ValidateResources() error {
 		}
 	}
 
+	for _, route := range r.Spec.EnvoyResources.ScopedRoutes {
+		if err := envoy_resources.Validate(route.Value, r.GetSerialization(), r.GetEnvoyAPIVersion(), envoy.ScopedRoute); err != nil {
+			errList = append(errList, err)
+		}
+	}
+
 	for _, listener := range r.Spec.EnvoyResources.Listeners {
 		if err := envoy_resources.Validate(listener.Value, r.GetSerialization(), r.GetEnvoyAPIVersion(), envoy.Listener); err != nil {
 			errList = append(errList, err)

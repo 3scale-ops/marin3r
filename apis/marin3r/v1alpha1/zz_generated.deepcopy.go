@@ -336,6 +336,11 @@ func (in *EnvoyResources) DeepCopyInto(out *EnvoyResources) {
 		*out = make([]EnvoyResource, len(*in))
 		copy(*out, *in)
 	}
+	if in.ScopedRoutes != nil {
+		in, out := &in.ScopedRoutes, &out.ScopedRoutes
+		*out = make([]EnvoyResource, len(*in))
+		copy(*out, *in)
+	}
 	if in.Listeners != nil {
 		in, out := &in.Listeners, &out.Listeners
 		*out = make([]EnvoyResource, len(*in))

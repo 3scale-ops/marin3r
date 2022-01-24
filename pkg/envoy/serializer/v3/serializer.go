@@ -52,6 +52,9 @@ func (s JSON) Unmarshal(str string, res envoy.Resource) error {
 	case *envoy_config_route_v3.RouteConfiguration:
 		err = protojson.Unmarshal([]byte(str), o)
 
+	case *envoy_config_route_v3.ScopedRouteConfiguration:
+		err = protojson.Unmarshal([]byte(str), o)
+
 	case *envoy_config_listener_v3.Listener:
 		err = protojson.Unmarshal([]byte(str), o)
 
