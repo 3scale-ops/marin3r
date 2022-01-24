@@ -12,9 +12,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("DiscoveryService controller", func() {
@@ -55,6 +57,26 @@ var _ = Describe("DiscoveryService controller", func() {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ds)
 		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
+	})
+
+	AfterEach(func() {
+		// Delete the namespace
+		testNamespace := &corev1.Namespace{
+			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
+			ObjectMeta: metav1.ObjectMeta{Name: namespace},
+		}
+		// Add any teardown steps that needs to be executed after each test
+		err := k8sClient.Delete(context.Background(), testNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
+		Expect(err).ToNot(HaveOccurred())
+
+		n := &corev1.Namespace{}
+		Eventually(func() bool {
+			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
+			if err != nil && errors.IsNotFound(err) {
+				return false
+			}
+			return true
+		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 	})
 
 	Context("DiscoveryService", func() {

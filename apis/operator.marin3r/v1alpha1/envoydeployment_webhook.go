@@ -33,7 +33,7 @@ func (r *EnvoyDeployment) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-operator-marin3r-3scale-net-v1alpha1-envoydeployment,mutating=false,failurePolicy=fail,sideEffects=None,groups=operator.marin3r.3scale.net,resources=envoydeployments,verbs=create;update,versions=v1alpha1,name=envoydeployment.operator.marin3r.3scale.net,admissionReviewVersions={v1,v1beta1}
+//+kubebuilder:webhook:path=/validate-operator-marin3r-3scale-net-v1alpha1-envoydeployment,mutating=false,failurePolicy=fail,sideEffects=None,groups=operator.marin3r.3scale.net,resources=envoydeployments,verbs=create;update,versions=v1alpha1,name=envoydeployment.operator.marin3r.3scale.net,admissionReviewVersions=v1
 
 var _ webhook.Validator = &EnvoyDeployment{}
 

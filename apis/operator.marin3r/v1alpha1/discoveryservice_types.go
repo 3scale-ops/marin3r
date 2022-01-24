@@ -60,8 +60,6 @@ const (
 	// DefaultServerCertificateSecretNamePrefix is the default prefix for the Secret
 	// where the server certificate is stored
 	DefaultServerCertificateSecretNamePrefix string = "marin3r-server-cert"
-	// DefaultImageRegistry is the default registry to pull discovery service images from
-	DefaultImageRegistry string = "quay.io/3scale/marin3r"
 )
 
 // ServiceType is an enum with the available discovery service Service types

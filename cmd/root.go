@@ -21,6 +21,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/3scale-ops/marin3r/pkg/image"
 	"github.com/3scale-ops/marin3r/pkg/version"
 	"github.com/spf13/cobra"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -72,4 +73,5 @@ func printVersion() {
 	setupLog.Info(fmt.Sprintf("Marin3r Version: %s", version.Current()))
 	setupLog.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	setupLog.Info(fmt.Sprintf("Image: %s", image.Current()))
 }
