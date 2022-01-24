@@ -1,6 +1,7 @@
 package reconcilers
 
 import (
+	"context"
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
@@ -8,6 +9,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	"github.com/davecgh/go-spew/spew"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
@@ -22,15 +24,17 @@ import (
 func testCacheGenerator(nodeID, version string) func() xdss.Cache {
 	return func() xdss.Cache {
 		cache := xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil))
-		snap := cache_v3.NewSnapshot(version,
-			[]cache_types.Resource{},
-			[]cache_types.Resource{},
-			[]cache_types.Resource{},
-			[]cache_types.Resource{},
-			[]cache_types.Resource{},
-			[]cache_types.Resource{},
-		)
-		cache.SetSnapshot(nodeID, xdss_v3.NewSnapshot(&snap))
+		snap, _ := cache_v3.NewSnapshot(version, map[string][]cache_types.Resource{
+			envoy_resources_v3.Mappings()[envoy.Endpoint]:        {},
+			envoy_resources_v3.Mappings()[envoy.Cluster]:         {},
+			envoy_resources_v3.Mappings()[envoy.Route]:           {},
+			envoy_resources_v3.Mappings()[envoy.ScopedRoute]:     {},
+			envoy_resources_v3.Mappings()[envoy.Listener]:        {},
+			envoy_resources_v3.Mappings()[envoy.Secret]:          {},
+			envoy_resources_v3.Mappings()[envoy.Runtime]:         {},
+			envoy_resources_v3.Mappings()[envoy.ExtensionConfig]: {},
+		})
+		cache.SetSnapshot(context.TODO(), nodeID, xdss_v3.NewSnapshot(&snap))
 		return cache
 	}
 }

@@ -5,16 +5,6 @@ import (
 	"time"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
-
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
@@ -26,6 +16,15 @@ import (
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	http_connection_manager_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -271,8 +270,8 @@ func TransportSocketV3(secretName string) *envoy_config_core_v3.TransportSocket 
 	return &envoy_config_core_v3.TransportSocket{
 		Name: "envoy.transport_sockets.tls",
 		ConfigType: &envoy_config_core_v3.TransportSocket_TypedConfig{
-			TypedConfig: func() *any.Any {
-				any, err := ptypes.MarshalAny(&envoy_extensions_transport_sockets_tls_v3.DownstreamTlsContext{
+			TypedConfig: func() *anypb.Any {
+				any, err := anypb.New(&envoy_extensions_transport_sockets_tls_v3.DownstreamTlsContext{
 					CommonTlsContext: &envoy_extensions_transport_sockets_tls_v3.CommonTlsContext{
 						TlsCertificateSdsSecretConfigs: []*envoy_extensions_transport_sockets_tls_v3.SdsSecretConfig{
 							{
@@ -304,8 +303,8 @@ func HTTPListenerWithRdsV3(listenerName, routeName string, address, transportSoc
 			Filters: []*envoy_config_listener_v3.Filter{{
 				Name: "envoy.filters.network.http_connection_manager",
 				ConfigType: &envoy_config_listener_v3.Filter_TypedConfig{
-					TypedConfig: func() *any.Any {
-						any, err := ptypes.MarshalAny(
+					TypedConfig: func() *anypb.Any {
+						any, err := anypb.New(
 							&http_connection_manager_v3.HttpConnectionManager{
 								StatPrefix: listenerName,
 								RouteSpecifier: &http_connection_manager_v3.HttpConnectionManager_Rds{
@@ -400,7 +399,7 @@ func EndpointV3(clusterName, host string, port uint32) (string, *envoy_config_en
 func ClusterWithEdsV3(clusterName string) (string, *envoy_config_cluster_v3.Cluster) {
 	return clusterName, &envoy_config_cluster_v3.Cluster{
 		Name:           clusterName,
-		ConnectTimeout: ptypes.DurationProto(10 * time.Millisecond),
+		ConnectTimeout: durationpb.New(10 * time.Millisecond),
 		ClusterDiscoveryType: &envoy_config_cluster_v3.Cluster_Type{
 			Type: envoy_config_cluster_v3.Cluster_EDS,
 		},
@@ -418,7 +417,7 @@ func ClusterWithEdsV3(clusterName string) (string, *envoy_config_cluster_v3.Clus
 func ClusterWithStrictDNSV3(clusterName, host string, port uint32) (string, *envoy_config_cluster_v3.Cluster) {
 	return clusterName, &envoy_config_cluster_v3.Cluster{
 		Name:           clusterName,
-		ConnectTimeout: ptypes.DurationProto(10 * time.Millisecond),
+		ConnectTimeout: durationpb.New(10 * time.Millisecond),
 		ClusterDiscoveryType: &envoy_config_cluster_v3.Cluster_Type{
 			Type: envoy_config_cluster_v3.Cluster_STRICT_DNS,
 		},

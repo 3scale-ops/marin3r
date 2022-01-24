@@ -2,7 +2,7 @@ package envoy
 
 import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // ResourcesEqual validates that the given maps of "name - resource" pairs

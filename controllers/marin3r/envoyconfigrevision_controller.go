@@ -112,7 +112,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 			envoy_resources.NewGenerator(r.APIVersion),
 		)
 
-		vt, err = cacheReconciler.Reconcile(req.NamespacedName, ecr.Spec.EnvoyResources, ecr.Spec.NodeID, ecr.Spec.Version)
+		vt, err = cacheReconciler.Reconcile(ctx, req.NamespacedName, ecr.Spec.EnvoyResources, ecr.Spec.NodeID, ecr.Spec.Version)
 
 		// If a type errors.StatusError is returned it means that the config in spec.envoyResources is wrong
 		// and cannot be written into the xDS cache. This is true for any error loading all types of resources

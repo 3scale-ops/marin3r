@@ -25,8 +25,8 @@ import (
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	"github.com/golang/protobuf/ptypes/any"
 	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -34,19 +34,20 @@ func fakeTestCache() *cache_v3.SnapshotCache {
 
 	snapshotCache := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
 
-	snapshotCache.SetSnapshot("node1", cache_v3.Snapshot{
-		Resources: [7]cache_v3.Resources{
-			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{
+	snapshotCache.SetSnapshot(context.TODO(), "node1", cache_v3.Snapshot{
+		Resources: [8]cache_v3.Resources{
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{
 				"endpoint1": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"}},
 			}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{
 				"cluster1": {Resource: &envoy_config_cluster_v3.Cluster{Name: "cluster1"}},
 			}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
 		}},
 	)
 
@@ -179,7 +180,7 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 					ErrorDetail:   nil,
 				},
 				&envoy_service_discovery_v3.DiscoveryResponse{
-					Resources: []*any.Any{
+					Resources: []*anypb.Any{
 						{TypeUrl: "some-type", Value: []byte("some-value")},
 					},
 					TypeUrl: "some-type",
@@ -200,7 +201,7 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 					ErrorDetail:   nil,
 				},
 				&envoy_service_discovery_v3.DiscoveryResponse{
-					Resources: []*any.Any{
+					Resources: []*anypb.Any{
 						{TypeUrl: "type.googleapis.com/envoy.api.v3.auth.Secret", Value: []byte("some-value")},
 					},
 					TypeUrl: "type.googleapis.com/envoy.api.v3.auth.Secret",
@@ -210,7 +211,7 @@ func TestCallbacks_OnStreamResponse(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.cb.OnStreamResponse(tt.args.id, tt.args.request, tt.args.response)
+			tt.cb.OnStreamResponse(context.TODO(), tt.args.id, tt.args.request, tt.args.response)
 		})
 	}
 }

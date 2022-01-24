@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.9.9
+	github.com/envoyproxy/go-control-plane v0.10.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v0.4.0
 	github.com/go-test/deep v1.0.8
@@ -21,6 +21,7 @@ require (
 	github.com/spf13/cobra v1.2.1
 	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 	google.golang.org/grpc v1.38.0
+	google.golang.org/protobuf v1.27.1
 	k8s.io/api v0.22.1
 	k8s.io/apimachinery v0.22.1
 	k8s.io/client-go v0.22.1

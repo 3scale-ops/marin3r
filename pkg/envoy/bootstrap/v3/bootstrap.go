@@ -1,7 +1,6 @@
 package envoy
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/3scale-ops/marin3r/pkg/envoy"
@@ -14,10 +13,10 @@ import (
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/any"
-	_struct "github.com/golang/protobuf/ptypes/struct"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Config is a struct with options and methods to generate an envoy bootstrap config
@@ -51,7 +50,7 @@ func (c *Config) GenerateStatic() (string, error) {
 		},
 	}
 
-	serializedTLSContext, err := ptypes.MarshalAny(tlsContext)
+	serializedTLSContext, err := anypb.New(tlsContext)
 	if err != nil {
 		return "", err
 	}
@@ -105,7 +104,7 @@ func (c *Config) GenerateStatic() (string, error) {
 			Clusters: []*envoy_config_cluster_v3.Cluster{
 				{
 					Name:           envoy_bootstrap_options.XdsClusterName,
-					ConnectTimeout: ptypes.DurationProto(1 * time.Second),
+					ConnectTimeout: durationpb.New(1 * time.Second),
 					ClusterDiscoveryType: &envoy_config_cluster_v3.Cluster_Type{
 						Type: envoy_config_cluster_v3.Cluster_STRICT_DNS,
 					},
@@ -163,24 +162,23 @@ func (c *Config) GenerateStatic() (string, error) {
 	}
 
 	if len(c.Options.Metadata) > 0 {
-		cfg.Node.Metadata = &_struct.Struct{Fields: map[string]*_struct.Value{}}
+		cfg.Node.Metadata = &structpb.Struct{Fields: map[string]*structpb.Value{}}
 		for key, value := range c.Options.Metadata {
-			cfg.Node.Metadata.Fields[key] = &_struct.Value{
-				Kind: &_struct.Value_StringValue{
+			cfg.Node.Metadata.Fields[key] = &structpb.Value{
+				Kind: &structpb.Value_StringValue{
 					StringValue: value,
 				},
 			}
 		}
 	}
 
-	m := jsonpb.Marshaler{OrigName: true}
-	json := bytes.NewBuffer([]byte{})
-	err = m.Marshal(json, cfg)
+	opts := protojson.MarshalOptions{UseProtoNames: true}
+	json, err := opts.Marshal(cfg)
 	if err != nil {
 		return "", err
 	}
 
-	return json.String(), nil
+	return string(json), nil
 }
 
 // GenerateSdsResources generates the envoy static config required for
@@ -190,23 +188,22 @@ func (c *Config) GenerateSdsResources() (map[string]string, error) {
 	generator := envoy_resources.NewGenerator(envoy.APIv3)
 	secret := generator.NewSecretFromPath("xds_client_certificate", c.Options.XdsClientCertificatePath, c.Options.XdsClientCertificateKeyPath)
 
-	a, err := ptypes.MarshalAny(secret)
+	a, err := anypb.New(secret)
 	if err != nil {
 		return nil, err
 	}
 	cfg := &envoy_service_discovery_v3.DiscoveryResponse{
-		Resources: []*any.Any{a},
+		Resources: []*anypb.Any{a},
 	}
 
-	m := jsonpb.Marshaler{OrigName: true}
-	json := bytes.NewBuffer([]byte{})
-	err = m.Marshal(json, cfg)
+	opts := protojson.MarshalOptions{UseProtoNames: true}
+	json, err := opts.Marshal(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string]string{
-		envoy_bootstrap_options.TlsCertificateSdsSecretFileName: json.String(),
+		envoy_bootstrap_options.TlsCertificateSdsSecretFileName: string(json),
 	}, nil
 }
 

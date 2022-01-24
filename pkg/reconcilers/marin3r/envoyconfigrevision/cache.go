@@ -38,7 +38,8 @@ func NewCacheReconciler(ctx context.Context, logger logr.Logger, client client.C
 	return CacheReconciler{ctx, logger, client, xdsCache, decoder, generator}
 }
 
-func (r *CacheReconciler) Reconcile(req types.NamespacedName, resources *marin3rv1alpha1.EnvoyResources, nodeID, version string) (*marin3rv1alpha1.VersionTracker, error) {
+func (r *CacheReconciler) Reconcile(ctx context.Context, req types.NamespacedName, resources *marin3rv1alpha1.EnvoyResources,
+	nodeID, version string) (*marin3rv1alpha1.VersionTracker, error) {
 
 	snap, err := r.GenerateSnapshot(req, resources)
 
@@ -50,7 +51,7 @@ func (r *CacheReconciler) Reconcile(req types.NamespacedName, resources *marin3r
 	if err != nil || areDifferent(snap, oldSnap) {
 
 		r.logger.Info("Writing new snapshot to xDS cache", "Revision", version, "NodeID", nodeID)
-		if err := r.xdsCache.SetSnapshot(nodeID, snap); err != nil {
+		if err := r.xdsCache.SetSnapshot(ctx, nodeID, snap); err != nil {
 			return nil, err
 		}
 

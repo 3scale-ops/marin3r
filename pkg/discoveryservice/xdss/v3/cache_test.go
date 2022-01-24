@@ -1,6 +1,7 @@
 package discoveryservice
 
 import (
+	"context"
 	"testing"
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
@@ -29,27 +30,27 @@ func TestCache_SetSnapshot(t *testing.T) {
 			name:   "Write the snapshot in the cache",
 			fields: fields{v3: cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)},
 			args: args{nodeID: "node", snap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+				Resources: [8]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}}},
 			wantErr: false,
 			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+				Resources: [8]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 		},
 	}
@@ -58,7 +59,7 @@ func TestCache_SetSnapshot(t *testing.T) {
 			c := Cache{
 				v3: tt.fields.v3,
 			}
-			if err := c.SetSnapshot(tt.args.nodeID, tt.args.snap); (err != nil) != tt.wantErr {
+			if err := c.SetSnapshot(context.TODO(), tt.args.nodeID, tt.args.snap); (err != nil) != tt.wantErr {
 				t.Errorf("Cache.SetSnapshot() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			gotSnap, _ := c.GetSnapshot("node")
@@ -88,31 +89,31 @@ func TestCache_GetSnapshot(t *testing.T) {
 			fields: fields{
 				v3: func() cache_v3.SnapshotCache {
 					c := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-					c.SetSnapshot("node", cache_v3.Snapshot{
-						Resources: [7]cache_v3.Resources{
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+					c.SetSnapshot(context.TODO(), "node", cache_v3.Snapshot{
+						Resources: [8]cache_v3.Resources{
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 								"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 						}})
 					return c
 				}(),
 			},
 			args: args{nodeID: "node"},
 			want: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+				Resources: [8]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 			wantErr: false,
 		},
@@ -121,16 +122,16 @@ func TestCache_GetSnapshot(t *testing.T) {
 			fields: fields{
 				v3: func() cache_v3.SnapshotCache {
 					c := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-					c.SetSnapshot("node", cache_v3.Snapshot{
-						Resources: [7]cache_v3.Resources{
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+					c.SetSnapshot(context.TODO(), "node", cache_v3.Snapshot{
+						Resources: [8]cache_v3.Resources{
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 								"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 						}})
 					return c
 				}(),
@@ -174,16 +175,16 @@ func TestCache_ClearSnapshot(t *testing.T) {
 			fields: fields{
 				v3: func() cache_v3.SnapshotCache {
 					c := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-					c.SetSnapshot("node", cache_v3.Snapshot{
-						Resources: [7]cache_v3.Resources{
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+					c.SetSnapshot(context.TODO(), "node", cache_v3.Snapshot{
+						Resources: [8]cache_v3.Resources{
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 								"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 						}})
 					return c
 				}(),
@@ -222,14 +223,14 @@ func TestCache_NewSnapshot(t *testing.T) {
 			fields: fields{v3: cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)},
 			args:   args{resourcesVersion: "xxxx"},
 			want: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+				Resources: [8]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 		},
 	}
