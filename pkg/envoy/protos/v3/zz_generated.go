@@ -1,6 +1,10 @@
 package envoy
 
 import (
+	_ "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/filters/http/squash/v3"
+	_ "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/filters/network/kafka_broker/v3"
+	_ "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/filters/network/mysql_proxy/v3"
+	_ "github.com/envoyproxy/go-control-plane/contrib/envoy/extensions/filters/network/rocketmq_proxy/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/admin/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	_ "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"

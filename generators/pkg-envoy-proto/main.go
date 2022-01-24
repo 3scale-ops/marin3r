@@ -108,7 +108,7 @@ func listProtoPackages(version string) []string {
 		dir, filename := filepath.Split(f.Name)
 		dir = filepath.Clean(dir)
 		// Look only under path "envoy/"
-		if !strings.HasPrefix(dir, "envoy/") {
+		if !strings.HasPrefix(dir, "envoy/") && !strings.HasPrefix(dir, "contrib/envoy/") {
 			return nil
 		}
 		// Find all proto files for the specified API version
