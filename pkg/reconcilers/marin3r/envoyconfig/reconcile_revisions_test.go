@@ -11,6 +11,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/go-logr/logr"
+	"github.com/go-test/deep"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -768,18 +769,18 @@ func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
 			),
 			want: &marin3rv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "node-v3-65864ccd8",
+					Name:      "node-v3-5fc788948c",
 					Namespace: "test",
 					Labels: map[string]string{
 						filters.EnvoyAPITag: envoy.APIv3.String(),
 						filters.NodeIDTag:   "node",
-						filters.VersionTag:  "65864ccd8",
+						filters.VersionTag:  "5fc788948c",
 					},
 				},
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:        "node",
 					EnvoyAPI:      pointer.StringPtr(envoy.APIv3.String()),
-					Version:       "65864ccd8",
+					Version:       "5fc788948c",
 					Serialization: pointer.StringPtr(string(envoy_serializer.JSON)),
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
@@ -792,8 +793,8 @@ func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.r.newRevisionForCurrentResources(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("RevisionReconciler.newRevisionForCurrentResources() = %v, want %v", got, tt.want)
+			if diff := deep.Equal(tt.r.newRevisionForCurrentResources(), tt.want); len(diff) > 0 {
+				t.Errorf("RevisionReconciler.newRevisionForCurrentResources() = diff %v", diff)
 			}
 		})
 	}

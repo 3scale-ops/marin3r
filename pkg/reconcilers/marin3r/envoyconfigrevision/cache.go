@@ -107,7 +107,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 		snap.SetResource(route.Name, res)
 	}
 
-	for idx, scopedRoute := range resources.Routes {
+	for idx, scopedRoute := range resources.ScopedRoutes {
 		res := r.generator.New(envoy.ScopedRoute)
 		if err := r.decoder.Unmarshal(scopedRoute.Value, res); err != nil {
 			return nil,
