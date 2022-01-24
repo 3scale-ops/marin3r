@@ -6,6 +6,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_bootstrap_options "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/options"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
+	envoy_serializer_v3 "github.com/3scale-ops/marin3r/pkg/envoy/serializer/v3"
 	envoy_config_bootstrap_v3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -13,7 +14,6 @@ import (
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -172,8 +172,7 @@ func (c *Config) GenerateStatic() (string, error) {
 		}
 	}
 
-	opts := protojson.MarshalOptions{UseProtoNames: true}
-	json, err := opts.Marshal(cfg)
+	json, err := envoy_serializer_v3.JSON{}.Marshal(cfg)
 	if err != nil {
 		return "", err
 	}
@@ -196,8 +195,7 @@ func (c *Config) GenerateSdsResources() (map[string]string, error) {
 		Resources: []*anypb.Any{a},
 	}
 
-	opts := protojson.MarshalOptions{UseProtoNames: true}
-	json, err := opts.Marshal(cfg)
+	json, err := envoy_serializer_v3.JSON{}.Marshal(cfg)
 	if err != nil {
 		return nil, err
 	}

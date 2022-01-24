@@ -10,7 +10,6 @@ import (
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
-	"github.com/davecgh/go-spew/spew"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
@@ -151,7 +150,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 		})
 	})
 
-	FContext("load certificates from secrets", func() {
+	Context("load certificates from secrets", func() {
 		var ecr *marin3rv1alpha1.EnvoyConfigRevision
 
 		BeforeEach(func() {
@@ -224,7 +223,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				if err != nil {
 					return false
 				}
-				spew.Dump(gotV3Snap)
+				// spew.Dump(gotV3Snap)
 				return testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)
 			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})

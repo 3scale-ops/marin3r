@@ -2,6 +2,7 @@ package envoy
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
@@ -20,12 +21,21 @@ type JSON struct{}
 
 func (s JSON) Marshal(res envoy.Resource) (string, error) {
 
-	opts := protojson.MarshalOptions{UseProtoNames: true}
-	json, err := opts.Marshal(res)
+	opts := protojson.MarshalOptions{UseProtoNames: true, Indent: ""}
+	data, err := opts.Marshal(res)
 	if err != nil {
 		return "", err
 	}
-	return string(json), nil
+
+	// The output of jsonpb.Marshal is not stable so we need
+	// to use the json package to produce stable json output
+	// See https://github.com/golang/protobuf/issues/1082
+	data2, err := json.Marshal(json.RawMessage(data))
+	if err != nil {
+		return "", err
+	}
+
+	return string(data2), nil
 }
 
 func (s JSON) Unmarshal(str string, res envoy.Resource) error {

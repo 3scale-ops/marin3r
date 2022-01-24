@@ -317,7 +317,7 @@ func TestSnapshot_recalculateVersion(t *testing.T) {
 						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "59b9fc4d55", Items: map[string]cache_types.ResourceWithTTL{
+						{Version: "56c6b8dc45", Items: map[string]cache_types.ResourceWithTTL{
 							"secret": {Resource: &envoy_extensions_transport_sockets_tls_v3.Secret{
 								Name: "secret",
 								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
@@ -334,7 +334,7 @@ func TestSnapshot_recalculateVersion(t *testing.T) {
 				},
 			},
 			args: args{rType: envoy.Secret},
-			want: "59b9fc4d55",
+			want: "56c6b8dc45",
 		},
 	}
 	for _, tt := range tests {
