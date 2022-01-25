@@ -13,6 +13,7 @@ import (
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
+	"github.com/davecgh/go-spew/spew"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -205,6 +206,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					Routes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "route", Value: "{\"name\": \"route\"}"},
 					},
+					ScopedRoutes: []marin3rv1alpha1.EnvoyResource{
+						{Name: "scoped_route", Value: "{\"name\": \"scoped_route\"}"},
+					},
 					Listeners: []marin3rv1alpha1.EnvoyResource{
 						{Name: "listener", Value: "{\"name\": \"listener\"}"},
 					},
@@ -223,7 +227,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					{Version: "6645547657", Items: map[string]cache_types.ResourceWithTTL{
 						"route": {Resource: &envoy_config_route_v3.RouteConfiguration{Name: "route"}},
 					}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "d89c5b959", Items: map[string]cache_types.ResourceWithTTL{
+						"scoped_route": {Resource: &envoy_config_route_v3.ScopedRouteConfiguration{Name: "scoped_route"}},
+					}},
 					{Version: "7cb77864cf", Items: map[string]cache_types.ResourceWithTTL{
 						"listener": {Resource: &envoy_config_listener_v3.Listener{Name: "listener"}},
 					}},
@@ -291,6 +297,26 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Routes: []marin3rv1alpha1.EnvoyResource{
 						{Name: "route", Value: "giberish"},
+					}},
+			},
+			wantErr: true,
+			want:    xdss_v3.NewSnapshot(&cache_v3.Snapshot{}),
+		},
+		{
+			name: "Error, bad scoped route value",
+			fields: fields{
+				ctx:       context.TODO(),
+				logger:    ctrl.Log.WithName("test"),
+				client:    fake.NewClientBuilder().Build(),
+				xdsCache:  xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
+			},
+			args: args{
+				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
+				resources: &marin3rv1alpha1.EnvoyResources{
+					ScopedRoutes: []marin3rv1alpha1.EnvoyResource{
+						{Name: "scoped_route", Value: "giberish"},
 					}},
 			},
 			wantErr: true,
@@ -442,9 +468,12 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			}
 
 			if !tt.wantErr && !testutil.SnapshotsAreEqual(got, tt.want) {
-				t.Errorf("CacheReconciler.GenerateSnapshot() = E:%s C:%s R:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s L:%s S:%s RU:%s",
-					got.GetVersion(envoy.Endpoint), got.GetVersion(envoy.Cluster), got.GetVersion(envoy.Route), got.GetVersion(envoy.Listener), got.GetVersion(envoy.Secret), got.GetVersion(envoy.Runtime),
-					tt.want.GetVersion(envoy.Endpoint), tt.want.GetVersion(envoy.Cluster), tt.want.GetVersion(envoy.Route), tt.want.GetVersion(envoy.Listener), tt.want.GetVersion(envoy.Secret), tt.want.GetVersion(envoy.Runtime),
+				spew.Dump(got)
+				t.Errorf("CacheReconciler.GenerateSnapshot() = E:%s C:%s R:%s SR:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s SR:%s L:%s S:%s RU:%s",
+					got.GetVersion(envoy.Endpoint), got.GetVersion(envoy.Cluster), got.GetVersion(envoy.Route), got.GetVersion(envoy.ScopedRoute),
+					got.GetVersion(envoy.Listener), got.GetVersion(envoy.Secret), got.GetVersion(envoy.Runtime), tt.want.GetVersion(envoy.Endpoint),
+					tt.want.GetVersion(envoy.Cluster), tt.want.GetVersion(envoy.Route), tt.want.GetVersion(envoy.ScopedRoute),
+					tt.want.GetVersion(envoy.Listener), tt.want.GetVersion(envoy.Secret), tt.want.GetVersion(envoy.Runtime),
 				)
 			}
 		})

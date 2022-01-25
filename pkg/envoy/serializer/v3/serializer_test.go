@@ -146,6 +146,20 @@ var (
 		}},
 	}
 
+	scopedRouteJSON string                                          = `{"name":"scoped_route1","route_configuration_name":"route1","key":{"fragments":[{"string_key":"test"}]}}`
+	scopedRoute     *envoy_config_route_v3.ScopedRouteConfiguration = &envoy_config_route_v3.ScopedRouteConfiguration{
+		OnDemand:               false,
+		Name:                   "scoped_route1",
+		RouteConfigurationName: "route1",
+		Key: &envoy_config_route_v3.ScopedRouteConfiguration_Key{
+			Fragments: []*envoy_config_route_v3.ScopedRouteConfiguration_Key_Fragment{{
+				Type: &envoy_config_route_v3.ScopedRouteConfiguration_Key_Fragment_StringKey{
+					StringKey: "test",
+				},
+			}},
+		},
+	}
+
 	runtimeJSON string                            = `{"name":"runtime1","layer":{"static_layer_0":"value"}}`
 	runtime     *envoy_service_runtime_v3.Runtime = &envoy_service_runtime_v3.Runtime{
 		Name: "runtime1",
@@ -200,6 +214,13 @@ func TestJSON_Marshal(t *testing.T) {
 			s:       JSON{},
 			args:    args{res: route},
 			want:    routeJSON,
+			wantErr: false,
+		},
+		{
+			name:    "Serialize scoped route to json",
+			s:       JSON{},
+			args:    args{res: scopedRoute},
+			want:    scopedRouteJSON,
 			wantErr: false,
 		},
 		{
@@ -269,6 +290,13 @@ func TestJSON_Unmarshal(t *testing.T) {
 			s:       JSON{},
 			args:    args{str: routeJSON, res: &envoy_config_route_v3.RouteConfiguration{}},
 			want:    route,
+			wantErr: false,
+		},
+		{
+			name:    "Deserialize scoped route from json",
+			s:       JSON{},
+			args:    args{str: scopedRouteJSON, res: &envoy_config_route_v3.ScopedRouteConfiguration{}},
+			want:    scopedRoute,
 			wantErr: false,
 		},
 		{

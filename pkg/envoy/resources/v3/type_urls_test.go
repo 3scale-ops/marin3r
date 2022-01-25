@@ -15,12 +15,13 @@ func TestMappings(t *testing.T) {
 		{
 			name: "Returns the typeURL to resource types mapping",
 			want: map[envoy.Type]string{
-				"Listener": "type.googleapis.com/envoy.config.listener.v3.Listener",
-				"Route":    "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
-				"Cluster":  "type.googleapis.com/envoy.config.cluster.v3.Cluster",
-				"Endpoint": "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
-				"Secret":   "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",
-				"Runtime":  "type.googleapis.com/envoy.service.runtime.v3.Runtime",
+				"Listener":    "type.googleapis.com/envoy.config.listener.v3.Listener",
+				"Route":       "type.googleapis.com/envoy.config.route.v3.RouteConfiguration",
+				"ScopedRoute": "type.googleapis.com/envoy.config.route.v3.ScopedRouteConfiguration",
+				"Cluster":     "type.googleapis.com/envoy.config.cluster.v3.Cluster",
+				"Endpoint":    "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
+				"Secret":      "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",
+				"Runtime":     "type.googleapis.com/envoy.service.runtime.v3.Runtime",
 			},
 		},
 	}

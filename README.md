@@ -194,6 +194,11 @@ spec:
     routes:
       - name: route1
         value: {"name":"route1","virtual_hosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"direct_response":{"status":200}}]}]}
+    # ScopedRoutes is a list of the Envoy Scoped Route resource type.
+    # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto
+    scopedRoutes:
+      - name: scoped_route1
+        value: {"name":"scoped_route1","route_configuration_name":"route1","key":{"fragments":[{"string_key":"test"}]}}
     # Listeners is a list of the Envoy Listener resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
     listeners:

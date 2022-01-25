@@ -55,6 +55,10 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 		rType = envoy.Route
 		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
 
+	case *envoy_config_route_v3.ScopedRouteConfiguration:
+		rType = envoy.ScopedRoute
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
+
 	case *envoy_config_listener_v3.Listener:
 		rType = envoy.Listener
 		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}

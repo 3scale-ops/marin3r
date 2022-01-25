@@ -94,6 +94,10 @@ type EnvoyResources struct {
 	// API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Routes []EnvoyResource `json:"routes,omitempty"`
+	// ScopedRoutes is a list of the envoy ScopeRoute resource type.
+	// API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	ScopedRoutes []EnvoyResource `json:"scopedRoutes,omitempty"`
 	// Listeners is a list of the envoy Listener resource type.
 	// API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
