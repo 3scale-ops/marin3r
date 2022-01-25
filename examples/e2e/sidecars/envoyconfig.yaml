@@ -11,6 +11,7 @@ spec:
       - name: kuard.default.svc
         ref:
           name: kuard
+          namespace: default
     clusters:
       - name: kuard
         value: |
@@ -26,7 +27,7 @@ spec:
                   - endpoint:
                       address:
                         socket_address:
-                          address: kuard
+                          address: 127.0.0.1
                           port_value: 8080
     routes:
       - name: kuard
