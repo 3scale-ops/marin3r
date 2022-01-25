@@ -114,15 +114,16 @@ var _ = Describe("EnvoyConfig controller", func() {
 				// Validate the cache for the nodeID
 				wantRevision := util.Hash(ec.Spec.EnvoyResources)
 				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-					Resources: [7]cache_v3.Resources{
-						{Version: "845f965864", Items: map[string]cache_types.ResourceWithTtl{
+					Resources: [8]cache_v3.Resources{
+						{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
 							"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTtl{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					}})
 
 				// Wait for the revision to get written to the xDS cache

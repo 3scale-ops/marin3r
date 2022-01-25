@@ -45,27 +45,27 @@ func (s Snapshot) SetResource(name string, res envoy.Resource) {
 
 	case *envoy_config_endpoint_v3.ClusterLoadAssignment:
 		rType = envoy.Endpoint
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
 
 	case *envoy_config_cluster_v3.Cluster:
 		rType = envoy.Cluster
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
 
 	case *envoy_config_route_v3.RouteConfiguration:
 		rType = envoy.Route
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
 
 	case *envoy_config_listener_v3.Listener:
 		rType = envoy.Listener
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
 
 	case *envoy_extensions_transport_sockets_tls_v3.Secret:
 		rType = envoy.Secret
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
 
 	case *envoy_service_runtime_v3.Runtime:
 		rType = envoy.Runtime
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTtl{Resource: o}
+		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
 	}
 
 	s.SetVersion(rType, s.recalculateVersion(rType))
@@ -112,10 +112,11 @@ func v3CacheResources(rType envoy.Type) int {
 		envoy.Endpoint:        0,
 		envoy.Cluster:         1,
 		envoy.Route:           2,
-		envoy.Listener:        3,
-		envoy.Secret:          4,
-		envoy.Runtime:         5,
-		envoy.ExtensionConfig: 6,
+		envoy.ScopedRoute:     3,
+		envoy.Listener:        4,
+		envoy.Secret:          5,
+		envoy.Runtime:         6,
+		envoy.ExtensionConfig: 7,
 	}
 
 	return types[rType]

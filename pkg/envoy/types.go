@@ -3,7 +3,7 @@ package envoy
 import (
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 // Resource is the base interface for the xDS payload.
@@ -46,6 +46,8 @@ const (
 	Cluster Type = "Cluster"
 	// Route is an envoy route resource
 	Route Type = "Route"
+	// ScopedRoute is an envoy scoped route resource
+	ScopedRoute Type = "ScopedRoute"
 	// Listener is an envoy listener resource
 	Listener Type = "Listener"
 	// Secret is an envoy secret resource

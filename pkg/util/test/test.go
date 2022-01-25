@@ -2,7 +2,6 @@ package test
 
 import (
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
-
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 )

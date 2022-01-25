@@ -26,5 +26,6 @@ func DeepHashObject(hasher hash.Hash, objectToWrite interface{}) {
 func Hash(o interface{}) string {
 	hasher := fnv.New32a()
 	DeepHashObject(hasher, o)
-	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32()))
+	h := rand.SafeEncodeString(fmt.Sprint(hasher.Sum32()))
+	return h
 }

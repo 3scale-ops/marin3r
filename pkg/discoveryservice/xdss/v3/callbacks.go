@@ -24,6 +24,7 @@ import (
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util/backoff"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
 )
 
@@ -32,6 +33,8 @@ type Callbacks struct {
 	Stats  *stats.Stats
 	Logger logr.Logger
 }
+
+var _ server_v3.Callbacks = &Callbacks{}
 
 // OnStreamOpen implements go-control-plane/pkg/server/Callbacks.OnStreamOpen
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.
@@ -91,7 +94,9 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.D
 
 // OnStreamResponse implements go-control-plane/pkgserver/Callbacks.OnStreamResponse
 // OnStreamResponse is called immediately prior to sending a response on a stream.
-func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_service_discovery_v3.DiscoveryRequest, rsp *envoy_service_discovery_v3.DiscoveryResponse) {
+func (cb *Callbacks) OnStreamResponse(ctx context.Context, id int64, req *envoy_service_discovery_v3.DiscoveryRequest,
+	rsp *envoy_service_discovery_v3.DiscoveryResponse) {
+
 	log := cb.Logger.WithValues("TypeURL", req.GetTypeUrl(), "NodeID", req.GetNode().GetId(), "StreamID", id, "Version", rsp.GetVersionInfo())
 
 	// Track the nonce of this response in the stats cache
@@ -119,13 +124,13 @@ func (cb *Callbacks) OnStreamResponse(id int64, req *envoy_service_discovery_v3.
 // OnFetchRequest implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchRequest is called for each Fetch request. Returning an error will end processing of the
 // request and respond with an error.
-func (cb *Callbacks) OnFetchRequest(ctx context.Context, req *envoy_service_discovery_v3.DiscoveryRequest) error {
+func (cb *Callbacks) OnFetchRequest(context.Context, *envoy_service_discovery_v3.DiscoveryRequest) error {
 	return nil
 }
 
 // OnFetchResponse implements go-control-plane/pkg/server/Callbacks.OnFetchRequest
 // OnFetchResponse is called immediately prior to sending a response.
-func (cb *Callbacks) OnFetchResponse(req *envoy_service_discovery_v3.DiscoveryRequest, resp *envoy_service_discovery_v3.DiscoveryResponse) {
+func (cb *Callbacks) OnFetchResponse(*envoy_service_discovery_v3.DiscoveryRequest, *envoy_service_discovery_v3.DiscoveryResponse) {
 }
 
 // OnDeltaStreamOpen is called once an incremental xDS stream is open with a stream ID and the type URL (or "" for ADS).

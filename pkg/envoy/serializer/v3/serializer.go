@@ -1,8 +1,8 @@
 package envoy
 
 import (
-	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
@@ -14,20 +14,28 @@ import (
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	"github.com/ghodss/yaml"
-	"github.com/golang/protobuf/jsonpb"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type JSON struct{}
 
 func (s JSON) Marshal(res envoy.Resource) (string, error) {
-	m := jsonpb.Marshaler{OrigName: true}
 
-	json := bytes.NewBuffer([]byte{})
-	err := m.Marshal(json, res)
+	opts := protojson.MarshalOptions{UseProtoNames: true, Indent: ""}
+	data, err := opts.Marshal(res)
 	if err != nil {
 		return "", err
 	}
-	return string(json.Bytes()), nil
+
+	// The output of jsonpb.Marshal is not stable so we need
+	// to use the json package to produce stable json output
+	// See https://github.com/golang/protobuf/issues/1082
+	data2, err := json.Marshal(json.RawMessage(data))
+	if err != nil {
+		return "", err
+	}
+
+	return string(data2), nil
 }
 
 func (s JSON) Unmarshal(str string, res envoy.Resource) error {
@@ -36,22 +44,22 @@ func (s JSON) Unmarshal(str string, res envoy.Resource) error {
 	switch o := res.(type) {
 
 	case *envoy_config_endpoint_v3.ClusterLoadAssignment:
-		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
+		err = protojson.Unmarshal([]byte(str), o)
 
 	case *envoy_config_cluster_v3.Cluster:
-		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
+		err = protojson.Unmarshal([]byte(str), o)
 
 	case *envoy_config_route_v3.RouteConfiguration:
-		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
+		err = protojson.Unmarshal([]byte(str), o)
 
 	case *envoy_config_listener_v3.Listener:
-		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
+		err = protojson.Unmarshal([]byte(str), o)
 
 	case *envoy_service_runtime_v3.Runtime:
-		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
+		err = protojson.Unmarshal([]byte(str), o)
 
 	case *envoy_extensions_transport_sockets_tls_v3.Secret:
-		err = jsonpb.Unmarshal(bytes.NewReader([]byte(str)), o)
+		err = protojson.Unmarshal([]byte(str), o)
 
 	default:
 		err = fmt.Errorf("Unknown resource type")

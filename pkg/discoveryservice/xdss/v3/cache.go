@@ -1,6 +1,8 @@
 package discoveryservice
 
 import (
+	"context"
+
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
@@ -17,9 +19,9 @@ func NewCache(v3 cache_v3.SnapshotCache) Cache {
 }
 
 // SetSnapshot updates a snapshot for a node.
-func (c Cache) SetSnapshot(nodeID string, snap xdss.Snapshot) error {
+func (c Cache) SetSnapshot(ctx context.Context, nodeID string, snap xdss.Snapshot) error {
 
-	return c.v3.SetSnapshot(nodeID, *snap.(Snapshot).v3)
+	return c.v3.SetSnapshot(ctx, nodeID, *snap.(Snapshot).v3)
 }
 
 // GetSnapshot gets the snapshot for a node, and returns an error if not found.
@@ -41,11 +43,12 @@ func (c Cache) ClearSnapshot(nodeID string) {
 // NewSnapshot returns a Snapshot object
 func (c Cache) NewSnapshot(resourcesVersion string) xdss.Snapshot {
 
-	snap := &cache_v3.Snapshot{Resources: [7]cache_v3.Resources{}}
+	snap := &cache_v3.Snapshot{Resources: [8]cache_v3.Resources{}}
 	snap.Resources[cache_types.Listener] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Endpoint] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Cluster] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Route] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
+	snap.Resources[cache_types.ScopedRoute] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Secret] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.Runtime] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})
 	snap.Resources[cache_types.ExtensionConfig] = cache_v3.NewResources(resourcesVersion, []cache_types.Resource{})

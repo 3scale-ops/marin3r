@@ -32,26 +32,28 @@ func TestSnapshot_SetResource(t *testing.T) {
 		{
 			name: "Writes resource in the snapshot",
 			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+				Resources: [8]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 			args: args{name: "endpoint", res: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}},
 			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "845f965864", Items: map[string]cache_types.ResourceWithTtl{
+				Resources: [8]cache_v3.Resources{
+					{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 		},
 	}
@@ -84,15 +86,16 @@ func TestSnapshot_GetResources(t *testing.T) {
 		{
 			name: "Returns a map with the snapshot resources",
 			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+				Resources: [8]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 			args: args{rType: envoy.Endpoint},
 			want: map[string]envoy.Resource{
@@ -128,14 +131,15 @@ func TestSnapshot_GetVersion(t *testing.T) {
 		{
 			name: "Returns the snapshot's version for the given resource type",
 			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "5", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "7", Items: map[string]cache_types.ResourceWithTtl{}},
+				Resources: [8]cache_v3.Resources{
+					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "6", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "7", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 			args: args{envoy.Endpoint},
 			want: "1",
@@ -143,17 +147,18 @@ func TestSnapshot_GetVersion(t *testing.T) {
 		{
 			name: "Returns the snapshot's version for the given resource type",
 			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "5", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "7", Items: map[string]cache_types.ResourceWithTtl{}},
+				Resources: [8]cache_v3.Resources{
+					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "6", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "7", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 			args: args{envoy.Secret},
-			want: "5",
+			want: "6",
 		},
 	}
 	for _, tt := range tests {
@@ -185,25 +190,27 @@ func TestSnapshot_SetVersion(t *testing.T) {
 		{
 			name: "Writes the version for the given resource type",
 			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "5", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "7", Items: map[string]cache_types.ResourceWithTtl{}},
+				Resources: [8]cache_v3.Resources{
+					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "6", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "7", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 			args: args{rType: envoy.Secret, version: "xxxx"},
 			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [7]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTtl{}},
-					{Version: "7", Items: map[string]cache_types.ResourceWithTtl{}},
+				Resources: [8]cache_v3.Resources{
+					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "7", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
 				}}},
 		},
 	}
@@ -230,9 +237,9 @@ func Test_v3CacheResources(t *testing.T) {
 		want int
 	}{
 		{
-			name: "Returns the internal resource type for the v3 snapshot",
+			name: "Returns the internal resource type for the v3 secret",
 			args: args{rType: envoy.Secret},
-			want: 4,
+			want: 5,
 		},
 	}
 	for _, tt := range tests {
@@ -261,15 +268,16 @@ func TestSnapshot_recalculateVersion(t *testing.T) {
 			name: "computes the hash of endpoints",
 			fields: fields{
 				v3: &cache_v3.Snapshot{
-					Resources: [7]cache_v3.Resources{
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{
+					Resources: [8]cache_v3.Resources{
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 							"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					},
 				},
 			},
@@ -280,16 +288,17 @@ func TestSnapshot_recalculateVersion(t *testing.T) {
 			name: "computes the hash of clusters",
 			fields: fields{
 				v3: &cache_v3.Snapshot{
-					Resources: [7]cache_v3.Resources{
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTtl{
+					Resources: [8]cache_v3.Resources{
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{
 							"cluster": {Resource: &envoy_config_cluster_v3.Cluster{Name: "cluster"}},
 						}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					},
 				},
 			},
@@ -302,12 +311,13 @@ func TestSnapshot_recalculateVersion(t *testing.T) {
 			name: "computes the hash of secrets",
 			fields: fields{
 				v3: &cache_v3.Snapshot{
-					Resources: [7]cache_v3.Resources{
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "56c6b8dc45", Items: map[string]cache_types.ResourceWithTtl{
+					Resources: [8]cache_v3.Resources{
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "56c6b8dc45", Items: map[string]cache_types.ResourceWithTTL{
 							"secret": {Resource: &envoy_extensions_transport_sockets_tls_v3.Secret{
 								Name: "secret",
 								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
@@ -318,8 +328,8 @@ func TestSnapshot_recalculateVersion(t *testing.T) {
 										CertificateChain: &envoy_config_core_v3.DataSource{
 											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
 										}}}}}}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTtl{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					},
 				},
 			},

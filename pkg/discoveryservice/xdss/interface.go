@@ -1,6 +1,8 @@
 package discoveryservice
 
 import (
+	"context"
+
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 )
 
@@ -13,7 +15,7 @@ import (
 // to ensure that Envoy makes the request for all EDS clusters or RDS routes
 // eventually.
 type Cache interface {
-	SetSnapshot(string, Snapshot) error
+	SetSnapshot(context.Context, string, Snapshot) error
 	GetSnapshot(string) (Snapshot, error)
 	ClearSnapshot(string)
 	NewSnapshot(string) Snapshot
