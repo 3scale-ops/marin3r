@@ -50,6 +50,10 @@ func generate() {
 	checkIfError(err)
 	defer f.Close()
 
+	// Reset file contents before writing
+	f.Truncate(0)
+	f.Seek(0, 0)
+
 	pkg := NewFile(packageName)
 	pkg.Const().Defs(Id("version").String().Op("=").Lit("v" + version))
 
