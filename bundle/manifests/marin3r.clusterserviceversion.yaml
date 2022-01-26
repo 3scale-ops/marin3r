@@ -74,12 +74,12 @@ metadata:
     certified: "false"
     containerImage: quay.io/3scale/marin3r
     description: Lighweight, CRD based Envoy control plane for Kubernetes
-    operators.operatorframework.io/builder: operator-sdk-v1.13.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.14.0+git
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.9.2-alpha.1
+  name: marin3r.v0.10.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -277,6 +277,16 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.runtimes[0].value
+      - description: 'ScopedRoutes is a list of the envoy ScopeRoute resource type.
+          API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto'
+        displayName: Scoped Routes
+        path: envoyResources.scopedRoutes
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.scopedRoutes[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.scopedRoutes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
@@ -393,6 +403,16 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.runtimes[0].value
+      - description: 'ScopedRoutes is a list of the envoy ScopeRoute resource type.
+          API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto'
+        displayName: Scoped Routes
+        path: envoyResources.scopedRoutes
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.scopedRoutes[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.scopedRoutes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
@@ -602,6 +622,15 @@ spec:
           which handles graceful termination of Envoy pods
         displayName: Shutdown Manager
         path: shutdownManager
+      - description: The drain strategy for the graceful shutdown. It also affects
+          drain when listeners are modified or removed via LDS.
+        displayName: Drain Strategy
+        path: shutdownManager.drainStrategy
+      - description: The time in seconds that Envoy will drain connections during
+          shutdown. It also affects drain behaviour when listeners are modified or
+          removed via LDS.
+        displayName: Drain Time
+        path: shutdownManager.drainTime
       - description: Image is the shutdown manager image and tag to use
         displayName: Image
         path: shutdownManager.image
@@ -673,7 +702,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.9.2-alpha.1
+                image: quay.io/3scale/marin3r:v0.10.0
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -729,7 +758,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.9.2-alpha.1
+                image: quay.io/3scale/marin3r:v0.10.0
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1020,11 +1049,50 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.9.2-alpha.1
+  version: 0.10.0
   webhookdefinitions:
   - admissionReviewVersions:
     - v1
-    - v1beta1
+    containerPort: 443
+    deploymentName: marin3r-controller-webhook
+    failurePolicy: Fail
+    generateName: envoyconfig.marin3r.3scale.net
+    rules:
+    - apiGroups:
+      - marin3r.3scale.net
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - envoyconfigs
+    sideEffects: None
+    targetPort: 9443
+    type: ValidatingAdmissionWebhook
+    webhookPath: /validate-marin3r-3scale-net-v1alpha1-envoyconfig
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    deploymentName: marin3r-controller-webhook
+    failurePolicy: Fail
+    generateName: envoydeployment.operator.marin3r.3scale.net
+    rules:
+    - apiGroups:
+      - operator.marin3r.3scale.net
+      apiVersions:
+      - v1alpha1
+      operations:
+      - CREATE
+      - UPDATE
+      resources:
+      - envoydeployments
+    sideEffects: None
+    targetPort: 9443
+    type: ValidatingAdmissionWebhook
+    webhookPath: /validate-operator-marin3r-3scale-net-v1alpha1-envoydeployment
+  - admissionReviewVersions:
+    - v1
     containerPort: 443
     deploymentName: marin3r-controller-webhook
     failurePolicy: Fail
@@ -1047,45 +1115,3 @@ spec:
     targetPort: 9443
     type: MutatingAdmissionWebhook
     webhookPath: /pod-v1-mutate
-  - admissionReviewVersions:
-    - v1
-    - v1beta1
-    containerPort: 443
-    deploymentName: marin3r-controller-webhook
-    failurePolicy: Fail
-    generateName: envoyconfig.marin3r.3scale.net
-    rules:
-    - apiGroups:
-      - marin3r.3scale.net
-      apiVersions:
-      - v1alpha1
-      operations:
-      - CREATE
-      - UPDATE
-      resources:
-      - envoyconfigs
-    sideEffects: None
-    targetPort: 9443
-    type: ValidatingAdmissionWebhook
-    webhookPath: /validate-marin3r-3scale-net-v1alpha1-envoyconfig
-  - admissionReviewVersions:
-    - v1
-    - v1beta1
-    containerPort: 443
-    deploymentName: marin3r-controller-webhook
-    failurePolicy: Fail
-    generateName: envoydeployment.operator.marin3r.3scale.net
-    rules:
-    - apiGroups:
-      - operator.marin3r.3scale.net
-      apiVersions:
-      - v1alpha1
-      operations:
-      - CREATE
-      - UPDATE
-      resources:
-      - envoydeployments
-    sideEffects: None
-    targetPort: 9443
-    type: ValidatingAdmissionWebhook
-    webhookPath: /validate-operator-marin3r-3scale-net-v1alpha1-envoydeployment

@@ -168,6 +168,25 @@ spec:
                       - value
                       type: object
                     type: array
+                  scopedRoutes:
+                    description: 'ScopedRoutes is a list of the envoy ScopeRoute resource
+                      type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto'
+                    items:
+                      description: EnvoyResource holds serialized representation of
+                        an envoy resource
+                      properties:
+                        name:
+                          description: Name of the envoy resource
+                          type: string
+                        value:
+                          description: Value is the serialized representation of the
+                            envoy resource
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
                   secrets:
                     description: Secrets is a list of references to Kubernetes Secret
                       objects.
@@ -284,6 +303,8 @@ spec:
                   routes:
                     type: string
                   runtimes:
+                    type: string
+                  scopedRoutes:
                     type: string
                   secrets:
                     type: string

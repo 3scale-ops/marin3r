@@ -332,7 +332,7 @@ spec:
                                     field and the ones listed in the namespaces field.
                                     null selector and null or empty namespaces list
                                     means "this pod's namespace". An empty selector
-                                    ({}) matches all namespaces. This field is alpha-level
+                                    ({}) matches all namespaces. This field is beta-level
                                     and is only honored when PodAffinityNamespaceSelector
                                     feature is enabled.
                                   properties:
@@ -488,7 +488,7 @@ spec:
                                 the ones listed in the namespaces field. null selector
                                 and null or empty namespaces list means "this pod's
                                 namespace". An empty selector ({}) matches all namespaces.
-                                This field is alpha-level and is only honored when
+                                This field is beta-level and is only honored when
                                 PodAffinityNamespaceSelector feature is enabled.
                               properties:
                                 matchExpressions:
@@ -641,7 +641,7 @@ spec:
                                     field and the ones listed in the namespaces field.
                                     null selector and null or empty namespaces list
                                     means "this pod's namespace". An empty selector
-                                    ({}) matches all namespaces. This field is alpha-level
+                                    ({}) matches all namespaces. This field is beta-level
                                     and is only honored when PodAffinityNamespaceSelector
                                     feature is enabled.
                                   properties:
@@ -797,7 +797,7 @@ spec:
                                 the ones listed in the namespaces field. null selector
                                 and null or empty namespaces list means "this pod's
                                 namespace". An empty selector ({}) matches all namespaces.
-                                This field is alpha-level and is only honored when
+                                This field is beta-level and is only honored when
                                 PodAffinityNamespaceSelector feature is enabled.
                               properties:
                                 matchExpressions:
@@ -1705,6 +1705,20 @@ spec:
                 description: ShutdownManager defines configuration for Envoy's shutdown
                   manager, which handles graceful termination of Envoy pods
                 properties:
+                  drainStrategy:
+                    description: The drain strategy for the graceful shutdown. It
+                      also affects drain when listeners are modified or removed via
+                      LDS.
+                    enum:
+                    - gradual
+                    - immediate
+                    type: string
+                  drainTime:
+                    description: The time in seconds that Envoy will drain connections
+                      during shutdown. It also affects drain behaviour when listeners
+                      are modified or removed via LDS.
+                    format: int64
+                    type: integer
                   image:
                     description: Image is the shutdown manager image and tag to use
                     type: string

@@ -207,6 +207,16 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.runtimes[0].value
+      - description: 'ScopedRoutes is a list of the envoy ScopeRoute resource type.
+          API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto'
+        displayName: Scoped Routes
+        path: envoyResources.scopedRoutes
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.scopedRoutes[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.scopedRoutes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
@@ -323,6 +333,16 @@ spec:
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.runtimes[0].value
+      - description: 'ScopedRoutes is a list of the envoy ScopeRoute resource type.
+          API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto'
+        displayName: Scoped Routes
+        path: envoyResources.scopedRoutes
+      - description: Name of the envoy resource
+        displayName: Name
+        path: envoyResources.scopedRoutes[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.scopedRoutes[0].value
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
@@ -532,6 +552,15 @@ spec:
           which handles graceful termination of Envoy pods
         displayName: Shutdown Manager
         path: shutdownManager
+      - description: The drain strategy for the graceful shutdown. It also affects
+          drain when listeners are modified or removed via LDS.
+        displayName: Drain Strategy
+        path: shutdownManager.drainStrategy
+      - description: The time in seconds that Envoy will drain connections during
+          shutdown. It also affects drain behaviour when listeners are modified or
+          removed via LDS.
+        displayName: Drain Time
+        path: shutdownManager.drainTime
       - description: Image is the shutdown manager image and tag to use
         displayName: Image
         path: shutdownManager.image
