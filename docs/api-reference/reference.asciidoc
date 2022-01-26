@@ -238,6 +238,7 @@ EnvoyResources holds each envoy api resource type
 | *`endpoints`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$] array__ | Endpoints is a list of the envoy ClusterLoadAssignment resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
 | *`clusters`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Clusters is a list of the envoy Cluster resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
 | *`routes`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Routes is a list of the envoy Route resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
+| *`scopedRoutes`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | ScopedRoutes is a list of the envoy ScopeRoute resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto
 | *`listeners`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Listeners is a list of the envoy Listener resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
 | *`runtimes`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresource[$$EnvoyResource$$]__ | Runtimes is a list of the envoy Runtime resource type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
 | *`secrets`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoysecretresource[$$EnvoySecretResource$$] array__ | Secrets is a list of references to Kubernetes Secret objects.
@@ -282,6 +283,7 @@ VersionTracker tracks the versions of the resources that this revision publishes
 | *`endpoints`* __string__ | 
 | *`clusters`* __string__ | 
 | *`routes`* __string__ | 
+| *`scopedRoutes`* __string__ | 
 | *`listeners`* __string__ | 
 | *`secrets`* __string__ | 
 | *`runtimes`* __string__ | 
@@ -790,6 +792,8 @@ ShutdownManager defines configuration for Envoy's shutdown manager, which handle
 | Field | Description
 | *`image`* __string__ | Image is the shutdown manager image and tag to use
 | *`serverPort`* __integer__ | Configures the sutdown manager's server port. Defaults to 8090.
+| *`drainTime`* __integer__ | The time in seconds that Envoy will drain connections during shutdown. It also affects drain behaviour when listeners are modified or removed via LDS.
+| *`drainStrategy`* __DrainStrategy__ | The drain strategy for the graceful shutdown. It also affects drain when listeners are modified or removed via LDS.
 |===
 
 

@@ -132,6 +132,10 @@ func writePackageFile(packagePath string, importList []string) {
 	checkIfError(err)
 	defer f.Close()
 
+	// Reset file contents before writing
+	f.Truncate(0)
+	f.Seek(0, 0)
+
 	pkg := NewFile(packageName)
 	pkg.Anon(importList...)
 
