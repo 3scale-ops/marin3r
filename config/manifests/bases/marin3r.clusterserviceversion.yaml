@@ -3,6 +3,7 @@ kind: ClusterServiceVersion
 metadata:
   annotations:
     capabilities: Full Lifecycle
+    categories: Networking
     certified: "false"
     containerImage: quay.io/3scale/marin3r
     description: Lighweight, CRD based Envoy control plane for Kubernetes
