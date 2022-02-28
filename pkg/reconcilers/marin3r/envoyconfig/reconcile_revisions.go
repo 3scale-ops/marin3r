@@ -105,7 +105,7 @@ func (r *RevisionReconciler) GetCacheState() string {
 func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	log := r.logger
 
-	_, err := revisions.Get(r.ctx, r.client, r.Namespace(),
+	desiredRev, err := revisions.Get(r.ctx, r.client, r.Namespace(),
 		filters.ByNodeID(r.NodeID()), filters.ByVersion(r.DesiredVersion()), filters.ByEnvoyAPI(r.EnvoyAPI()))
 	if err != nil {
 		if revisions.ErrorIsNoMatchesForFilter(err) {
@@ -128,7 +128,17 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 		}
 
 		return ctrl.Result{}, err
+	} else {
+		// The desired rev already exists so it had been published at some
+		// point, but it might not be the rev that SortByPublication() and
+		// getVersionToPublish() will choose so "touch" its published
+		// timestamp to force them to choose it.
+		desiredRev.Status.LastPublishedAt = func(t metav1.Time) *metav1.Time { return &t }(metav1.Now())
+		if err := desiredRev.UpdateStatus(r.ctx, r.client, log); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
+	log.V(1).Info("Reconcile", "desired version", r.DesiredVersion(), "error", nil)
 
 	list, err := revisions.List(r.ctx, r.client, r.Namespace(), filters.ByNodeID(r.NodeID()), filters.ByEnvoyAPI(r.EnvoyAPI()))
 	if err != nil {
@@ -143,16 +153,13 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	shouldBeTrue, shouldBeFalse := r.isRevisionPublishedConditionReconciled(r.PublishedVersion())
 
 	for _, ecr := range shouldBeFalse {
-
-		if err := r.client.Status().Update(r.ctx, &ecr); err != nil {
-			log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "Name/Namespace", util.ObjectKey(&ecr))
+		if err := ecr.UpdateStatus(r.ctx, r.client, log); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	if shouldBeTrue != nil {
-		if err := r.client.Status().Update(r.ctx, shouldBeTrue); err != nil {
-			log.Error(err, "unable to update revision", "Phase", "PublishNewRevision", "Name/Namespace", util.ObjectKey(shouldBeTrue))
+		if err := shouldBeTrue.UpdateStatus(r.ctx, r.client, log); err != nil {
 			return ctrl.Result{}, err
 		}
 		log.Info("updated the published EnvoyConfigRevision", "Namespace/Name", util.ObjectKey(shouldBeTrue))

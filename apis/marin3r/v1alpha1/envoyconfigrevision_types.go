@@ -17,11 +17,17 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
+
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util"
+	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-lib/status"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -164,6 +170,31 @@ func (ecr *EnvoyConfigRevision) GetSerialization() envoy_serializer.Serializatio
 		return envoy_serializer.JSON
 	}
 	return envoy_serializer.Serialization(*ecr.Spec.Serialization)
+}
+
+// UpdateStatus updates the provided EnvoyConfigRevision Status. It
+// retries in case of an update conflict.
+func (ecr *EnvoyConfigRevision) UpdateStatus(ctx context.Context, cl client.Client, log logr.Logger) error {
+	key := util.ObjectKey(ecr)
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Fetch the resource here; you need to refetch it on every try,
+		// since if you got a conflict on the last update attempt then
+		// you need to get the current version before making your own
+		// changes.
+		existing := EnvoyConfigRevision{}
+		if err := cl.Get(ctx, key, &existing); err != nil {
+			return err
+		}
+		ecr.Status.DeepCopyInto(&existing.Status)
+		if err := cl.Status().Update(ctx, &existing); err != nil {
+			log.Info("ECR Status update conflict, will retry", "ecr", key)
+			return err
+		}
+		log.V(1).Info("Status updated for EnvoyConfigRevision resource", "ecr", key)
+
+		return nil
+	})
 }
 
 // +kubebuilder:object:root=true
