@@ -8,18 +8,26 @@ import (
 )
 
 // SortByPublication sorts a list of EnvoyConfigRevisions using the following criteria
-// - if revision matches currentResourcesVersion, it always goes higher
+// - if revision matches desiredVersion, it always goes higher
 // - if publication date is defined, higher publication date goes higher
 // - if publication date is not defined, higher creation date goes higher
-func SortByPublication(currentResourcesVersion string, list *marin3rv1alpha1.EnvoyConfigRevisionList) *marin3rv1alpha1.EnvoyConfigRevisionList {
+func SortByPublication(desiredVersion string, list *marin3rv1alpha1.EnvoyConfigRevisionList) *marin3rv1alpha1.EnvoyConfigRevisionList {
 
 	ll := list.DeepCopy()
 
 	sort.SliceStable(ll.Items, func(i, j int) bool {
-		if ll.Items[j].Spec.Version == currentResourcesVersion {
+
+		// Override the chronological sort if either of the candidates is
+		// the desired one.
+		if ll.Items[j].Spec.Version == desiredVersion {
 			return true
 		}
+		if ll.Items[i].Spec.Version == desiredVersion {
+			return false
+		}
 
+		// Neither candidate is the desired one, so sort based on
+		// timestamps.
 		var iTime, jTime metav1.Time
 		if ll.Items[i].Status.LastPublishedAt.IsZero() {
 			iTime = ll.Items[i].GetCreationTimestamp()

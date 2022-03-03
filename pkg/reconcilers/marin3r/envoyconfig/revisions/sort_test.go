@@ -88,6 +88,48 @@ func TestSortByPublication(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Correctly sorts a list of only two items",
+			args: args{
+				currentResourcesVersion: "2",
+				list: &marin3rv1alpha1.EnvoyConfigRevisionList{
+					Items: []marin3rv1alpha1.EnvoyConfigRevision{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "ecr1", Namespace: "default"},
+							Spec:       marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "1"},
+							Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+								LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.NewTime(now.Add(-2 * time.Second))),
+							},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "ecr2", Namespace: "default"},
+							Spec:       marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "2"},
+							Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+								LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.NewTime(now.Add(-4 * time.Second))),
+							},
+						},
+					},
+				},
+			},
+			want: &marin3rv1alpha1.EnvoyConfigRevisionList{
+				Items: []marin3rv1alpha1.EnvoyConfigRevision{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "ecr1", Namespace: "default"},
+						Spec:       marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "1"},
+						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+							LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.NewTime(now.Add(-2 * time.Second))),
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "ecr2", Namespace: "default"},
+						Spec:       marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "2"},
+						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
+							LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.NewTime(now.Add(-4 * time.Second))),
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
