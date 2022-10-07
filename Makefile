@@ -407,3 +407,6 @@ tmp: ## Create project tmp directory
 gen-pkg-image: export TARGET_PATH = $(PWD)/bin
 gen-pkg-image: ## builds the gen-pkg-image binary
 	 cd generators/pkg-image && go build -o $${TARGET_PATH}/gen-pkg-image main.go
+
+clean: ## Clean project directory
+	rm -rf tmp bin kubeconfig
