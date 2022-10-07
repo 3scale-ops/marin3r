@@ -85,7 +85,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             leaderElect,
 		LeaderElectionID:           "2cfbe7d6.operator.marin3r.3scale.net",
-		LeaderElectionResourceLock: "configmaps",
+		LeaderElectionResourceLock: "configmapsleases",
 		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
 	}
 

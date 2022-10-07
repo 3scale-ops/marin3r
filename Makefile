@@ -50,7 +50,7 @@ endif
 IMG ?= $(IMAGE_TAG_BASE):v$(VERSION)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.23
+ENVTEST_K8S_VERSION = 1.24
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -211,7 +211,7 @@ KIND ?= $(LOCALBIN)/kind
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.8.0
+CONTROLLER_TOOLS_VERSION ?= v0.9.0
 GINKGO_VERSION ?= v1.16.5
 CRD_REFDOCS_VERSION ?= v0.0.8
 KIND_VERSION ?= v0.16.0
@@ -279,7 +279,7 @@ ifeq (,$(shell which opm 2>/dev/null))
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
 	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.23.0/$${OS}-$${ARCH}-opm ;\
 	chmod +x $(OPM) ;\
 	}
 else
@@ -390,7 +390,7 @@ run-envoy: certs
 ##@ Other
 
 .PHONY: operator-sdk
-OPERATOR_SDK_RELEASE = v1.21.0
+OPERATOR_SDK_RELEASE = v1.22.0
 OPERATOR_SDK = bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
 operator-sdk: ## Download operator-sdk locally if necessary.
 ifeq (,$(wildcard $(OPERATOR_SDK)))
