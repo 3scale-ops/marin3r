@@ -268,7 +268,7 @@ endif
 
 
 deploy-cert-manager: ## Deployes cert-manager in the K8s cluster specified in ~/.kube/config.
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.1.0/cert-manager.yaml
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.3/cert-manager.yaml
 	while [[ $$(kubectl -n cert-manager get deployment cert-manager-webhook -o 'jsonpath={.status.readyReplicas}') != "1" ]]; \
 		do echo "waiting for cert-manager webhook" && sleep 3; \
 	done
@@ -289,7 +289,7 @@ catalog-push: ## Push a catalog image.
 
 kind-create: export KUBECONFIG = $(PWD)/kubeconfig
 kind-create: tmp docker-build kind ## Runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
-	$(KIND) create cluster --wait 5m --config test/kind.yaml
+	$(KIND) create cluster --wait 5m --config test/kind.yaml --image kindest/node:v1.25.2
 	$(MAKE) deploy-cert-manager
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
@@ -312,7 +312,7 @@ kind-delete: kind
 .PHONY: kind
 KIND = $(shell pwd)/bin/kind
 kind: ## Download kind locally if necessary
-	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.11.1)
+	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.16.0)
 
 ##@ Release
 
@@ -407,3 +407,6 @@ tmp: ## Create project tmp directory
 gen-pkg-image: export TARGET_PATH = $(PWD)/bin
 gen-pkg-image: ## builds the gen-pkg-image binary
 	 cd generators/pkg-image && go build -o $${TARGET_PATH}/gen-pkg-image main.go
+
+clean: ## Clean project directory
+	rm -rf tmp bin kubeconfig

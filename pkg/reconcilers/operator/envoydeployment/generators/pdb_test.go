@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -26,10 +26,10 @@ func TestGeneratorOptions_PDB(t *testing.T) {
 					MinAvailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
 				},
 			},
-			want: &policyv1beta1.PodDisruptionBudget{
+			want: &policyv1.PodDisruptionBudget{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "PodDisruptionBudget",
-					APIVersion: policyv1beta1.SchemeGroupVersion.String(),
+					APIVersion: policyv1.SchemeGroupVersion.String(),
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-envoydeployment-instance",
@@ -41,7 +41,7 @@ func TestGeneratorOptions_PDB(t *testing.T) {
 						"app.kubernetes.io/instance":   "instance",
 					},
 				},
-				Spec: policyv1beta1.PodDisruptionBudgetSpec{
+				Spec: policyv1.PodDisruptionBudgetSpec{
 					MinAvailable: &intstr.IntOrString{Type: intstr.Int, IntVal: 1},
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
