@@ -446,7 +446,7 @@ func (esc *envoySidecarConfig) addExtraLifecycleHooks(containers []corev1.Contai
 			return nil, err
 		}
 		containers[pos].Lifecycle = &corev1.Lifecycle{
-			PreStop: &corev1.Handler{
+			PreStop: &corev1.LifecycleHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   shutdownmanager.DrainEndpoint,
 					Port:   intstr.FromInt(int(esc.generator.ShutdownManagerPort)),

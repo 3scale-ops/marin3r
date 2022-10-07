@@ -53,8 +53,8 @@ func TestNewRevisionReconciler(t *testing.T) {
 	}{
 		{
 			name: "Returns a RevisionReconciler",
-			args: args{context.TODO(), nil, fake.NewFakeClient(), s, nil},
-			want: RevisionReconciler{context.TODO(), nil, fake.NewFakeClient(), s, nil, nil, nil, nil, nil},
+			args: args{context.TODO(), logr.Logger{}, fake.NewFakeClient(), s, nil},
+			want: RevisionReconciler{context.TODO(), logr.Logger{}, fake.NewFakeClient(), s, nil, nil, nil, nil, nil},
 		},
 	}
 	for _, tt := range tests {
@@ -199,7 +199,7 @@ func TestRevisionReconciler_DesiredVersion(t *testing.T) {
 	}{
 		{
 			"Returns the DesiredVersion",
-			fields{context.TODO(), nil, nil, nil, nil, pointer.StringPtr("xxxx"), nil, nil, nil},
+			fields{context.TODO(), logr.Logger{}, nil, nil, nil, pointer.StringPtr("xxxx"), nil, nil, nil},
 			"xxxx",
 		},
 	}
@@ -242,7 +242,7 @@ func TestRevisionReconciler_GetRevisionList(t *testing.T) {
 	}{
 		{
 			"Returns the revision list",
-			fields{context.TODO(), nil, nil, nil, nil, nil, nil, nil, &marin3rv1alpha1.EnvoyConfigRevisionList{}},
+			fields{context.TODO(), logr.Logger{}, nil, nil, nil, nil, nil, nil, &marin3rv1alpha1.EnvoyConfigRevisionList{}},
 			&marin3rv1alpha1.EnvoyConfigRevisionList{},
 		},
 	}
@@ -285,7 +285,7 @@ func TestRevisionReconciler_PublishedVersion(t *testing.T) {
 	}{
 		{
 			"Returns the PublishedVersion",
-			fields{context.TODO(), nil, nil, nil, nil, nil, pointer.StringPtr("xxxx"), nil, nil},
+			fields{context.TODO(), logr.Logger{}, nil, nil, nil, nil, pointer.StringPtr("xxxx"), nil, nil},
 			"xxxx",
 		},
 	}
@@ -328,7 +328,7 @@ func TestRevisionReconciler_GetCacheState(t *testing.T) {
 	}{
 		{
 			"Returns the CacheState",
-			fields{context.TODO(), nil, nil, nil, nil, nil, nil, pointer.StringPtr(marin3rv1alpha1.InSyncState), nil},
+			fields{context.TODO(), logr.Logger{}, nil, nil, nil, nil, nil, pointer.StringPtr(marin3rv1alpha1.InSyncState), nil},
 			marin3rv1alpha1.InSyncState,
 		},
 	}
@@ -824,7 +824,7 @@ func TestRevisionReconciler_isRevisionRetentionReconciled(t *testing.T) {
 	}{
 		{
 			name: "Resulting list has 'retention' elements and returns trimmed elements",
-			fields: fields{nil, nil, nil, nil, nil, nil, nil, nil,
+			fields: fields{nil, logr.Logger{}, nil, nil, nil, nil, nil, nil,
 				&marin3rv1alpha1.EnvoyConfigRevisionList{
 					Items: []marin3rv1alpha1.EnvoyConfigRevision{
 						{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},
@@ -846,7 +846,7 @@ func TestRevisionReconciler_isRevisionRetentionReconciled(t *testing.T) {
 		},
 		{
 			name: "List is not modified if elements within 'retention' parameter",
-			fields: fields{nil, nil, nil, nil, nil, nil, nil, nil,
+			fields: fields{nil, logr.Logger{}, nil, nil, nil, nil, nil, nil,
 				&marin3rv1alpha1.EnvoyConfigRevisionList{
 					Items: []marin3rv1alpha1.EnvoyConfigRevision{
 						{ObjectMeta: metav1.ObjectMeta{Name: "ecr1"}},

@@ -78,7 +78,7 @@ func GeneratePod(key types.NamespacedName, nodeID, envoyAPI, envoyVersion, disco
 			{Name: "config-volume", ReadOnly: true, MountPath: "/etc/envoy/bootstrap"},
 		},
 		ReadinessProbe: &corev1.Probe{
-			Handler:             corev1.Handler{HTTPGet: &corev1.HTTPGetAction{Path: "/ready", Port: intstr.IntOrString{IntVal: 9901}}},
+			ProbeHandler:        corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{Path: "/ready", Port: intstr.IntOrString{IntVal: 9901}}},
 			InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1,
 		},
 	}}
