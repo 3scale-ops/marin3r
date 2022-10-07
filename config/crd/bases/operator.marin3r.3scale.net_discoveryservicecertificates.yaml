@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.0
+    controller-gen.kubebuilder.io/version: v0.9.2
   creationTimestamp: null
   name: discoveryservicecertificates.operator.marin3r.3scale.net
 spec:
@@ -90,6 +90,7 @@ spec:
                       name must be unique.
                     type: string
                 type: object
+                x-kubernetes-map-type: atomic
               server:
                 description: IsServerCertificate is a boolean specifying if the certificate
                   should be issued with server auth usage enabled
@@ -114,6 +115,7 @@ spec:
                               the secret name must be unique.
                             type: string
                         type: object
+                        x-kubernetes-map-type: atomic
                     required:
                     - caSecretRef
                     type: object
