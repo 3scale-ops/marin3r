@@ -289,7 +289,7 @@ catalog-push: ## Push a catalog image.
 
 kind-create: export KUBECONFIG = $(PWD)/kubeconfig
 kind-create: tmp docker-build kind ## Runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
-	$(KIND) create cluster --wait 5m --config test/kind.yaml
+	$(KIND) create cluster --wait 5m --config test/kind.yaml --image kindest/node:v1.25.2
 	$(MAKE) deploy-cert-manager
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
@@ -312,7 +312,7 @@ kind-delete: kind
 .PHONY: kind
 KIND = $(shell pwd)/bin/kind
 kind: ## Download kind locally if necessary
-	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.11.1)
+	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.16.0)
 
 ##@ Release
 
