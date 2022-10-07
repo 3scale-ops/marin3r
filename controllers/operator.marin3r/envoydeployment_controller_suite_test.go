@@ -12,7 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -182,7 +182,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 
 			By("waiting for the envoy PDB to be created")
 			{
-				pdb := &policyv1beta1.PodDisruptionBudget{}
+				pdb := &policyv1.PodDisruptionBudget{}
 				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
 				Eventually(func() error {
 					return k8sClient.Get(context.Background(), key, pdb)

@@ -2,7 +2,7 @@ package generators
 
 import (
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -11,18 +11,18 @@ func (cfg *GeneratorOptions) PDB() lockedresources.GeneratorFunction {
 
 	return func() client.Object {
 
-		return &policyv1beta1.PodDisruptionBudget{
+		return &policyv1.PodDisruptionBudget{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "PodDisruptionBudget",
-				APIVersion: policyv1beta1.SchemeGroupVersion.String(),
+				APIVersion: policyv1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cfg.resourceName(),
 				Namespace: cfg.Namespace,
 				Labels:    cfg.labels(),
 			},
-			Spec: func() policyv1beta1.PodDisruptionBudgetSpec {
-				spec := policyv1beta1.PodDisruptionBudgetSpec{
+			Spec: func() policyv1.PodDisruptionBudgetSpec {
+				spec := policyv1.PodDisruptionBudgetSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: cfg.labels(),
 					},
