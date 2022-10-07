@@ -122,9 +122,10 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 			want:    &marin3rv1alpha1.VersionTracker{Endpoints: "845f965864"},
 			wantErr: false,
 			wantSnap: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
 					{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -155,9 +156,11 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 			}
 			gotSnap, _ := r.xdsCache.GetSnapshot(tt.args.nodeID)
 			if !testutil.SnapshotsAreEqual(gotSnap, tt.wantSnap) {
-				t.Errorf("CacheReconciler.Reconcile() Snapshot = E:%s C:%s R:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s L:%s S:%s RU:%s",
-					gotSnap.GetVersion(envoy.Endpoint), gotSnap.GetVersion(envoy.Cluster), gotSnap.GetVersion(envoy.Route), gotSnap.GetVersion(envoy.Listener), gotSnap.GetVersion(envoy.Secret), gotSnap.GetVersion(envoy.Runtime),
-					tt.wantSnap.GetVersion(envoy.Endpoint), tt.wantSnap.GetVersion(envoy.Cluster), tt.wantSnap.GetVersion(envoy.Route), tt.wantSnap.GetVersion(envoy.Listener), tt.wantSnap.GetVersion(envoy.Secret), tt.wantSnap.GetVersion(envoy.Runtime),
+				t.Errorf("CacheReconciler.Reconcile() Snapshot = E:%s C:%s R:%s SR:%s VH:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s SR:%s VH:%s L:%s S:%s RU:%s",
+					gotSnap.GetVersion(envoy.Endpoint), gotSnap.GetVersion(envoy.Cluster), gotSnap.GetVersion(envoy.Route), gotSnap.GetVersion(envoy.ScopedRoute),
+					gotSnap.GetVersion(envoy.VirtualHost), gotSnap.GetVersion(envoy.Listener), gotSnap.GetVersion(envoy.Secret), gotSnap.GetVersion(envoy.Runtime),
+					tt.wantSnap.GetVersion(envoy.Endpoint), tt.wantSnap.GetVersion(envoy.Cluster), tt.wantSnap.GetVersion(envoy.Route), tt.wantSnap.GetVersion(envoy.ScopedRoute),
+					tt.wantSnap.GetVersion(envoy.VirtualHost), tt.wantSnap.GetVersion(envoy.Listener), tt.wantSnap.GetVersion(envoy.Secret), tt.wantSnap.GetVersion(envoy.Runtime),
 				)
 			}
 		})
@@ -217,7 +220,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					}},
 			},
 			want: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
 					{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}},
 					}},
@@ -230,6 +233,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 					{Version: "d89c5b959", Items: map[string]cache_types.ResourceWithTTL{
 						"scoped_route": {Resource: &envoy_config_route_v3.ScopedRouteConfiguration{Name: "scoped_route"}},
 					}},
+					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "7cb77864cf", Items: map[string]cache_types.ResourceWithTTL{
 						"listener": {Resource: &envoy_config_listener_v3.Listener{Name: "listener"}},
 					}},
@@ -384,7 +388,8 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			wantErr: false,
 			want: xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
+					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -469,11 +474,11 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 
 			if !tt.wantErr && !testutil.SnapshotsAreEqual(got, tt.want) {
 				spew.Dump(got)
-				t.Errorf("CacheReconciler.GenerateSnapshot() = E:%s C:%s R:%s SR:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s SR:%s L:%s S:%s RU:%s",
+				t.Errorf("CacheReconciler.Reconcile() Snapshot = E:%s C:%s R:%s SR:%s VH:%s L:%s S:%s RU:%s, want E:%s C:%s R:%s SR:%s VH:%s L:%s S:%s RU:%s",
 					got.GetVersion(envoy.Endpoint), got.GetVersion(envoy.Cluster), got.GetVersion(envoy.Route), got.GetVersion(envoy.ScopedRoute),
-					got.GetVersion(envoy.Listener), got.GetVersion(envoy.Secret), got.GetVersion(envoy.Runtime), tt.want.GetVersion(envoy.Endpoint),
-					tt.want.GetVersion(envoy.Cluster), tt.want.GetVersion(envoy.Route), tt.want.GetVersion(envoy.ScopedRoute),
-					tt.want.GetVersion(envoy.Listener), tt.want.GetVersion(envoy.Secret), tt.want.GetVersion(envoy.Runtime),
+					got.GetVersion(envoy.VirtualHost), got.GetVersion(envoy.Listener), got.GetVersion(envoy.Secret), got.GetVersion(envoy.Runtime),
+					tt.want.GetVersion(envoy.Endpoint), tt.want.GetVersion(envoy.Cluster), tt.want.GetVersion(envoy.Route), tt.want.GetVersion(envoy.ScopedRoute),
+					tt.want.GetVersion(envoy.VirtualHost), tt.want.GetVersion(envoy.Listener), tt.want.GetVersion(envoy.Secret), tt.want.GetVersion(envoy.Runtime),
 				)
 			}
 		})

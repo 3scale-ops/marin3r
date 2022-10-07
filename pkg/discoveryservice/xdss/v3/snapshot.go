@@ -117,10 +117,11 @@ func v3CacheResources(rType envoy.Type) int {
 		envoy.Cluster:         1,
 		envoy.Route:           2,
 		envoy.ScopedRoute:     3,
-		envoy.Listener:        4,
-		envoy.Secret:          5,
-		envoy.Runtime:         6,
-		envoy.ExtensionConfig: 7,
+		envoy.VirtualHost:     4,
+		envoy.Listener:        5,
+		envoy.Secret:          6,
+		envoy.Runtime:         7,
+		envoy.ExtensionConfig: 8,
 	}
 
 	return types[rType]

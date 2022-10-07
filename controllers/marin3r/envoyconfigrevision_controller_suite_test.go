@@ -132,9 +132,10 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-					Resources: [8]cache_v3.Resources{
+					Resources: [9]cache_v3.Resources{
 						{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
 							"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -195,7 +196,8 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
 			wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
+					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -246,7 +248,8 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-					Resources: [8]cache_v3.Resources{
+					Resources: [9]cache_v3.Resources{
+						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
 						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},

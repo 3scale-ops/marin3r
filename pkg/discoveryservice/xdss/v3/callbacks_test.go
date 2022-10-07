@@ -34,8 +34,8 @@ func fakeTestCache() *cache_v3.SnapshotCache {
 
 	snapshotCache := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
 
-	snapshotCache.SetSnapshot(context.TODO(), "node1", cache_v3.Snapshot{
-		Resources: [8]cache_v3.Resources{
+	snapshotCache.SetSnapshot(context.TODO(), "node1", &cache_v3.Snapshot{
+		Resources: [9]cache_v3.Resources{
 			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{
 				"endpoint1": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"}},
 			}},

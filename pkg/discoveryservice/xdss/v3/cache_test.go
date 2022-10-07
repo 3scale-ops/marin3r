@@ -30,9 +30,11 @@ func TestCache_SetSnapshot(t *testing.T) {
 			name:   "Write the snapshot in the cache",
 			fields: fields{v3: cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)},
 			args: args{nodeID: "node", snap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -42,9 +44,11 @@ func TestCache_SetSnapshot(t *testing.T) {
 				}}}},
 			wantErr: false,
 			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -89,10 +93,12 @@ func TestCache_GetSnapshot(t *testing.T) {
 			fields: fields{
 				v3: func() cache_v3.SnapshotCache {
 					c := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-					c.SetSnapshot(context.TODO(), "node", cache_v3.Snapshot{
-						Resources: [8]cache_v3.Resources{
+					c.SetSnapshot(context.TODO(), "node", &cache_v3.Snapshot{
+						Resources: [9]cache_v3.Resources{
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 								"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -105,9 +111,11 @@ func TestCache_GetSnapshot(t *testing.T) {
 			},
 			args: args{nodeID: "node"},
 			want: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -122,10 +130,12 @@ func TestCache_GetSnapshot(t *testing.T) {
 			fields: fields{
 				v3: func() cache_v3.SnapshotCache {
 					c := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-					c.SetSnapshot(context.TODO(), "node", cache_v3.Snapshot{
-						Resources: [8]cache_v3.Resources{
+					c.SetSnapshot(context.TODO(), "node", &cache_v3.Snapshot{
+						Resources: [9]cache_v3.Resources{
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 								"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -175,10 +185,12 @@ func TestCache_ClearSnapshot(t *testing.T) {
 			fields: fields{
 				v3: func() cache_v3.SnapshotCache {
 					c := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-					c.SetSnapshot(context.TODO(), "node", cache_v3.Snapshot{
-						Resources: [8]cache_v3.Resources{
+					c.SetSnapshot(context.TODO(), "node", &cache_v3.Snapshot{
+						Resources: [9]cache_v3.Resources{
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
 								"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 							{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
@@ -223,7 +235,9 @@ func TestCache_NewSnapshot(t *testing.T) {
 			fields: fields{v3: cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)},
 			args:   args{resourcesVersion: "xxxx"},
 			want: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [8]cache_v3.Resources{
+				Resources: [9]cache_v3.Resources{
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
+					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
 					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},

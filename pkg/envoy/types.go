@@ -48,6 +48,8 @@ const (
 	Route Type = "Route"
 	// ScopedRoute is an envoy scoped route resource
 	ScopedRoute Type = "ScopedRoute"
+	// VirtualHost is an enovy virtual host resource
+	VirtualHost Type = "VirtualHost"
 	// Listener is an envoy listener resource
 	Listener Type = "Listener"
 	// Secret is an envoy secret resource
