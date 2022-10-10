@@ -18,7 +18,7 @@ type Cache interface {
 	SetSnapshot(context.Context, string, Snapshot) error
 	GetSnapshot(string) (Snapshot, error)
 	ClearSnapshot(string)
-	NewSnapshot(string) Snapshot
+	NewSnapshot() Snapshot
 }
 
 // Snapshot is an internally consistent snapshot of xDS resources.
@@ -26,7 +26,7 @@ type Cache interface {
 // from the snapshot may be delivered to the proxy in arbitrary order.
 type Snapshot interface {
 	Consistent() error
-	SetResource(string, envoy.Resource)
+	SetResources(envoy.Type, []envoy.Resource) Snapshot
 	GetResources(envoy.Type) map[string]envoy.Resource
 	GetVersion(envoy.Type) string
 	SetVersion(envoy.Type, string)

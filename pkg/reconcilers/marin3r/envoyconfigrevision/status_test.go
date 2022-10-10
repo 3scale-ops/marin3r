@@ -9,10 +9,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	"github.com/davecgh/go-spew/spew"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	resource_v3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/operator-framework/operator-lib/status"
 	"github.com/patrickmn/go-cache"
@@ -23,19 +20,8 @@ import (
 
 func testCacheGenerator(nodeID, version string) func() xdss.Cache {
 	return func() xdss.Cache {
-		cache := xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil))
-		snap, _ := cache_v3.NewSnapshot(version, map[string][]cache_types.Resource{
-			envoy_resources_v3.Mappings()[envoy.Endpoint]:        {},
-			envoy_resources_v3.Mappings()[envoy.Cluster]:         {},
-			envoy_resources_v3.Mappings()[envoy.Route]:           {},
-			envoy_resources_v3.Mappings()[envoy.ScopedRoute]:     {},
-			envoy_resources_v3.Mappings()[envoy.VirtualHost]:     {},
-			envoy_resources_v3.Mappings()[envoy.Listener]:        {},
-			envoy_resources_v3.Mappings()[envoy.Secret]:          {},
-			envoy_resources_v3.Mappings()[envoy.Runtime]:         {},
-			envoy_resources_v3.Mappings()[envoy.ExtensionConfig]: {},
-		})
-		cache.SetSnapshot(context.TODO(), nodeID, xdss_v3.NewSnapshot(snap))
+		cache := xdss_v3.NewCache()
+		cache.NewSnapshot()
 		return cache
 	}
 }
@@ -78,8 +64,12 @@ func TestIsStatusReconciled(t *testing.T) {
 						Runtimes:  "f",
 					}
 				},
-				xdssCacheFactory: testCacheGenerator("test", "xxxx"),
-				dStats:           stats.New,
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
+				dStats: stats.New,
 			},
 			want: false,
 		},
@@ -128,8 +118,12 @@ func TestIsStatusReconciled(t *testing.T) {
 						Runtimes:  "f",
 					}
 				},
-				xdssCacheFactory: testCacheGenerator("test", "xxxx"),
-				dStats:           stats.New,
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
+				dStats: stats.New,
 			},
 			want: true,
 		},
@@ -153,8 +147,12 @@ func TestIsStatusReconciled(t *testing.T) {
 					}
 				},
 				versionTrackerFactory: func() *marin3rv1alpha1.VersionTracker { return nil },
-				xdssCacheFactory:      testCacheGenerator("test", "xxxx"),
-				dStats:                stats.New,
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
+				dStats: stats.New,
 			},
 			want: false,
 		},
@@ -177,8 +175,12 @@ func TestIsStatusReconciled(t *testing.T) {
 					}
 				},
 				versionTrackerFactory: func() *marin3rv1alpha1.VersionTracker { return nil },
-				xdssCacheFactory:      testCacheGenerator("test", "xxxx"),
-				dStats:                stats.New,
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
+				dStats: stats.New,
 			},
 			want: true,
 		},
@@ -197,7 +199,11 @@ func TestIsStatusReconciled(t *testing.T) {
 						},
 					}
 				},
-				xdssCacheFactory:      testCacheGenerator("test", "xxxx"),
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
 				versionTrackerFactory: func() *marin3rv1alpha1.VersionTracker { return &marin3rv1alpha1.VersionTracker{Endpoints: "aaaa"} },
 				dStats: func() *stats.Stats {
 					return stats.NewWithItems(map[string]cache.Item{
@@ -232,7 +238,11 @@ func TestIsStatusReconciled(t *testing.T) {
 						},
 					}
 				},
-				xdssCacheFactory:      testCacheGenerator("test", "xxxx"),
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
 				versionTrackerFactory: func() *marin3rv1alpha1.VersionTracker { return &marin3rv1alpha1.VersionTracker{Endpoints: "aaaa"} },
 				dStats: func() *stats.Stats {
 					return stats.NewWithItems(map[string]cache.Item{
@@ -260,8 +270,12 @@ func TestIsStatusReconciled(t *testing.T) {
 					}
 				},
 				versionTrackerFactory: func() *marin3rv1alpha1.VersionTracker { return nil },
-				xdssCacheFactory:      testCacheGenerator("test", "xxxx"),
-				dStats:                stats.New,
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
+				dStats: stats.New,
 			},
 			want: false,
 		},
@@ -283,8 +297,12 @@ func TestIsStatusReconciled(t *testing.T) {
 					}
 				},
 				versionTrackerFactory: func() *marin3rv1alpha1.VersionTracker { return nil },
-				xdssCacheFactory:      testCacheGenerator("test", "xxxx"),
-				dStats:                stats.New,
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
+				dStats: stats.New,
 			},
 			want: true,
 		},
@@ -326,7 +344,11 @@ func Test_calculateResourcesInSyncCondition(t *testing.T) {
 						},
 					}
 				},
-				xdssCacheFactory: testCacheGenerator("test", "xxxx"),
+				xdssCacheFactory: func() xdss.Cache {
+					cache := xdss_v3.NewCache()
+					cache.SetSnapshot(context.TODO(), "test", cache.NewSnapshot())
+					return cache
+				},
 			},
 			want: corev1.ConditionTrue,
 		},
@@ -347,7 +369,7 @@ func Test_calculateResourcesInSyncCondition(t *testing.T) {
 					}
 				},
 				xdssCacheFactory: func() xdss.Cache {
-					cache := xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil))
+					cache := xdss_v3.NewCache()
 					return cache
 				},
 			},

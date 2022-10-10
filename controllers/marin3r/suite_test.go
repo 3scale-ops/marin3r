@@ -28,7 +28,6 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/goombaio/namegenerator"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -113,7 +112,7 @@ var _ = BeforeSuite(func() {
 		Client:         mgr.GetClient(),
 		Log:            ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v3"),
 		Scheme:         mgr.GetScheme(),
-		XdsCache:       xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+		XdsCache:       xdss_v3.NewCache(),
 		APIVersion:     envoy.APIv3,
 		DiscoveryStats: stats.New(),
 	}

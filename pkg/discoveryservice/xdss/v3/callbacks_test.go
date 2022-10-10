@@ -19,40 +19,12 @@ import (
 	"testing"
 
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
-	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
-	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
-
-func fakeTestCache() *cache_v3.SnapshotCache {
-
-	snapshotCache := cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)
-
-	snapshotCache.SetSnapshot(context.TODO(), "node1", &cache_v3.Snapshot{
-		Resources: [9]cache_v3.Resources{
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{
-				"endpoint1": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint1"}},
-			}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{
-				"cluster1": {Resource: &envoy_config_cluster_v3.Cluster{Name: "cluster1"}},
-			}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-			{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-		}},
-	)
-
-	return &snapshotCache
-}
 
 func TestCallbacks_OnStreamOpen(t *testing.T) {
 	type args struct {

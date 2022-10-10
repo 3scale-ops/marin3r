@@ -69,20 +69,22 @@ func (r *CacheReconciler) Reconcile(ctx context.Context, req types.NamespacedNam
 }
 
 func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *marin3rv1alpha1.EnvoyResources) (xdss.Snapshot, error) {
-	snap := r.xdsCache.NewSnapshot("")
+	snap := r.xdsCache.NewSnapshot()
 
+	endpoints := make([]envoy.Resource, 0, len(resources.Endpoints))
 	for idx, endpoint := range resources.Endpoints {
 		res := r.generator.New(envoy.Endpoint)
 		if err := r.decoder.Unmarshal(endpoint.Value, res); err != nil {
 			return nil,
 				resourceLoaderError(
-					req, endpoint.Value, field.NewPath("spec", "resources").Child("endpoint").Index(idx).Child("value"),
+					req, endpoint.Value, field.NewPath("spec", "resources").Child("endpoints").Index(idx).Child("value"),
 					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
-		snap.SetResource(endpoint.Name, res)
+		endpoints = append(endpoints, res)
 	}
 
+	clusters := make([]envoy.Resource, 0, len(resources.Clusters))
 	for idx, cluster := range resources.Clusters {
 		res := r.generator.New(envoy.Cluster)
 		if err := r.decoder.Unmarshal(cluster.Value, res); err != nil {
@@ -92,9 +94,10 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
-		snap.SetResource(cluster.Name, res)
+		clusters = append(clusters, res)
 	}
 
+	routes := make([]envoy.Resource, 0, len(resources.Routes))
 	for idx, route := range resources.Routes {
 		res := r.generator.New(envoy.Route)
 		if err := r.decoder.Unmarshal(route.Value, res); err != nil {
@@ -104,9 +107,10 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
-		snap.SetResource(route.Name, res)
+		routes = append(routes, res)
 	}
 
+	scopedRoutes := make([]envoy.Resource, 0, len(resources.ScopedRoutes))
 	for idx, scopedRoute := range resources.ScopedRoutes {
 		res := r.generator.New(envoy.ScopedRoute)
 		if err := r.decoder.Unmarshal(scopedRoute.Value, res); err != nil {
@@ -116,33 +120,36 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
-		snap.SetResource(scopedRoute.Name, res)
+		scopedRoutes = append(scopedRoutes, res)
 	}
 
+	listeners := make([]envoy.Resource, 0, len(resources.Listeners))
 	for idx, listener := range resources.Listeners {
 		res := r.generator.New(envoy.Listener)
 		if err := r.decoder.Unmarshal(listener.Value, res); err != nil {
 			return nil,
 				resourceLoaderError(
-					req, listener.Value, field.NewPath("spec", "resources").Child("listener").Index(idx).Child("value"),
+					req, listener.Value, field.NewPath("spec", "resources").Child("listeners").Index(idx).Child("value"),
 					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
-		snap.SetResource(listener.Name, res)
+		listeners = append(listeners, res)
 	}
 
+	runtimes := make([]envoy.Resource, 0, len(resources.Runtimes))
 	for idx, runtime := range resources.Runtimes {
 		res := r.generator.New(envoy.Runtime)
 		if err := r.decoder.Unmarshal(runtime.Value, res); err != nil {
 			return nil,
 				resourceLoaderError(
-					req, runtime.Value, field.NewPath("spec", "resources").Child("runtime").Index(idx).Child("value"),
+					req, runtime.Value, field.NewPath("spec", "resources").Child("runtimes").Index(idx).Child("value"),
 					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
 				)
 		}
-		snap.SetResource(runtime.Name, res)
+		runtimes = append(runtimes, res)
 	}
 
+	secrets := make([]envoy.Resource, 0, len(resources.Secrets))
 	for idx, secret := range resources.Secrets {
 		s := &corev1.Secret{}
 		key := secret.GetSecretKey(req.Namespace)
@@ -153,7 +160,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 		// Validate secret holds a certificate
 		if s.Type == "kubernetes.io/tls" {
 			res := r.generator.NewSecret(secret.Name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
-			snap.SetResource(secret.Name, res)
+			secrets = append(secrets, res)
 		} else {
 			err := resourceLoaderError(
 				req, secret.Ref, field.NewPath("spec", "resources").Child("secrets").Index(idx).Child("ref"),
@@ -163,6 +170,14 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 
 		}
 	}
+
+	snap.SetResources(envoy.Endpoint, endpoints)
+	snap.SetResources(envoy.Cluster, clusters)
+	snap.SetResources(envoy.Route, routes)
+	snap.SetResources(envoy.ScopedRoute, scopedRoutes)
+	snap.SetResources(envoy.Listener, listeners)
+	snap.SetResources(envoy.Secret, secrets)
+	snap.SetResources(envoy.Runtime, runtimes)
 
 	return snap, nil
 }

@@ -4,10 +4,10 @@ import (
 	"context"
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
-	resource_v3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
+
+var _ xdss.Cache = Cache{}
 
 // Cache implements "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss".Cache for envoy API v3.
 type Cache struct {
@@ -15,7 +15,12 @@ type Cache struct {
 }
 
 // NewCache returns a Cache object.
-func NewCache(v3 cache_v3.SnapshotCache) Cache {
+func NewCache() Cache {
+	return Cache{v3: cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)}
+}
+
+// NewCache returns a Cache object.
+func NewCacheFromSnapshotCache(v3 cache_v3.SnapshotCache) Cache {
 	return Cache{v3: v3}
 }
 
@@ -41,22 +46,7 @@ func (c Cache) ClearSnapshot(nodeID string) {
 	c.v3.ClearSnapshot(nodeID)
 }
 
-// NewSnapshot returns a Snapshot object
-func (c Cache) NewSnapshot(resourcesVersion string) xdss.Snapshot {
+func (c Cache) NewSnapshot() xdss.Snapshot {
 
-	snap, _ := cache_v3.NewSnapshot(resourcesVersion,
-		map[resource_v3.Type][]cache_types.Resource{
-			resource_v3.EndpointType:        {},
-			resource_v3.ClusterType:         {},
-			resource_v3.RouteType:           {},
-			resource_v3.ScopedRouteType:     {},
-			resource_v3.VirtualHostType:     {},
-			resource_v3.ListenerType:        {},
-			resource_v3.SecretType:          {},
-			resource_v3.RuntimeType:         {},
-			resource_v3.ExtensionConfigType: {},
-		},
-	)
-
-	return Snapshot{v3: snap}
+	return NewSnapshot()
 }

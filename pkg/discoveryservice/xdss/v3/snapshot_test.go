@@ -10,96 +10,66 @@ import (
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 )
 
-func TestSnapshot_SetResource(t *testing.T) {
-	type fields struct {
-		v3 *cache_v3.Snapshot
-	}
+func TestSnapshot_SetResources(t *testing.T) {
 	type args struct {
-		name string
-		res  envoy.Resource
+		rType     envoy.Type
+		resources []envoy.Resource
 	}
 	tests := []struct {
 		name     string
-		fields   fields
+		snapshot xdss.Snapshot
 		args     args
-		wantSnap xdss.Snapshot
+		want     xdss.Snapshot
 	}{
 		{
-			name: "Writes resource in the snapshot",
-			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-				}}},
-			args: args{name: "endpoint", res: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}},
-			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
-						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-				}}},
+			name:     "Writes resources in the snapshot",
+			snapshot: NewSnapshot(),
+			args: args{
+				rType: envoy.Endpoint,
+				resources: []envoy.Resource{
+					&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+				},
+			},
+			want: func() xdss.Snapshot {
+				s := NewSnapshot()
+				s.v3.Resources[cache_types.Endpoint] = cache_v3.NewResources("845f965864", []cache_types.Resource{
+					&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+				})
+				return s
+			}(),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := Snapshot{
-				v3: tt.fields.v3,
-			}
-			s.SetResource(tt.args.name, tt.args.res)
-			if !testutil.SnapshotsAreEqual(s, tt.wantSnap) {
-				t.Errorf("Snapshot.SetResource() = %v, want %v", s, tt.wantSnap)
+			s := tt.snapshot
+			if got := s.SetResources(tt.args.rType, tt.args.resources); !testutil.SnapshotsAreEqual(got, tt.want) {
+				t.Errorf("Snapshot.SetResources() = %v, want %v", got.(Snapshot).v3.Resources, tt.want.(Snapshot).v3.Resources)
 			}
 		})
 	}
 }
 
 func TestSnapshot_GetResources(t *testing.T) {
-	type fields struct {
-		v3 *cache_v3.Snapshot
-	}
 	type args struct {
 		rType envoy.Type
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   map[string]envoy.Resource
+		name     string
+		snapshot xdss.Snapshot
+		args     args
+		want     map[string]envoy.Resource
 	}{
 		{
 			name: "Returns a map with the snapshot resources",
-			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
-						"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-				}}},
+			snapshot: NewSnapshot().SetResources(envoy.Endpoint, []envoy.Resource{
+				&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+			}),
 			args: args{rType: envoy.Endpoint},
 			want: map[string]envoy.Resource{
 				"endpoint": &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
@@ -108,9 +78,7 @@ func TestSnapshot_GetResources(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := Snapshot{
-				v3: tt.fields.v3,
-			}
+			s := tt.snapshot
 			if got := s.GetResources(tt.args.rType); !envoy_resources.ResourcesEqual(got, tt.want) {
 				t.Errorf("Snapshot.GetResources() = %v, want %v", got, tt.want)
 			}
@@ -119,58 +87,35 @@ func TestSnapshot_GetResources(t *testing.T) {
 }
 
 func TestSnapshot_GetVersion(t *testing.T) {
-	type fields struct {
-		v3 *cache_v3.Snapshot
-	}
 	type args struct {
 		rType envoy.Type
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name     string
+		snapshot xdss.Snapshot
+		args     args
+		want     string
 	}{
 		{
 			name: "Returns the snapshot's version for the given resource type",
-			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "7", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "9", Items: map[string]cache_types.ResourceWithTTL{}},
-				}}},
+			snapshot: NewSnapshot().SetResources(envoy.Endpoint, []envoy.Resource{
+				&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+			}),
 			args: args{envoy.Endpoint},
-			want: "1",
+			want: "845f965864",
 		},
 		{
 			name: "Returns the snapshot's version for the given resource type",
-			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "7", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "9", Items: map[string]cache_types.ResourceWithTTL{}},
-				}}},
-			args: args{envoy.Secret},
-			want: "7",
+			snapshot: NewSnapshot().SetResources(envoy.Route, []envoy.Resource{
+				&envoy_config_route_v3.RouteConfiguration{Name: "route"},
+			}),
+			args: args{envoy.Route},
+			want: "6645547657",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := Snapshot{
-				v3: tt.fields.v3,
-			}
+			s := tt.snapshot
 			if got := s.GetVersion(tt.args.rType); got != tt.want {
 				t.Errorf("Snapshot.GetVersion() = %v, want %v", got, tt.want)
 			}
@@ -179,56 +124,29 @@ func TestSnapshot_GetVersion(t *testing.T) {
 }
 
 func TestSnapshot_SetVersion(t *testing.T) {
-	type fields struct {
-		v3 *cache_v3.Snapshot
-	}
 	type args struct {
 		rType   envoy.Type
 		version string
 	}
 	tests := []struct {
 		name     string
-		fields   fields
+		snapshot xdss.Snapshot
 		args     args
-		wantSnap xdss.Snapshot
 	}{
 		{
 			name: "Writes the version for the given resource type",
-			fields: fields{v3: &cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "7", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "9", Items: map[string]cache_types.ResourceWithTTL{}},
-				}}},
+			snapshot: NewSnapshot().SetResources(envoy.Route, []envoy.Resource{
+				&envoy_config_route_v3.RouteConfiguration{Name: "listener"},
+			}),
 			args: args{rType: envoy.Secret, version: "xxxx"},
-			wantSnap: Snapshot{v3: &cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "1", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "2", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "3", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "4", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "5", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "6", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "8", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "9", Items: map[string]cache_types.ResourceWithTTL{}},
-				}}},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := Snapshot{
-				v3: tt.fields.v3,
-			}
+			s := tt.snapshot
 			s.SetVersion(tt.args.rType, tt.args.version)
-			if !testutil.SnapshotsAreEqual(s, tt.wantSnap) {
-				t.Errorf("Snapshot.SetVersion() = %v, want %v", s, tt.wantSnap)
+			if s.GetVersion(tt.args.rType) != tt.args.version {
+				t.Errorf("Snapshot.SetVersion() = %v, want %v", s.GetVersion(tt.args.rType), tt.args.version)
 			}
 		})
 	}
@@ -246,7 +164,7 @@ func Test_v3CacheResources(t *testing.T) {
 		{
 			name: "Returns the internal resource type for the v3 secret",
 			args: args{rType: envoy.Secret},
-			want: 6,
+			want: int(cache_types.Secret),
 		},
 	}
 	for _, tt := range tests {
@@ -259,58 +177,37 @@ func Test_v3CacheResources(t *testing.T) {
 }
 
 func TestSnapshot_recalculateVersion(t *testing.T) {
-	type fields struct {
-		v3 *cache_v3.Snapshot
-	}
 	type args struct {
 		rType envoy.Type
 	}
 	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   string
+		name     string
+		snapshot Snapshot
+		args     args
+		want     string
 	}{
 		{
 			name: "computes the hash of endpoints",
-			fields: fields{
-				v3: &cache_v3.Snapshot{
-					Resources: [9]cache_v3.Resources{
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{
-							"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					},
-				},
-			},
+			// "endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
+			snapshot: func() Snapshot {
+				s := NewSnapshot()
+				s.v3.Resources[cache_types.Endpoint] = cache_v3.NewResources("xxxx", []cache_types.Resource{
+					&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+				})
+				return s
+			}(),
 			args: args{rType: envoy.Endpoint},
 			want: "845f965864",
 		},
 		{
 			name: "computes the hash of clusters",
-			fields: fields{
-				v3: &cache_v3.Snapshot{
-					Resources: [9]cache_v3.Resources{
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{
-							"cluster": {Resource: &envoy_config_cluster_v3.Cluster{Name: "cluster"}},
-						}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					},
-				},
-			},
+			snapshot: func() Snapshot {
+				s := NewSnapshot()
+				s.v3.Resources[cache_types.Cluster] = cache_v3.NewResources("xxxx", []cache_types.Resource{
+					&envoy_config_cluster_v3.Cluster{Name: "cluster"},
+				})
+				return s
+			}(),
 			args: args{
 				rType: envoy.Cluster,
 			},
@@ -318,40 +215,29 @@ func TestSnapshot_recalculateVersion(t *testing.T) {
 		},
 		{
 			name: "computes the hash of secrets",
-			fields: fields{
-				v3: &cache_v3.Snapshot{
-					Resources: [9]cache_v3.Resources{
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "56c6b8dc45", Items: map[string]cache_types.ResourceWithTTL{
-							"secret": {Resource: &envoy_extensions_transport_sockets_tls_v3.Secret{
-								Name: "secret",
-								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-									TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-										PrivateKey: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
-										},
-										CertificateChain: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-										}}}}}}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "xxxx", Items: map[string]cache_types.ResourceWithTTL{}},
-					},
-				},
-			},
+			snapshot: func() Snapshot {
+				s := NewSnapshot()
+				s.v3.Resources[cache_types.Secret] = cache_v3.NewResources("xxxx", []cache_types.Resource{
+					&envoy_extensions_transport_sockets_tls_v3.Secret{
+						Name: "secret",
+						Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+							TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+								PrivateKey: &envoy_config_core_v3.DataSource{
+									Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+								},
+								CertificateChain: &envoy_config_core_v3.DataSource{
+									Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+								}}}},
+				})
+				return s
+			}(),
 			args: args{rType: envoy.Secret},
 			want: "56c6b8dc45",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := Snapshot{
-				v3: tt.fields.v3,
-			}
+			s := tt.snapshot
 			if got := s.recalculateVersion(tt.args.rType); got != tt.want {
 				t.Errorf("Snapshot.recalculateVersion() = %v, want %v", got, tt.want)
 			}

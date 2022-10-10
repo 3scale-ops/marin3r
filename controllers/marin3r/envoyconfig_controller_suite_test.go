@@ -7,16 +7,14 @@ import (
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
+	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/util"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,7 +32,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 		// Create a nodeID for each block
 		nodeID = nameGenerator.Generate()
 		// Add any setup steps that needs to be executed before each test
-		testNamespace := &v1.Namespace{
+		testNamespace := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
@@ -42,7 +40,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 		err := k8sClient.Create(context.Background(), testNamespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		n := &v1.Namespace{}
+		n := &corev1.Namespace{}
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
 		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
@@ -52,7 +50,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 	AfterEach(func() {
 
 		// Delete the namespace
-		testNamespace := &v1.Namespace{
+		testNamespace := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
@@ -60,7 +58,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 		err := k8sClient.Delete(context.Background(), testNamespace, client.PropagationPolicy(metav1.DeletePropagationForeground))
 		Expect(err).ToNot(HaveOccurred())
 
-		n := &v1.Namespace{}
+		n := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
 			if err != nil && errors.IsNotFound(err) {
@@ -113,19 +111,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				// Validate the cache for the nodeID
 				wantRevision := util.Hash(ec.Spec.EnvoyResources)
-				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-					Resources: [9]cache_v3.Resources{
-						{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
-							"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					}})
+				wantSnap := xdss_v3.NewSnapshot().SetResources(envoy.Endpoint, []envoy.Resource{
+					&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+				})
 
 				// Wait for the revision to get written to the xDS cache
 				Eventually(func() bool {

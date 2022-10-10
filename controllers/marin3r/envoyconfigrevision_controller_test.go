@@ -7,7 +7,6 @@ import (
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +36,7 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 		r := &EnvoyConfigRevisionReconciler{
 			Client:   fake.NewFakeClient(ecr),
 			Scheme:   scheme.Scheme,
-			XdsCache: xdss_v3.NewCache(cache_v3.NewSnapshotCache(true, cache_v3.IDHash{}, nil)),
+			XdsCache: xdss_v3.NewCache(),
 			Log:      ctrl.Log.WithName("test"),
 		}
 		if err := r.taintSelf(context.TODO(), ecr, "test", "test", r.Log); err != nil {
