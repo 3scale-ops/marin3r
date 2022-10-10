@@ -12,6 +12,7 @@ func Mappings() map[envoy.Type]string {
 		envoy.Listener:    resource_v3.ListenerType,
 		envoy.Route:       resource_v3.RouteType,
 		envoy.ScopedRoute: resource_v3.ScopedRouteType,
+		envoy.VirtualHost: resource_v3.VirtualHostType,
 		envoy.Cluster:     resource_v3.ClusterType,
 		envoy.Endpoint:    resource_v3.EndpointType,
 		envoy.Secret:      resource_v3.SecretType,

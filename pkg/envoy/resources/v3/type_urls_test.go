@@ -22,6 +22,7 @@ func TestMappings(t *testing.T) {
 				"Endpoint":    "type.googleapis.com/envoy.config.endpoint.v3.ClusterLoadAssignment",
 				"Secret":      "type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.Secret",
 				"Runtime":     "type.googleapis.com/envoy.service.runtime.v3.Runtime",
+				"VirtualHost": "type.googleapis.com/envoy.config.route.v3.VirtualHost",
 			},
 		},
 	}
