@@ -91,7 +91,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 			},
 		},
 		LivenessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/ready",
 					Port:   intstr.IntOrString{IntVal: cc.AdminPort},
@@ -105,7 +105,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 			FailureThreshold:    cc.LivenessProbe.FailureThreshold,
 		},
 		ReadinessProbe: &corev1.Probe{
-			Handler: corev1.Handler{
+			ProbeHandler: corev1.ProbeHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   "/ready",
 					Port:   intstr.IntOrString{IntVal: cc.AdminPort},
@@ -143,7 +143,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 				},
 			},
 			LivenessProbe: &corev1.Probe{
-				Handler: corev1.Handler{
+				ProbeHandler: corev1.ProbeHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   shutdownmanager.HealthEndpoint,
 						Port:   intstr.FromInt(int(cc.ShutdownManagerPort)),
@@ -154,7 +154,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 				PeriodSeconds:       10,
 			},
 			Lifecycle: &corev1.Lifecycle{
-				PreStop: &corev1.Handler{
+				PreStop: &corev1.LifecycleHandler{
 					HTTPGet: &corev1.HTTPGetAction{
 						Path:   shutdownmanager.DrainEndpoint,
 						Port:   intstr.FromInt(int(cc.ShutdownManagerPort)),
@@ -168,7 +168,7 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 		})
 
 		containers[0].Lifecycle = &corev1.Lifecycle{
-			PreStop: &corev1.Handler{
+			PreStop: &corev1.LifecycleHandler{
 				HTTPGet: &corev1.HTTPGetAction{
 					Path:   shutdownmanager.ShutdownEndpoint,
 					Port:   intstr.FromInt(int(cc.ShutdownManagerPort)),

@@ -35,11 +35,22 @@ IMAGE_TAG_BASE ?= quay.io/3scale/marin3r
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
+# BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
+BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+
+# USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
+# You can enable this value if you would like to use SHA Based Digests
+# To enable set flag to true
+USE_IMAGE_DIGESTS ?= false
+ifeq ($(USE_IMAGE_DIGESTS), true)
+    BUNDLE_GEN_FLAGS += --use-image-digests
+endif
+
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_TAG_BASE):v$(VERSION)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.22
+ENVTEST_K8S_VERSION = 1.24
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -145,20 +156,6 @@ e2e-envtest-suite: export KUBECONFIG = $(PWD)/kubeconfig
 e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 	$(GINKGO) -r -p ./test/e2e
 
-ENVTEST = $(shell pwd)/bin/setup-envtest
-envtest: ## Download envtest-setup locally if necessary.
-	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
-
-.PHONY: gocovmerge
-GOCOVMERGE = $(shell pwd)/bin/gocovmerge
-gocovmerge: ## Download gocovmerge locally if necessary
-	$(call go-get-tool,$(GOCOVMERGE),github.com/wadey/gocovmerge)
-
-.PHONY: ginkgo
-GINKGO = $(shell pwd)/bin/ginkgo
-ginkgo: ## Download ginkgo locally if necessary
-	$(call go-get-tool,$(GINKGO),github.com/onsi/ginkgo/ginkgo)
-
 ##@ Build
 
 build: generate fmt vet go-generate ## Build manager binary.
@@ -196,34 +193,73 @@ deploy-test: manifests kustomize ## Deploy controller (test configuration) to th
 undeploy-test: manifests kustomize ## Undeploy controller (test configuration) from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/test | kubectl delete -f -
 
-CONTROLLER_GEN = $(shell pwd)/bin/controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.7.0)
+##@ Build Dependencies
 
-KUSTOMIZE = $(shell pwd)/bin/kustomize
-kustomize: ## Download kustomize locally if necessary.
-	$(call go-get-tool,$(KUSTOMIZE),sigs.k8s.io/kustomize/kustomize/v3@v3.8.7)
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
 
-# go-get-tool will 'go get' any package $2 and install it to $1.
-PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
-define go-get-tool
-@[ -f $(1) ] || { \
-set -e ;\
-TMP_DIR=$$(mktemp -d) ;\
-cd $$TMP_DIR ;\
-go mod init tmp ;\
-echo "Downloading $(2)" ;\
-GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
-rm -rf $$TMP_DIR ;\
-}
-endef
+## Tool Binaries
+KUSTOMIZE ?= $(LOCALBIN)/kustomize
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+GINKGO ?= $(LOCALBIN)/ginkgo
+GOCOVMERGE ?= $(LOCALBIN)/gocovmerge
+CRD_REFDOCS ?= $(LOCALBIN)/crd-ref-docs
+KIND ?= $(LOCALBIN)/kind
+
+## Tool Versions
+KUSTOMIZE_VERSION ?= v3.8.7
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
+GINKGO_VERSION ?= v1.16.5
+CRD_REFDOCS_VERSION ?= v0.0.8
+KIND_VERSION ?= v0.16.0
+
+KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+.PHONY: kustomize
+kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
+$(KUSTOMIZE): $(LOCALBIN)
+	test -s $(KUSTOMIZE) || curl -s $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN)
+
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(CONTROLLER_GEN) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(ENVTEST) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: ginkgo
+ginkgo: $(GINKGO) ## Download ginkgo locally if necessary
+$(GINKGO):
+	test -s $(GINKGO) || GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/ginkgo@$(GINKGO_VERSION)
+
+.PHONY: gocovmerge
+gocovmerge: $(GOCOVMERGE) ## Download gocovmerge locally if necessary
+$(GOCOVMERGE):
+	test -s $(GOCOVMERGE) || GOBIN=$(LOCALBIN) go install github.com/wadey/gocovmerge@latest
+
+.PHONY: crd-ref-docs
+crd-ref-docs: ## Download crd-ref-docs locally if necessary
+	test -s $(GOCOVMERGE) || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REFDOCS_VERSION)
+
+.PHONY: kind
+KIND = $(shell pwd)/bin/kind
+kind: $(KIND) ## Download kind locally if necessary
+$(KIND):
+	test -s $(KIND) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/kind@$(KIND_VERSION)
+
+##@ OLM related targets
 
 .PHONY: bundle
 bundle: operator-sdk manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	cd config/webhook && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
@@ -243,7 +279,7 @@ ifeq (,$(shell which opm 2>/dev/null))
 	set -e ;\
 	mkdir -p $(dir $(OPM)) ;\
 	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.15.1/$${OS}-$${ARCH}-opm ;\
+	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.23.0/$${OS}-$${ARCH}-opm ;\
 	chmod +x $(OPM) ;\
 	}
 else
@@ -309,11 +345,6 @@ kind-delete: ## Deletes the kind cluster and the registry
 kind-delete: kind
 	$(KIND) delete cluster
 
-.PHONY: kind
-KIND = $(shell pwd)/bin/kind
-kind: ## Download kind locally if necessary
-	$(call go-get-tool,$(KIND),sigs.k8s.io/kind@v0.16.0)
-
 ##@ Release
 
 prepare-alpha-release: generate fmt vet manifests go-generate bundle ## Generates bundle manifests for alpha channel release
@@ -358,11 +389,8 @@ run-envoy: certs
 
 ##@ Other
 
-$(shell pwd)/bin:
-	mkdir -p $(shell pwd)/bin
-
 .PHONY: operator-sdk
-OPERATOR_SDK_RELEASE = v1.15.0
+OPERATOR_SDK_RELEASE = v1.23.0
 OPERATOR_SDK = bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
 operator-sdk: ## Download operator-sdk locally if necessary.
 ifeq (,$(wildcard $(OPERATOR_SDK)))
@@ -378,11 +406,6 @@ else
 OPERATOR_SDK = $(shell which $(OPERATOR_SDK))
 endif
 endif
-
-.PHONY: crd-ref-docs
-CRD_REFDOCS = $(shell pwd)/bin/crd-ref-docs
-crd-ref-docs: ## Download crd-ref-docs locally if necessary
-	$(call go-get-tool,$(CRD_REFDOCS),github.com/elastic/crd-ref-docs@v0.0.7)
 
 refdocs: ## Generates api reference documentation from code
 refdocs: crd-ref-docs

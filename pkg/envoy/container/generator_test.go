@@ -105,7 +105,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 					},
 				},
 				LivenessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
+					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Path:   "/ready",
 							Port:   intstr.IntOrString{IntVal: 5000},
@@ -119,7 +119,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 					FailureThreshold:    1,
 				},
 				ReadinessProbe: &corev1.Probe{
-					Handler: corev1.Handler{
+					ProbeHandler: corev1.ProbeHandler{
 						HTTPGet: &corev1.HTTPGetAction{
 							Path:   "/ready",
 							Port:   intstr.IntOrString{IntVal: 5000},
@@ -232,7 +232,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 						},
 					},
 					LivenessProbe: &corev1.Probe{
-						Handler: corev1.Handler{
+						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   "/ready",
 								Port:   intstr.IntOrString{IntVal: 5000},
@@ -246,7 +246,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 						FailureThreshold:    1,
 					},
 					ReadinessProbe: &corev1.Probe{
-						Handler: corev1.Handler{
+						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   "/ready",
 								Port:   intstr.IntOrString{IntVal: 5000},
@@ -263,7 +263,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 					TerminationMessagePolicy: corev1.TerminationMessageReadFile,
 					ImagePullPolicy:          corev1.PullIfNotPresent,
 					Lifecycle: &corev1.Lifecycle{
-						PreStop: &corev1.Handler{
+						PreStop: &corev1.LifecycleHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   shutdownmanager.ShutdownEndpoint,
 								Port:   intstr.FromInt(30000),
@@ -291,7 +291,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 						},
 					},
 					LivenessProbe: &corev1.Probe{
-						Handler: corev1.Handler{
+						ProbeHandler: corev1.ProbeHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   shutdownmanager.HealthEndpoint,
 								Port:   intstr.FromInt(30000),
@@ -302,7 +302,7 @@ func TestContainerConfig_Containers(t *testing.T) {
 						PeriodSeconds:       10,
 					},
 					Lifecycle: &corev1.Lifecycle{
-						PreStop: &corev1.Handler{
+						PreStop: &corev1.LifecycleHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   shutdownmanager.DrainEndpoint,
 								Port:   intstr.FromInt(30000),

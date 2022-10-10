@@ -1029,7 +1029,7 @@ func Test_envoySidecarConfig_addExtraLifecycleHooks(t *testing.T) {
 			want: []corev1.Container{
 				{Name: "c1",
 					Lifecycle: &corev1.Lifecycle{
-						PreStop: &corev1.Handler{
+						PreStop: &corev1.LifecycleHandler{
 							HTTPGet: &corev1.HTTPGetAction{
 								Path:   shutdownmanager.DrainEndpoint,
 								Port:   intstr.FromInt(int(defaults.ShtdnMgrDefaultServerPort)),
