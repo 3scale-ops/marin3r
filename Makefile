@@ -362,27 +362,25 @@ catalog-retag-latest:
 	$(MAKE) docker-push IMG=$(IMAGE_TAG_BASE)-catalog:latest
 
 ##@ Run components locally
-
-EASYRSA_VERSION ?= v3.0.6
-certs:
-	hack/gen-certs.sh $(EASYRSA_VERSION)
+tmp/certs:
+	hack/gen-certs.sh
 
 ENVOY_VERSION ?= v1.20.1
 
 run-ds: ## locally starts a discovery service
-run-ds: manifests generate fmt vet go-generate certs
+run-ds: manifests generate fmt vet go-generate tmp/certs
 	WATCH_NAMESPACE="default" go run main.go \
 		discovery-service \
-		--server-certificate-path certs/server \
-		--ca-certificate-path certs/ca \
+		--server-certificate-path tmp/certs/server \
+		--ca-certificate-path tmp/certs/ca \
 		--debug
 
 run-envoy: ## runs an envoy process in a container that will try to connect to a local discovery service
-run-envoy: certs
+run-envoy: tmp/certs
 	docker run -ti --rm \
 		--network=host \
 		--add-host marin3r.default.svc:127.0.0.1 \
-		-v $$(pwd)/certs:/etc/envoy/tls \
+		-v $$(pwd)/tmp/certs:/etc/envoy/tls \
 		-v $$(pwd)/examples/local:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
