@@ -161,7 +161,7 @@ func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 
 // GetCache returns the Cache
 func (xdss *XdsServer) GetCache(version envoy.APIVersion) xdss.Cache {
-	return xdss_v3.NewCache(xdss.snapshotCacheV3)
+	return xdss_v3.NewCacheFromSnapshotCache(xdss.snapshotCacheV3)
 }
 
 // GetCache returns the discovery stats

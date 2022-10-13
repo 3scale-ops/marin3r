@@ -1,18 +1,14 @@
 package discoveryservice
 
 import (
+	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util"
-	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
-	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
-	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
-	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
-	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
+	resource_v3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
 
 // Snapshot implements "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss".Snapshot for envoy API v3.
@@ -20,9 +16,24 @@ type Snapshot struct {
 	v3 *cache_v3.Snapshot
 }
 
-// NewSnapshot returns a Snapshot object.
-func NewSnapshot(v3 *cache_v3.Snapshot) Snapshot {
-	return Snapshot{v3: v3}
+// NewSnapshot returns a Snapshot object
+func NewSnapshot() Snapshot {
+
+	snap, _ := cache_v3.NewSnapshot("",
+		map[resource_v3.Type][]cache_types.Resource{
+			resource_v3.EndpointType:        {},
+			resource_v3.ClusterType:         {},
+			resource_v3.RouteType:           {},
+			resource_v3.ScopedRouteType:     {},
+			resource_v3.VirtualHostType:     {},
+			resource_v3.ListenerType:        {},
+			resource_v3.SecretType:          {},
+			resource_v3.RuntimeType:         {},
+			resource_v3.ExtensionConfigType: {},
+		},
+	)
+
+	return Snapshot{v3: snap}
 }
 
 // Consistent check verifies that the dependent resources are exactly listed in the
@@ -37,43 +48,19 @@ func (s Snapshot) Consistent() error {
 	return s.v3.Consistent()
 }
 
-// SetResource writes the given v3 resource in the Snapshot object.
-func (s Snapshot) SetResource(name string, res envoy.Resource) {
-	var rType envoy.Type
+func (s Snapshot) SetResources(rType envoy.Type, resources []envoy.Resource) xdss.Snapshot {
 
-	switch o := res.(type) {
-
-	case *envoy_config_endpoint_v3.ClusterLoadAssignment:
-		rType = envoy.Endpoint
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
-
-	case *envoy_config_cluster_v3.Cluster:
-		rType = envoy.Cluster
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
-
-	case *envoy_config_route_v3.RouteConfiguration:
-		rType = envoy.Route
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
-
-	case *envoy_config_route_v3.ScopedRouteConfiguration:
-		rType = envoy.ScopedRoute
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
-
-	case *envoy_config_listener_v3.Listener:
-		rType = envoy.Listener
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
-
-	case *envoy_extensions_transport_sockets_tls_v3.Secret:
-		rType = envoy.Secret
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
-
-	case *envoy_service_runtime_v3.Runtime:
-		rType = envoy.Runtime
-		s.v3.Resources[v3CacheResources(rType)].Items[name] = cache_types.ResourceWithTTL{Resource: o}
+	items := make([]cache_types.Resource, 0, len(resources))
+	for _, r := range resources {
+		items = append(items, cache_types.Resource(r))
 	}
+
+	cv3resources := cache_v3.NewResources("", items)
+	s.v3.Resources[v3CacheResources(rType)] = cv3resources
 
 	s.SetVersion(rType, s.recalculateVersion(rType))
 
+	return s
 }
 
 // GetResources selects snapshot resources by type.
@@ -113,15 +100,15 @@ func (s Snapshot) recalculateVersion(rType envoy.Type) string {
 
 func v3CacheResources(rType envoy.Type) int {
 	types := map[envoy.Type]int{
-		envoy.Endpoint:        0,
-		envoy.Cluster:         1,
-		envoy.Route:           2,
-		envoy.ScopedRoute:     3,
-		envoy.VirtualHost:     4,
-		envoy.Listener:        5,
-		envoy.Secret:          6,
-		envoy.Runtime:         7,
-		envoy.ExtensionConfig: 8,
+		envoy.Endpoint:        int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.Endpoint])),
+		envoy.Cluster:         int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.Cluster])),
+		envoy.Route:           int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.Route])),
+		envoy.ScopedRoute:     int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.ScopedRoute])),
+		envoy.VirtualHost:     int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.VirtualHost])),
+		envoy.Listener:        int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.Listener])),
+		envoy.Secret:          int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.Secret])),
+		envoy.Runtime:         int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.Runtime])),
+		envoy.ExtensionConfig: int(cache_v3.GetResponseType(envoy_resources_v3.Mappings()[envoy.ExtensionConfig])),
 	}
 
 	return types[rType]

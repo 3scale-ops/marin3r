@@ -116,7 +116,7 @@ func TestXdsServer_GetCache(t *testing.T) {
 				&xdss_v3.Callbacks{Logger: ctrl.Log},
 				stats.New(),
 			},
-			xdss_v3.NewCache(snapshotCacheV3),
+			xdss_v3.NewCache(),
 			envoy.APIv3,
 		},
 	}

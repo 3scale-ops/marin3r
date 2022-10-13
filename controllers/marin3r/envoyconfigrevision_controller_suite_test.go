@@ -13,8 +13,6 @@ import (
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
-	cache_types "github.com/envoyproxy/go-control-plane/pkg/cache/types"
-	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/operator-framework/operator-lib/status"
@@ -131,19 +129,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return err
 				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
-				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-					Resources: [9]cache_v3.Resources{
-						{Version: "845f965864", Items: map[string]cache_types.ResourceWithTTL{
-							"endpoint": {Resource: &envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"}}}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					}})
+				wantSnap := xdss_v3.NewSnapshot().SetResources(envoy.Endpoint, []envoy.Resource{
+					&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
+				})
 				Expect(testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)).To(BeTrue())
 
 			})
@@ -195,29 +183,18 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
-			wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-				Resources: [9]cache_v3.Resources{
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					{
-						Version: "56c6b8dc45", Items: map[string]cache_types.ResourceWithTTL{
-							"secret": {Resource: &envoy_extensions_transport_sockets_tls_v3.Secret{
-								Name: "secret",
-								Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-									TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-										PrivateKey: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
-										},
-										CertificateChain: &envoy_config_core_v3.DataSource{
-											Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
-										}}}}}}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-				}})
+			wantSnap := xdss_v3.NewSnapshot().SetResources(envoy.Secret, []envoy.Resource{
+				&envoy_extensions_transport_sockets_tls_v3.Secret{
+					Name: "secret",
+					Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+						TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+							PrivateKey: &envoy_config_core_v3.DataSource{
+								Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("key")},
+							},
+							CertificateChain: &envoy_config_core_v3.DataSource{
+								Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+							}}}},
+			})
 
 			By("waiting for the envoy resources to be published in the xDS cache")
 			Eventually(func() bool {
@@ -247,29 +224,18 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					return string(secret.Data["tls.crt"]) == "new-cert"
 				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
-				wantSnap := xdss_v3.NewSnapshot(&cache_v3.Snapshot{
-					Resources: [9]cache_v3.Resources{
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{
-							Version: "66bb868d4f", Items: map[string]cache_types.ResourceWithTTL{
-								"secret": {Resource: &envoy_extensions_transport_sockets_tls_v3.Secret{
-									Name: "secret",
-									Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
-										TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
-											PrivateKey: &envoy_config_core_v3.DataSource{
-												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-key")},
-											},
-											CertificateChain: &envoy_config_core_v3.DataSource{
-												Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-cert")},
-											}}}}}}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-						{Version: "", Items: map[string]cache_types.ResourceWithTTL{}},
-					}})
+				wantSnap := xdss_v3.NewSnapshot().SetResources(envoy.Secret, []envoy.Resource{
+					&envoy_extensions_transport_sockets_tls_v3.Secret{
+						Name: "secret",
+						Type: &envoy_extensions_transport_sockets_tls_v3.Secret_TlsCertificate{
+							TlsCertificate: &envoy_extensions_transport_sockets_tls_v3.TlsCertificate{
+								PrivateKey: &envoy_config_core_v3.DataSource{
+									Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-key")},
+								},
+								CertificateChain: &envoy_config_core_v3.DataSource{
+									Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("new-cert")},
+								}}}},
+				})
 
 				By("checking the new certificate it's in the xDS cache")
 				Eventually(func() bool {
