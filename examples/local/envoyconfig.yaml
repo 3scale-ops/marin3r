@@ -12,7 +12,7 @@ spec:
       - name: echo_api
         value: |
           name: echo_api
-          connect_timeout: 10ms
+          connect_timeout: 1s
           type: STRICT_DNS
           dns_lookup_family: V4_ONLY
           lb_policy: ROUND_ROBIN
@@ -58,4 +58,15 @@ spec:
                     stat_prefix: ingress_http
                     rds: { route_config_name: "echo-api.3scale.net", config_source: { ads: {}, resource_api_version: "V3" }}
                     http_filters:
-                      - name: envoy.filters.http.router
+                      - name: "http_router"
+                        config_discovery:
+                          config_source: { ads: {}, resource_api_version: V3 }
+                          type_urls: ["type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"]
+
+    extensionConfigs:
+      - name: http_router
+        value: |
+          name: http_router
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            dynamic_stats: false
