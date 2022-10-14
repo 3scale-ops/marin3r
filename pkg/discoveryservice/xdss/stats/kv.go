@@ -99,8 +99,9 @@ func (s *Stats) DecrementCounter(nodeID, rType, version, podID, key string, decr
 func (s *Stats) FilterKeys(filters ...string) map[string]kv.Item {
 	all := s.store.Items()
 	selected := map[string]kv.Item{}
+	var isSelected bool
 	for key, value := range all {
-		isSelected := true
+		isSelected = true
 		for _, filter := range filters {
 			if !strings.Contains(key, filter) {
 				isSelected = false
