@@ -112,7 +112,8 @@ func calculateRevisionTaintedCondition(ecr *marin3rv1alpha1.EnvoyConfigRevision,
 		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.ScopedRoute, ecr.GetEnvoyAPIVersion()), vt.ScopedRoutes) == threshold ||
 		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Listener, ecr.GetEnvoyAPIVersion()), vt.Listeners) == threshold ||
 		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Secret, ecr.GetEnvoyAPIVersion()), vt.Secrets) == threshold ||
-		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Runtime, ecr.GetEnvoyAPIVersion()), vt.Runtimes) == threshold {
+		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.Runtime, ecr.GetEnvoyAPIVersion()), vt.Runtimes) == threshold ||
+		dStats.GetPercentageFailing(ecr.Spec.NodeID, envoy_resources.TypeURL(envoy.ExtensionConfig, ecr.GetEnvoyAPIVersion()), vt.ExtensionConfigs) == threshold {
 		return &status.Condition{
 			Type:    marin3rv1alpha1.RevisionTaintedCondition,
 			Reason:  "ResourcesFailing",

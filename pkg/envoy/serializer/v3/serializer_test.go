@@ -10,6 +10,7 @@ import (
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	http_connection_manager_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	envoy_service_runtime_v3 "github.com/envoyproxy/go-control-plane/envoy/service/runtime/v3"
 	"google.golang.org/protobuf/proto"
@@ -168,6 +169,25 @@ var (
 			Fields: map[string]*structpb.Value{
 				"static_layer_0": {Kind: &structpb.Value_StringValue{StringValue: "value"}},
 			}}}
+
+	extensionConfigJSON string                                     = `{"name":"test","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager","stat_prefix":"http","route_config":{"name":"route"},"http_filters":[{"name":"envoy.filters.http.router"}]}}`
+	extensionConfig     *envoy_config_core_v3.TypedExtensionConfig = &envoy_config_core_v3.TypedExtensionConfig{
+		Name: "test",
+		TypedConfig: func() *anypb.Any {
+			any, err := anypb.New(
+				&http_connection_manager_v3.HttpConnectionManager{
+					StatPrefix: "http",
+					RouteSpecifier: &http_connection_manager_v3.HttpConnectionManager_RouteConfig{
+						RouteConfig: &envoy_config_route_v3.RouteConfiguration{Name: "route"},
+					},
+					HttpFilters: []*http_connection_manager_v3.HttpFilter{{Name: "envoy.filters.http.router"}},
+				})
+			if err != nil {
+				panic(err)
+			}
+			return any
+		}(),
+	}
 )
 
 func TestJSON_Marshal(t *testing.T) {
@@ -228,6 +248,13 @@ func TestJSON_Marshal(t *testing.T) {
 			s:       JSON{},
 			args:    args{res: runtime},
 			want:    runtimeJSON,
+			wantErr: false,
+		},
+		{
+			name:    "Serialize extension config to json",
+			s:       JSON{},
+			args:    args{res: extensionConfig},
+			want:    extensionConfigJSON,
 			wantErr: false,
 		},
 	}
@@ -304,6 +331,13 @@ func TestJSON_Unmarshal(t *testing.T) {
 			s:       JSON{},
 			args:    args{str: runtimeJSON, res: &envoy_service_runtime_v3.Runtime{}},
 			want:    runtime,
+			wantErr: false,
+		},
+		{
+			name:    "Deserialize extension configuration from json",
+			s:       JSON{},
+			args:    args{str: extensionConfigJSON, res: &envoy_config_core_v3.TypedExtensionConfig{}},
+			want:    extensionConfig,
 			wantErr: false,
 		},
 		{
