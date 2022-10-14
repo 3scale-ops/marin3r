@@ -8,6 +8,7 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	_ "github.com/3scale-ops/marin3r/pkg/envoy/protos/v3"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
@@ -64,12 +65,15 @@ func (s JSON) Unmarshal(str string, res envoy.Resource) error {
 	case *envoy_extensions_transport_sockets_tls_v3.Secret:
 		err = protojson.Unmarshal([]byte(str), o)
 
+	case *envoy_config_core_v3.TypedExtensionConfig:
+		err = protojson.Unmarshal([]byte(str), o)
+
 	default:
-		err = fmt.Errorf("Unknown resource type")
+		err = fmt.Errorf("unknown resource type")
 	}
 
 	if err != nil {
-		return fmt.Errorf("Error deserializing resource: '%s'", err)
+		return fmt.Errorf("error deserializing resource: '%s'", err)
 	}
 	return nil
 }
@@ -79,7 +83,7 @@ type B64JSON struct{}
 func (s B64JSON) Unmarshal(str string, res envoy.Resource) error {
 	b, err := base64.StdEncoding.DecodeString(str)
 	if err != nil {
-		return fmt.Errorf("Error decoding base64 string: '%s'", err)
+		return fmt.Errorf("error decoding base64 string: '%s'", err)
 	}
 
 	js := JSON{}
@@ -96,7 +100,7 @@ type YAML struct{}
 func (s YAML) Unmarshal(str string, res envoy.Resource) error {
 	b, err := yaml.YAMLToJSON([]byte(str))
 	if err != nil {
-		return fmt.Errorf("Error converting yaml to json: '%s'", err)
+		return fmt.Errorf("error converting yaml to json: '%s'", err)
 	}
 
 	js := JSON{}

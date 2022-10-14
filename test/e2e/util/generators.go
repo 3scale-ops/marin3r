@@ -14,11 +14,13 @@ import (
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	envoy_config_listener_v3 "github.com/envoyproxy/go-control-plane/envoy/config/listener/v3"
 	envoy_config_route_v3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
+	envoy_extensions_filters_http_router_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/router/v3"
 	http_connection_manager_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/http_connection_manager/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -181,7 +183,8 @@ func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string)
 }
 
 func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
-	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn func() map[string]envoy.Resource, secrets map[string]string) *marin3rv1alpha1.EnvoyConfig {
+	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() map[string]envoy.Resource,
+	secrets map[string]string) *marin3rv1alpha1.EnvoyConfig {
 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
 
 	return &marin3rv1alpha1.EnvoyConfig{
@@ -250,6 +253,17 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 					}
 					return s
 				}(),
+				ExtensionConfigs: func() []marin3rv1alpha1.EnvoyResource {
+					extensionConfigs := []marin3rv1alpha1.EnvoyResource{}
+					for name, resource := range extensionConfigsGenFn() {
+						json, err := m.Marshal(resource)
+						if err != nil {
+							panic(err)
+						}
+						extensionConfigs = append(extensionConfigs, marin3rv1alpha1.EnvoyResource{Name: name, Value: json})
+					}
+					return extensionConfigs
+				}(),
 			},
 		},
 	}
@@ -295,7 +309,8 @@ func TransportSocketV3(secretName string) *envoy_config_core_v3.TransportSocket 
 	}
 }
 
-func HTTPListenerWithRdsV3(listenerName, routeName string, address, transportSocket proto.Message) (string, *envoy_config_listener_v3.Listener) {
+func HTTPListener(listenerName, routeName, extensionConfigName string,
+	address, transportSocket proto.Message) (string, *envoy_config_listener_v3.Listener) {
 	return listenerName, &envoy_config_listener_v3.Listener{
 		Name:    listenerName,
 		Address: address.(*envoy_config_core_v3.Address),
@@ -318,7 +333,20 @@ func HTTPListenerWithRdsV3(listenerName, routeName string, address, transportSoc
 										RouteConfigName: routeName,
 									},
 								},
-								HttpFilters: []*http_connection_manager_v3.HttpFilter{{Name: "envoy.filters.http.router"}},
+								HttpFilters: []*http_connection_manager_v3.HttpFilter{{
+									Name: extensionConfigName,
+									ConfigType: &http_connection_manager_v3.HttpFilter_ConfigDiscovery{
+										ConfigDiscovery: &envoy_config_core_v3.ExtensionConfigSource{
+											ConfigSource: &envoy_config_core_v3.ConfigSource{
+												ConfigSourceSpecifier: &envoy_config_core_v3.ConfigSource_Ads{
+													Ads: &envoy_config_core_v3.AggregatedConfigSource{},
+												},
+												ResourceApiVersion: envoy_config_core_v3.ApiVersion_V3,
+											},
+											TypeUrls: []string{"type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"},
+										},
+									},
+								}},
 							})
 						if err != nil {
 							panic(err)
@@ -335,6 +363,22 @@ func HTTPListenerWithRdsV3(listenerName, routeName string, address, transportSoc
 			}(),
 		}},
 	}
+}
+
+func HTTPFilterRouter(extensionConfigName string) (string, *envoy_config_core_v3.TypedExtensionConfig) {
+	return extensionConfigName, &envoy_config_core_v3.TypedExtensionConfig{
+		Name: extensionConfigName,
+		TypedConfig: func() *anypb.Any {
+			any, err := anypb.New(
+				&envoy_extensions_filters_http_router_v3.Router{
+					DynamicStats: wrapperspb.Bool(false),
+				},
+			)
+			if err != nil {
+				panic(err)
+			}
+			return any
+		}()}
 }
 
 func ProxyPassRouteV3(routeName, clusterName string) (string, *envoy_config_route_v3.RouteConfiguration) {

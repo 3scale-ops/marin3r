@@ -118,13 +118,14 @@ func (status *EnvoyConfigRevisionStatus) IsTainted() bool {
 // VersionTracker tracks the versions of the resources
 // that this revision publishes in the xDS server cache
 type VersionTracker struct {
-	Endpoints    string `json:"endpoints,omitempty"`
-	Clusters     string `json:"clusters,omitempty"`
-	Routes       string `json:"routes,omitempty"`
-	ScopedRoutes string `json:"scopedRoutes,omitempty"`
-	Listeners    string `json:"listeners,omitempty"`
-	Secrets      string `json:"secrets,omitempty"`
-	Runtimes     string `json:"runtimes,omitempty"`
+	Endpoints        string `json:"endpoints,omitempty"`
+	Clusters         string `json:"clusters,omitempty"`
+	Routes           string `json:"routes,omitempty"`
+	ScopedRoutes     string `json:"scopedRoutes,omitempty"`
+	Listeners        string `json:"listeners,omitempty"`
+	Secrets          string `json:"secrets,omitempty"`
+	Runtimes         string `json:"runtimes,omitempty"`
+	ExtensionConfigs string `json:"extensionConfigs,omitempty"`
 }
 
 // +kubebuilder:object:root=true

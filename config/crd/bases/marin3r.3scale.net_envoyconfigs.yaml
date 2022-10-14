@@ -104,6 +104,25 @@ spec:
                       - value
                       type: object
                     type: array
+                  extensionConfigs:
+                    description: 'ExtensionConfigs is a list of the envoy ExtensionConfig
+                      resource type API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/extension.proto'
+                    items:
+                      description: EnvoyResource holds serialized representation of
+                        an envoy resource
+                      properties:
+                        name:
+                          description: Name of the envoy resource
+                          type: string
+                        value:
+                          description: Value is the serialized representation of the
+                            envoy resource
+                          type: string
+                      required:
+                      - name
+                      - value
+                      type: object
+                    type: array
                   listeners:
                     description: 'Listeners is a list of the envoy Listener resource
                       type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'

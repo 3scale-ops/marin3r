@@ -109,6 +109,10 @@ type EnvoyResources struct {
 	// Secrets is a list of references to Kubernetes Secret objects.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Secrets []EnvoySecretResource `json:"secrets,omitempty"`
+	// ExtensionConfigs is a list of the envoy ExtensionConfig resource type
+	// API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/extension.proto
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	ExtensionConfigs []EnvoyResource `json:"extensionConfigs,omitempty"`
 }
 
 // EnvoyResource holds serialized representation of an envoy

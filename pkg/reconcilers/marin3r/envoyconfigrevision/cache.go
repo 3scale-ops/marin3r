@@ -58,13 +58,14 @@ func (r *CacheReconciler) Reconcile(ctx context.Context, req types.NamespacedNam
 	}
 
 	return &marin3rv1alpha1.VersionTracker{
-		Endpoints:    snap.GetVersion(envoy.Endpoint),
-		Clusters:     snap.GetVersion(envoy.Cluster),
-		Routes:       snap.GetVersion(envoy.Route),
-		ScopedRoutes: snap.GetVersion(envoy.ScopedRoute),
-		Listeners:    snap.GetVersion(envoy.Listener),
-		Secrets:      snap.GetVersion(envoy.Secret),
-		Runtimes:     snap.GetVersion(envoy.Runtime),
+		Endpoints:        snap.GetVersion(envoy.Endpoint),
+		Clusters:         snap.GetVersion(envoy.Cluster),
+		Routes:           snap.GetVersion(envoy.Route),
+		ScopedRoutes:     snap.GetVersion(envoy.ScopedRoute),
+		Listeners:        snap.GetVersion(envoy.Listener),
+		Secrets:          snap.GetVersion(envoy.Secret),
+		Runtimes:         snap.GetVersion(envoy.Runtime),
+		ExtensionConfigs: snap.GetVersion(envoy.ExtensionConfig),
 	}, nil
 }
 
@@ -149,6 +150,19 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 		runtimes = append(runtimes, res)
 	}
 
+	extensionConfigs := make([]envoy.Resource, 0, len(resources.ExtensionConfigs))
+	for idx, extensionConfig := range resources.ExtensionConfigs {
+		res := r.generator.New(envoy.ExtensionConfig)
+		if err := r.decoder.Unmarshal(extensionConfig.Value, res); err != nil {
+			return nil,
+				resourceLoaderError(
+					req, extensionConfig.Value, field.NewPath("spec", "resources").Child("extensionConfigs").Index(idx).Child("value"),
+					fmt.Sprintf("Invalid envoy resource value: '%s'", err),
+				)
+		}
+		extensionConfigs = append(extensionConfigs, res)
+	}
+
 	secrets := make([]envoy.Resource, 0, len(resources.Secrets))
 	for idx, secret := range resources.Secrets {
 		s := &corev1.Secret{}
@@ -178,6 +192,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources *
 	snap.SetResources(envoy.Listener, listeners)
 	snap.SetResources(envoy.Secret, secrets)
 	snap.SetResources(envoy.Runtime, runtimes)
+	snap.SetResources(envoy.ExtensionConfig, extensionConfigs)
 
 	return snap, nil
 }
@@ -191,7 +206,8 @@ func resourceLoaderError(req types.NamespacedName, value interface{}, resPath *f
 }
 
 func areDifferent(a, b xdss.Snapshot) bool {
-	for _, rType := range []envoy.Type{envoy.Endpoint, envoy.Cluster, envoy.Route, envoy.ScopedRoute, envoy.Listener, envoy.Secret, envoy.Runtime} {
+	for _, rType := range []envoy.Type{envoy.Endpoint, envoy.Cluster, envoy.Route, envoy.ScopedRoute,
+		envoy.Listener, envoy.Secret, envoy.Runtime, envoy.ExtensionConfig} {
 		if a.GetVersion(rType) != b.GetVersion(rType) {
 			return true
 		}
