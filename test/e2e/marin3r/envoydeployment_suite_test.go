@@ -112,7 +112,7 @@ var _ = Describe("EnvoyDeployment", func() {
 					return map[string]envoy.Resource{k: v}
 				},
 				func() map[string]envoy.Resource {
-					k, v := testutil.ListenerWithExtensionConfig("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
+					k, v := testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
 					return map[string]envoy.Resource{k: v}
 				},
 				func() map[string]envoy.Resource {

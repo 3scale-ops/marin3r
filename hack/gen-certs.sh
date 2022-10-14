@@ -16,7 +16,7 @@ go run hack/gen_cert.go \
 mkdir -p ${SERVER_CERT_PATH}
 go run hack/gen_cert.go \
     --not-before=$(date '+%Y-%m-%dT%H:%M:%SZ') \
-    --not-after=$(date '+%Y-%m-%dT%H:%M:%SZ' -d '+5 years') \
+    --not-after=$(date '+%Y-%m-%dT%H:%M:%SZ' -d '+10 years') \
     --is-server-certificate=true \
     --common-name=marin3r.default.svc \
     --signer-cert=${CA_CERT_PATH}/tls.crt \
@@ -25,7 +25,7 @@ go run hack/gen_cert.go \
 
 go run hack/gen_cert.go \
     --not-before=$(date '+%Y-%m-%dT%H:%M:%SZ') \
-    --not-after=$(date '+%Y-%m-%dT%H:%M:%SZ' -d '+5 years') \
+    --not-after=$(date '+%Y-%m-%dT%H:%M:%SZ' -d '+10 years') \
     --signer-cert=${CA_CERT_PATH}/tls.crt \
     --common-name=envoy-client \
     --signer-key=${CA_CERT_PATH}/tls.key \

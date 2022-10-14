@@ -112,7 +112,7 @@ var _ = Describe("Envoy pods", func() {
 				},
 				func() map[string]envoy.Resource {
 					// Envoy listeners don't allow bind address changes
-					k, v := testutil.ListenerWithExtensionConfig("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
+					k, v := testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
 					return map[string]envoy.Resource{k: v}
 				},
 				func() map[string]envoy.Resource {
@@ -197,7 +197,7 @@ var _ = Describe("Envoy pods", func() {
 				},
 				func() map[string]envoy.Resource {
 					// Envoy listeners don't allow bind address changes
-					k, v := testutil.ListenerWithExtensionConfig("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", 30333), nil)
+					k, v := testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", 30333), nil)
 					return map[string]envoy.Resource{k: v}
 				},
 				func() map[string]envoy.Resource {
@@ -258,7 +258,7 @@ var _ = Describe("Envoy pods", func() {
 							return map[string]envoy.Resource{k: v}
 						},
 						func() map[string]envoy.Resource {
-							k, v := testutil.ListenerWithExtensionConfig("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("localhost"))
+							k, v := testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("localhost"))
 							return map[string]envoy.Resource{k: v}
 						},
 						func() map[string]envoy.Resource {

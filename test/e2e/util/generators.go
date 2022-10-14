@@ -309,7 +309,7 @@ func TransportSocketV3(secretName string) *envoy_config_core_v3.TransportSocket 
 	}
 }
 
-func ListenerWithExtensionConfig(listenerName, routeName, extensionConfigName string,
+func HTTPListener(listenerName, routeName, extensionConfigName string,
 	address, transportSocket proto.Message) (string, *envoy_config_listener_v3.Listener) {
 	return listenerName, &envoy_config_listener_v3.Listener{
 		Name:    listenerName,
