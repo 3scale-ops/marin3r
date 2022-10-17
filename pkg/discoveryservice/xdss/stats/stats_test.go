@@ -2,8 +2,8 @@ package stats
 
 import (
 	"reflect"
-	"sort"
 	"testing"
+	"time"
 
 	kv "github.com/patrickmn/go-cache"
 )
@@ -57,7 +57,7 @@ func TestStats_ReportNACK(t *testing.T) {
 		name       string
 		cacheItems map[string]kv.Item
 		args       args
-		want       int64
+		want       map[string]kv.Item
 		wantErr    bool
 	}{
 		{
@@ -65,6 +65,7 @@ func TestStats_ReportNACK(t *testing.T) {
 			cacheItems: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:nonce:7":      {Object: "", Expiration: int64(defaultExpiration)},
 				"node:endpoint:aaaa:pod-xxxx:nack_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:nack_counter":    {Object: int64(5), Expiration: int64(defaultExpiration)},
 			},
 			args: args{
 				nodeID: "node",
@@ -72,7 +73,11 @@ func TestStats_ReportNACK(t *testing.T) {
 				podID:  "pod-xxxx",
 				nonce:  "7",
 			},
-			want: 6,
+			want: map[string]kv.Item{
+				"node:endpoint:aaaa:pod-xxxx:nonce:7":      {Object: "", Expiration: int64(defaultExpiration)},
+				"node:endpoint:aaaa:pod-xxxx:nack_counter": {Object: int64(6), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:nack_counter":    {Object: int64(6), Expiration: int64(defaultExpiration)},
+			},
 		},
 		{
 			name: "Creates a new NACK counter",
@@ -85,19 +90,23 @@ func TestStats_ReportNACK(t *testing.T) {
 				podID:  "pod-xxxx",
 				nonce:  "xyz",
 			},
-			want: 1,
+			want: map[string]kv.Item{
+				"node:endpoint:aaaa:pod-xxxx:nonce:xyz":    {Object: "", Expiration: int64(defaultExpiration)},
+				"node:endpoint:aaaa:pod-xxxx:nack_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:nack_counter":    {Object: int64(1), Expiration: int64(defaultExpiration)},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
-			got, err := s.ReportNACK(tt.args.nodeID, tt.args.rType, tt.args.podID, tt.args.nonce)
+			_, err := s.ReportNACK(tt.args.nodeID, tt.args.rType, tt.args.podID, tt.args.nonce)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Stats.ReportNACK() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Stats.ReportNACK() = %v, want %v", got, tt.want)
+			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Stats.ReportACK() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -120,6 +129,8 @@ func TestStats_ReportACK(t *testing.T) {
 			name: "Increments an ACK counter",
 			cacheItems: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
+				"node:endpoint:bbbb:pod-xxxx:ack_counter": {Object: int64(3), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:ack_counter":    {Object: int64(8), Expiration: int64(defaultExpiration)},
 			},
 			args: args{
 				nodeID:  "node",
@@ -129,6 +140,8 @@ func TestStats_ReportACK(t *testing.T) {
 			},
 			want: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(6), Expiration: int64(defaultExpiration)},
+				"node:endpoint:bbbb:pod-xxxx:ack_counter": {Object: int64(3), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:ack_counter":    {Object: int64(9), Expiration: int64(defaultExpiration)},
 			},
 		},
 		{
@@ -142,6 +155,7 @@ func TestStats_ReportACK(t *testing.T) {
 			},
 			want: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:ack_counter":    {Object: int64(1), Expiration: int64(defaultExpiration)},
 			},
 		},
 	}
@@ -173,6 +187,8 @@ func TestStats_ReportRequest(t *testing.T) {
 			name: "Increases counter",
 			cacheItems: map[string]kv.Item{
 				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter:stream_9":  {Object: int64(20), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter":           {Object: int64(23), Expiration: int64(defaultExpiration)},
 			},
 			args: args{
 				nodeID:   "node",
@@ -182,12 +198,15 @@ func TestStats_ReportRequest(t *testing.T) {
 			},
 			want: map[string]kv.Item{
 				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(4), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter:stream_9":  {Object: int64(20), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter":           {Object: int64(24), Expiration: int64(defaultExpiration)},
 			},
 		},
 		{
 			name: "Creates new counter",
 			cacheItems: map[string]kv.Item{
 				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter":           {Object: int64(3), Expiration: int64(defaultExpiration)},
 			},
 			args: args{
 				nodeID:   "node",
@@ -198,6 +217,7 @@ func TestStats_ReportRequest(t *testing.T) {
 			want: map[string]kv.Item{
 				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-xxxx:request_counter:stream_11": {Object: int64(1), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter":           {Object: int64(4), Expiration: int64(defaultExpiration)},
 			},
 		},
 	}
@@ -328,7 +348,7 @@ func TestStats_GetSubscribedPods(t *testing.T) {
 		name       string
 		cacheItems map[string]kv.Item
 		args       args
-		want       []string
+		want       map[string]int8
 	}{
 		{
 			name: "",
@@ -341,16 +361,15 @@ func TestStats_GetSubscribedPods(t *testing.T) {
 				nodeID: "node",
 				rType:  "cluster",
 			},
-			want: []string{"pod-xxxx", "pod-yyyy"},
+			want: map[string]int8{"pod-xxxx": 1, "pod-yyyy": 1},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
 			got := s.GetSubscribedPods(tt.args.nodeID, tt.args.rType)
-			sort.Strings(got)
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Stats.GetSubscribedPods() = %v, want %v", sort.StringSlice(got), sort.StringSlice(tt.want))
+				t.Errorf("Stats.GetSubscribedPods() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -445,6 +464,51 @@ func TestStats_GetPercentageFailing(t *testing.T) {
 			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
 			if got := s.GetPercentageFailing(tt.args.nodeID, tt.args.rType, tt.args.version); got != tt.want {
 				t.Errorf("Stats.GetPercentageFailing() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStats_CleanStats(t *testing.T) {
+	type args struct {
+		podName string
+	}
+	tests := []struct {
+		name       string
+		cacheItems map[string]kv.Item
+		args       args
+		want       map[string]kv.Item
+		// name   string
+		// fields fields
+		// args   args
+	}{
+		{
+			name: "cleans stat keys for the given pod name",
+			cacheItems: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter:stream_9":  {Object: int64(20), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-xxxx:request_counter":           {Object: int64(23), Expiration: int64(defaultExpiration)},
+				"node:endpoint:*:pod-zzzz:request_counter:stream_3":  {Object: int64(2), Expiration: int64(defaultExpiration)},
+			},
+			args: args{
+				podName: "pod-xxxx",
+			},
+			want: map[string]kv.Item{
+				"node:endpoint:*:pod-xxxx:request_counter:stream_10": {Object: int64(3), Expiration: int64(time.Now().Add(5 * time.Minute).UnixNano())},
+				"node:endpoint:*:pod-xxxx:request_counter:stream_9":  {Object: int64(20), Expiration: int64(time.Now().Add(5 * time.Minute).UnixNano())},
+				"node:endpoint:*:pod-xxxx:request_counter":           {Object: int64(23), Expiration: int64(time.Now().Add(5 * time.Minute).UnixNano())},
+				"node:endpoint:*:pod-zzzz:request_counter:stream_3":  {Object: int64(2), Expiration: int64(defaultExpiration)},
+			}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
+			s.CleanStats(tt.args.podName)
+			expired := s.FilterKeys(tt.args.podName)
+			for k, v := range expired {
+				if v.Expiration == 0 {
+					t.Errorf("Stats.CleanStats() = key %+v has no expiration", k)
+				}
 			}
 		})
 	}

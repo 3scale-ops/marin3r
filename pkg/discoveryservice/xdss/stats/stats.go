@@ -3,17 +3,15 @@ package stats
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"time"
 
 	kv "github.com/patrickmn/go-cache"
 )
 
 // The format of the keys in the cache is
-//   <node-id>:<version>:<resource-type>:<pod-id>:<key>
-//
-// Note that though currently revision and version have the same value for all
-// types (with the exeption of secrets), this might change in the future and have
-// each resource type follow its own versioning
+//   <node-id>:<version>:<resource-type>:<pod-id>:<stat-name>
 type Stats struct {
 	store *kv.Cache
 }
@@ -31,16 +29,16 @@ func NewWithItems(items map[string]kv.Item) *Stats {
 }
 
 func (s *Stats) WriteResponseNonce(nodeID, rType, version, podID, nonce string) {
-	s.SetStringWithExpiration(nodeID, rType, version, podID, fmt.Sprintf("nonce:%s", nonce), "", 10*time.Second)
+	s.SetStringWithExpiration(nodeID, rType, version, podID, "nonce:"+nonce, "", 10*time.Second)
 }
 
 func (s *Stats) ReportNACK(nodeID, rType, podID, nonce string) (int64, error) {
-	keys := s.FilterKeys(nodeID, rType, podID, fmt.Sprintf("nonce:%s", nonce))
+	keys := s.FilterKeys(nodeID, rType, podID, "nonce:"+nonce)
 	if len(keys) != 1 {
 		return 0, fmt.Errorf("error reporting failure: unexpected number of nonces in the cache")
 	}
 
-	// The value of version is container in the key of the corresponding nonce stored
+	// The value of version is contained in the key of the corresponding nonce stored
 	// in the cache
 	version := NewKeyFromString(func() string {
 		for k := range keys {
@@ -50,6 +48,8 @@ func (s *Stats) ReportNACK(nodeID, rType, podID, nonce string) (int64, error) {
 	}()).Version
 
 	s.IncrementCounter(nodeID, rType, version, podID, "nack_counter", 1)
+	// aggregated counter, with lower cardinality, to expose as prometheus metric
+	s.IncrementCounter(nodeID, rType, "*", podID, "nack_counter", 1)
 	return s.GetCounter(nodeID, rType, version, podID, "nack_counter")
 }
 
@@ -60,13 +60,13 @@ func (s *Stats) ReportACK(nodeID, rType, version, podID string) {
 }
 
 func (s *Stats) ReportRequest(nodeID, rType, podID string, streamID int64) {
-	s.IncrementCounter(nodeID, rType, "*", podID, fmt.Sprintf("request_counter:stream_%d", streamID), 1)
+	s.IncrementCounter(nodeID, rType, "*", podID, "request_counter:stream_"+strconv.FormatInt(streamID, 10), 1)
 	// aggregated counter ,with lower cardinality, to expose as prometheus metric
-	s.IncrementCounter(nodeID, rType, "*", podID, "*", 1)
+	s.IncrementCounter(nodeID, rType, "*", podID, "request_counter", 1)
 }
 
 func (s *Stats) ReportStreamClosed(streamID int64) {
-	s.DeleteKeysByFilter(fmt.Sprintf("request_counter:stream_%d", streamID))
+	s.DeleteKeysByFilter("request_counter:stream_" + strconv.FormatInt(streamID, 10))
 }
 
 func GetStringValueFromMetadata(meta map[string]interface{}, key string) (string, error) {
@@ -81,33 +81,34 @@ func GetStringValueFromMetadata(meta map[string]interface{}, key string) (string
 	return v.(string), nil
 }
 
-func (s *Stats) GetSubscribedPods(nodeID, rType string) []string {
+func (s *Stats) GetSubscribedPods(nodeID, rType string) map[string]int8 {
 
 	m := map[string]int8{}
-	items := s.FilterKeys(nodeID, rType, "request_counter")
+
+	filters := []string{"request_counter"}
+	if nodeID != "" {
+		filters = append(filters, nodeID)
+	}
+	if rType != "" {
+		filters = append(filters, rType)
+	}
+	items := s.FilterKeys(filters...)
 
 	for k := range items {
 		podID := NewKeyFromString(k).PodID
 		if _, ok := m[podID]; !ok {
-			m[podID] = 0
+			m[podID] = 1
 		}
 	}
 
-	pods := make([]string, len(m))
-	i := 0
-	for k := range m {
-		pods[i] = k
-		i++
-	}
-
-	return pods
+	return m
 }
 
 func (s *Stats) GetPercentageFailing(nodeID, rType, version string) float64 {
 
 	failing := 0
 	pods := s.GetSubscribedPods(nodeID, rType)
-	for _, pod := range pods {
+	for pod := range pods {
 		if v, err := s.GetCounter(nodeID, rType, version, pod, "nack_counter"); err == nil && v > 0 {
 			failing++
 		}
@@ -118,4 +119,17 @@ func (s *Stats) GetPercentageFailing(nodeID, rType, version string) float64 {
 		return 0
 	}
 	return val
+}
+
+// CleanStats adds expiration to all cache items that match the given Pod. The cache items
+// will be eventually deleted from the cache once they expire. This is required to avoid
+// keeping stats in the cache for pods that are no longer subscribed to the xds sercver.
+func (s *Stats) CleanStats(podName string) {
+	items := s.FilterKeys(podName)
+	for k := range items {
+		if !strings.Contains(k, "nonce:") {
+			key := NewKeyFromString(k)
+			s.ExpireCounter(key.NodeID, key.ResourceType, key.Version, key.PodID, key.StatName, 5*time.Minute)
+		}
+	}
 }
