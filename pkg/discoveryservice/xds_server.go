@@ -29,6 +29,7 @@ import (
 	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 
@@ -67,6 +68,10 @@ func NewXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logg
 	xdsLogger := logger.WithName("xds")
 
 	discoveryStatsV3 := stats.New()
+
+	// register the custom metrics collector with the global
+	// prometheus registry
+	metrics.Registry.MustRegister(discoveryStatsV3)
 
 	snapshotCacheV3 := cache_v3.NewSnapshotCache(
 		true,
