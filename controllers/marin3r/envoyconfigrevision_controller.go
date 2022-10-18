@@ -35,13 +35,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // EnvoyConfigRevisionReconciler reconciles a EnvoyConfigRevision object
@@ -198,10 +201,49 @@ func filterByAPIVersionPredicate(version envoy.APIVersion,
 	}
 }
 
+// SecretsEventHandler returns an EventHandler that generates
+// reconcile requests for Secrets
+func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(
+		func(o client.Object) []reconcile.Request {
+			secret := o.(*corev1.Secret)
+			if secret.Type != "kubernetes.io/tls" {
+				return []reconcile.Request{}
+			}
+			list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
+			if err := r.Client.List(context.Background(), list); err != nil {
+				return []reconcile.Request{}
+			}
+
+			reconcileRequests := []reconcile.Request{}
+
+			for _, ecr := range list.Items {
+				if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+
+					// check if the Secret is relevant for this EnvoyConfigRevision
+					for _, s := range ecr.Spec.EnvoyResources.Secrets {
+
+						if (s.Ref != nil && s.Ref.Name == secret.GetName()) || (s.Name == secret.GetName()) {
+							reconcileRequests = append(reconcileRequests,
+								reconcile.Request{NamespacedName: types.NamespacedName{
+									Name:      ecr.GetName(),
+									Namespace: ecr.GetNamespace(),
+								}})
+						}
+					}
+				}
+			}
+
+			return reconcileRequests
+		},
+	)
+}
+
 // SetupWithManager adds the controller to the manager
 func (r *EnvoyConfigRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&marin3rv1alpha1.EnvoyConfigRevision{}).
 		WithEventFilter(filterByAPIVersionPredicate(r.APIVersion, filterByAPIVersion)).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, r.SecretsEventHandler()).
 		Complete(r)
 }

@@ -151,15 +151,6 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if err := (&marin3rcontroller.SecretReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("secret"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "secret")
-		os.Exit(1)
-	}
-
 	// Start the controllers
 	wait.Add(1)
 	go func() {
