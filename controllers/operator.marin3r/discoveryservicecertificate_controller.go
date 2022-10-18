@@ -26,21 +26,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/discovery"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // DiscoveryServiceCertificateReconciler reconciles a DiscoveryServiceCertificate object
 type DiscoveryServiceCertificateReconciler struct {
 	// This Client, initialized using mgr.Client() above, is a split Client
 	// that reads objects from the cache and writes to the apiserver
-	Client           client.Client
-	Scheme           *runtime.Scheme
-	Log              logr.Logger
-	discoveryClient  discovery.DiscoveryInterface
-	certificateWatch bool
+	Client client.Client
+	Scheme *runtime.Scheme
+	Log    logr.Logger
 }
 
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch;delete
@@ -96,10 +96,48 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(ctx context.Context, r
 	return ctrl.Result{RequeueAfter: *certificateReconciler.GetSchedule()}, nil
 }
 
+// IssuerChangedHandler returns an EventHandler that generates
+// reconcile requests for Secrets
+func (r *DiscoveryServiceCertificateReconciler) IssuerChangedHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(
+		func(o client.Object) []reconcile.Request {
+
+			issuer := o.(*operatorv1alpha1.DiscoveryServiceCertificate)
+			// Only interested in changes to CA certificates. A change in the CA
+			// means that the child certificates need to be re-issued
+			if !issuer.IsCA() || !issuer.GetCertificateRenewalConfig().Enabled {
+				return []reconcile.Request{}
+			}
+
+			list := &operatorv1alpha1.DiscoveryServiceCertificateList{}
+			if err := r.Client.List(context.Background(), list); err != nil {
+				return []reconcile.Request{}
+			}
+
+			reconcileRequests := []reconcile.Request{}
+
+			for _, dsc := range list.Items {
+				if dsc.Spec.Signer.CASigned != nil &&
+					dsc.Spec.Signer.CASigned.SecretRef.Name == issuer.Spec.SecretRef.Name {
+
+					reconcileRequests = append(reconcileRequests,
+						reconcile.Request{NamespacedName: types.NamespacedName{
+							Name:      dsc.GetName(),
+							Namespace: dsc.GetNamespace(),
+						}})
+				}
+			}
+
+			return reconcileRequests
+		},
+	)
+}
+
 // SetupWithManager adds the controller to the manager
 func (r *DiscoveryServiceCertificateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&operatorv1alpha1.DiscoveryServiceCertificate{}).
 		Owns(&corev1.Secret{}).
+		Watches(&source.Kind{Type: &operatorv1alpha1.DiscoveryServiceCertificate{}}, r.IssuerChangedHandler()).
 		Complete(r)
 }
