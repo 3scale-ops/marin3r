@@ -26,7 +26,7 @@ var (
 	)
 	infoDesc = prometheus.NewDesc(
 		"marin3r_xdss_discovery_info",
-		"Number of discovery NACK responses",
+		"Information about the version a certain resource type is at",
 		[]string{"node_id", "resource_type", "pod_name", "version"}, nil,
 	)
 )
