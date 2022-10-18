@@ -105,7 +105,7 @@ func (r *DiscoveryServiceCertificateReconciler) IssuerChangedHandler() handler.E
 			issuer := o.(*operatorv1alpha1.DiscoveryServiceCertificate)
 			// Only interested in changes to CA certificates. A change in the CA
 			// means that the child certificates need to be re-issued
-			if !issuer.IsCA() || !issuer.GetCertificateRenewalConfig().Enabled {
+			if !issuer.IsCA() {
 				return []reconcile.Request{}
 			}
 
