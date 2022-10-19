@@ -365,7 +365,7 @@ catalog-retag-latest:
 tmp/certs:
 	hack/gen-certs.sh
 
-ENVOY_VERSION ?= v1.20.1
+ENVOY_VERSION ?= v1.23.2
 
 run-ds: ## locally starts a discovery service
 run-ds: manifests generate fmt vet go-generate tmp/certs
