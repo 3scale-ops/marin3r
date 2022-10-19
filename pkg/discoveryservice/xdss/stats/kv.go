@@ -18,16 +18,16 @@ type Key struct {
 	ResourceType string
 	Version      string
 	PodID        string
-	Key          string
+	StatName     string
 }
 
-func NewKey(nodeID, rType, version, podID, key string) *Key {
+func NewKey(nodeID, rType, version, podID, statName string) *Key {
 	return &Key{
 		NodeID:       nodeID,
 		ResourceType: rType,
 		Version:      version,
 		PodID:        podID,
-		Key:          key,
+		StatName:     statName,
 	}
 }
 
@@ -38,16 +38,16 @@ func NewKeyFromString(key string) *Key {
 		ResourceType: values[1],
 		Version:      values[2],
 		PodID:        values[3],
-		Key:          values[4],
+		StatName:     strings.Join(values[4:], ":"),
 	}
 }
 
 func (k *Key) String() string {
-	return strings.Join([]string{k.NodeID, k.ResourceType, k.Version, k.PodID, k.Key}, ":")
+	return strings.Join([]string{k.NodeID, k.ResourceType, k.Version, k.PodID, k.StatName}, ":")
 }
 
-func (s *Stats) GetString(nodeID, rtype, version, podID, key string) (string, error) {
-	k := NewKey(nodeID, rtype, version, podID, key).String()
+func (s *Stats) GetString(nodeID, rtype, version, podID, statName string) (string, error) {
+	k := NewKey(nodeID, rtype, version, podID, statName).String()
 	if v, ok := s.store.Get(k); ok {
 		if value, ok := v.(string); !ok {
 			return "", fmt.Errorf("value of key '%s' is not a string", k)
@@ -60,16 +60,16 @@ func (s *Stats) GetString(nodeID, rtype, version, podID, key string) (string, er
 	}
 }
 
-func (s *Stats) SetString(nodeID, rType, version, podID, key, value string) {
-	s.store.SetDefault(NewKey(nodeID, rType, version, podID, key).String(), value)
+func (s *Stats) SetString(nodeID, rType, version, podID, statName, value string) {
+	s.store.SetDefault(NewKey(nodeID, rType, version, podID, statName).String(), value)
 }
 
-func (s *Stats) SetStringWithExpiration(nodeID, rType, version, podID, key, value string, expiration time.Duration) {
-	s.store.Set(NewKey(nodeID, rType, version, podID, key).String(), value, expiration)
+func (s *Stats) SetStringWithExpiration(nodeID, rType, version, podID, statName, value string, expiration time.Duration) {
+	s.store.Set(NewKey(nodeID, rType, version, podID, statName).String(), value, expiration)
 }
 
-func (s *Stats) GetCounter(nodeID, rtype, version, podID, key string) (int64, error) {
-	k := NewKey(nodeID, rtype, version, podID, key).String()
+func (s *Stats) GetCounter(nodeID, rtype, version, podID, statName string) (int64, error) {
+	k := NewKey(nodeID, rtype, version, podID, statName).String()
 	if v, ok := s.store.Get(k); ok {
 		if value, ok := v.(int64); !ok {
 			return 0, fmt.Errorf("value of key '%s' is not an int", k)
@@ -82,25 +82,26 @@ func (s *Stats) GetCounter(nodeID, rtype, version, podID, key string) (int64, er
 	}
 }
 
-func (s *Stats) IncrementCounter(nodeID, rType, version, podID, key string, increment int64) {
-	if _, err := s.store.IncrementInt64(NewKey(nodeID, rType, version, podID, key).String(), increment); err != nil {
-		// The key does not exist yet in the kv store
-		s.store.SetDefault(NewKey(nodeID, rType, version, podID, key).String(), increment)
-	}
+// IncrementCounter increments the counter if it already exists or creates it if it doesn't. IncrementCount
+// removes any expiration that the cache item might had previously.
+func (s *Stats) IncrementCounter(nodeID, rType, version, podID, statName string, increment int64) {
+	// GetCounter returns 0 when an error happens so we don't need to check for errors
+	counter, _ := s.GetCounter(nodeID, rType, version, podID, statName)
+	s.store.SetDefault(NewKey(nodeID, rType, version, podID, statName).String(), counter+increment)
 }
 
-func (s *Stats) DecrementCounter(nodeID, rType, version, podID, key string, decrement int64) {
-	if _, err := s.store.DecrementInt64(NewKey(nodeID, rType, version, podID, key).String(), decrement); err != nil {
-		// The key does not exist yet in the kv store
-		s.store.SetDefault(NewKey(nodeID, rType, version, podID, key).String(), 0)
-	}
+// ExpireCounter adds expiration to a counter.
+func (s *Stats) ExpireCounter(nodeID, rType, version, podID, statName string, expiration time.Duration) {
+	counter, _ := s.GetCounter(nodeID, rType, version, podID, statName)
+	s.store.Set(NewKey(nodeID, rType, version, podID, statName).String(), counter, expiration)
 }
 
 func (s *Stats) FilterKeys(filters ...string) map[string]kv.Item {
 	all := s.store.Items()
 	selected := map[string]kv.Item{}
+	var isSelected bool
 	for key, value := range all {
-		isSelected := true
+		isSelected = true
 		for _, filter := range filters {
 			if !strings.Contains(key, filter) {
 				isSelected = false
@@ -118,4 +119,8 @@ func (s *Stats) DeleteKeysByFilter(filters ...string) {
 	for k := range keys {
 		s.store.Delete(k)
 	}
+}
+
+func (s *Stats) DumpAll() map[string]kv.Item {
+	return s.store.Items()
 }
