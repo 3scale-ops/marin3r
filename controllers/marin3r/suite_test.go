@@ -119,13 +119,6 @@ var _ = BeforeSuite(func() {
 	err = ecrV3Reconciler.SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&SecretReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("secret"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr)
-	Expect(err).ToNot(HaveOccurred())
-
 	go func() {
 		defer GinkgoRecover()
 		err = mgr.Start(ctx)
