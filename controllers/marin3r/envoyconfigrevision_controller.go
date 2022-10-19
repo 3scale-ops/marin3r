@@ -180,7 +180,7 @@ func filterByAPIVersion(obj runtime.Object, version envoy.APIVersion) bool {
 		return false
 
 	default:
-		return false
+		return true
 	}
 }
 
@@ -207,7 +207,7 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 	return handler.EnqueueRequestsFromMapFunc(
 		func(o client.Object) []reconcile.Request {
 			secret := o.(*corev1.Secret)
-			if secret.Type != "kubernetes.io/tls" {
+			if secret.Type != corev1.SecretTypeTLS {
 				return []reconcile.Request{}
 			}
 			list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
@@ -219,7 +219,6 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 
 			for _, ecr := range list.Items {
 				if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
-
 					// check if the Secret is relevant for this EnvoyConfigRevision
 					for _, s := range ecr.Spec.EnvoyResources.Secrets {
 

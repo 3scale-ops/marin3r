@@ -244,7 +244,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 						return false
 					}
 					return testutil.SnapshotsAreEqual(gotV3Snap, wantSnap)
-				}, 60*time.Second, 5*time.Second).Should(BeTrue())
+					// this should occur triggered by an event, before the 60 seconds
+					// ECR reconcile period
+				}, 10*time.Second, 1*time.Second).Should(BeTrue())
 
 			})
 
