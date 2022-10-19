@@ -244,7 +244,7 @@ $(GOCOVMERGE):
 
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary
-	test -s $(GOCOVMERGE) || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REFDOCS_VERSION)
+	test -s $(CRD_REFDOCS) || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REFDOCS_VERSION)
 
 .PHONY: kind
 KIND = $(shell pwd)/bin/kind

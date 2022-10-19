@@ -5,14 +5,13 @@ The discovery service is the piece of MARIN3R in charge of delivering envoy conf
 
 Two kubernetes controllers run alongside the discovery service server: the EnvoyConfig controller and the EnvoyConfigRevision controller. Toghether with the xDS server, they are the core of MARIN3R functionality.
 
-As of today, the discovery service run in a single pod.
+As of today, the discovery service runs in a single pod.
 
 - [Configuration as CRDs](#configuration-as-crds)
 - [Envoy nodeIDs](#envoy-nodeids)
   - [Command line parameters](#command-line-parameters)
   - [Static config](#static-config)
 - [Certificates](#certificates)
-  - [Certificate updates](#certificate-updates)
 
 ## Configuration as CRDs
 
@@ -31,7 +30,7 @@ The mechanism by which configurations get to the discovery service server and ar
 
 - The EnvoyConfigRevision controller watches events on EnvoyConfigRevision custom resources. Whenever it receives an event on one, it checks if the revision is marked as published. If so, loads the envoy resources from serizalized format into proto message objects and writes them to the xDS server in-memory cache. The xDS server will start delivering the new config to the envoy proxies as soon as it detects changes in the in-memory cache.
 
-- The xDS server detects when the config sent to an envoy proxy is not valid due to the [NACKs](https://www.envoyproxy.io/docs/envoy/v1.16.0/api-docs/xds_protocol#basic-protocol-overview) defined in the xDS protocol. This is done by a callback function that inspects the DiscoveryRequest messages received by the server looking for NACKs. Whenever a NACK is detected, the callback function marks the relevant EnvoyConfigRevision custom resource with the `RevisionTainted` condition. This triggers a rollback process and the last not tainted revision in the list will get published instead. The EnvoyConfig custom resource will get the `Rollback` status in the `status.CacheState` field. If there is not a single revision untainted in the EnvoyConfig's revision list, the EnvoyConfig will set the `RollbackFailed` status in the `status.CacheState` field and the failing config will be still published until the config gets fixed by the user and a new publication process is triggered.
+- The xDS server gathers statistics of the number of configuration updates accepted/rejected by the envoy clients. With that information, it is able to calculate the percentage of Pods that have rejected a certain configuration update. When the 100% of the clients subscribed to a configuration reject a configuration update, the EnvoyConfigRevision is marked with the condition `RevisionTainted`. This triggers a rollback process and the last non-tainted revision in the revision list will get published instead. The EnvoyConfig custom resource will get the `Rollback` status in the `status.CacheState` field. If there is not a single revision untainted in the EnvoyConfig's revision list, the EnvoyConfig will set the `RollbackFailed` status in the `status.CacheState` field and the failing config will be still be published until the config gets fixed by the user and a new publication process is triggered. Scenarios where less than a hundred percent of the envoy clients subscribed to a certain config are rejecting an update are more complex to solve and the operator won't try to execute a rollback of the configuration.
 
 The following image depicts the described process.
 
@@ -62,7 +61,7 @@ The in-memory cache is built by the discovery service with the process described
 
 ## Certificates
 
-The discovery service can also deliver certificates to the envoy proxies. When an envoy configuration references an envoy secret resource to be used as a certificate, this needs to be specified in the EnvoyConfig custom resource as a reference to a kubernetes Secret.
+The discovery service can also deliver certificates to the envoy proxies. When an envoy configuration references an envoy secret resource to be used as a certificate (the secret type must be "kubernetes.io/tls"), this needs to be specified in the EnvoyConfig custom resource as a reference to a kubernetes Secret.
 
 For example, in the following EnvoyConfig there is a listener configured for TLS termination. The TLS config of the listener specifies that the certificate needs to be retrieved from the discovery service, referencing it by name. This name needs to match the name given to the secret in the secret reference in `spec.envoyResources.secrets`.
 
@@ -112,8 +111,4 @@ spec:
 
 Using references to kubernetes Secret resources avoids having to write sensitive information like the certificate's private key directly into the EnvoyConfig custom resource. This is a standard way to manage sensitive information inside Kubernetes and allows to safely keep the EnvoyConfig custom resources under version control.
 
-### Certificate updates
-
-Given the fact that certificates are not included inline in the EnvoyConfig, it can occur that the value of the Secret resources containing the certificates change but the config in the EnvoyConfig custom resource remains the same, in which case a reconcile wouldn't be triggered to reload the certificates. In order to properly reload certificates, a small additional controller also runs in the discovery service, continuously watching for changes to any Secret resource. Whenever it detects a change, it adds the `ResourcesOutOfSync` condition to any published EnvoyConfigRevision that contains a reference to that specific Secret. In doing so, a new reconcile of the EnvoyConfigRevision is triggered and the certificates reloaded.
-
-**NOTE**: when writting envoy secret resoures into the xDS chache, the version is slightly different to the version of all other resource types. If for all resource types the version is directly the hash of `spec.envoyResources`, in the case of secrets, the hash of the loaded secrets is appended, forming a version like `<spec.envoyresources hash>-<secrets hash>`. This is neccessary so the xDS server correctly notifies of a new available version for the secret resources to the envoy proxies.
+The EnvoyConfigRevision controller keeps track of changes to the Secrets that hold certificates and sends configuration updates to subscribed clients whenever a Secret changes, typically when the certificate is re-issued before expiration by the user or other controller (i.e. cert-manager).
