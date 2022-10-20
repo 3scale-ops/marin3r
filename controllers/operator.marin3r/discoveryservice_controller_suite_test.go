@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +27,7 @@ var _ = Describe("DiscoveryService controller", func() {
 		namespace = "test-ns-" + nameGenerator.Generate()
 
 		// Add any setup steps that needs to be executed before each test
-		testNamespace := &v1.Namespace{
+		testNamespace := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
@@ -36,7 +35,7 @@ var _ = Describe("DiscoveryService controller", func() {
 		err := k8sClient.Create(context.Background(), testNamespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		n := &v1.Namespace{}
+		n := &corev1.Namespace{}
 		Eventually(func() error {
 			return k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
 		}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
@@ -86,10 +85,7 @@ var _ = Describe("DiscoveryService controller", func() {
 			Eventually(func() bool {
 				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ds)
 				Expect(err).ToNot(HaveOccurred())
-				if len(ds.GetFinalizers()) > 0 {
-					return true
-				}
-				return false
+				return len(ds.GetFinalizers()) > 0
 			}, 60*time.Second, 5*time.Second).Should(BeTrue())
 		})
 

@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,7 +25,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 		namespace = "test-ns-" + nameGenerator.Generate()
 
 		// Add any setup steps that needs to be executed before each test
-		testNamespace := &v1.Namespace{
+		testNamespace := &corev1.Namespace{
 			TypeMeta:   metav1.TypeMeta{APIVersion: "v1", Kind: "Namespace"},
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}
@@ -34,13 +33,10 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 		err := k8sClient.Create(context.Background(), testNamespace)
 		Expect(err).ToNot(HaveOccurred())
 
-		n := &v1.Namespace{}
+		n := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: namespace}, n)
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
 	})
@@ -126,7 +122,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 
 		BeforeEach(func() {
 			By("creating a DiscoveryServiceCertificate instance for the CA")
-			dsc = &operatorv1alpha1.DiscoveryServiceCertificate{
+			ca := &operatorv1alpha1.DiscoveryServiceCertificate{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "ca",
 					Namespace: namespace,
@@ -141,7 +137,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 					SecretRef: corev1.SecretReference{Name: "ca"},
 				},
 			}
-			err := k8sClient.Create(context.Background(), dsc)
+			err := k8sClient.Create(context.Background(), ca)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(func() error {
@@ -183,6 +179,45 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 
 			err = pki.Verify(cert, ca)
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("re-issues the certificate if the CA changes", func() {
+
+			By("creating a DiscoveryServiceCertificate instance for the certificate")
+			dsc = &operatorv1alpha1.DiscoveryServiceCertificate{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "cert",
+					Namespace: namespace,
+				},
+				Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
+					CommonName: "test",
+					ValidFor:   3600,
+					Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+						CASigned: &operatorv1alpha1.CASignedConfig{
+							SecretRef: corev1.SecretReference{Name: "ca", Namespace: namespace},
+						},
+					},
+					SecretRef: corev1.SecretReference{Name: "cert"},
+				},
+			}
+			err := k8sClient.Create(context.Background(), dsc)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() bool {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "cert", Namespace: namespace}, dsc)
+				return err == nil && dsc.Status.IsReady()
+			}, 60*time.Second, 5*time.Second).Should(BeTrue())
+
+			hash := dsc.Status.GetCertificateHash()
+
+			By("forcing recreation of the CA certificate")
+			err = k8sClient.Delete(context.Background(), caSecret)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(func() string {
+				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "cert", Namespace: namespace}, dsc)
+				Expect(err).ToNot(HaveOccurred())
+				return dsc.Status.GetCertificateHash()
+			}, 60*time.Second, 5*time.Second).ShouldNot(Equal(hash))
 		})
 
 	})

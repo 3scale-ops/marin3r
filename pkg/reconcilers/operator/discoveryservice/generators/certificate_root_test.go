@@ -68,7 +68,7 @@ func TestGeneratorOptions_RootCertificationAuthority(t *testing.T) {
 						Namespace: "default",
 					},
 					CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{
-						Enabled: false,
+						Enabled: true,
 					},
 				},
 			},

@@ -37,7 +37,7 @@ func (cfg *GeneratorOptions) RootCertificationAuthority() lockedresources.Genera
 					Namespace: cfg.Namespace,
 				},
 				CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{
-					Enabled: false,
+					Enabled: true,
 				},
 			},
 		}
