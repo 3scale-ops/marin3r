@@ -122,6 +122,7 @@ func TestStats_ReportACK(t *testing.T) {
 	tests := []struct {
 		name       string
 		cacheItems map[string]kv.Item
+		t          time.Time
 		args       args
 		want       map[string]kv.Item
 	}{
@@ -131,7 +132,9 @@ func TestStats_ReportACK(t *testing.T) {
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
 				"node:endpoint:bbbb:pod-xxxx:ack_counter": {Object: int64(3), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-xxxx:ack_counter":    {Object: int64(8), Expiration: int64(defaultExpiration)},
+				"node:endpoint:aaaa:pod-xxxx:info":        {Object: int64(0), Expiration: int64(defaultExpiration)},
 			},
+			t: time.UnixMilli(100),
 			args: args{
 				nodeID:  "node",
 				rType:   "endpoint",
@@ -142,11 +145,13 @@ func TestStats_ReportACK(t *testing.T) {
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(6), Expiration: int64(defaultExpiration)},
 				"node:endpoint:bbbb:pod-xxxx:ack_counter": {Object: int64(3), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-xxxx:ack_counter":    {Object: int64(9), Expiration: int64(defaultExpiration)},
+				"node:endpoint:aaaa:pod-xxxx:info":        {Object: int64(100), Expiration: int64(defaultExpiration)},
 			},
 		},
 		{
 			name:       "Creates an ACK counter",
 			cacheItems: map[string]kv.Item{},
+			t:          time.UnixMilli(200),
 			args: args{
 				nodeID:  "node",
 				rType:   "endpoint",
@@ -156,12 +161,13 @@ func TestStats_ReportACK(t *testing.T) {
 			want: map[string]kv.Item{
 				"node:endpoint:aaaa:pod-xxxx:ack_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-xxxx:ack_counter":    {Object: int64(1), Expiration: int64(defaultExpiration)},
+				"node:endpoint:aaaa:pod-xxxx:info":        {Object: int64(200), Expiration: int64(defaultExpiration)},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := Stats{store: kv.NewFrom(defaultExpiration, cleanupInterval, tt.cacheItems)}
+			s := NewWithItems(tt.cacheItems, tt.t)
 			s.ReportACK(tt.args.nodeID, tt.args.rType, tt.args.version, tt.args.podID)
 			if got := s.store.Items(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Stats.ReportACK() = %v, want %v", got, tt.want)
