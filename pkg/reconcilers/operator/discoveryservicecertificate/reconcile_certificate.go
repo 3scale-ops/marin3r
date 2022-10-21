@@ -9,6 +9,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers"
 	internal_provider "github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers/marin3r"
 	"github.com/3scale-ops/marin3r/pkg/util"
+	"github.com/3scale-ops/marin3r/pkg/util/clock"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -16,17 +17,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// Clock knows how to get the current time.
-// It can be used to fake out timing for testing.
-type Clock interface {
-	Now() time.Time
-}
-
-type realClock struct{}
-
-// Now returns the current time
-func (realClock) Now() time.Time { return time.Now() }
 
 // CertificateReconciler is a struct with methods to reconcile DiscoveryServiceCertificates
 type CertificateReconciler struct {
@@ -36,7 +26,7 @@ type CertificateReconciler struct {
 	scheme   *runtime.Scheme
 	dsc      *operatorv1alpha1.DiscoveryServiceCertificate
 	provider providers.CertificateProvider
-	clock    Clock
+	clock    clock.Clock
 
 	// Calculated fields
 	ready     bool
@@ -53,7 +43,7 @@ var _ providers.CertificateProvider = &internal_provider.CertificateProvider{}
 func NewCertificateReconciler(ctx context.Context, logger logr.Logger, client client.Client,
 	s *runtime.Scheme, dsc *operatorv1alpha1.DiscoveryServiceCertificate, provider providers.CertificateProvider) CertificateReconciler {
 
-	return CertificateReconciler{ctx, logger, client, s, dsc, provider, realClock{}, false, "", nil, nil, nil}
+	return CertificateReconciler{ctx, logger, client, s, dsc, provider, clock.Real{}, false, "", nil, nil, nil}
 }
 
 // IsReady returns true if the certificate is ready after the
