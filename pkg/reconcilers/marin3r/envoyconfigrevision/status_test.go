@@ -3,6 +3,7 @@ package reconcilers
 import (
 	"context"
 	"testing"
+	"time"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
@@ -209,7 +210,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					return stats.NewWithItems(map[string]cache.Item{
 						"test:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(2), Expiration: int64(0)},
 						"test:" + resource_v3.EndpointType + ":aaaa:pod-aaaa:nack_counter":          {Object: int64(1), Expiration: int64(0)},
-					})
+					}, time.Now())
 				},
 			},
 			want: false,
@@ -248,7 +249,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					return stats.NewWithItems(map[string]cache.Item{
 						"test:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(2), Expiration: int64(0)},
 						"test:" + resource_v3.EndpointType + ":aaaa:pod-aaaa:nack_counter":          {Object: int64(1), Expiration: int64(0)},
-					})
+					}, time.Now())
 				},
 			},
 			want: true,
@@ -424,7 +425,7 @@ func Test_calculateRevisionTaintedCondition(t *testing.T) {
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-bbbb:nack_counter":          {Object: int64(10), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-cccc:nack_counter":          {Object: int64(10), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-dddd:nack_counter":          {Object: int64(10), Expiration: int64(0)},
-				}),
+				}, time.Now()),
 				thresshold: 1,
 			},
 			want: corev1.ConditionTrue,
@@ -454,7 +455,7 @@ func Test_calculateRevisionTaintedCondition(t *testing.T) {
 					"node:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(2), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-aaaa:nack_counter":          {Object: int64(1), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-bbbb:nack_counter":          {Object: int64(10), Expiration: int64(0)},
-				}),
+				}, time.Now()),
 				thresshold: 0.5,
 			},
 			want: corev1.ConditionTrue,
@@ -483,7 +484,7 @@ func Test_calculateRevisionTaintedCondition(t *testing.T) {
 					"node:" + resource_v3.EndpointType + ":*:pod-dddd:request_counter:stream_4": {Object: int64(1), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(2), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-aaaa:nack_counter":          {Object: int64(1), Expiration: int64(0)},
-				}),
+				}, time.Now()),
 				thresshold: 0.5,
 			},
 			want: corev1.ConditionFalse,
@@ -498,7 +499,7 @@ func Test_calculateRevisionTaintedCondition(t *testing.T) {
 						EnvoyAPI: pointer.StringPtr(envoy.APIv3.String()),
 					},
 				}, vt: &marin3rv1alpha1.VersionTracker{},
-				dStats:     stats.NewWithItems(map[string]cache.Item{}),
+				dStats:     stats.NewWithItems(map[string]cache.Item{}, time.Now()),
 				thresshold: 1,
 			},
 			want: corev1.ConditionFalse,

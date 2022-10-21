@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/3scale-ops/marin3r/pkg/util/clock"
 	kv "github.com/patrickmn/go-cache"
 )
 
@@ -14,17 +15,20 @@ import (
 //   <node-id>:<version>:<resource-type>:<pod-id>:<stat-name>
 type Stats struct {
 	store *kv.Cache
+	clock clock.Clock
 }
 
 func New() *Stats {
 	return &Stats{
 		store: kv.New(defaultExpiration, cleanupInterval),
+		clock: clock.Real{},
 	}
 }
 
-func NewWithItems(items map[string]kv.Item) *Stats {
+func NewWithItems(items map[string]kv.Item, now time.Time) *Stats {
 	return &Stats{
 		store: kv.NewFrom(defaultExpiration, cleanupInterval, items),
+		clock: clock.NewTest(now),
 	}
 }
 
@@ -57,6 +61,8 @@ func (s *Stats) ReportACK(nodeID, rType, version, podID string) {
 	s.IncrementCounter(nodeID, rType, version, podID, "ack_counter", 1)
 	// aggregated counter, with lower cardinality, to expose as prometheus metric
 	s.IncrementCounter(nodeID, rType, "*", podID, "ack_counter", 1)
+	// add stat with timestamp to expose info metric
+	s.SetInt64(nodeID, rType, version, podID, "info", s.clock.Now().UnixMilli())
 }
 
 func (s *Stats) ReportRequest(nodeID, rType, podID string, streamID int64) {
