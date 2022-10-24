@@ -100,24 +100,20 @@ var _ = Describe("EnvoyDeployment", func() {
 			By("applying an EnvoyConfig that will configure the envoy Deployment through service discovery")
 			key := types.NamespacedName{Name: "envoyconfig", Namespace: testNamespace}
 			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-				func() map[string]envoy.Resource {
-					return map[string]envoy.Resource{}
+				func() []envoy.Resource {
+					return []envoy.Resource{}
 				},
-				func() map[string]envoy.Resource {
-					k, v := testutil.ClusterWithStrictDNSV3("nginx", "nginx", 80)
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.ClusterWithStrictDNSV3("nginx", "nginx", 80)}
 				},
-				func() map[string]envoy.Resource {
-					k, v := testutil.ProxyPassRouteV3("proxypass", "nginx")
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.ProxyPassRouteV3("proxypass", "nginx")}
 				},
-				func() map[string]envoy.Resource {
-					k, v := testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)}
 				},
-				func() map[string]envoy.Resource {
-					k, v := testutil.HTTPFilterRouter("router_filter")
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
 				},
 				nil,
 			)

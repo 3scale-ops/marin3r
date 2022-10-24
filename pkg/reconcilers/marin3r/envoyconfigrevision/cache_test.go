@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -111,7 +112,7 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
 					}},
 				version: "xxxx",
 				nodeID:  "node2",
@@ -189,22 +190,22 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+						{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
 					},
 					Clusters: []marin3rv1alpha1.EnvoyResource{
-						{Name: "cluster", Value: "{\"name\": \"cluster\"}"},
+						{Name: pointer.String("cluster"), Value: "{\"name\": \"cluster\"}"},
 					},
 					Routes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "route", Value: "{\"name\": \"route\"}"},
+						{Name: pointer.String("route"), Value: "{\"name\": \"route\"}"},
 					},
 					ScopedRoutes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "scoped_route", Value: "{\"name\": \"scoped_route\"}"},
+						{Name: pointer.String("scoped_route"), Value: "{\"name\": \"scoped_route\"}"},
 					},
 					Listeners: []marin3rv1alpha1.EnvoyResource{
-						{Name: "listener", Value: "{\"name\": \"listener\"}"},
+						{Name: pointer.String("listener"), Value: "{\"name\": \"listener\"}"},
 					},
 					Runtimes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "runtime", Value: "{\"name\": \"runtime\"}"},
+						{Name: pointer.String("runtime"), Value: "{\"name\": \"runtime\"}"},
 					}},
 			},
 			want: xdss_v3.NewSnapshot().
@@ -242,7 +243,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "giberish"},
+						{Name: pointer.String("endpoint"), Value: "giberish"},
 					}},
 			},
 			wantErr: true,
@@ -262,7 +263,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Clusters: []marin3rv1alpha1.EnvoyResource{
-						{Name: "cluster", Value: "giberish"},
+						{Name: pointer.String("cluster"), Value: "giberish"},
 					}},
 			},
 			wantErr: true,
@@ -282,7 +283,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Routes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "route", Value: "giberish"},
+						{Name: pointer.String("route"), Value: "giberish"},
 					}},
 			},
 			wantErr: true,
@@ -302,7 +303,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					ScopedRoutes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "scoped_route", Value: "giberish"},
+						{Name: pointer.String("scoped_route"), Value: "giberish"},
 					}},
 			},
 			wantErr: true,
@@ -322,7 +323,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Listeners: []marin3rv1alpha1.EnvoyResource{
-						{Name: "listener", Value: "giberish"},
+						{Name: pointer.String("listener"), Value: "giberish"},
 					}},
 			},
 			wantErr: true,
@@ -342,7 +343,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
 				resources: &marin3rv1alpha1.EnvoyResources{
 					Runtimes: []marin3rv1alpha1.EnvoyResource{
-						{Name: "runtime", Value: "giberish"},
+						{Name: pointer.String("runtime"), Value: "giberish"},
 					}},
 			},
 			wantErr: true,

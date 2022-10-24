@@ -761,7 +761,7 @@ func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
 						NodeID: "node",
 						EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 							Endpoints: []marin3rv1alpha1.EnvoyResource{
-								{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+								{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"correct_endpoint\"}"},
 							},
 						},
 					},
@@ -769,22 +769,22 @@ func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
 			),
 			want: &marin3rv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "node-v3-7fc7b66fd6",
+					Name:      "node-v3-6c554ddcb8",
 					Namespace: "test",
 					Labels: map[string]string{
 						filters.EnvoyAPITag: envoy.APIv3.String(),
 						filters.NodeIDTag:   "node",
-						filters.VersionTag:  "7fc7b66fd6",
+						filters.VersionTag:  "6c554ddcb8",
 					},
 				},
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:        "node",
 					EnvoyAPI:      pointer.StringPtr(envoy.APIv3.String()),
-					Version:       "7fc7b66fd6",
+					Version:       "6c554ddcb8",
 					Serialization: pointer.StringPtr(string(envoy_serializer.JSON)),
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"correct_endpoint\"}"},
 						},
 					},
 				},

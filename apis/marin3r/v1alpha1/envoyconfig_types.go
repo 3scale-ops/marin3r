@@ -120,7 +120,8 @@ type EnvoyResources struct {
 type EnvoyResource struct {
 	// Name of the envoy resource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Name string `json:"name"`
+	// +optional
+	Name *string `json:"name"`
 	// Value is the serialized representation of the envoy resource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Value string `json:"value"`

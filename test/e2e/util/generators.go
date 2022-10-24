@@ -183,7 +183,7 @@ func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string)
 }
 
 func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
-	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() map[string]envoy.Resource,
+	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() []envoy.Resource,
 	secrets map[string]string) *marin3rv1alpha1.EnvoyConfig {
 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
 
@@ -198,45 +198,45 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 			EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 				Endpoints: func() []marin3rv1alpha1.EnvoyResource {
 					endpoints := []marin3rv1alpha1.EnvoyResource{}
-					for name, resource := range endpointsGenFn() {
+					for _, resource := range endpointsGenFn() {
 						json, err := m.Marshal(resource)
 						if err != nil {
 							panic(err)
 						}
-						endpoints = append(endpoints, marin3rv1alpha1.EnvoyResource{Name: name, Value: json})
+						endpoints = append(endpoints, marin3rv1alpha1.EnvoyResource{Value: json})
 					}
 					return endpoints
 				}(),
 				Clusters: func() []marin3rv1alpha1.EnvoyResource {
 					clusters := []marin3rv1alpha1.EnvoyResource{}
-					for name, resource := range clustersGenFn() {
+					for _, resource := range clustersGenFn() {
 						json, err := m.Marshal(resource)
 						if err != nil {
 							panic(err)
 						}
-						clusters = append(clusters, marin3rv1alpha1.EnvoyResource{Name: name, Value: json})
+						clusters = append(clusters, marin3rv1alpha1.EnvoyResource{Value: json})
 					}
 					return clusters
 				}(),
 				Routes: func() []marin3rv1alpha1.EnvoyResource {
 					routes := []marin3rv1alpha1.EnvoyResource{}
-					for name, resource := range routesGenFn() {
+					for _, resource := range routesGenFn() {
 						json, err := m.Marshal(resource)
 						if err != nil {
 							panic(err)
 						}
-						routes = append(routes, marin3rv1alpha1.EnvoyResource{Name: name, Value: json})
+						routes = append(routes, marin3rv1alpha1.EnvoyResource{Value: json})
 					}
 					return routes
 				}(),
 				Listeners: func() []marin3rv1alpha1.EnvoyResource {
 					listeners := []marin3rv1alpha1.EnvoyResource{}
-					for name, resource := range listenersGenFn() {
+					for _, resource := range listenersGenFn() {
 						json, err := m.Marshal(resource)
 						if err != nil {
 							panic(err)
 						}
-						listeners = append(listeners, marin3rv1alpha1.EnvoyResource{Name: name, Value: json})
+						listeners = append(listeners, marin3rv1alpha1.EnvoyResource{Value: json})
 					}
 					return listeners
 				}(),
@@ -255,12 +255,12 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 				}(),
 				ExtensionConfigs: func() []marin3rv1alpha1.EnvoyResource {
 					extensionConfigs := []marin3rv1alpha1.EnvoyResource{}
-					for name, resource := range extensionConfigsGenFn() {
+					for _, resource := range extensionConfigsGenFn() {
 						json, err := m.Marshal(resource)
 						if err != nil {
 							panic(err)
 						}
-						extensionConfigs = append(extensionConfigs, marin3rv1alpha1.EnvoyResource{Name: name, Value: json})
+						extensionConfigs = append(extensionConfigs, marin3rv1alpha1.EnvoyResource{Value: json})
 					}
 					return extensionConfigs
 				}(),
@@ -310,8 +310,8 @@ func TransportSocketV3(secretName string) *envoy_config_core_v3.TransportSocket 
 }
 
 func HTTPListener(listenerName, routeName, extensionConfigName string,
-	address, transportSocket proto.Message) (string, *envoy_config_listener_v3.Listener) {
-	return listenerName, &envoy_config_listener_v3.Listener{
+	address, transportSocket proto.Message) *envoy_config_listener_v3.Listener {
+	return &envoy_config_listener_v3.Listener{
 		Name:    listenerName,
 		Address: address.(*envoy_config_core_v3.Address),
 		FilterChains: []*envoy_config_listener_v3.FilterChain{{
@@ -365,8 +365,8 @@ func HTTPListener(listenerName, routeName, extensionConfigName string,
 	}
 }
 
-func HTTPFilterRouter(extensionConfigName string) (string, *envoy_config_core_v3.TypedExtensionConfig) {
-	return extensionConfigName, &envoy_config_core_v3.TypedExtensionConfig{
+func HTTPFilterRouter(extensionConfigName string) *envoy_config_core_v3.TypedExtensionConfig {
+	return &envoy_config_core_v3.TypedExtensionConfig{
 		Name: extensionConfigName,
 		TypedConfig: func() *anypb.Any {
 			any, err := anypb.New(
@@ -381,8 +381,8 @@ func HTTPFilterRouter(extensionConfigName string) (string, *envoy_config_core_v3
 		}()}
 }
 
-func ProxyPassRouteV3(routeName, clusterName string) (string, *envoy_config_route_v3.RouteConfiguration) {
-	return routeName, &envoy_config_route_v3.RouteConfiguration{
+func ProxyPassRouteV3(routeName, clusterName string) *envoy_config_route_v3.RouteConfiguration {
+	return &envoy_config_route_v3.RouteConfiguration{
 		Name: routeName,
 		VirtualHosts: []*envoy_config_route_v3.VirtualHost{{
 			Name:    routeName,
@@ -400,8 +400,8 @@ func ProxyPassRouteV3(routeName, clusterName string) (string, *envoy_config_rout
 	}
 }
 
-func DirectResponseRouteV3(routeName, msg string) (string, *envoy_config_route_v3.RouteConfiguration) {
-	return routeName, &envoy_config_route_v3.RouteConfiguration{
+func DirectResponseRouteV3(routeName, msg string) *envoy_config_route_v3.RouteConfiguration {
+	return &envoy_config_route_v3.RouteConfiguration{
 		Name: routeName,
 		VirtualHosts: []*envoy_config_route_v3.VirtualHost{{
 			Name:    routeName,
@@ -421,8 +421,8 @@ func DirectResponseRouteV3(routeName, msg string) (string, *envoy_config_route_v
 	}
 }
 
-func EndpointV3(clusterName, host string, port uint32) (string, *envoy_config_endpoint_v3.ClusterLoadAssignment) {
-	return clusterName, &envoy_config_endpoint_v3.ClusterLoadAssignment{
+func EndpointV3(clusterName, host string, port uint32) *envoy_config_endpoint_v3.ClusterLoadAssignment {
+	return &envoy_config_endpoint_v3.ClusterLoadAssignment{
 		ClusterName: clusterName,
 		Endpoints: []*envoy_config_endpoint_v3.LocalityLbEndpoints{
 			{
@@ -440,8 +440,8 @@ func EndpointV3(clusterName, host string, port uint32) (string, *envoy_config_en
 	}
 }
 
-func ClusterWithEdsV3(clusterName string) (string, *envoy_config_cluster_v3.Cluster) {
-	return clusterName, &envoy_config_cluster_v3.Cluster{
+func ClusterWithEdsV3(clusterName string) *envoy_config_cluster_v3.Cluster {
+	return &envoy_config_cluster_v3.Cluster{
 		Name:           clusterName,
 		ConnectTimeout: durationpb.New(10 * time.Millisecond),
 		ClusterDiscoveryType: &envoy_config_cluster_v3.Cluster_Type{
@@ -458,8 +458,8 @@ func ClusterWithEdsV3(clusterName string) (string, *envoy_config_cluster_v3.Clus
 	}
 }
 
-func ClusterWithStrictDNSV3(clusterName, host string, port uint32) (string, *envoy_config_cluster_v3.Cluster) {
-	return clusterName, &envoy_config_cluster_v3.Cluster{
+func ClusterWithStrictDNSV3(clusterName, host string, port uint32) *envoy_config_cluster_v3.Cluster {
+	return &envoy_config_cluster_v3.Cluster{
 		Name:           clusterName,
 		ConnectTimeout: durationpb.New(10 * time.Millisecond),
 		ClusterDiscoveryType: &envoy_config_cluster_v3.Cluster_Type{
