@@ -9,6 +9,7 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers"
+	"github.com/3scale-ops/marin3r/pkg/util/clock"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	"github.com/MakeNowJust/heredoc"
 	"github.com/go-logr/logr"
@@ -29,18 +30,6 @@ func init() {
 		&operatorv1alpha1.DiscoveryServiceCertificate{},
 	)
 }
-
-const (
-	tlsCertificateKey = "tls.crt"
-	tlsPrivateKeyKey  = "tls.key"
-)
-
-type testClock struct {
-	now time.Time
-}
-
-// Now returns the the current time
-func (tc testClock) Now() time.Time { return tc.now }
 
 // testCertificateProvider fakes a certificate provider by returning the hardcoded certificates the provider
 // is created with. The certificate in index 0 is returned when CreateCertificate() is invoked and its used as the
@@ -124,7 +113,7 @@ func TestNewCertificateReconciler(t *testing.T) {
 				scheme:   s,
 				dsc:      &operatorv1alpha1.DiscoveryServiceCertificate{},
 				provider: &testCertificateProvider{},
-				clock:    realClock{},
+				clock:    clock.Real{},
 				ready:    false,
 				hash:     "",
 			},
@@ -233,7 +222,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 						`)),
 					},
 				},
-				clock: realClock{},
+				clock: clock.Real{},
 			},
 			want:          ctrl.Result{Requeue: true},
 			wantErr:       false,
@@ -272,7 +261,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 					},
 					currentTime: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:00Z"); return t }(),
 				},
-				clock: testClock{now: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:00Z"); return t }()},
+				clock: clock.NewTest(func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:00Z"); return t }()),
 			},
 			want:          ctrl.Result{},
 			wantErr:       false,
@@ -313,7 +302,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 					},
 					currentTime: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:00Z"); return t }(),
 				},
-				clock: testClock{now: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:00Z"); return t }()},
+				clock: clock.NewTest(func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:00Z"); return t }()),
 			},
 			want:          ctrl.Result{},
 			wantErr:       false,
@@ -354,7 +343,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 					},
 					currentTime: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:02:00Z"); return t }(),
 				},
-				clock: testClock{now: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:02:00Z"); return t }()},
+				clock: clock.NewTest(func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:02:00Z"); return t }()),
 			},
 			want:          ctrl.Result{},
 			wantErr:       false,
@@ -407,7 +396,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 					},
 					currentTime: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:02:00Z"); return t }(),
 				},
-				clock: testClock{now: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:02:00Z"); return t }()},
+				clock: clock.NewTest(func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:02:00Z"); return t }()),
 			},
 			want:        ctrl.Result{Requeue: true},
 			wantErr:     false,
@@ -456,7 +445,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 					},
 					currentTime: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:21Z"); return t }(),
 				},
-				clock:     testClock{now: func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:21Z"); return t }()},
+				clock:     clock.NewTest(func() time.Time { t, _ := time.Parse(time.RFC3339, "2021-01-01T00:01:21Z"); return t }()),
 				ready:     true,
 				hash:      "",
 				notBefore: &time.Time{},

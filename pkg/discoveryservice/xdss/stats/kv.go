@@ -68,6 +68,10 @@ func (s *Stats) SetStringWithExpiration(nodeID, rType, version, podID, statName,
 	s.store.Set(NewKey(nodeID, rType, version, podID, statName).String(), value, expiration)
 }
 
+func (s *Stats) SetInt64(nodeID, rType, version, podID, statName string, value int64) {
+	s.store.SetDefault(NewKey(nodeID, rType, version, podID, statName).String(), value)
+}
+
 func (s *Stats) GetCounter(nodeID, rtype, version, podID, statName string) (int64, error) {
 	k := NewKey(nodeID, rtype, version, podID, statName).String()
 	if v, ok := s.store.Get(k); ok {

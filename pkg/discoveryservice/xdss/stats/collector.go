@@ -65,14 +65,6 @@ func (s Stats) Collect(ch chan<- prometheus.Metric) {
 				key.NodeID, key.ResourceType, key.PodID,
 			)
 
-		case "ack_counter/" + key.Version:
-			ch <- prometheus.MustNewConstMetric(
-				infoDesc,
-				prometheus.UntypedValue,
-				float64(0),
-				key.NodeID, key.ResourceType, key.PodID, key.Version,
-			)
-
 		case "nack_counter/*":
 			ch <- prometheus.MustNewConstMetric(
 				nackCountDesc,
@@ -84,4 +76,32 @@ func (s Stats) Collect(ch chan<- prometheus.Metric) {
 		}
 
 	}
+
+	// expose info metrics
+	type currentVersion struct {
+		version string
+		ts      int64
+	}
+	info := map[string]currentVersion{}
+	for k, v := range items {
+		key := NewKeyFromString(k)
+		if key.StatName == "info" {
+			version := key.Version
+			key.Version = "*"
+			if cv, ok := info[key.String()]; !ok || v.Object.(int64) > cv.ts {
+				info[key.String()] = currentVersion{version, v.Object.(int64)}
+			}
+		}
+	}
+
+	for k, v := range info {
+		key := NewKeyFromString(k)
+		ch <- prometheus.MustNewConstMetric(
+			infoDesc,
+			prometheus.UntypedValue,
+			float64(0),
+			key.NodeID, key.ResourceType, key.PodID, v.version,
+		)
+	}
+
 }
