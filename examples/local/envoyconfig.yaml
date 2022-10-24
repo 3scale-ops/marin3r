@@ -9,8 +9,7 @@ spec:
   serialization: yaml
   envoyResources:
     clusters:
-      - name: echo_api
-        value: |
+      - value: |
           name: echo_api
           connect_timeout: 1s
           type: STRICT_DNS
@@ -28,8 +27,7 @@ spec:
               "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
               sni: echo-api.3scale.net
     routes:
-      - name: echo-api.3scale.net
-        value: |
+      - value: |
           name: echo-api.3scale.net
           virtual_hosts:
             - name: ingress
@@ -41,8 +39,7 @@ spec:
                     auto_host_rewrite: true
                     cluster: echo_api
     listeners:
-      - name: http
-        value: |
+      - value: |
           name: http
           address: { socket_address: { address: 0.0.0.0, port_value: 8888 }}
           filter_chains:
@@ -64,8 +61,7 @@ spec:
                           type_urls: ["type.googleapis.com/envoy.extensions.filters.http.router.v3.Router"]
 
     extensionConfigs:
-      - name: http_router
-        value: |
+      - value: |
           name: http_router
           typed_config:
             "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

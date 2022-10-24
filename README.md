@@ -182,33 +182,27 @@ spec:
     # Endpoints is a list of the Envoy ClusterLoadAssignment resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
     endpoints:
-      - name: endpoint1
-        value: {"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}
+      - value: {"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}
     # Clusters is a list of the Envoy Cluster resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
     clusters:
-      - name: cluster1
-        value: {"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1","endpoints":[]}}
+      - value: {"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1","endpoints":[]}}
     # Routes is a list of the Envoy Route resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
     routes:
-      - name: route1
-        value: {"name":"route1","virtual_hosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"direct_response":{"status":200}}]}]}
+      - value: {"name":"route1","virtual_hosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"direct_response":{"status":200}}]}]}
     # ScopedRoutes is a list of the Envoy Scoped Route resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto
     scopedRoutes:
-      - name: scoped_route1
-        value: {"name":"scoped_route1","route_configuration_name":"route1","key":{"fragments":[{"string_key":"test"}]}}
+      - value: {"name":"scoped_route1","route_configuration_name":"route1","key":{"fragments":[{"string_key":"test"}]}}
     # Listeners is a list of the Envoy Listener resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
     listeners:
-      - name: listener1
-        value: {"name":"listener1","address":{"socketAddress":{"address":"0.0.0.0","portValue":8443}}}
+      - value: {"name":"listener1","address":{"socketAddress":{"address":"0.0.0.0","portValue":8443}}}
     # Runtimes is a list of the Envoy Runtime resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
     runtimes:
-      - name: runtime1
-        value: {"name":"runtime1","layer":{"static_layer_0":"value"}}
+      - value: {"name":"runtime1","layer":{"static_layer_0":"value"}}
 ```
 
 ### **Secrets**

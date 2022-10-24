@@ -110,8 +110,7 @@ spec:
   envoyAPI: v3
   envoyResources:
     clusters:
-      - name: upstream-a
-        value: |
+      - value: |
           name: upstream-a
           connect_timeout: 10ms
           type: STRICT_DNS
@@ -124,8 +123,7 @@ spec:
                       address:
                         socket_address: { address: upstream-a, port_value: 8080 }
     listeners:
-      - name: http
-        value: |
+      - value: |
           name: http
           address: { socket_address: { address: 0.0.0.0, port_value: 8080 } }
           filter_chains:
@@ -237,8 +235,7 @@ spec:
   envoyAPI: v3
   envoyResources:
     clusters:
-      - name: upstream-a
-        value: |
+      - value: |
           name: upstream-a
           connect_timeout: 10ms
           type: STRICT_DNS
@@ -250,8 +247,7 @@ spec:
                   - endpoint:
                       address:
                         socket_address: { address: upstream-a, port_value: 8080 }
-      - name: upstream-b
-        value: |
+      - value: |
           name: upstream-b
           connect_timeout: 10ms
           type: STRICT_DNS
@@ -264,8 +260,7 @@ spec:
                       address:
                         socket_address: { address: upstream-b, port_value: 8080 }
     listeners:
-      - name: http
-        value: |
+      - value: |
           name: http
           address: { socket_address: { address: 0.0.0.0, port_value: 8080 } }
           filter_chains:

@@ -11,8 +11,7 @@ spec:
     secrets:
       - name: example.default.svc
     clusters:
-      - name: example
-        value: |
+      - value: |
           name: example
           connect_timeout: 10ms
           type: STRICT_DNS
@@ -28,8 +27,7 @@ spec:
                           address: example
                           port_value: 8080
     routes:
-      - name: local
-        value: |
+      - value: |
           name: local
           virtual_hosts:
             - name: all
@@ -40,8 +38,7 @@ spec:
                   route:
                     cluster: example
     listeners:
-      - name: https
-        value: |
+      - value: |
           name: https
           address:
             socket_address:

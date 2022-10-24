@@ -12,8 +12,7 @@ spec:
         ref:
           name: kuard
     clusters:
-      - name: kuard
-        value: |
+      - value: |
           name: kuard
           connect_timeout: 0.010s
           type: STRICT_DNS
@@ -29,8 +28,7 @@ spec:
                           address: kuard
                           port_value: 8080
     routes:
-      - name: kuard
-        value: |
+      - value: |
           name: kuard
           virtual_hosts:
             - name: all
@@ -38,16 +36,14 @@ spec:
               routes:
                 - { match: {prefix: "/"}, route: { cluster: "kuard" }}
     scopedRoutes:
-      - name: scoped_route_kuard
-        value: |
+      - value: |
           name: scoped_route_kuard
           route_configuration_name: kuard
           key:
             fragments:
               - string_key: kuard
     listeners:
-      - name: https
-        value: |
+      - value: |
           name: https
           address:
             socket_address:
@@ -75,8 +71,7 @@ spec:
                     tls_certificate_sds_secret_configs:
                       - name: kuard.default.svc
                         sds_config: { ads: {}, resource_api_version: "V3" }
-      - name: https-scoped
-        value: |
+      - value: |
           name: https-scoped
           address:
             socket_address:
