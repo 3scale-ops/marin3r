@@ -84,7 +84,7 @@ var _ = Describe("EnvoyConfig webhook", func() {
 					EnvoyAPI:      pointer.StringPtr("v3"),
 					EnvoyResources: &EnvoyResources{
 						Clusters: []EnvoyResource{{
-							Name: "cluster",
+							Name: pointer.String("cluster"),
 							// the connect_timeout value unit is wrong
 							Value: `{"name":"cluster1","type":"STRICT_DNS","connect_timeout":"2xs","load_assignment":{"cluster_name":"cluster1"}}`,
 						}},
@@ -103,7 +103,7 @@ var _ = Describe("EnvoyConfig webhook", func() {
 					EnvoyAPI:      pointer.StringPtr("v3"),
 					EnvoyResources: &EnvoyResources{
 						Listeners: []EnvoyResource{{
-							Name: "test",
+							Name: pointer.String("test"),
 							// the "port" property should be "port_value"
 							Value: `
                               name: listener1

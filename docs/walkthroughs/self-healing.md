@@ -52,8 +52,7 @@ spec:
   envoyAPI: v3
   envoyResources:
     clusters:
-      - name: kuard
-        value: |
+      - value: |
           name: kuard
           connect_timeout: 10ms
           type: STRICT_DNS
@@ -66,8 +65,7 @@ spec:
                       address:
                         socket_address: { address: 127.0.0.1, port_value: 8080 }
     listeners:
-      - name: http
-        value: |
+      - value: |
           name: http
           address: { socket_address: { address: 0.0.0.0, port_value: 8081 } }
           filter_chains:
@@ -135,8 +133,7 @@ spec:
   envoyAPI: v3
   envoyResources:
     clusters:
-      - name: kuard
-        value: |
+      - value: |
           name: kuard
           connect_timeout: 10ms
           type: STRICT_DNS
@@ -149,8 +146,7 @@ spec:
                       address:
                         socket_address: { address: 127.0.0.1, port_value: 8080 }
     listeners:
-      - name: http
-        value: |
+      - value: |
           name: http
           # Changed listener port from 8081 to 5000
           address: { socket_address: { address: 0.0.0.0, port_value: 5000 } }

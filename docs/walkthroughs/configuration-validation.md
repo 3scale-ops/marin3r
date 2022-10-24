@@ -24,8 +24,7 @@ spec:
     secrets:
       - name: kuard-certificate
     clusters:
-      - name: kuard
-        value: |
+      - value: |
           name: kuard
           connect_timeout: 10 miliseconds
           type: STRICT_DNS

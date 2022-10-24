@@ -104,20 +104,17 @@ var _ = Describe("Envoy pods", func() {
 			By("applying an EnvoyConfig that configures the Pod with a direct response")
 			key := types.NamespacedName{Name: "test-envoyconfig", Namespace: testNamespace}
 			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-				func() map[string]envoy.Resource { return nil },
-				func() map[string]envoy.Resource { return nil },
-				func() map[string]envoy.Resource {
-					k, v := testutil.DirectResponseRouteV3("direct_response", "OK")
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource { return nil },
+				func() []envoy.Resource { return nil },
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")}
 				},
-				func() map[string]envoy.Resource {
+				func() []envoy.Resource {
 					// Envoy listeners don't allow bind address changes
-					k, v := testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)
-					return map[string]envoy.Resource{k: v}
+					return []envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)}
 				},
-				func() map[string]envoy.Resource {
-					k, v := testutil.HTTPFilterRouter("router_filter")
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
 				},
 				nil)
 
@@ -189,20 +186,17 @@ var _ = Describe("Envoy pods", func() {
 			key := types.NamespacedName{Name: "test-envoyconfig", Namespace: testNamespace}
 			patch := client.MergeFrom(ec.DeepCopy())
 			ec.Spec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-				func() map[string]envoy.Resource { return nil },
-				func() map[string]envoy.Resource { return nil },
-				func() map[string]envoy.Resource {
-					k, v := testutil.DirectResponseRouteV3("direct_response", "OK")
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource { return nil },
+				func() []envoy.Resource { return nil },
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")}
 				},
-				func() map[string]envoy.Resource {
+				func() []envoy.Resource {
 					// Envoy listeners don't allow bind address changes
-					k, v := testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", 30333), nil)
-					return map[string]envoy.Resource{k: v}
+					return []envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", 30333), nil)}
 				},
-				func() map[string]envoy.Resource {
-					k, v := testutil.HTTPFilterRouter("router_filter")
-					return map[string]envoy.Resource{k: v}
+				func() []envoy.Resource {
+					return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
 				},
 				nil,
 			).Spec
@@ -251,19 +245,16 @@ var _ = Describe("Envoy pods", func() {
 					key := types.NamespacedName{Name: "test-envoyconfig", Namespace: testNamespace}
 					patch := client.MergeFrom(ec.DeepCopy())
 					ec.Spec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-						func() map[string]envoy.Resource { return nil },
-						func() map[string]envoy.Resource { return nil },
-						func() map[string]envoy.Resource {
-							k, v := testutil.DirectResponseRouteV3("direct_response", "OK")
-							return map[string]envoy.Resource{k: v}
+						func() []envoy.Resource { return nil },
+						func() []envoy.Resource { return nil },
+						func() []envoy.Resource {
+							return []envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")}
 						},
-						func() map[string]envoy.Resource {
-							k, v := testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("localhost"))
-							return map[string]envoy.Resource{k: v}
+						func() []envoy.Resource {
+							return []envoy.Resource{testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("localhost"))}
 						},
-						func() map[string]envoy.Resource {
-							k, v := testutil.HTTPFilterRouter("router_filter")
-							return map[string]envoy.Resource{k: v}
+						func() []envoy.Resource {
+							return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
 						},
 						map[string]string{"localhost": "self-signed-cert"},
 					).Spec

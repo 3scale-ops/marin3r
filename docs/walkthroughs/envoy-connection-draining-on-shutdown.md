@@ -26,8 +26,7 @@ spec:
   envoyAPI: v3
   envoyResources:
     listeners:
-      - name: http
-        value: |
+      - value: |
           name: http
           address: { socket_address: { address: 0.0.0.0, port_value: 8080 } }
           filter_chains:

@@ -89,7 +89,6 @@ spec:
                             envoy resource
                           type: string
                       required:
-                      - name
                       - value
                       type: object
                     type: array
@@ -108,7 +107,6 @@ spec:
                             envoy resource
                           type: string
                       required:
-                      - name
                       - value
                       type: object
                     type: array
@@ -127,7 +125,6 @@ spec:
                             envoy resource
                           type: string
                       required:
-                      - name
                       - value
                       type: object
                     type: array
@@ -146,7 +143,6 @@ spec:
                             envoy resource
                           type: string
                       required:
-                      - name
                       - value
                       type: object
                     type: array
@@ -165,7 +161,6 @@ spec:
                             envoy resource
                           type: string
                       required:
-                      - name
                       - value
                       type: object
                     type: array
@@ -184,7 +179,6 @@ spec:
                             envoy resource
                           type: string
                       required:
-                      - name
                       - value
                       type: object
                     type: array
@@ -203,7 +197,6 @@ spec:
                             envoy resource
                           type: string
                       required:
-                      - name
                       - value
                       type: object
                     type: array

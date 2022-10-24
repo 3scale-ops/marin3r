@@ -80,7 +80,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					NodeID:   nodeID,
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
 			}
 			err := k8sClient.Create(context.Background(), ec)
@@ -146,7 +146,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					NodeID:   nodeID,
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
 			}
 			err := k8sClient.Create(context.Background(), ec)
@@ -172,7 +172,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				patch := client.MergeFrom(ec.DeepCopy())
 				ec.Spec.EnvoyResources = &marin3rv1alpha1.EnvoyResources{
 					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: "endpoint", Value: "{\"wrong_key\": \"wrong_value\"}"},
+						{Name: pointer.String("endpoint"), Value: "{\"wrong_key\": \"wrong_value\"}"},
 					}}
 				err := k8sClient.Patch(context.Background(), ec, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -201,7 +201,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					patch := client.MergeFrom(ec.DeepCopy())
 					ec.Spec.EnvoyResources = &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"correct_endpoint\"}"},
 						}}
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())
@@ -270,7 +270,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					patch := client.MergeFrom(ec.DeepCopy())
 					ec.Spec.EnvoyResources = &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"correct_endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"correct_endpoint\"}"},
 						}}
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())

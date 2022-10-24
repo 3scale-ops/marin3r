@@ -118,9 +118,14 @@ type EnvoyResources struct {
 // EnvoyResource holds serialized representation of an envoy
 // resource
 type EnvoyResource struct {
-	// Name of the envoy resource
+	// Name of the envoy resource.
+	// DEPRECATED: this field has no effect and will be removed in an
+	// upcoming release. The name of the resources for discovery purposes
+	// is included in the resource itself. Refer to the envoy API reference
+	// to check how the name is specified for each resource type.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Name string `json:"name"`
+	// +optional
+	Name *string `json:"name"`
 	// Value is the serialized representation of the envoy resource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Value string `json:"value"`

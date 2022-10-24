@@ -83,7 +83,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
 			}
 			err := k8sClient.Create(context.Background(), ecr)
@@ -265,7 +265,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					Version: "xxxx",
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
 			}
 			err := k8sClient.Create(context.Background(), ecr)
@@ -328,7 +328,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 					Version: "xxxx",
 					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
 						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: "endpoint", Value: "{\"cluster_name\": \"endpoint\"}"},
+							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
 						}}},
 			}
 			err := k8sClient.Create(context.Background(), ecr)
@@ -390,7 +390,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 				patch := client.MergeFrom(ecr.DeepCopy())
 				ecr.Spec.EnvoyResources.Clusters = []marin3rv1alpha1.EnvoyResource{
-					{Name: "cluster", Value: "{\"wrong_key\": \"wrong_value\"}"},
+					{Name: pointer.String("cluster"), Value: "{\"wrong_key\": \"wrong_value\"}"},
 				}
 				err = k8sClient.Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
