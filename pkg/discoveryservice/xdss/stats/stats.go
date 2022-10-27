@@ -3,8 +3,6 @@ package stats
 import (
 	"fmt"
 	"math"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/3scale-ops/marin3r/pkg/util/clock"
@@ -65,14 +63,8 @@ func (s *Stats) ReportACK(nodeID, rType, version, podID string) {
 	s.SetInt64(nodeID, rType, version, podID, "info", s.clock.Now().UnixMilli())
 }
 
-func (s *Stats) ReportRequest(nodeID, rType, podID string, streamID int64) {
-	s.IncrementCounter(nodeID, rType, "*", podID, "request_counter:stream_"+strconv.FormatInt(streamID, 10), 1)
-	// aggregated counter ,with lower cardinality, to expose as prometheus metric
+func (s *Stats) ReportRequest(nodeID, rType, podID string) {
 	s.IncrementCounter(nodeID, rType, "*", podID, "request_counter", 1)
-}
-
-func (s *Stats) ReportStreamClosed(streamID int64) {
-	s.DeleteKeysByFilter("request_counter:stream_" + strconv.FormatInt(streamID, 10))
 }
 
 func GetStringValueFromMetadata(meta map[string]interface{}, key string) (string, error) {
@@ -125,17 +117,4 @@ func (s *Stats) GetPercentageFailing(nodeID, rType, version string) float64 {
 		return 0
 	}
 	return val
-}
-
-// CleanStats adds expiration to all cache items that match the given Pod. The cache items
-// will be eventually deleted from the cache once they expire. This is required to avoid
-// keeping stats in the cache for pods that are no longer subscribed to the xds sercver.
-func (s *Stats) CleanStats(podName string) {
-	items := s.FilterKeys(podName)
-	for k := range items {
-		if !strings.Contains(k, "nonce:") {
-			key := NewKeyFromString(k)
-			s.ExpireCounter(key.NodeID, key.ResourceType, key.Version, key.PodID, key.StatName, 5*time.Minute)
-		}
-	}
 }

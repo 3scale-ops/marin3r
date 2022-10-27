@@ -74,11 +74,10 @@ func TestStats_Collect(t *testing.T) {
 			`)),
 		},
 		{
-			name: "Ignores perversion and per stream stats",
+			name: "Ignores per version stats",
 			cacheItems: map[string]kv.Item{
-				"node:" + "endpoint" + ":*:pod-xxxx:request_counter:stream_1": {Object: int64(5), Expiration: int64(0)},
-				"node:" + "endpoint" + ":xxxx:pod-xxxx:ack_counter":           {Object: int64(1), Expiration: int64(0)},
-				"node:" + "endpoint" + ":xxxx:pod-xxxxc:nack_counter":         {Object: int64(13), Expiration: int64(0)},
+				"node:" + "endpoint" + ":xxxx:pod-xxxx:ack_counter":   {Object: int64(1), Expiration: int64(0)},
+				"node:" + "endpoint" + ":xxxx:pod-xxxxc:nack_counter": {Object: int64(13), Expiration: int64(0)},
 			},
 			ts:   time.UnixMilli(100),
 			want: strings.NewReader(""),
