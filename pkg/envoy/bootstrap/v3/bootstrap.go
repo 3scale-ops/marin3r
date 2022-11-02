@@ -7,12 +7,16 @@ import (
 	envoy_bootstrap_options "github.com/3scale-ops/marin3r/pkg/envoy/bootstrap/options"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer_v3 "github.com/3scale-ops/marin3r/pkg/envoy/serializer/v3"
+	envoy_config_accesslog_v3 "github.com/envoyproxy/go-control-plane/envoy/config/accesslog/v3"
 	envoy_config_bootstrap_v3 "github.com/envoyproxy/go-control-plane/envoy/config/bootstrap/v3"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
+	envoy_estensions_access_loggers_file_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/access_loggers/file/v3"
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
+	envoy_extensions_upstreams_http_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
+
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -35,12 +39,13 @@ func (c *Config) getAdminAccessLogPath() string {
 // so it can connect to the discovery service.
 func (c *Config) GenerateStatic() (string, error) {
 
-	tlsContext := &envoy_extensions_transport_sockets_tls_v3.UpstreamTlsContext{
+	tlsContext, err := anypb.New(&envoy_extensions_transport_sockets_tls_v3.UpstreamTlsContext{
 		CommonTlsContext: &envoy_extensions_transport_sockets_tls_v3.CommonTlsContext{
 			TlsCertificateSdsSecretConfigs: []*envoy_extensions_transport_sockets_tls_v3.SdsSecretConfig{
 				{
 					Name: "xds_client_certificate",
 					SdsConfig: &envoy_config_core_v3.ConfigSource{
+						ResourceApiVersion: envoy_config_core_v3.ApiVersion_V3,
 						ConfigSourceSpecifier: &envoy_config_core_v3.ConfigSource_Path{
 							Path: c.Options.SdsConfigSourcePath,
 						},
@@ -48,16 +53,39 @@ func (c *Config) GenerateStatic() (string, error) {
 				},
 			},
 		},
+	})
+	if err != nil {
+		return "", err
 	}
 
-	serializedTLSContext, err := anypb.New(tlsContext)
+	adminAccessLogConfig, err := anypb.New(&envoy_estensions_access_loggers_file_v3.FileAccessLog{
+		Path: c.getAdminAccessLogPath(),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	http2ProtocolOptions, err := anypb.New(&envoy_extensions_upstreams_http_v3.HttpProtocolOptions{
+		UpstreamProtocolOptions: &envoy_extensions_upstreams_http_v3.HttpProtocolOptions_ExplicitHttpConfig_{
+			ExplicitHttpConfig: &envoy_extensions_upstreams_http_v3.HttpProtocolOptions_ExplicitHttpConfig{
+				ProtocolConfig: &envoy_extensions_upstreams_http_v3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{
+					Http2ProtocolOptions: &envoy_config_core_v3.Http2ProtocolOptions{},
+				},
+			},
+		},
+	})
 	if err != nil {
 		return "", err
 	}
 
 	cfg := &envoy_config_bootstrap_v3.Bootstrap{
 		Admin: &envoy_config_bootstrap_v3.Admin{
-			AccessLogPath: c.getAdminAccessLogPath(),
+			AccessLog: []*envoy_config_accesslog_v3.AccessLog{{
+				Name: "envoy.access_loggers.file",
+				ConfigType: &envoy_config_accesslog_v3.AccessLog_TypedConfig{
+					TypedConfig: adminAccessLogConfig,
+				},
+			}},
 			Address: &envoy_config_core_v3.Address{
 				Address: &envoy_config_core_v3.Address_SocketAddress{
 					SocketAddress: &envoy_config_core_v3.SocketAddress{
@@ -108,7 +136,6 @@ func (c *Config) GenerateStatic() (string, error) {
 					ClusterDiscoveryType: &envoy_config_cluster_v3.Cluster_Type{
 						Type: envoy_config_cluster_v3.Cluster_STRICT_DNS,
 					},
-					Http2ProtocolOptions: &envoy_config_core_v3.Http2ProtocolOptions{},
 					LoadAssignment: &envoy_config_endpoint_v3.ClusterLoadAssignment{
 						ClusterName: envoy_bootstrap_options.XdsClusterName,
 						Endpoints: []*envoy_config_endpoint_v3.LocalityLbEndpoints{
@@ -134,11 +161,15 @@ func (c *Config) GenerateStatic() (string, error) {
 							},
 						},
 					},
+
 					TransportSocket: &envoy_config_core_v3.TransportSocket{
 						Name: wellknown.TransportSocketTls,
 						ConfigType: &envoy_config_core_v3.TransportSocket_TypedConfig{
-							TypedConfig: serializedTLSContext,
+							TypedConfig: tlsContext,
 						},
+					},
+					TypedExtensionProtocolOptions: map[string]*anypb.Any{
+						"envoy.extensions.upstreams.http.v3.HttpProtocolOptions": http2ProtocolOptions,
 					},
 				},
 			},
