@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -27,7 +26,7 @@ const (
 	DiscoveryServiceCertificateKind string = "DiscoveryServiceCertificate"
 	// CertificateNeedsRenewalCondition is a condition that indicates that a
 	// DiscoveryServiceCertificate is invalid and needs replacement
-	CertificateNeedsRenewalCondition status.ConditionType = "CertificateNeedsRenewal"
+	CertificateNeedsRenewalCondition string = "CertificateNeedsRenewal"
 	// CertificateHashLabelKey is the label that stores the hash of the certificate managed
 	// by the DiscoveryServiceCertificate resource
 	CertificateHashLabelKey string = "certificate-hash"
@@ -167,7 +166,7 @@ type DiscoveryServiceCertificateStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
-	Conditions status.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // IsReady returns true if the certificate is ready to use, false otherwise

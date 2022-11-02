@@ -5,7 +5,6 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -37,7 +36,7 @@ func IsStatusReconciled(dsc *operatorv1alpha1.DiscoveryServiceCertificate, certi
 	}
 
 	if dsc.Status.Conditions == nil {
-		dsc.Status.Conditions = status.NewConditions()
+		dsc.Status.Conditions = []metav1.Condition{}
 		ok = false
 	}
 

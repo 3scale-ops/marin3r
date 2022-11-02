@@ -5,7 +5,6 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/operator-framework/operator-lib/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
@@ -40,7 +39,7 @@ func TestIsStatusReconciled(t *testing.T) {
 						CertificateHash: pointer.StringPtr("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
-						Conditions:      status.Conditions{},
+						Conditions:      []metav1.Condition{},
 					},
 				},
 				certificateHash: "xxxx",
@@ -59,7 +58,7 @@ func TestIsStatusReconciled(t *testing.T) {
 						CertificateHash: pointer.StringPtr("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
-						Conditions:      status.Conditions{},
+						Conditions:      []metav1.Condition{},
 					},
 				},
 				certificateHash: "xxxx",
@@ -78,7 +77,7 @@ func TestIsStatusReconciled(t *testing.T) {
 						CertificateHash: pointer.StringPtr("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
-						Conditions:      status.Conditions{},
+						Conditions:      []metav1.Condition{},
 					},
 				},
 				certificateHash: "zzzz",
@@ -97,7 +96,7 @@ func TestIsStatusReconciled(t *testing.T) {
 						CertificateHash: pointer.StringPtr("xxxx"),
 						NotBefore:       &metav1.Time{},
 						NotAfter:        &metav1.Time{Time: t2},
-						Conditions:      status.Conditions{},
+						Conditions:      []metav1.Condition{},
 					},
 				},
 				certificateHash: "zzzz",
@@ -116,7 +115,7 @@ func TestIsStatusReconciled(t *testing.T) {
 						CertificateHash: pointer.StringPtr("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{},
-						Conditions:      status.Conditions{},
+						Conditions:      []metav1.Condition{},
 					},
 				},
 				certificateHash: "zzzz",
