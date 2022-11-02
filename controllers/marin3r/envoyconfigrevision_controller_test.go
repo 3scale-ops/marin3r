@@ -7,6 +7,7 @@ import (
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -43,7 +44,7 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() error = %v", err)
 		}
 		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
-		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
+		if !meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionTaintedCondition) {
 			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() ecr is not tainted")
 		}
 	})

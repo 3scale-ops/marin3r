@@ -13,9 +13,9 @@ import (
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -190,7 +190,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 			It("should set the CacheOutOfSync condition", func() {
 
-				Expect(ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeTrue())
+				Expect(meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeTrue())
 			})
 
 			When("resources are fixed in EnvoyConfig", func() {
@@ -219,7 +219,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				It("should clear the CacheOutOfSync condition", func() {
 
-					Expect(ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeFalse())
+					Expect(meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeFalse())
 				})
 
 			})
@@ -239,9 +239,10 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				By("updating the EnvoyConfigRevision with the RevisionTainted condition")
 				patch := client.MergeFrom(ecr.DeepCopy())
-				ecr.Status.Conditions.SetCondition(status.Condition{
+				meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
 					Type:   marin3rv1alpha1.RevisionTaintedCondition,
-					Status: corev1.ConditionTrue,
+					Status: metav1.ConditionTrue,
+					Reason: "test",
 				})
 				err = k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -258,8 +259,8 @@ var _ = Describe("EnvoyConfig controller", func() {
 			})
 
 			It("should set the CacheOutOfSync and the RollbackFailed conditions", func() {
-				Expect(ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeTrue())
-				Expect(ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition)).To(BeTrue())
+				Expect(meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeTrue())
+				Expect(meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.RollbackFailedCondition)).To(BeTrue())
 			})
 
 			When("EnvoyConfig gets updated with a new set of correct resources", func() {
@@ -288,8 +289,8 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				It("should set status.cacheState back to InSync", func() {
 
-					Expect(ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeFalse())
-					Expect(ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition)).To(BeFalse())
+					Expect(meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.CacheOutOfSyncCondition)).To(BeFalse())
+					Expect(meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.RollbackFailedCondition)).To(BeFalse())
 
 				})
 

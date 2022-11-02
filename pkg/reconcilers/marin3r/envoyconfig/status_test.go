@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
-	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -35,9 +34,9 @@ func TestIsStatusReconciled(t *testing.T) {
 							{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "test"}},
 							{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "test"}},
 						},
-						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+						Conditions: []metav1.Condition{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: metav1.ConditionFalse},
 						},
 					},
 				},
@@ -67,9 +66,9 @@ func TestIsStatusReconciled(t *testing.T) {
 						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
-						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionTrue},
+						Conditions: []metav1.Condition{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: metav1.ConditionTrue},
 						},
 					},
 				},
@@ -88,9 +87,9 @@ func TestIsStatusReconciled(t *testing.T) {
 						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
-						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionTrue},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+						Conditions: []metav1.Condition{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionTrue},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: metav1.ConditionFalse},
 						},
 					},
 				},
@@ -109,9 +108,9 @@ func TestIsStatusReconciled(t *testing.T) {
 						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.RollbackFailedState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
-						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+						Conditions: []metav1.Condition{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: metav1.ConditionFalse},
 						},
 					},
 				},
@@ -130,9 +129,9 @@ func TestIsStatusReconciled(t *testing.T) {
 						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
-						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+						Conditions: []metav1.Condition{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: metav1.ConditionFalse},
 						},
 					},
 				},
@@ -151,9 +150,9 @@ func TestIsStatusReconciled(t *testing.T) {
 						PublishedVersion: pointer.StringPtr("xxxx"),
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
-						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+						Conditions: []metav1.Condition{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: metav1.ConditionFalse},
 						},
 					},
 				},
@@ -172,9 +171,9 @@ func TestIsStatusReconciled(t *testing.T) {
 						PublishedVersion: pointer.StringPtr("xxxx"),
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
-						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+						Conditions: []metav1.Condition{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: metav1.ConditionFalse},
 						},
 					},
 				},
