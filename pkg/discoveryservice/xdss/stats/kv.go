@@ -94,12 +94,6 @@ func (s *Stats) IncrementCounter(nodeID, rType, version, podID, statName string,
 	s.store.SetDefault(NewKey(nodeID, rType, version, podID, statName).String(), counter+increment)
 }
 
-// ExpireCounter adds expiration to a counter.
-func (s *Stats) ExpireCounter(nodeID, rType, version, podID, statName string, expiration time.Duration) {
-	counter, _ := s.GetCounter(nodeID, rType, version, podID, statName)
-	s.store.Set(NewKey(nodeID, rType, version, podID, statName).String(), counter, expiration)
-}
-
 func (s *Stats) FilterKeys(filters ...string) map[string]kv.Item {
 	all := s.store.Items()
 	selected := map[string]kv.Item{}

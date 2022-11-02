@@ -28,6 +28,7 @@ import (
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
@@ -98,7 +99,7 @@ func NewXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logg
 }
 
 // Start starts an xDS server at the given port.
-func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
+func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string, stopCh <-chan struct{}) error {
 
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
@@ -136,11 +137,18 @@ func (xdss *XdsServer) Start(stopCh <-chan struct{}) error {
 
 	setupLog.Info(fmt.Sprintf("Aggregated discovery service listening on %d\n", xdss.xDSPort))
 
+	// start the stats garbage collector
+	stopGC := make(chan struct{})
+	if err := xdss.callbacksV3.Stats.RunGC(client, namespace, stopGC); err != nil {
+		return err
+	}
+
 	// wait until channel stopCh closed or an error is received
 	select {
 
 	case <-stopCh:
 		setupLog.Info("shutting down xds server")
+		close(stopGC)
 		stopped := make(chan struct{})
 		go func() {
 			grpcServer.GracefulStop()

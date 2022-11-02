@@ -35,6 +35,7 @@ import (
 	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -123,7 +124,12 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	wait.Add(1)
 	go func() {
 		defer wait.Done()
-		if err := xdss.Start(stopCh); err != nil {
+		client, err := kubernetes.NewForConfig(cfg)
+		if err != nil {
+			setupLog.Error(err, "unable to create k8s client for xdss")
+			os.Exit(1)
+		}
+		if err := xdss.Start(client, os.Getenv("WATCH_NAMESPACE"), stopCh); err != nil {
 			setupLog.Error(err, "xDS server returned an unrecoverable error, shutting down")
 			os.Exit(1)
 		}

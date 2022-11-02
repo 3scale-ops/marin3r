@@ -60,7 +60,7 @@ func TestGeneratorOptions_Role(t *testing.T) {
 				Rules: []rbacv1.PolicyRule{
 					{
 						APIGroups: []string{corev1.SchemeGroupVersion.Group},
-						Resources: []string{"secrets"},
+						Resources: []string{"secrets", "pods"},
 						Verbs:     []string{"get", "list", "watch"},
 					},
 					{

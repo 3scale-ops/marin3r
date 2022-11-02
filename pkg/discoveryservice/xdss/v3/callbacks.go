@@ -47,7 +47,6 @@ func (cb *Callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) err
 // OnStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
 func (cb *Callbacks) OnStreamClosed(id int64) {
 	cb.Logger.V(1).Info("Stream closed", "StreamID", id)
-	cb.Stats.ReportStreamClosed(id)
 }
 
 // OnStreamRequest implements go-control-plane/pkg/server/Callbacks.OnStreamRequest
@@ -86,7 +85,7 @@ func (cb *Callbacks) OnStreamRequest(id int64, req *envoy_service_discovery_v3.D
 
 	} else {
 		log.Info("Discovery Request")
-		cb.Stats.ReportRequest(req.GetNode().GetId(), req.GetTypeUrl(), podName, id)
+		cb.Stats.ReportRequest(req.GetNode().GetId(), req.GetTypeUrl(), podName)
 	}
 
 	return nil

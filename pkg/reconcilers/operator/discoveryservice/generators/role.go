@@ -26,7 +26,7 @@ func (cfg *GeneratorOptions) Role() lockedresources.GeneratorFunction {
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{corev1.SchemeGroupVersion.Group},
-					Resources: []string{"secrets"},
+					Resources: []string{"secrets", "pods"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{

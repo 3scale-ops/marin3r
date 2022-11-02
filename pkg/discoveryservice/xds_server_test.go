@@ -28,6 +28,7 @@ import (
 	cache_v3 "github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
+	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -87,7 +88,7 @@ func TestXdsServer_Start(t *testing.T) {
 			stopCh := make(chan struct{})
 			wait.Add(1)
 			go func() {
-				if err := tt.xdss.Start(stopCh); err != nil {
+				if err := tt.xdss.Start(fake.NewSimpleClientset(), "ns", stopCh); err != nil {
 					t.Errorf("TestXdsServer_Start = non nil error: '%s'", err)
 				}
 				wait.Done()
