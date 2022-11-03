@@ -1,10 +1,8 @@
 package k8sutil
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import "github.com/operator-framework/operator-lib/status"
 
-func ConditionsEqual(a, b *metav1.Condition) bool {
+func ConditionsEqual(a, b *status.Condition) bool {
 	if a == nil && b == nil {
 		return true
 	}

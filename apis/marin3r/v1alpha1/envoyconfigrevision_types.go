@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/operator-framework/operator-lib/status"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,15 +29,15 @@ const (
 
 	// RevisionPublishedCondition is a condition that marks the EnvoyConfigRevision object
 	// as the one that should be published in the xds server cache
-	RevisionPublishedCondition string = "RevisionPublished"
+	RevisionPublishedCondition status.ConditionType = "RevisionPublished"
 
 	// ResourcesInSyncCondition is a condition that other controllers can use to indicate
 	// that the respurces need resync
-	ResourcesInSyncCondition string = "ResourcesInSync"
+	ResourcesInSyncCondition status.ConditionType = "ResourcesInSync"
 
 	// RevisionTaintedCondition is a condition type that's used to report that this
 	// problems have been observed with this revision and should not be published
-	RevisionTaintedCondition string = "RevisionTainted"
+	RevisionTaintedCondition status.ConditionType = "RevisionTainted"
 
 	/* Finalizers */
 
@@ -95,7 +96,7 @@ type EnvoyConfigRevisionStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions status.Conditions `json:"conditions,omitempty"`
 }
 
 // IsPublished returns true if this revision is published, false otherwise
