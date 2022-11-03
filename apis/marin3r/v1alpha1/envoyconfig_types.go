@@ -22,6 +22,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util"
+	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,12 +35,12 @@ const (
 	// envoyconfig cannot reach the desired status specified in the spec,
 	// usually because the config in the spec is incorrect or has caused failures
 	// in the envoy clients
-	CacheOutOfSyncCondition string = "CacheOutOfSync"
+	CacheOutOfSyncCondition status.ConditionType = "CacheOutOfSync"
 
 	// RollbackFailedCondition indicates that the EnvoyConfig object
 	// is not able to publish a config revision because all revisions are
 	// tainted
-	RollbackFailedCondition string = "RollbackFailed"
+	RollbackFailedCondition status.ConditionType = "RollbackFailed"
 
 	/* State */
 
@@ -186,7 +187,7 @@ type EnvoyConfigStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions status.Conditions `json:"conditions,omitempty"`
 	// ConfigRevisions is an ordered list of references to EnvoyConfigRevision
 	// objects
 	// +operator-sdk:csv:customresourcedefinitions:type=status

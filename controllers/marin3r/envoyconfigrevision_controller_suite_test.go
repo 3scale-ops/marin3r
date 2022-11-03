@@ -15,9 +15,9 @@ import (
 	envoy_extensions_transport_sockets_tls_v3 "github.com/envoyproxy/go-control-plane/envoy/extensions/transport_sockets/tls/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -113,15 +113,14 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				}, 60*time.Second, 5*time.Second).ShouldNot(HaveOccurred())
 
 				patch := client.MergeFrom(ecr.DeepCopy())
-				meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   marin3rv1alpha1.RevisionPublishedCondition,
-					Status: metav1.ConditionTrue,
-					Reason: "test",
+					Status: corev1.ConditionTrue,
 				})
 
 				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition)).To(BeTrue())
+				Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
 				By("checking that a snapshot for spec.nodeId exists in the v3 xDS cache")
 				var gotV3Snap xdss.Snapshot
@@ -176,14 +175,13 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 			By("settign the EnvoyConfigRevision as published")
 			patch := client.MergeFrom(ecr.DeepCopy())
-			meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+			ecr.Status.Conditions.SetCondition(status.Condition{
 				Type:   marin3rv1alpha1.RevisionPublishedCondition,
-				Status: metav1.ConditionTrue,
-				Reason: "test",
+				Status: corev1.ConditionTrue,
 			})
 			err = k8sClient.Status().Patch(context.Background(), ecr, patch)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition))
+			Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)).To(BeTrue())
 
 			wantSnap := xdss_v3.NewSnapshot().SetResources(envoy.Secret, []envoy.Resource{
 				&envoy_extensions_transport_sockets_tls_v3.Secret{
@@ -293,10 +291,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			BeforeEach(func() {
 				By("setting the published condition in the EnvoyConfigRevision to force execution of the finalizer code")
 				patch := client.MergeFrom(ecr.DeepCopy())
-				meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   marin3rv1alpha1.RevisionPublishedCondition,
-					Status: metav1.ConditionTrue,
-					Reason: "test",
+					Status: corev1.ConditionTrue,
 				})
 				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -346,10 +343,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 			BeforeEach(func() {
 				By("setting the RevisionTained condition in the EnvoyConfigRevision")
 				patch := client.MergeFrom(ecr.DeepCopy())
-				meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   marin3rv1alpha1.RevisionTaintedCondition,
-					Status: metav1.ConditionTrue,
-					Reason: "test",
+					Status: corev1.ConditionTrue,
 				})
 				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -368,10 +364,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 				By("unsetting the RevisionTained condition in the EnvoyConfigRevision")
 				patch := client.MergeFrom(ecr.DeepCopy())
-				meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   marin3rv1alpha1.RevisionTaintedCondition,
-					Status: metav1.ConditionFalse,
-					Reason: "test",
+					Status: corev1.ConditionFalse,
 				})
 				err := k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -402,10 +397,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 				By("publishing the EnvoyConfigRevision to force it to load the resources")
 				patch = client.MergeFrom(ecr.DeepCopy())
-				meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   marin3rv1alpha1.RevisionPublishedCondition,
-					Status: metav1.ConditionTrue,
-					Reason: "test",
+					Status: corev1.ConditionTrue,
 				})
 				err = k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -413,7 +407,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), key, ecr)
 					Expect(err).ToNot(HaveOccurred())
-					return meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionTaintedCondition)
+					return ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition)
 				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 			})
 
@@ -431,10 +425,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 				By("publishing the EnvoyConfigRevision to force it to load the resources")
 				patch = client.MergeFrom(ecr.DeepCopy())
-				meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+				ecr.Status.Conditions.SetCondition(status.Condition{
 					Type:   marin3rv1alpha1.RevisionPublishedCondition,
-					Status: metav1.ConditionTrue,
-					Reason: "test",
+					Status: corev1.ConditionTrue,
 				})
 				err = k8sClient.Status().Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -442,10 +435,10 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Eventually(func() bool {
 					err := k8sClient.Get(context.Background(), key, ecr)
 					Expect(err).ToNot(HaveOccurred())
-					return meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition)
+					return ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition)
 				}, 60*time.Second, 5*time.Second).Should(BeTrue())
 
-				Expect(meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.ResourcesInSyncCondition)).ToNot(BeTrue())
+				Expect(ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.ResourcesInSyncCondition)).ToNot(BeTrue())
 				Expect(ecr.Status.IsPublished()).ToNot(BeTrue())
 			})
 		})

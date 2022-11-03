@@ -31,10 +31,9 @@ import (
 	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/go-logr/logr"
+	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -106,7 +105,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	// If this ecr has the RevisionPublishedCondition set to "True" pusblish the resources
 	// to the xds server cache
-	if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
+	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 		var err error
 		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), r.APIVersion)
 
@@ -142,7 +141,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		log.Info("status updated for EnvoyConfigRevision resource")
 	}
 
-	if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
+	if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 		return ctrl.Result{Requeue: true, RequeueAfter: 60 * time.Second}, nil
 	}
 
@@ -153,12 +152,12 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision,
 	reason, msg string, log logr.Logger) error {
 
-	if !meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionTaintedCondition) {
+	if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
 		patch := client.MergeFrom(ecr.DeepCopy())
-		meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+		ecr.Status.Conditions.SetCondition(status.Condition{
 			Type:    marin3rv1alpha1.RevisionTaintedCondition,
-			Status:  metav1.ConditionTrue,
-			Reason:  reason,
+			Status:  corev1.ConditionTrue,
+			Reason:  status.ConditionReason(reason),
 			Message: msg,
 		})
 		ecr.Status.Tainted = pointer.BoolPtr(true)
@@ -219,7 +218,7 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 			reconcileRequests := []reconcile.Request{}
 
 			for _, ecr := range list.Items {
-				if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
+				if ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
 					// check if the Secret is relevant for this EnvoyConfigRevision
 					for _, s := range ecr.Spec.EnvoyResources.Secrets {
 

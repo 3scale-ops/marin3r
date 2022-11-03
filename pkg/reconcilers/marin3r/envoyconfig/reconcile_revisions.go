@@ -10,7 +10,8 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
 	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/meta"
+	"github.com/operator-framework/operator-lib/status"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/pointer"
@@ -182,7 +183,7 @@ func (r *RevisionReconciler) getVersionToPublish() (string, string) {
 	// down, take the first version found that is not tainted
 	for idx := topIdx; idx >= 0; idx-- {
 		ecr := r.revisionList.Items[idx]
-		if !meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionTaintedCondition) {
+		if !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionTaintedCondition) {
 			versionToPublish = ecr.Spec.Version
 			break
 		}
@@ -210,15 +211,15 @@ func (r *RevisionReconciler) isRevisionPublishedConditionReconciled(versionToPub
 	var shouldBeFalse []marin3rv1alpha1.EnvoyConfigRevision = []marin3rv1alpha1.EnvoyConfigRevision{}
 	for _, ecr := range r.revisionList.Items {
 
-		if ecr.Spec.Version != versionToPublish && meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
-			meta.RemoveStatusCondition(&ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition)
+		if ecr.Spec.Version != versionToPublish && ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+			ecr.Status.Conditions.RemoveCondition(marin3rv1alpha1.RevisionPublishedCondition)
 			shouldBeFalse = append(shouldBeFalse, ecr)
 
-		} else if ecr.Spec.Version == versionToPublish && !meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
-			meta.SetStatusCondition(&ecr.Status.Conditions, metav1.Condition{
+		} else if ecr.Spec.Version == versionToPublish && !ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+			ecr.Status.Conditions.SetCondition(status.Condition{
 				Type:    marin3rv1alpha1.RevisionPublishedCondition,
-				Status:  metav1.ConditionTrue,
-				Reason:  "VersionPublished",
+				Status:  corev1.ConditionTrue,
+				Reason:  status.ConditionReason("VersionPublished"),
 				Message: fmt.Sprintf("Version '%s' has been published", versionToPublish),
 			})
 			shouldBeTrue = ecr.DeepCopy()
