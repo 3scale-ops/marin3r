@@ -64,9 +64,10 @@ func IsStatusReconciled(ec *marin3rv1alpha1.EnvoyConfig, cacheState, publishedVe
 	// Reconcile the RollbackFailedCondition
 	if cacheState != marin3rv1alpha1.RollbackFailedState && ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
 		ec.Status.Conditions.SetCondition(status.Condition{
-			Type:   marin3rv1alpha1.RollbackFailedCondition,
-			Reason: "Recovered",
-			Status: corev1.ConditionFalse,
+			Type:    marin3rv1alpha1.RollbackFailedCondition,
+			Reason:  "Recovered",
+			Status:  corev1.ConditionFalse,
+			Message: "Recovered from RollbackFailed condition",
 		})
 		ok = false
 
@@ -77,6 +78,14 @@ func IsStatusReconciled(ec *marin3rv1alpha1.EnvoyConfig, cacheState, publishedVe
 			Reason:  "AllRevisionsTainted",
 			Message: "All revisions are tainted, rollback failed",
 		})
+		ok = false
+	}
+
+	// Temporary fix for RollbackFailedCondition conditions that are missing  the .Message property, which
+	// will be required in an upcoming release
+	if cond := ec.Status.Conditions.GetCondition(marin3rv1alpha1.RollbackFailedCondition); cond != nil && cond.Message == "" {
+		cond.Message = "Recovered from RollbackFailed condition"
+		ec.Status.Conditions.SetCondition(*cond)
 		ok = false
 	}
 

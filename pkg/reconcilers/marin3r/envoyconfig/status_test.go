@@ -36,8 +36,8 @@ func TestIsStatusReconciled(t *testing.T) {
 							{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "test"}},
 						},
 						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse, Message: "a"},
 						},
 					},
 				},
@@ -68,8 +68,8 @@ func TestIsStatusReconciled(t *testing.T) {
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionTrue},
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionTrue, Message: "a"},
 						},
 					},
 				},
@@ -89,8 +89,8 @@ func TestIsStatusReconciled(t *testing.T) {
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionTrue},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionTrue, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse, Message: "a"},
 						},
 					},
 				},
@@ -110,8 +110,8 @@ func TestIsStatusReconciled(t *testing.T) {
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.RollbackFailedState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse, Message: "a"},
 						},
 					},
 				},
@@ -131,8 +131,8 @@ func TestIsStatusReconciled(t *testing.T) {
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse, Message: "a"},
 						},
 					},
 				},
@@ -152,8 +152,8 @@ func TestIsStatusReconciled(t *testing.T) {
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse, Message: "a"},
 						},
 					},
 				},
@@ -173,14 +173,61 @@ func TestIsStatusReconciled(t *testing.T) {
 						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: status.Conditions{
-							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse},
-							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse, Message: "a"},
 						},
 					},
 				},
 				cacheState:       marin3rv1alpha1.RollbackState,
 				publishedVersion: "xxxx",
 				list:             &marin3rv1alpha1.EnvoyConfigRevisionList{},
+			},
+			want: false,
+		},
+		{
+			name: "Status empty, return false",
+			args: args{
+				ec: &marin3rv1alpha1.EnvoyConfig{
+					Status: marin3rv1alpha1.EnvoyConfigStatus{},
+				},
+				cacheState:       marin3rv1alpha1.RollbackState,
+				publishedVersion: "xxxx",
+				list:             &marin3rv1alpha1.EnvoyConfigRevisionList{},
+			},
+			want: false,
+		},
+		{
+			name: "RollbackFailed/Recovered condition is missing the message property",
+			args: args{
+				ec: &marin3rv1alpha1.EnvoyConfig{
+					Status: marin3rv1alpha1.EnvoyConfigStatus{
+						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
+						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
+						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
+							{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "test"}},
+							{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "test"}},
+						},
+						Conditions: status.Conditions{
+							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: corev1.ConditionFalse, Message: "a"},
+							{Type: marin3rv1alpha1.RollbackFailedCondition, Status: corev1.ConditionFalse},
+						},
+					},
+				},
+				cacheState:       marin3rv1alpha1.InSyncState,
+				publishedVersion: "6ddbcdf795",
+				list: &marin3rv1alpha1.EnvoyConfigRevisionList{
+					Items: []marin3rv1alpha1.EnvoyConfigRevision{
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "ecr1", Namespace: "test"},
+							Spec:       marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "1"},
+						},
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "ecr2", Namespace: "test"},
+							Spec:       marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "2"},
+						},
+					},
+				},
 			},
 			want: false,
 		},
