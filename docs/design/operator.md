@@ -4,7 +4,6 @@ The operator part of MARIN3R is a group of controllers that manage the deploymen
 
 * DiscoveryService controller
 * DiscoveryServiceCertificate controller
-* DiscoveryServiceCertificateWatcher controller
 
 ## DiscoveryService controller
 
@@ -44,7 +43,7 @@ The sidecar envoy proxies consume the client certificate by mounting the Secret 
 
 This controller is responsible for creating certificates matching the spec defined in DiscoveryServiceCertificate resources. Both self-signed and ca-signed certificates are supported.
 
-Certificates are stored in kubernetes Secrets of type `kubernetes.io/tls`.
+Certificates are stored as kubernetes Secrets of type `kubernetes.io/tls`.
 
 ### Certificate renewal
 

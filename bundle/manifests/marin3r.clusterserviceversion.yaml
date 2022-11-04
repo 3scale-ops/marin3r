@@ -16,19 +16,16 @@ metadata:
             "envoyResources": {
               "clusters": [
                 {
-                  "name": "example",
                   "value": "name: example\nconnect_timeout: 10ms\ntype: STRICT_DNS\ndns_lookup_family: V4_ONLY\nlb_policy: ROUND_ROBIN\nload_assignment:\n  cluster_name: example\n  endpoints:\n    - lb_endpoints:\n        - endpoint:\n            address:\n              socket_address:\n                address: example\n                port_value: 8080\n"
                 }
               ],
               "listeners": [
                 {
-                  "name": "https",
                   "value": "name: https\naddress:\n  socket_address:\n    address: 0.0.0.0\n    port_value: 8443\nfilter_chains:\n  - filters:\n    - name: envoy.filters.network.http_connection_manager\n      typed_config:\n        \"@type\": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager\n        access_log:\n          - name: envoy.access_loggers.file\n            typed_config:\n              \"@type\": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog\n              path: /dev/stdout\n        stat_prefix: https\n        rds: { route_config_name: \"local\", config_source: { ads: {}, resource_api_version: \"V3\" }}\n        http_filters:\n          - name: envoy.filters.http.router\n    transport_socket:\n      name: envoy.transport_sockets.tls\n      typed_config:\n        \"@type\": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext\n        common_tls_context:\n          tls_certificate_sds_secret_configs:\n            - name: example.default.svc\n              sds_config: { ads: {}, resource_api_version: \"V3\" }\n"
                 }
               ],
               "routes": [
                 {
-                  "name": "local",
                   "value": "name: local\nvirtual_hosts:\n  - name: all\n    domains: [\"*\"]\n    routes:\n      - match:\n          prefix: \"/\"\n        route:\n          cluster: example\n"
                 }
               ],
@@ -80,7 +77,7 @@ metadata:
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.10.0
+  name: marin3r.v0.11.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -232,7 +229,10 @@ spec:
           reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
         displayName: Clusters
         path: envoyResources.clusters
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.clusters[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -242,17 +242,36 @@ spec:
           type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
         displayName: Endpoints
         path: envoyResources.endpoints
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.endpoints[0].name
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.endpoints[0].value
+      - description: 'ExtensionConfigs is a list of the envoy ExtensionConfig resource
+          type API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/extension.proto'
+        displayName: Extension Configs
+        path: envoyResources.extensionConfigs
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
+        displayName: Name
+        path: envoyResources.extensionConfigs[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.extensionConfigs[0].value
       - description: 'Listeners is a list of the envoy Listener resource type. API
           V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
         displayName: Listeners
         path: envoyResources.listeners
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.listeners[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -262,7 +281,10 @@ spec:
           https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
         displayName: Routes
         path: envoyResources.routes
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.routes[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -272,7 +294,10 @@ spec:
           reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
         path: envoyResources.runtimes
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.runtimes[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -282,7 +307,10 @@ spec:
           API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto'
         displayName: Scoped Routes
         path: envoyResources.scopedRoutes
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.scopedRoutes[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -358,7 +386,10 @@ spec:
           reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto'
         displayName: Clusters
         path: envoyResources.clusters
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.clusters[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -368,17 +399,36 @@ spec:
           type. API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto'
         displayName: Endpoints
         path: envoyResources.endpoints
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.endpoints[0].name
       - description: Value is the serialized representation of the envoy resource
         displayName: Value
         path: envoyResources.endpoints[0].value
+      - description: 'ExtensionConfigs is a list of the envoy ExtensionConfig resource
+          type API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/extension.proto'
+        displayName: Extension Configs
+        path: envoyResources.extensionConfigs
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
+        displayName: Name
+        path: envoyResources.extensionConfigs[0].name
+      - description: Value is the serialized representation of the envoy resource
+        displayName: Value
+        path: envoyResources.extensionConfigs[0].value
       - description: 'Listeners is a list of the envoy Listener resource type. API
           V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto'
         displayName: Listeners
         path: envoyResources.listeners
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.listeners[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -388,7 +438,10 @@ spec:
           https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto'
         displayName: Routes
         path: envoyResources.routes
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.routes[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -398,7 +451,10 @@ spec:
           reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto'
         displayName: Runtimes
         path: envoyResources.runtimes
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.runtimes[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -408,7 +464,10 @@ spec:
           API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto'
         displayName: Scoped Routes
         path: envoyResources.scopedRoutes
-      - description: Name of the envoy resource
+      - description: 'Name of the envoy resource. DEPRECATED: this field has no effect
+          and will be removed in an upcoming release. The name of the resources for
+          discovery purposes is included in the resource itself. Refer to the envoy
+          API reference to check how the name is specified for each resource type.'
         displayName: Name
         path: envoyResources.scopedRoutes[0].name
       - description: Value is the serialized representation of the envoy resource
@@ -705,7 +764,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.10.0
+                image: quay.io/3scale/marin3r:v0.11.0
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -763,7 +822,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.10.0
+                image: quay.io/3scale/marin3r:v0.11.0
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -847,6 +906,14 @@ spec:
           - list
           - patch
           - update
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
           - watch
         - apiGroups:
           - ""
@@ -1054,7 +1121,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.10.0
+  version: 0.11.0
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

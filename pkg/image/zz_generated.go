@@ -1,5 +1,5 @@
 package image
 
 const (
-	image string = "quay.io/3scale/marin3r:v0.10.0"
+	image string = "quay.io/3scale/marin3r:v0.11.0"
 )

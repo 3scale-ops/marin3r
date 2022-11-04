@@ -82,7 +82,12 @@ spec:
                         an envoy resource
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: 'Name of the envoy resource. DEPRECATED: this
+                            field has no effect and will be removed in an upcoming
+                            release. The name of the resources for discovery purposes
+                            is included in the resource itself. Refer to the envoy
+                            API reference to check how the name is specified for each
+                            resource type.'
                           type: string
                         value:
                           description: Value is the serialized representation of the
@@ -100,7 +105,12 @@ spec:
                         an envoy resource
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: 'Name of the envoy resource. DEPRECATED: this
+                            field has no effect and will be removed in an upcoming
+                            release. The name of the resources for discovery purposes
+                            is included in the resource itself. Refer to the envoy
+                            API reference to check how the name is specified for each
+                            resource type.'
                           type: string
                         value:
                           description: Value is the serialized representation of the
@@ -118,7 +128,12 @@ spec:
                         an envoy resource
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: 'Name of the envoy resource. DEPRECATED: this
+                            field has no effect and will be removed in an upcoming
+                            release. The name of the resources for discovery purposes
+                            is included in the resource itself. Refer to the envoy
+                            API reference to check how the name is specified for each
+                            resource type.'
                           type: string
                         value:
                           description: Value is the serialized representation of the
@@ -136,7 +151,12 @@ spec:
                         an envoy resource
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: 'Name of the envoy resource. DEPRECATED: this
+                            field has no effect and will be removed in an upcoming
+                            release. The name of the resources for discovery purposes
+                            is included in the resource itself. Refer to the envoy
+                            API reference to check how the name is specified for each
+                            resource type.'
                           type: string
                         value:
                           description: Value is the serialized representation of the
@@ -154,7 +174,12 @@ spec:
                         an envoy resource
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: 'Name of the envoy resource. DEPRECATED: this
+                            field has no effect and will be removed in an upcoming
+                            release. The name of the resources for discovery purposes
+                            is included in the resource itself. Refer to the envoy
+                            API reference to check how the name is specified for each
+                            resource type.'
                           type: string
                         value:
                           description: Value is the serialized representation of the
@@ -172,7 +197,12 @@ spec:
                         an envoy resource
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: 'Name of the envoy resource. DEPRECATED: this
+                            field has no effect and will be removed in an upcoming
+                            release. The name of the resources for discovery purposes
+                            is included in the resource itself. Refer to the envoy
+                            API reference to check how the name is specified for each
+                            resource type.'
                           type: string
                         value:
                           description: Value is the serialized representation of the
@@ -190,7 +220,12 @@ spec:
                         an envoy resource
                       properties:
                         name:
-                          description: Name of the envoy resource
+                          description: 'Name of the envoy resource. DEPRECATED: this
+                            field has no effect and will be removed in an upcoming
+                            release. The name of the resources for discovery purposes
+                            is included in the resource itself. Refer to the envoy
+                            API reference to check how the name is specified for each
+                            resource type.'
                           type: string
                         value:
                           description: Value is the serialized representation of the

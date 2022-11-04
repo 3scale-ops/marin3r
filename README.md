@@ -203,6 +203,10 @@ spec:
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
     runtimes:
       - value: {"name":"runtime1","layer":{"static_layer_0":"value"}}
+    # ExtensionConfigs is a list of the envoy ExtensionConfig resource type
+    # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/extension.proto
+    extensionConfigs:
+      - value: {"name":"http_filter1","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.http.router.v3.Router","dynamic_stats":false}}
 ```
 
 ### **Secrets**

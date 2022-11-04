@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.10.0
+VERSION ?= 0.11.0
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -244,7 +244,7 @@ $(GOCOVMERGE):
 
 .PHONY: crd-ref-docs
 crd-ref-docs: ## Download crd-ref-docs locally if necessary
-	test -s $(GOCOVMERGE) || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REFDOCS_VERSION)
+	test -s $(CRD_REFDOCS) || GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REFDOCS_VERSION)
 
 .PHONY: kind
 KIND = $(shell pwd)/bin/kind
@@ -365,7 +365,7 @@ catalog-retag-latest:
 tmp/certs:
 	hack/gen-certs.sh
 
-ENVOY_VERSION ?= v1.20.1
+ENVOY_VERSION ?= v1.23.2
 
 run-ds: ## locally starts a discovery service
 run-ds: manifests generate fmt vet go-generate tmp/certs
