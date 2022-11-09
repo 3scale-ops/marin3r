@@ -12,7 +12,6 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/davecgh/go-spew/spew"
 	resource_v3 "github.com/envoyproxy/go-control-plane/pkg/resource/v3"
-	"github.com/operator-framework/operator-lib/status"
 	"github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,8 +48,8 @@ func TestIsStatusReconciled(t *testing.T) {
 							NodeID:  "test",
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: status.Conditions{
-								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue},
+							Conditions: []metav1.Condition{
+								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: metav1.ConditionTrue},
 							},
 						},
 					}
@@ -94,14 +93,14 @@ func TestIsStatusReconciled(t *testing.T) {
 								Runtimes:  "f",
 							},
 							LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.Now()),
-							Conditions: status.Conditions{
+							Conditions: []metav1.Condition{
 								{
 									Type:   marin3rv1alpha1.RevisionPublishedCondition,
-									Status: corev1.ConditionTrue,
+									Status: metav1.ConditionTrue,
 								},
 								{
 									Type:    marin3rv1alpha1.ResourcesInSyncCondition,
-									Status:  corev1.ConditionTrue,
+									Status:  metav1.ConditionTrue,
 									Reason:  "ResourcesSynced",
 									Message: "EnvoyConfigRevision resources successfully synced with xDS server cache",
 								},
@@ -140,9 +139,9 @@ func TestIsStatusReconciled(t *testing.T) {
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 							Published:       pointer.BoolPtr(true),
 							LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.Now()),
-							Conditions: status.Conditions{
-								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionFalse},
-								{Type: marin3rv1alpha1.ResourcesInSyncCondition, Status: corev1.ConditionTrue},
+							Conditions: []metav1.Condition{
+								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: metav1.ConditionFalse},
+								{Type: marin3rv1alpha1.ResourcesInSyncCondition, Status: metav1.ConditionTrue},
 							},
 						},
 					}
@@ -169,8 +168,8 @@ func TestIsStatusReconciled(t *testing.T) {
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 							Published:       pointer.BoolPtr(false),
 							LastPublishedAt: func(t metav1.Time) *metav1.Time { return &t }(metav1.Now()),
-							Conditions: status.Conditions{
-								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionFalse},
+							Conditions: []metav1.Condition{
+								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: metav1.ConditionFalse},
 							},
 						},
 					}
@@ -228,10 +227,10 @@ func TestIsStatusReconciled(t *testing.T) {
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 							ProvidesVersions: &marin3rv1alpha1.VersionTracker{Endpoints: "aaaa"},
 							Tainted:          pointer.BoolPtr(true),
-							Conditions: status.Conditions{
+							Conditions: []metav1.Condition{
 								{
 									Type:    marin3rv1alpha1.RevisionTaintedCondition,
-									Status:  corev1.ConditionTrue,
+									Status:  metav1.ConditionTrue,
 									Reason:  "ResourcesFailing",
 									Message: "EnvoyConfigRevision resources are being rejected by more than 100% of the Envoy clients",
 								},
@@ -264,8 +263,8 @@ func TestIsStatusReconciled(t *testing.T) {
 							NodeID:  "test",
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: status.Conditions{
-								{Type: marin3rv1alpha1.RevisionTaintedCondition, Status: corev1.ConditionTrue},
+							Conditions: []metav1.Condition{
+								{Type: marin3rv1alpha1.RevisionTaintedCondition, Status: metav1.ConditionTrue},
 							},
 						},
 					}
@@ -291,8 +290,8 @@ func TestIsStatusReconciled(t *testing.T) {
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
 							Tainted: pointer.BoolPtr(true),
-							Conditions: status.Conditions{
-								{Type: marin3rv1alpha1.RevisionTaintedCondition, Status: corev1.ConditionTrue},
+							Conditions: []metav1.Condition{
+								{Type: marin3rv1alpha1.RevisionTaintedCondition, Status: metav1.ConditionTrue},
 							},
 						},
 					}
@@ -327,7 +326,7 @@ func Test_calculateResourcesInSyncCondition(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want corev1.ConditionStatus
+		want metav1.ConditionStatus
 	}{
 		{
 			name: "Returns condition true",
@@ -339,8 +338,8 @@ func Test_calculateResourcesInSyncCondition(t *testing.T) {
 							NodeID:  "test",
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: status.Conditions{
-								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue},
+							Conditions: []metav1.Condition{
+								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: metav1.ConditionTrue},
 							},
 						},
 					}
@@ -351,7 +350,7 @@ func Test_calculateResourcesInSyncCondition(t *testing.T) {
 					return cache
 				},
 			},
-			want: corev1.ConditionTrue,
+			want: metav1.ConditionTrue,
 		},
 		{
 			name: "Returns condition false if snapshot not found for spec.nodeID",
@@ -363,8 +362,8 @@ func Test_calculateResourcesInSyncCondition(t *testing.T) {
 							NodeID:  "test",
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: status.Conditions{
-								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: corev1.ConditionTrue},
+							Conditions: []metav1.Condition{
+								{Type: marin3rv1alpha1.RevisionPublishedCondition, Status: metav1.ConditionTrue},
 							},
 						},
 					}
@@ -374,7 +373,7 @@ func Test_calculateResourcesInSyncCondition(t *testing.T) {
 					return cache
 				},
 			},
-			want: corev1.ConditionFalse,
+			want: metav1.ConditionFalse,
 		},
 	}
 	for _, tt := range tests {

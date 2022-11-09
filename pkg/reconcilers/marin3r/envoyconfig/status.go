@@ -4,8 +4,9 @@ import (
 	"reflect"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
-	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // IsStatusReconciled calculates the status of the resource
@@ -37,24 +38,24 @@ func IsStatusReconciled(ec *marin3rv1alpha1.EnvoyConfig, cacheState, publishedVe
 	}
 
 	if ec.Status.Conditions == nil {
-		ec.Status.Conditions = status.NewConditions()
+		ec.Status.Conditions = []metav1.Condition{}
 		ok = false
 	}
 
 	// Reconcile the CacheOutOfSyncCondition
-	if desiredVersion != publishedVersion && !ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
-		ec.Status.Conditions.SetCondition(status.Condition{
+	if desiredVersion != publishedVersion && !meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.CacheOutOfSyncCondition) {
+		meta.SetStatusCondition(&ec.Status.Conditions, metav1.Condition{
 			Type:    marin3rv1alpha1.CacheOutOfSyncCondition,
-			Status:  corev1.ConditionTrue,
+			Status:  metav1.ConditionTrue,
 			Reason:  "CantPublishDesiredVersion",
 			Message: "Desired resources spec cannot be applied",
 		})
 		ok = false
 
-	} else if desiredVersion == publishedVersion && ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.CacheOutOfSyncCondition) {
-		ec.Status.Conditions.SetCondition(status.Condition{
+	} else if desiredVersion == publishedVersion && meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.CacheOutOfSyncCondition) {
+		meta.SetStatusCondition(&ec.Status.Conditions, metav1.Condition{
 			Type:    marin3rv1alpha1.CacheOutOfSyncCondition,
-			Status:  corev1.ConditionFalse,
+			Status:  metav1.ConditionFalse,
 			Reason:  "DesiredVersionPublished",
 			Message: "Desired version successfully published",
 		})
@@ -62,19 +63,19 @@ func IsStatusReconciled(ec *marin3rv1alpha1.EnvoyConfig, cacheState, publishedVe
 	}
 
 	// Reconcile the RollbackFailedCondition
-	if cacheState != marin3rv1alpha1.RollbackFailedState && ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
-		ec.Status.Conditions.SetCondition(status.Condition{
+	if cacheState != marin3rv1alpha1.RollbackFailedState && meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.RollbackFailedCondition) {
+		meta.SetStatusCondition(&ec.Status.Conditions, metav1.Condition{
 			Type:    marin3rv1alpha1.RollbackFailedCondition,
 			Reason:  "Recovered",
-			Status:  corev1.ConditionFalse,
+			Status:  metav1.ConditionFalse,
 			Message: "Recovered from RollbackFailed condition",
 		})
 		ok = false
 
-	} else if cacheState == marin3rv1alpha1.RollbackFailedState && !ec.Status.Conditions.IsTrueFor(marin3rv1alpha1.RollbackFailedCondition) {
-		ec.Status.Conditions.SetCondition(status.Condition{
+	} else if cacheState == marin3rv1alpha1.RollbackFailedState && !meta.IsStatusConditionTrue(ec.Status.Conditions, marin3rv1alpha1.RollbackFailedCondition) {
+		meta.SetStatusCondition(&ec.Status.Conditions, metav1.Condition{
 			Type:    marin3rv1alpha1.RollbackFailedCondition,
-			Status:  corev1.ConditionTrue,
+			Status:  metav1.ConditionTrue,
 			Reason:  "AllRevisionsTainted",
 			Message: "All revisions are tainted, rollback failed",
 		})
@@ -83,9 +84,9 @@ func IsStatusReconciled(ec *marin3rv1alpha1.EnvoyConfig, cacheState, publishedVe
 
 	// Temporary fix for RollbackFailedCondition conditions that are missing  the .Message property, which
 	// will be required in an upcoming release
-	if cond := ec.Status.Conditions.GetCondition(marin3rv1alpha1.RollbackFailedCondition); cond != nil && cond.Message == "" {
+	if cond := meta.FindStatusCondition(ec.Status.Conditions, marin3rv1alpha1.RollbackFailedCondition); cond != nil && cond.Message == "" {
 		cond.Message = "Recovered from RollbackFailed condition"
-		ec.Status.Conditions.SetCondition(*cond)
+		meta.SetStatusCondition(&ec.Status.Conditions, *cond)
 		ok = false
 	}
 
