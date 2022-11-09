@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/3scale-ops/marin3r/pkg/image"
-	"github.com/operator-framework/operator-lib/status"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -115,7 +114,7 @@ type DiscoveryServiceStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
-	Conditions status.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // PKIConfig has configuration for the PKI that marin3r manages for the

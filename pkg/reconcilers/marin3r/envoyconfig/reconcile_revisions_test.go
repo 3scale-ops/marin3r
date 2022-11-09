@@ -12,8 +12,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/go-test/deep"
-	"github.com/operator-framework/operator-lib/status"
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -510,9 +509,9 @@ func TestRevisionReconciler_getVersionToPublish(t *testing.T) {
 					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "aaaa"}},
 					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "xxxx"},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: []status.Condition{{
+							Conditions: []metav1.Condition{{
 								Type:   marin3rv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
+								Status: metav1.ConditionTrue,
 							}}}},
 				},
 			},
@@ -525,15 +524,15 @@ func TestRevisionReconciler_getVersionToPublish(t *testing.T) {
 				Items: []marin3rv1alpha1.EnvoyConfigRevision{
 					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "aaaa"},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: []status.Condition{{
+							Conditions: []metav1.Condition{{
 								Type:   marin3rv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
+								Status: metav1.ConditionTrue,
 							}}}},
 					{Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{Version: "xxxx"},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: []status.Condition{{
+							Conditions: []metav1.Condition{{
 								Type:   marin3rv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
+								Status: metav1.ConditionTrue,
 							}}}},
 				},
 			},
@@ -598,9 +597,9 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 							Version: "xxxx",
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: []status.Condition{{
+							Conditions: []metav1.Condition{{
 								Type:   marin3rv1alpha1.RevisionPublishedCondition,
-								Status: corev1.ConditionTrue,
+								Status: metav1.ConditionTrue,
 							}},
 						},
 					},
@@ -613,7 +612,7 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 							Version: "aaaa",
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: []status.Condition{},
+							Conditions: []metav1.Condition{},
 						},
 					},
 				},
@@ -635,9 +634,9 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 						Version: "xxxx",
 					},
 					Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-						Conditions: []status.Condition{{
+						Conditions: []metav1.Condition{{
 							Type:   marin3rv1alpha1.RevisionPublishedCondition,
-							Status: corev1.ConditionTrue,
+							Status: metav1.ConditionTrue,
 						}},
 					},
 				}},
@@ -659,9 +658,9 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 						Version: "xxxx",
 					},
 					Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-						Conditions: []status.Condition{{
+						Conditions: []metav1.Condition{{
 							Type:   marin3rv1alpha1.RevisionPublishedCondition,
-							Status: corev1.ConditionTrue,
+							Status: metav1.ConditionTrue,
 						}},
 					},
 				}},
@@ -694,9 +693,9 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 							Version: "xxxx",
 						},
 						Status: marin3rv1alpha1.EnvoyConfigRevisionStatus{
-							Conditions: []status.Condition{{
+							Conditions: []metav1.Condition{{
 								Type:   marin3rv1alpha1.RevisionTaintedCondition,
-								Status: corev1.ConditionTrue,
+								Status: metav1.ConditionTrue,
 							}},
 						},
 					},
@@ -718,7 +717,7 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotPublished '%v', wanted 'nil'", types.NamespacedName{Name: got.GetName(), Namespace: got.GetNamespace()})
 				}
 			} else {
-				if got.GetName() != tt.wantPublished.Name || got.GetNamespace() != tt.wantPublished.Namespace || !got.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+				if got.GetName() != tt.wantPublished.Name || got.GetNamespace() != tt.wantPublished.Namespace || !meta.IsStatusConditionTrue(got.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
 					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotPublished '%v', wantPublished %v", types.NamespacedName{Name: got.GetName(), Namespace: got.GetNamespace()}, tt.wantPublished)
 				}
 			}
@@ -734,7 +733,7 @@ func TestRevisionReconciler_isRevisionPublishedConditionReconciled(t *testing.T)
 					t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() got wrong number of unpublished revisions")
 				}
 				for idx, ecr := range got1 {
-					if ecr.GetName() != (*tt.wantUnpublished)[idx].Name || ecr.GetNamespace() != (*tt.wantUnpublished)[idx].Namespace || ecr.Status.Conditions.IsTrueFor(marin3rv1alpha1.RevisionPublishedCondition) {
+					if ecr.GetName() != (*tt.wantUnpublished)[idx].Name || ecr.GetNamespace() != (*tt.wantUnpublished)[idx].Namespace || meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
 						t.Errorf("RevisionReconciler.isRevisionPublishedConditionReconciled() gotUnpublished '%v', wantUnpublished %v", ecr, (*tt.wantUnpublished)[idx])
 					}
 				}

@@ -23,7 +23,6 @@ package v1alpha1
 
 import (
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
-	"github.com/operator-framework/operator-lib/status"
 	"k8s.io/api/autoscaling/v2beta2"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -269,7 +268,7 @@ func (in *DiscoveryServiceCertificateStatus) DeepCopyInto(out *DiscoveryServiceC
 	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(status.Conditions, len(*in))
+		*out = make([]metav1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -373,7 +372,7 @@ func (in *DiscoveryServiceStatus) DeepCopyInto(out *DiscoveryServiceStatus) {
 	*out = *in
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(status.Conditions, len(*in))
+		*out = make([]metav1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
