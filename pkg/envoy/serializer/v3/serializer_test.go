@@ -348,7 +348,7 @@ func TestJSON_Unmarshal(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "Error deserializing resource: unknown type",
+			name:    "Error deserializing resource: cannot be nil",
 			s:       JSON{},
 			args:    args{str: `{"this_is": "wrong"}`, res: nil},
 			want:    nil,
