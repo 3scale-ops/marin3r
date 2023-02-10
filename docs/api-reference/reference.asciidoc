@@ -158,7 +158,7 @@ EnvoyConfigRevisionStatus defines the observed state of EnvoyConfigRevision
 | *`providesVersions`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-versiontracker[$$VersionTracker$$]__ | ProvidesVersions keeps track of the version that this revision publishes in the xDS server for each resource type
 | *`lastPublishedAt`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#time-v1-meta[$$Time$$]__ | LastPublishedAt indicates the last time this config review transitioned to published
 | *`tainted`* __boolean__ | Tainted indicates whether the EnvoyConfigRevision is eligible for publishing or not
-| *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-lib-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
+| *`conditions`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#condition-v1-meta[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
 |===
 
 
@@ -198,7 +198,7 @@ EnvoyConfigStatus defines the observed state of EnvoyConfig
 | *`cacheState`* __string__ | CacheState summarizes all the observations about the EnvoyConfig to give the user a concrete idea on the general status of the discovery servie cache. It is intended only for human consumption. Other controllers should relly on conditions to determine the status of the discovery server cache.
 | *`publishedVersion`* __string__ | PublishedVersion is the config version currently served by the envoy discovery service for the give nodeID
 | *`desiredVersion`* __string__ | DesiredVersion represents the resources version described in the spec of the EnvoyConfig object
-| *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-lib-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
+| *`conditions`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#condition-v1-meta[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
 | *`revisions`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-configrevisionref[$$ConfigRevisionRef$$] array__ | ConfigRevisions is an ordered list of references to EnvoyConfigRevision objects
 |===
 
@@ -500,7 +500,7 @@ DiscoveryServiceCertificateStatus defines the observed state of DiscoveryService
 | *`notBefore`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#time-v1-meta[$$Time$$]__ | NotBefore is the time at which the certificate starts being valid
 | *`notAfter`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#time-v1-meta[$$Time$$]__ | NotAfter is the time at which the certificate expires
 | *`certificateHash`* __string__ | CertificateHash stores the current hash of the certificate. It is used for other controllers to validate if a certificate has been re-issued.
-| *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-lib-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
+| *`conditions`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#condition-v1-meta[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
 |===
 
 
@@ -558,7 +558,7 @@ DiscoveryServiceStatus defines the observed state of DiscoveryService
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`conditions`* __xref:{anchor_prefix}-github-com-operator-framework-operator-lib-status-condition[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
+| *`conditions`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#condition-v1-meta[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
 |===
 
 
