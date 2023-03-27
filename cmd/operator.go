@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/3scale-ops/basereconciler/reconciler"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
@@ -85,7 +86,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             leaderElect,
 		LeaderElectionID:           "2cfbe7d6.operator.marin3r.3scale.net",
-		LeaderElectionResourceLock: "configmapsleases",
+		LeaderElectionResourceLock: "leases",
 		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
 	}
 
@@ -111,7 +112,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	if err := (&operatorcontroller.DiscoveryServiceReconciler{
-		Reconciler: lockedresources.NewFromManager(mgr, "DiscoveryService", isClusterScoped),
+		Reconciler: reconciler.NewFromManager(mgr),
 		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "discoveryservice")

@@ -11,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_Deployment(t *testing.T) {
@@ -22,7 +21,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 		name string
 		opts GeneratorOptions
 		args args
-		want client.Object
+		want *appsv1.Deployment
 	}{
 		{"Generates a Deployment",
 			GeneratorOptions{

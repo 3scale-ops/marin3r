@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_ServerCertificate(t *testing.T) {
@@ -20,7 +19,7 @@ func TestGeneratorOptions_ServerCertificate(t *testing.T) {
 		name string
 		opts GeneratorOptions
 		args args
-		want client.Object
+		want *operatorv1alpha1.DiscoveryServiceCertificate
 	}{
 		{"Generates DiscoveryServiceCertificate for the server certificate",
 			GeneratorOptions{

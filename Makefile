@@ -162,7 +162,7 @@ build: generate fmt vet go-generate ## Build manager binary.
 	go build -o bin/manager main.go
 
 run: manifests generate fmt vet go-generate ## Run a controller from your host.
-	go run ./main.go
+	go run ./main.go operator
 
 docker-build: ## Build docker image with the manager.
 	docker build -t ${IMG} .

@@ -8,14 +8,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_ClientCertificate(t *testing.T) {
 	tests := []struct {
 		name string
 		opts GeneratorOptions
-		want client.Object
+		want *operatorv1alpha1.DiscoveryServiceCertificate
 	}{
 		{
 			name: "Generates DSC resource",
@@ -60,7 +59,7 @@ func TestGeneratorOptions_ClientCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.opts.ClientCertificate()(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.Deployment() = %v, want %v", got.(*operatorv1alpha1.DiscoveryServiceCertificate).Spec.Signer.CASigned, tt.want.(*operatorv1alpha1.DiscoveryServiceCertificate).Spec.Signer.CASigned)
+				t.Errorf("GeneratorOptions.Deployment() = %v, want %v", got.Spec.Signer.CASigned, tt.want.Spec.Signer.CASigned)
 			}
 		})
 	}

@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_Service(t *testing.T) {
@@ -20,7 +19,7 @@ func TestGeneratorOptions_Service(t *testing.T) {
 		name string
 		opts GeneratorOptions
 		args args
-		want client.Object
+		want *corev1.Service
 	}{
 		{"Generates a Service (ClusterIP)",
 			GeneratorOptions{

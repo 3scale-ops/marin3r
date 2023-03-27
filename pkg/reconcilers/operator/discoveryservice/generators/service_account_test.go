@@ -8,7 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_ServiceAccount(t *testing.T) {
@@ -19,7 +18,7 @@ func TestGeneratorOptions_ServiceAccount(t *testing.T) {
 		name string
 		opts GeneratorOptions
 		args args
-		want client.Object
+		want *corev1.ServiceAccount
 	}{
 		{"Generates a ServiceAccount",
 			GeneratorOptions{

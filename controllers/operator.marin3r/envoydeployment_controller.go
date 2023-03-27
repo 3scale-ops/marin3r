@@ -41,6 +41,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
+var defaultExcludedPaths = []string{".metadata", ".status"}
+
 // EnvoyDeploymentReconciler reconciles a EnvoyDeployment object
 type EnvoyDeploymentReconciler struct {
 	lockedresources.Reconciler

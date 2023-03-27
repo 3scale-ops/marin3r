@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/reconciler"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
@@ -94,7 +95,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&DiscoveryServiceReconciler{
-		Reconciler: lockedresources.NewFromManager(mgr, "DiscoveryService", true),
+		Reconciler: reconciler.NewFromManager(mgr),
 		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
