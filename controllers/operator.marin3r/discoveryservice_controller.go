@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -74,7 +75,14 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		return *result, err
 	}
 
-	// TODO: remove the old finalizer required by operator-utils
+	// Temporary code to remove finalizers from DiscoveryService resources
+	if controllerutil.ContainsFinalizer(ds, operatorv1alpha1.Finalizer) {
+		controllerutil.RemoveFinalizer(ds, operatorv1alpha1.Finalizer)
+		if err := r.Client.Update(ctx, ds); err != nil {
+			logger.Error(err, "unable to remove finalizer")
+		}
+		return ctrl.Result{}, nil
+	}
 
 	gen := generators.GeneratorOptions{
 		InstanceName:                      ds.GetName(),
@@ -94,7 +102,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		Debug:                             ds.Debug(),
 	}
 
-	hash, err := r.calculateServerCertificateHash(ctx, types.NamespacedName{Name: gen.ServerCertName(), Namespace: gen.Namespace})
+	serverCertHash, err := r.calculateServerCertificateHash(ctx, types.NamespacedName{Name: gen.ServerCertName(), Namespace: gen.Namespace})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -108,15 +116,21 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		resources.RoleBindingTemplate{Template: gen.RoleBinding(), IsEnabled: true},
 		resources.ServiceTemplate{Template: gen.Service(), IsEnabled: true},
 		resources.DeploymentTemplate{
-			Template:        gen.Deployment(hash),
+			Template:        gen.Deployment(serverCertHash),
 			EnforceReplicas: true,
-			IsEnabled:       true,
+			// wait until the server certificate is ready before Deployment creation
+			IsEnabled: serverCertHash != "",
 		},
 	}
 
 	if err := r.ReconcileOwnedResources(ctx, ds, res); err != nil {
 		logger.Error(err, "unable to update owned resources")
 		return ctrl.Result{}, err
+	}
+
+	// requeue if the server certificate is not ready
+	if serverCertHash == "" {
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	return ctrl.Result{}, nil
