@@ -10,7 +10,8 @@ import (
 )
 
 // The format of the keys in the cache is
-//   <node-id>:<version>:<resource-type>:<pod-id>:<stat-name>
+//
+//	<node-id>:<version>:<resource-type>:<pod-id>:<stat-name>
 type Stats struct {
 	store *kv.Cache
 	clock clock.Clock

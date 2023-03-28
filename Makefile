@@ -388,7 +388,7 @@ run-envoy: tmp/certs
 ##@ Other
 
 .PHONY: operator-sdk
-OPERATOR_SDK_RELEASE = v1.23.0
+OPERATOR_SDK_RELEASE = v1.27.0
 OPERATOR_SDK = bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
 operator-sdk: ## Download operator-sdk locally if necessary.
 ifeq (,$(wildcard $(OPERATOR_SDK)))

@@ -135,10 +135,10 @@ func (mgr *Manager) shutdownHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // drainHandler is called from the shutdown-manager container preStop hook and will:
-// * Call Envoy container admin api to start graceful connection draining of the listeners
-// * Block until the prometheus metrics returned by Envoy container admin api return the
-//   desired min number of connection (usually 0). The admin listener connections are not
-//   computed towards this value.
+//   - Call Envoy container admin api to start graceful connection draining of the listeners
+//   - Block until the prometheus metrics returned by Envoy container admin api return the
+//     desired min number of connection (usually 0). The admin listener connections are not
+//     computed towards this value.
 func (mgr *Manager) drainHandler(w http.ResponseWriter, r *http.Request) {
 	l := logger.WithValues("context", "DrainListeners")
 	ctx := r.Context()
