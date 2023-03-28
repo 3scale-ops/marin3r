@@ -2,15 +2,13 @@ package generators
 
 import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) ClientCertificate() lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) ClientCertificate() func() *operatorv1alpha1.DiscoveryServiceCertificate {
 
-	return func() client.Object {
+	return func() *operatorv1alpha1.DiscoveryServiceCertificate {
 
 		return &operatorv1alpha1.DiscoveryServiceCertificate{
 			TypeMeta: metav1.TypeMeta{

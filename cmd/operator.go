@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/3scale-ops/basereconciler/reconciler"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	"github.com/spf13/cobra"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -90,19 +89,15 @@ func runOperator(cmd *cobra.Command, args []string) {
 		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
 	}
 
-	var isClusterScoped bool
 	if strings.Contains(watchNamespace, ",") {
 		setupLog.Info(fmt.Sprintf("manager in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
 		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
-		isClusterScoped = false
 	} else if watchNamespace == "" {
 		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
 		options.Namespace = watchNamespace
-		isClusterScoped = true
 	} else {
 		setupLog.Info(fmt.Sprintf("manager in Namespaced mode will be watching namespace %q", watchNamespace))
 		options.Namespace = watchNamespace
-		isClusterScoped = false
 	}
 
 	mgr, err := ctrl.NewManager(cfg, options)
@@ -129,7 +124,7 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	if err = (&operatorcontroller.EnvoyDeploymentReconciler{
-		Reconciler: lockedresources.NewFromManager(mgr, "EnvoyDeployment", isClusterScoped),
+		Reconciler: reconciler.NewFromManager(mgr),
 		Log:        ctrl.Log.WithName("controllers").WithName("envoydeployment"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EnvoyDeployment")

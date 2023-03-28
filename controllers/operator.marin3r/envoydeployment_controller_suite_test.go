@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,7 +49,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 				Namespace: namespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image: pointer.StringPtr("image"),
+				Image: pointer.String("image"),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
@@ -62,7 +62,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 		ec := &marin3rv1alpha1.EnvoyConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: "config", Namespace: namespace},
 			Spec: marin3rv1alpha1.EnvoyConfigSpec{
-				EnvoyAPI:       pointer.StringPtr("v3"),
+				EnvoyAPI:       pointer.String("v3"),
 				NodeID:         "test-node",
 				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
 			},
@@ -94,15 +94,6 @@ var _ = Describe("EnvoyDeployment controller", func() {
 	})
 
 	Context("EnvoyDeployment", func() {
-
-		It("adds a finalizer to the resource", func() {
-
-			Eventually(func() bool {
-				err := k8sClient.Get(context.Background(), types.NamespacedName{Name: "instance", Namespace: namespace}, ed)
-				Expect(err).ToNot(HaveOccurred())
-				return len(ed.GetFinalizers()) > 0
-			}, 60*time.Second, 5*time.Second).Should(BeTrue())
-		})
 
 		It("creates the required resources", func() {
 
@@ -138,14 +129,14 @@ var _ = Describe("EnvoyDeployment controller", func() {
 				ed.Spec.Replicas = &operatorv1alpha1.ReplicasSpec{
 					Dynamic: &operatorv1alpha1.DynamicReplicasSpec{
 						MaxReplicas: 5,
-						Metrics: []autoscalingv2beta2.MetricSpec{
+						Metrics: []autoscalingv2.MetricSpec{
 							{
-								Type: autoscalingv2beta2.ResourceMetricSourceType,
-								Resource: &autoscalingv2beta2.ResourceMetricSource{
+								Type: autoscalingv2.ResourceMetricSourceType,
+								Resource: &autoscalingv2.ResourceMetricSource{
 									Name: corev1.ResourceCPU,
-									Target: autoscalingv2beta2.MetricTarget{
-										Type:               autoscalingv2beta2.UtilizationMetricType,
-										AverageUtilization: pointer.Int32Ptr(50),
+									Target: autoscalingv2.MetricTarget{
+										Type:               autoscalingv2.UtilizationMetricType,
+										AverageUtilization: pointer.Int32(50),
 									},
 								},
 							},
@@ -158,7 +149,7 @@ var _ = Describe("EnvoyDeployment controller", func() {
 
 			By("waiting for the envoy HPA to be created")
 			{
-				hpa := &autoscalingv2beta2.HorizontalPodAutoscaler{}
+				hpa := &autoscalingv2.HorizontalPodAutoscaler{}
 				key := types.NamespacedName{Name: "marin3r-envoydeployment-instance", Namespace: namespace}
 				Eventually(func() error {
 					return k8sClient.Get(context.Background(), key, hpa)

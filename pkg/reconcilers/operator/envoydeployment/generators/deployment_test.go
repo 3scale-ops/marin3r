@@ -13,18 +13,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_Deployment(t *testing.T) {
-	type args struct {
-		replicas *int32
-	}
 	tests := []struct {
 		name string
 		opts GeneratorOptions
-		args args
-		want client.Object
+		want *appsv1.Deployment
 	}{
 		{
 			name: "EnvoyDeployment's Deployment generation",
@@ -47,7 +42,6 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				ReadinessProbe:            operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
 				InitManager:               &operatorv1alpha1.InitManager{Image: pointer.StringPtr("init-manager:latest")},
 			},
-			args: args{replicas: pointer.Int32Ptr(1)},
 			want: &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "Deployment",
@@ -257,7 +251,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := tt.opts
-			if diff := deep.Equal(cfg.Deployment(tt.args.replicas)(), tt.want); len(diff) > 0 {
+			if diff := deep.Equal(cfg.Deployment()(), tt.want); len(diff) > 0 {
 				t.Errorf("GeneratorOptions.Deployment() = diff %v", diff)
 			}
 		})

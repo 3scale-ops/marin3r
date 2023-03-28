@@ -5,18 +5,16 @@ import (
 
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) Deployment() func() *appsv1.Deployment {
 
-	return func() client.Object {
+	return func() *appsv1.Deployment {
 
 		cc := envoy_container.ContainerConfig{
 			Name:  defaults.DeploymentContainerName,
@@ -79,7 +77,9 @@ func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.Generat
 				Labels:    cfg.labels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: replicas,
+				// this value will be overwritten by the basereconciler
+				// if HPA is enabled
+				Replicas: cfg.Replicas.Static,
 				Selector: &metav1.LabelSelector{
 					MatchLabels: cfg.labels(),
 				},
@@ -104,7 +104,7 @@ func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.Generat
 								d := cfg.ShutdownManager.GetDrainTime()
 								return &d
 							}
-							return pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds)
+							return pointer.Int64(corev1.DefaultTerminationGracePeriodSeconds)
 						}(),
 						SecurityContext: &corev1.PodSecurityContext{},
 						SchedulerName:   corev1.DefaultSchedulerName,
@@ -123,14 +123,9 @@ func (cfg *GeneratorOptions) Deployment(replicas *int32) lockedresources.Generat
 						},
 					},
 				},
-				RevisionHistoryLimit:    pointer.Int32Ptr(10),
-				ProgressDeadlineSeconds: pointer.Int32Ptr(600),
+				RevisionHistoryLimit:    pointer.Int32(10),
+				ProgressDeadlineSeconds: pointer.Int32(600),
 			},
-		}
-
-		// Enforce a fixed number of replicas if static replicas is active
-		if cfg.Replicas.Static != nil {
-			dep.Spec.Replicas = cfg.Replicas.Static
 		}
 
 		return dep
