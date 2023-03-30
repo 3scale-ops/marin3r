@@ -3,7 +3,7 @@ module github.com/3scale-ops/marin3r
 go 1.19
 
 require (
-	github.com/3scale-ops/basereconciler v0.0.0-20230328150114-6afa55bb8e35
+	github.com/3scale-ops/basereconciler v0.0.0-20230330141702-3e37ce95476a
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/davecgh/go-spew v1.1.1
 	github.com/envoyproxy/go-control-plane v0.10.3
@@ -27,8 +27,6 @@ require (
 	k8s.io/utils v0.0.0-20230313181309-38a27ef9d749
 	sigs.k8s.io/controller-runtime v0.14.5
 )
-
-replace github.com/3scale-ops/basereconciler v0.0.0-20230328101344-7a022fe25ea1 => /home/roi/github.com/3scale/base-reconciler
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
