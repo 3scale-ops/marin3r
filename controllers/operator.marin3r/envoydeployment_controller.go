@@ -30,9 +30,6 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/envoydeployment/generators"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/resource_extensions"
 	"github.com/go-logr/logr"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -42,15 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
-
-func init() {
-	reconciler.Config.AnnotationsDomain = "marin3r.3scale.net"
-	reconciler.Config.ResourcePruner = false
-	reconciler.Config.ManagedTypes = reconciler.NewManagedTypes().
-		Register(&appsv1.DeploymentList{}).
-		Register(&policyv1.PodDisruptionBudgetList{}).
-		Register(&autoscalingv2.HorizontalPodAutoscalerList{})
-}
 
 // EnvoyDeploymentReconciler reconciles a EnvoyDeployment object
 type EnvoyDeploymentReconciler struct {
