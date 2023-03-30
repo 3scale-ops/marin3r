@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -144,26 +144,26 @@ func (r *RevisionReconciler) Reconcile() (ctrl.Result, error) {
 	for _, ecr := range shouldBeFalse {
 
 		if err := r.client.Status().Update(r.ctx, &ecr); err != nil {
-			log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "Name/Namespace", util.ObjectKey(&ecr))
+			log.Error(err, "unable to update revision", "Phase", "UnpublishOldRevisions", "Name/Namespace", reconcilerutil.ObjectKey(&ecr))
 			return ctrl.Result{}, err
 		}
 	}
 
 	if shouldBeTrue != nil {
 		if err := r.client.Status().Update(r.ctx, shouldBeTrue); err != nil {
-			log.Error(err, "unable to update revision", "Phase", "PublishNewRevision", "Name/Namespace", util.ObjectKey(shouldBeTrue))
+			log.Error(err, "unable to update revision", "Phase", "PublishNewRevision", "Name/Namespace", reconcilerutil.ObjectKey(shouldBeTrue))
 			return ctrl.Result{}, err
 		}
-		log.Info("updated the published EnvoyConfigRevision", "Namespace/Name", util.ObjectKey(shouldBeTrue))
+		log.Info("updated the published EnvoyConfigRevision", "Namespace/Name", reconcilerutil.ObjectKey(shouldBeTrue))
 	}
 
 	shouldBeDeleted := r.isRevisionRetentionReconciled(maxRevisions)
 	for _, ecr := range shouldBeDeleted {
 		if err := r.client.Delete(r.ctx, &ecr); err != nil {
-			log.Error(err, "unable to delete revision", "Phase", "ApplyRevisionRetention", "Name/Namespace", util.ObjectKey(&ecr))
+			log.Error(err, "unable to delete revision", "Phase", "ApplyRevisionRetention", "Name/Namespace", reconcilerutil.ObjectKey(&ecr))
 			return ctrl.Result{}, err
 		}
-		log.Info("deleted old EnvoyConfigRevision", "Namespace/Name", util.ObjectKey(&ecr))
+		log.Info("deleted old EnvoyConfigRevision", "Namespace/Name", reconcilerutil.ObjectKey(&ecr))
 	}
 
 	log.Info(fmt.Sprintf("CacheState is %s after revision reconcile", cacheState))

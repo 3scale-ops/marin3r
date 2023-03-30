@@ -5,10 +5,10 @@ import (
 	"math"
 	"time"
 
+	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers"
 	internal_provider "github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers/marin3r"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/3scale-ops/marin3r/pkg/util/clock"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
@@ -154,7 +154,7 @@ func (r *CertificateReconciler) Reconcile() (ctrl.Result, error) {
 	}
 
 	// store the certificate hash for status reconciliation
-	r.hash = util.Hash(certBytes)
+	r.hash = reconcilerutil.Hash(certBytes)
 
 	//store certificate validity times for status reconciliation
 	r.notBefore = &cert.NotBefore

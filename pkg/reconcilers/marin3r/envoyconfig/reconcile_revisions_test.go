@@ -5,11 +5,11 @@ import (
 	"reflect"
 	"testing"
 
+	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/go-logr/logr"
 	"github.com/go-test/deep"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -397,7 +397,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 							Labels: map[string]string{
 								filters.NodeIDTag:   "node",
 								filters.EnvoyAPITag: envoy.APIv3.String(),
-								filters.VersionTag:  util.Hash(&marin3rv1alpha1.EnvoyResources{}),
+								filters.VersionTag:  reconcilerutil.Hash(&marin3rv1alpha1.EnvoyResources{}),
 							},
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
@@ -409,7 +409,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 							Labels: map[string]string{
 								filters.NodeIDTag:   "node",
 								filters.EnvoyAPITag: envoy.APIv3.String(),
-								filters.VersionTag:  util.Hash(&marin3rv1alpha1.EnvoyResources{}),
+								filters.VersionTag:  reconcilerutil.Hash(&marin3rv1alpha1.EnvoyResources{}),
 							},
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
@@ -442,7 +442,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 							Labels: map[string]string{
 								filters.NodeIDTag:   "node",
 								filters.EnvoyAPITag: envoy.APIv3.String(),
-								filters.VersionTag:  util.Hash(&marin3rv1alpha1.EnvoyResources{}),
+								filters.VersionTag:  reconcilerutil.Hash(&marin3rv1alpha1.EnvoyResources{}),
 							},
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},

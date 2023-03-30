@@ -20,9 +20,9 @@ import (
 	"reflect"
 	"testing"
 
+	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -110,7 +110,7 @@ func TestEnvoyConfig_GetEnvoyResourcesVersion(t *testing.T) {
 					},
 				}
 			},
-			util.Hash(&EnvoyResources{}),
+			reconcilerutil.Hash(&EnvoyResources{}),
 		},
 	}
 
