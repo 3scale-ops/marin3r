@@ -4,17 +4,15 @@ import (
 	"fmt"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	// cert-manager
 )
 
-func (cfg *GeneratorOptions) ServerCertificate() lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) ServerCertificate() func() *operatorv1alpha1.DiscoveryServiceCertificate {
 
-	return func() client.Object {
+	return func() *operatorv1alpha1.DiscoveryServiceCertificate {
 
 		return &operatorv1alpha1.DiscoveryServiceCertificate{
 			TypeMeta: metav1.TypeMeta{
@@ -22,7 +20,7 @@ func (cfg *GeneratorOptions) ServerCertificate() lockedresources.GeneratorFuncti
 				APIVersion: operatorv1alpha1.GroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cfg.serverCertName(),
+				Name:      cfg.ServerCertName(),
 				Namespace: cfg.Namespace,
 				Labels:    cfg.labels(),
 			},
@@ -33,12 +31,12 @@ func (cfg *GeneratorOptions) ServerCertificate() lockedresources.GeneratorFuncti
 				Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 					CASigned: &operatorv1alpha1.CASignedConfig{
 						SecretRef: corev1.SecretReference{
-							Name:      cfg.rootCertName(),
+							Name:      cfg.RootCertName(),
 							Namespace: cfg.Namespace,
 						}},
 				},
 				SecretRef: corev1.SecretReference{
-					Name:      cfg.serverCertName(),
+					Name:      cfg.ServerCertName(),
 					Namespace: cfg.Namespace,
 				},
 			},

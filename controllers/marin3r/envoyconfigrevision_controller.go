@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/util"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
@@ -28,7 +29,6 @@ import (
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	envoyconfigrevision "github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision"
-	"github.com/redhat-cop/operator-utils/pkg/util"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"

@@ -9,7 +9,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_RoleBinding(t *testing.T) {
@@ -20,7 +19,7 @@ func TestGeneratorOptions_RoleBinding(t *testing.T) {
 		name string
 		opts GeneratorOptions
 		args args
-		want client.Object
+		want *rbacv1.RoleBinding
 	}{
 		{"Generates a RoleBinding",
 			GeneratorOptions{

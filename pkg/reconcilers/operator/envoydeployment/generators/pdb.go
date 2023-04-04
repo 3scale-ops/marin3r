@@ -1,15 +1,13 @@
 package generators
 
 import (
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	policyv1 "k8s.io/api/policy/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) PDB() lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) PDB() func() *policyv1.PodDisruptionBudget {
 
-	return func() client.Object {
+	return func() *policyv1.PodDisruptionBudget {
 
 		return &policyv1.PodDisruptionBudget{
 			TypeMeta: metav1.TypeMeta{

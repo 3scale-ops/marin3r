@@ -19,9 +19,9 @@ package v1alpha1
 import (
 	"fmt"
 
+	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -247,7 +247,7 @@ func (ec *EnvoyConfig) GetSerialization() envoy_serializer.Serialization {
 // GetEnvoyResourcesVersion returns the hash of the resources in the spec which
 // univoquely identifies the version of the resources.
 func (ec *EnvoyConfig) GetEnvoyResourcesVersion() string {
-	return util.Hash(ec.Spec.EnvoyResources)
+	return reconcilerutil.Hash(ec.Spec.EnvoyResources)
 }
 
 // +kubebuilder:object:root=true

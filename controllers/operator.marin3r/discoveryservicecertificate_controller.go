@@ -52,7 +52,7 @@ func (r *DiscoveryServiceCertificateReconciler) Reconcile(ctx context.Context, r
 
 	// Fetch the DiscoveryServiceCertificate instance
 	dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, dsc)
+	err := r.Client.Get(ctx, request.NamespacedName, dsc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

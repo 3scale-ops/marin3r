@@ -2,16 +2,14 @@ package generators
 
 import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) Service() lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) Service() func() *corev1.Service {
 
-	return func() client.Object {
+	return func() *corev1.Service {
 
 		return &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
@@ -19,7 +17,7 @@ func (cfg *GeneratorOptions) Service() lockedresources.GeneratorFunction {
 				APIVersion: corev1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cfg.resourceName(),
+				Name:      cfg.ResourceName(),
 				Namespace: cfg.Namespace,
 				Labels:    cfg.labels(),
 			},

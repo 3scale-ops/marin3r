@@ -21,7 +21,7 @@ import (
 	"time"
 
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
-	autoscalingv2beta2 "k8s.io/api/autoscaling/v2beta2"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -250,13 +250,13 @@ type DynamicReplicasSpec struct {
 	// If not set, the default metric will be set to 80% average CPU utilization.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Metrics []autoscalingv2beta2.MetricSpec `json:"metrics,omitempty"`
+	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty"`
 	// behavior configures the scaling behavior of the target
 	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
 	// If not set, the default HPAScalingRules for scale up and scale down are used.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Behavior *autoscalingv2beta2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
 }
 
 // ProbeSpec specifies configuration for a probe

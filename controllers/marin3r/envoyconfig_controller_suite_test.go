@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -110,7 +110,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Validate the cache for the nodeID
-				wantRevision := util.Hash(ec.Spec.EnvoyResources)
+				wantRevision := reconcilerutil.Hash(ec.Spec.EnvoyResources)
 				wantSnap := xdss_v3.NewSnapshot().SetResources(envoy.Endpoint, []envoy.Resource{
 					&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
 				})

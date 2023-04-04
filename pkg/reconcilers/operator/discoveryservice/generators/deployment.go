@@ -4,18 +4,16 @@ import (
 	"fmt"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/lockedresources"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFunction {
+func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 
-	return func() client.Object {
+	return func() *appsv1.Deployment {
 
 		return &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
@@ -23,7 +21,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 				APIVersion: appsv1.SchemeGroupVersion.String(),
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      cfg.resourceName(),
+				Name:      cfg.ResourceName(),
 				Namespace: cfg.Namespace,
 				Labels:    cfg.labels(),
 			},
@@ -47,7 +45,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 								Name: "server-cert",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName:  cfg.serverCertName(),
+										SecretName:  cfg.ServerCertName(),
 										DefaultMode: pointer.Int32Ptr(420),
 									},
 								},
@@ -56,7 +54,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 								Name: "ca-cert",
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
-										SecretName:  cfg.rootCertName(),
+										SecretName:  cfg.RootCertName(),
 										DefaultMode: pointer.Int32Ptr(420),
 									},
 								},
@@ -121,8 +119,8 @@ func (cfg *GeneratorOptions) Deployment(hash string) lockedresources.GeneratorFu
 						RestartPolicy:                 corev1.RestartPolicyAlways,
 						TerminationGracePeriodSeconds: pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
 						DNSPolicy:                     corev1.DNSClusterFirst,
-						ServiceAccountName:            cfg.resourceName(),
-						DeprecatedServiceAccount:      cfg.resourceName(),
+						ServiceAccountName:            cfg.ResourceName(),
+						DeprecatedServiceAccount:      cfg.ResourceName(),
 						SecurityContext:               &corev1.PodSecurityContext{},
 						SchedulerName:                 corev1.DefaultSchedulerName,
 					},

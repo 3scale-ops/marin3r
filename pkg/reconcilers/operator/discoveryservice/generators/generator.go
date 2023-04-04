@@ -35,14 +35,14 @@ func (cfg *GeneratorOptions) labels() map[string]string {
 	}
 }
 
-func (cfg *GeneratorOptions) rootCertName() string {
+func (cfg *GeneratorOptions) RootCertName() string {
 	return fmt.Sprintf("%s-%s", cfg.RootCertificateNamePrefix, cfg.InstanceName)
 }
 
-func (cfg *GeneratorOptions) serverCertName() string {
+func (cfg *GeneratorOptions) ServerCertName() string {
 	return fmt.Sprintf("%s-%s", cfg.ServerCertificateNamePrefix, cfg.InstanceName)
 }
 
-func (cfg *GeneratorOptions) resourceName() string {
+func (cfg *GeneratorOptions) ResourceName() string {
 	return fmt.Sprintf("%s-%s", "marin3r", cfg.InstanceName)
 }

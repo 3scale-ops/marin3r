@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"github.com/3scale-ops/marin3r/pkg/util"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -66,8 +66,8 @@ func (cp *CertificateProvider) CreateCertificate() ([]byte, []byte, error) {
 	err = cp.client.Get(cp.ctx, key, secret)
 
 	if err == nil {
-		logger.Error(fmt.Errorf("Secret %s already exists", util.ObjectKey(secret)), "Secret already exists")
-		return nil, nil, fmt.Errorf("Secret %s already exists", util.ObjectKey(secret))
+		logger.Error(fmt.Errorf("secret %s already exists", reconcilerutil.ObjectKey(secret)), "secret already exists")
+		return nil, nil, fmt.Errorf("secret %s already exists", reconcilerutil.ObjectKey(secret))
 
 	} else if !errors.IsNotFound(err) {
 		logger.Error(err, "unable to get Secret")

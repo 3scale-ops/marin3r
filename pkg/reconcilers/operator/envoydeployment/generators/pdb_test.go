@@ -8,14 +8,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestGeneratorOptions_PDB(t *testing.T) {
 	tests := []struct {
 		name string
 		opts GeneratorOptions
-		want client.Object
+		want *policyv1.PodDisruptionBudget
 	}{
 		{
 			name: "Generate an HPA",
