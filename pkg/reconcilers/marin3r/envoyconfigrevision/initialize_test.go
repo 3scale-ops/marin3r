@@ -29,8 +29,7 @@ func TestIsInitialized(t *testing.T) {
 						Finalizers: []string{marin3rv1alpha1.EnvoyConfigRevisionFinalizer},
 					},
 					Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-						EnvoyAPI:      pointer.StringPtr("v3"),
-						Serialization: pointer.StringPtr("json"),
+						EnvoyAPI: pointer.String("v3"),
 					},
 				}
 			},

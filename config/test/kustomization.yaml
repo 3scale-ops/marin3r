@@ -7,6 +7,7 @@ images:
     newTag: test
 patchesStrategicMerge:
   - manager_patch.yaml
+  - webhook_patch.yaml
 patches:
   - path: clusterrole_patch.yaml
     target:

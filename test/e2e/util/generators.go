@@ -184,7 +184,7 @@ func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string)
 
 func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
 	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() []envoy.Resource,
-	secrets map[string]string) *marin3rv1alpha1.EnvoyConfig {
+	secrets []string) *marin3rv1alpha1.EnvoyConfig {
 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
 
 	return &marin3rv1alpha1.EnvoyConfig{
@@ -242,14 +242,8 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 				}(),
 				Secrets: func() []marin3rv1alpha1.EnvoySecretResource {
 					s := []marin3rv1alpha1.EnvoySecretResource{}
-					for k, v := range secrets {
-						s = append(s, marin3rv1alpha1.EnvoySecretResource{
-							Name: k,
-							Ref: &corev1.SecretReference{
-								Name:      v,
-								Namespace: key.Namespace,
-							},
-						})
+					for _, name := range secrets {
+						s = append(s, marin3rv1alpha1.EnvoySecretResource{Name: name})
 					}
 					return s
 				}(),

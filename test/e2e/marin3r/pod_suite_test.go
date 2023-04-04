@@ -251,12 +251,12 @@ var _ = Describe("Envoy pods", func() {
 							return []envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")}
 						},
 						func() []envoy.Resource {
-							return []envoy.Resource{testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("localhost"))}
+							return []envoy.Resource{testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("self-signed-cert"))}
 						},
 						func() []envoy.Resource {
 							return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
 						},
-						map[string]string{"localhost": "self-signed-cert"},
+						[]string{"self-signed-cert"},
 					).Spec
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())

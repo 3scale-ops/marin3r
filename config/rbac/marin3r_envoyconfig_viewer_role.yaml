@@ -1,0 +1,27 @@
+# permissions for end users to view envoyconfigs.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: envoyconfig-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: marin3r
+    app.kubernetes.io/part-of: marin3r
+    app.kubernetes.io/managed-by: kustomize
+  name: envoyconfig-viewer-role
+rules:
+- apiGroups:
+  - marin3r.3scale.net
+  resources:
+  - envoyconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - marin3r.3scale.net
+  resources:
+  - envoyconfigs/status
+  verbs:
+  - get

@@ -52,7 +52,7 @@ var _ = Describe("EnvoyDeployment", func() {
 				Namespace: testNamespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image: pointer.StringPtr(image),
+				Image: pointer.String(image),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
@@ -153,8 +153,8 @@ var _ = Describe("EnvoyDeployment", func() {
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
 					DiscoveryServiceRef: ds.GetName(),
 					EnvoyConfigRef:      ec.GetName(),
-					Image:               pointer.StringPtr(defaults.ImageRepo + ":" + envoyVersionV3),
-					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.StringPtr(image)},
+					Image:               pointer.String(defaults.ImageRepo + ":" + envoyVersionV3),
+					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.String(image)},
 				},
 			}
 

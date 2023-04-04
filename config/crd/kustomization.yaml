@@ -9,7 +9,7 @@ resources:
 - bases/operator.marin3r.3scale.net_envoydeployments.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
-patchesStrategicMerge:
+patchesStrategicMerge: []
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
 # patches here are for enabling the conversion webhook for each CRD
 #- patches/webhook_in_envoyconfigrevisions.yaml

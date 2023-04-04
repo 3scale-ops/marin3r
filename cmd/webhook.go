@@ -124,9 +124,9 @@ func runWebhook(cmd *cobra.Command, args []string) {
 	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
 	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
 
-	// Register the EnvoyConfig validating webhook
+	// Register the EnvoyConfig v1alpha1 webhooks
 	if err = (&marin3rv1alpha1.EnvoyConfig{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "EnvoyConfig")
+		setupLog.Error(err, "unable to create webhook", "webhook", "EnvoyConfig", "version", "v1alpha1")
 		os.Exit(1)
 	}
 

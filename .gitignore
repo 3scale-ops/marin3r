@@ -33,3 +33,4 @@ kubeconfig
 kind-logs-*
 *.coverprofile
 *.coverprofile.*
+.vscode

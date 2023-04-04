@@ -71,13 +71,14 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/3scale/marin3r
+    createdAt: "2023-05-02T15:09:31Z"
     description: Lighweight, CRD based Envoy control plane for Kubernetes
-    operators.operatorframework.io/builder: operator-sdk-v1.23.0
+    operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.11.1
+  name: marin3r.v0.12.0-alpha.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -334,6 +335,30 @@ spec:
           to it.
         displayName: Node ID
         path: nodeID
+      - description: Resources holds the different types of resources suported by
+          the envoy discovery service
+        displayName: Resources
+        path: resources
+      - description: Template specifies a template to generate a configuration proto.
+          It is currently only supported to generate secret configuration resources
+          from k8s Secrets
+        displayName: Blueprint
+        path: resources[0].blueprint
+      - description: Specifies a label selector to watch for EndpointSlices that will
+          be used to generate the endpoint resource
+        displayName: Generate From Endpoint Slices
+        path: resources[0].generateFromEndpointSlices
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Tls Secret
+        path: resources[0].generateFromTlsSecret
+      - description: Type is the type url for the protobuf message
+        displayName: Type
+        path: resources[0].type
+      - description: FromProto is the protobufer message that configures the resource.
+          The proto must match the envoy configuration API v3 specification for the
+          given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
+        displayName: Value
+        path: resources[0].value
       - description: Serialization specicifies the serialization format used to describe
           the resources. "json" and "yaml" are supported. "json" is used if unset.
         displayName: Serialization
@@ -491,6 +516,30 @@ spec:
           to it.
         displayName: Node ID
         path: nodeID
+      - description: Resources holds the different types of resources suported by
+          the envoy discovery service
+        displayName: Resources
+        path: resources
+      - description: Template specifies a template to generate a configuration proto.
+          It is currently only supported to generate secret configuration resources
+          from k8s Secrets
+        displayName: Blueprint
+        path: resources[0].blueprint
+      - description: Specifies a label selector to watch for EndpointSlices that will
+          be used to generate the endpoint resource
+        displayName: Generate From Endpoint Slices
+        path: resources[0].generateFromEndpointSlices
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Tls Secret
+        path: resources[0].generateFromTlsSecret
+      - description: Type is the type url for the protobuf message
+        displayName: Type
+        path: resources[0].type
+      - description: FromProto is the protobufer message that configures the resource.
+          The proto must match the envoy configuration API v3 specification for the
+          given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
+        displayName: Value
+        path: resources[0].value
       - description: Serialization specicifies the serialization format used to describe
           the resources. "json" and "yaml" are supported. "json" is used if unset.
         displayName: Serialization
@@ -764,7 +813,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.11.1
+                image: quay.io/3scale/marin3r:v0.12.0-alpha.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -822,7 +871,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.11.1
+                image: quay.io/3scale/marin3r:v0.12.0-alpha.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1121,14 +1170,14 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.11.1
+  version: 0.12.0-alpha.2
   webhookdefinitions:
   - admissionReviewVersions:
     - v1
     containerPort: 443
     deploymentName: marin3r-controller-webhook
     failurePolicy: Fail
-    generateName: envoyconfig.marin3r.3scale.net
+    generateName: envoyconfig.marin3r.3scale.net-v1alpha1
     rules:
     - apiGroups:
       - marin3r.3scale.net

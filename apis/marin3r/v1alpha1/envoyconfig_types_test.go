@@ -106,11 +106,11 @@ func TestEnvoyConfig_GetEnvoyResourcesVersion(t *testing.T) {
 			func() *EnvoyConfig {
 				return &EnvoyConfig{
 					Spec: EnvoyConfigSpec{
-						EnvoyResources: &EnvoyResources{},
+						Resources: []Resource{},
 					},
 				}
 			},
-			reconcilerutil.Hash(&EnvoyResources{}),
+			reconcilerutil.Hash([]Resource{}),
 		},
 	}
 

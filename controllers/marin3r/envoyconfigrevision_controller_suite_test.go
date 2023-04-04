@@ -9,6 +9,7 @@ import (
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
+	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -80,11 +81,10 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:   nodeID,
 					Version:  "xxxx",
-					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
-						}}},
+					EnvoyAPI: pointer.String(string(envoy.APIv3)),
+					Resources: []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension(`{"cluster_name": "endpoint"}`)},
+					}},
 			}
 			err := k8sClient.Create(context.Background(), ecr)
 			Expect(err).ToNot(HaveOccurred())
@@ -104,7 +104,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 
 		When("RevisionPublished condition is true in EnvoyConfigRevision", func() {
 
-			It("should update the xDS cache with new snapshot for the nodeID and do not modify the v3 xDS cache", func() {
+			It("should update the xDS cache with a new snapshot for the nodeID", func() {
 
 				By("setting ECR RevisionPublished condition to true")
 				ecr = &marin3rv1alpha1.EnvoyConfigRevision{}
@@ -162,9 +162,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:   nodeID,
 					Version:  "xxxx",
-					EnvoyAPI: pointer.StringPtr(string(envoy.APIv3)),
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
+					EnvoyAPI: pointer.String(string(envoy.APIv3)),
+					Resources: []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Secret), GenerateFromTlsSecret: pointer.String("secret")},
 					},
 				},
 			}
@@ -265,10 +265,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:  nodeID,
 					Version: "xxxx",
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
-						}}},
+					Resources: []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
+					}},
 			}
 			err := k8sClient.Create(context.Background(), ecr)
 			Expect(err).ToNot(HaveOccurred())
@@ -329,10 +328,9 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:  nodeID,
 					Version: "xxxx",
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
-						}}},
+					Resources: []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
+					}},
 			}
 			err := k8sClient.Create(context.Background(), ecr)
 			Expect(err).ToNot(HaveOccurred())
@@ -394,8 +392,8 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				err := k8sClient.Get(context.Background(), key, ecr)
 				Expect(err).ToNot(HaveOccurred())
 				patch := client.MergeFrom(ecr.DeepCopy())
-				ecr.Spec.EnvoyResources.Clusters = []marin3rv1alpha1.EnvoyResource{
-					{Name: pointer.String("cluster"), Value: "{\"wrong_key\": \"wrong_value\"}"},
+				ecr.Spec.Resources = []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Cluster), Value: k8sutil.StringtoRawExtension("{\"wrong_key\": \"wrong_value\"}")},
 				}
 				err = k8sClient.Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -425,7 +423,7 @@ var _ = Describe("EnvoyConfigRevision controller", func() {
 				err := k8sClient.Get(context.Background(), key, ecr)
 				Expect(err).ToNot(HaveOccurred())
 				patch := client.MergeFrom(ecr.DeepCopy())
-				ecr.Spec.EnvoyResources.Secrets = []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}}
+				ecr.Spec.Resources = []marin3rv1alpha1.Resource{{Type: string(envoy.Secret), GenerateFromTlsSecret: pointer.String("secret")}}
 				err = k8sClient.Patch(context.Background(), ecr, patch)
 				Expect(err).ToNot(HaveOccurred())
 

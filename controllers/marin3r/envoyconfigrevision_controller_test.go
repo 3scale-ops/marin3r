@@ -29,9 +29,9 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 		ecr := &marin3rv1alpha1.EnvoyConfigRevision{
 			ObjectMeta: metav1.ObjectMeta{Name: "ecr", Namespace: "default"},
 			Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-				NodeID:         "node1",
-				Version:        "bbbb",
-				EnvoyResources: &marin3rv1alpha1.EnvoyResources{},
+				NodeID:    "node1",
+				Version:   "bbbb",
+				Resources: []marin3rv1alpha1.Resource{},
 			},
 		}
 		r := &EnvoyConfigRevisionReconciler{

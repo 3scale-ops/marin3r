@@ -13,12 +13,7 @@ func IsInitialized(ec *marin3rv1alpha1.EnvoyConfig) bool {
 	ok := true
 
 	if ec.Spec.EnvoyAPI == nil {
-		ec.Spec.EnvoyAPI = pointer.StringPtr(string(ec.GetEnvoyAPIVersion()))
-		ok = false
-	}
-
-	if ec.Spec.Serialization == nil {
-		ec.Spec.Serialization = pointer.StringPtr(string(ec.GetSerialization()))
+		ec.Spec.EnvoyAPI = pointer.String(string(ec.GetEnvoyAPIVersion()))
 		ok = false
 	}
 

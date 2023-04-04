@@ -64,6 +64,8 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(dsScheme))
 	utilruntime.Must(marin3rv1alpha1.AddToScheme(dsScheme))
+	utilruntime.Must(marin3rv1alpha1.AddToScheme(dsScheme))
+
 	// +kubebuilder:scaffold:scheme
 
 	rootCmd.AddCommand(discoveryServiceCmd)

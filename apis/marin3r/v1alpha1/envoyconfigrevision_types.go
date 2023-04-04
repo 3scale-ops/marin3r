@@ -67,7 +67,12 @@ type EnvoyConfigRevisionSpec struct {
 	Serialization *string `json:"serialization,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	EnvoyResources *EnvoyResources `json:"envoyResources"`
+	// +optional
+	EnvoyResources *EnvoyResources `json:"envoyResources,omitempty"`
+	// Resources holds the different types of resources suported by the envoy discovery service
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Resources []Resource `json:"resources,omitempty"`
 }
 
 // EnvoyConfigRevisionStatus defines the observed state of EnvoyConfigRevision
