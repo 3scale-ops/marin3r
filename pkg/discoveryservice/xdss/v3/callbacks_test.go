@@ -73,7 +73,7 @@ func TestCallbacks_OnStreamClosed(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.cb.OnStreamClosed(tt.args.id)
+			tt.cb.OnStreamClosed(tt.args.id, &envoy_config_core_v3.Node{})
 		})
 	}
 }
