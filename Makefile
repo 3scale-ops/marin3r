@@ -126,21 +126,18 @@ unit-test: $(COVER_OUTPUT_DIR) ## Run unit tests
 
 OPERATOR_COVERPROFILE = operator.coverprofile
 MARIN3R_COVERPROFILE = marin3r.coverprofile
-MARIN3R_WEBHOOK_COVERPROFILE = marin3r.webhook.coverprofile
 OPERATOR_WEBHOOK_COVERPROFILE = operator.webhook.coverprofile
 integration-test: export ACK_GINKGO_DEPRECATIONS=1.16.4
 integration-test: envtest ginkgo $(COVER_OUTPUT_DIR) ## Run integration tests
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_COVERPROFILE) ./controllers/marin3r
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_COVERPROFILE) ./controllers/operator.marin3r
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_WEBHOOK_COVERPROFILE) ./apis/marin3r
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_WEBHOOK_COVERPROFILE) ./apis/operator.marin3r
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -race -cover -coverpkg=$(COVERPKGS) -output-dir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_COVERPROFILE) ./controllers/operator.marin3r
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -race -cover -coverpkg=$(COVERPKGS) -output-dir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_WEBHOOK_COVERPROFILE) ./apis/operator.marin3r
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -race -cover -coverpkg=$(COVERPKGS) -output-dir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_COVERPROFILE) ./controllers/marin3r
 
 coverprofile: unit-test integration-test gocovmerge ## Calculates test  coverage from unit and integration tests
 	$(GOCOVMERGE) \
 		$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) \
 		$(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) \
 		$(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) \
-		$(COVER_OUTPUT_DIR)/$(MARIN3R_WEBHOOK_COVERPROFILE) \
 		$(COVER_OUTPUT_DIR)/$(OPERATOR_WEBHOOK_COVERPROFILE) \
 		> $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
