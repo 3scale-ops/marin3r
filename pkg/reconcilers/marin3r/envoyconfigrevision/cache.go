@@ -9,6 +9,7 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision/discover"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -85,15 +86,31 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 		switch resourceDefinition.Type {
 
 		case string(envoy.Endpoint):
-			res := r.generator.New(envoy.Endpoint)
-			if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
-				return nil,
-					resourceLoaderError(
-						req, string(resourceDefinition.Value.Raw), field.NewPath("spec", "resources").Index(idx).Child("value"),
-						fmt.Sprintf("Invalid envoy resource value: '%s'", err),
-					)
+
+			if resourceDefinition.GenerateFromEndpointSlices != nil {
+				// Endpoint discovery enabled
+				endpoint, err := discover.Endpoints(r.ctx, r.client, req.Namespace,
+					resourceDefinition.GenerateFromEndpointSlices.ClusterName,
+					resourceDefinition.GenerateFromEndpointSlices.TargetPort,
+					resourceDefinition.GenerateFromEndpointSlices.Selector,
+					r.generator, r.logger)
+				if err != nil {
+					return nil, err
+				}
+				endpoints = append(endpoints, endpoint)
+
+			} else {
+				// Raw value provided
+				res := r.generator.New(envoy.Endpoint)
+				if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
+					return nil,
+						resourceLoaderError(
+							req, string(resourceDefinition.Value.Raw), field.NewPath("spec", "resources").Index(idx).Child("value"),
+							fmt.Sprintf("Invalid envoy resource value: '%s'", err),
+						)
+				}
+				endpoints = append(endpoints, res)
 			}
-			endpoints = append(endpoints, res)
 
 		case string(envoy.Cluster):
 			res := r.generator.New(envoy.Cluster)
