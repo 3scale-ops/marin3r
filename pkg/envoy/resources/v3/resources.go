@@ -88,3 +88,41 @@ func (g Generator) NewSecretFromPath(name, certificateChainPath, privateKeyPath 
 		},
 	}
 }
+
+func (g Generator) NewClusterLoadAssignment(clusterName string, hosts ...envoy.UpstreamHost) envoy.Resource {
+
+	return &envoy_config_endpoint_v3.ClusterLoadAssignment{
+		ClusterName: clusterName,
+		Endpoints: []*envoy_config_endpoint_v3.LocalityLbEndpoints{
+			{
+				LbEndpoints: func() []*envoy_config_endpoint_v3.LbEndpoint {
+					endpoints := make([]*envoy_config_endpoint_v3.LbEndpoint, len(hosts))
+					for idx, host := range hosts {
+						endpoints[idx] = LbEndpoint(host).(*envoy_config_endpoint_v3.LbEndpoint)
+					}
+					return endpoints
+				}(),
+			},
+		},
+	}
+}
+
+func LbEndpoint(host envoy.UpstreamHost) envoy.Resource {
+	return &envoy_config_endpoint_v3.LbEndpoint{
+		HostIdentifier: &envoy_config_endpoint_v3.LbEndpoint_Endpoint{
+			Endpoint: &envoy_config_endpoint_v3.Endpoint{
+				Address: &envoy_config_core_v3.Address{
+					Address: &envoy_config_core_v3.Address_SocketAddress{
+						SocketAddress: &envoy_config_core_v3.SocketAddress{
+							Address: host.IP.String(),
+							PortSpecifier: &envoy_config_core_v3.SocketAddress_PortValue{
+								PortValue: host.Port,
+							},
+						},
+					},
+				},
+			},
+		},
+		HealthStatus: envoy_config_core_v3.HealthStatus(host.Health),
+	}
+}

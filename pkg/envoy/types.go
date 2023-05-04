@@ -2,6 +2,7 @@ package envoy
 
 import (
 	"fmt"
+	"net"
 
 	"google.golang.org/protobuf/proto"
 )
@@ -59,3 +60,31 @@ const (
 	// ExtensionConfig is an envoy extension config resource
 	ExtensionConfig Type = "extensionConfig"
 )
+
+type EndpointHealthStatus int32
+
+const (
+	// The health status is not known. This is interpreted by Envoy as ``HEALTHY``.
+	HealthStatus_UNKNOWN EndpointHealthStatus = 0
+	// Healthy.
+	HealthStatus_HEALTHY EndpointHealthStatus = 1
+	// Unhealthy.
+	HealthStatus_UNHEALTHY EndpointHealthStatus = 2
+	// Connection draining in progress. E.g.,
+	// `<https://aws.amazon.com/blogs/aws/elb-connection-draining-remove-instances-from-service-with-care/>`_
+	// or
+	// `<https://cloud.google.com/compute/docs/load-balancing/enabling-connection-draining>`_.
+	// This is interpreted by Envoy as ``UNHEALTHY``.
+	HealthStatus_DRAINING EndpointHealthStatus = 3
+	// Health check timed out. This is part of HDS and is interpreted by Envoy as
+	// ``UNHEALTHY``.
+	HealthStatus_TIMEOUT EndpointHealthStatus = 4
+	// Degraded.
+	HealthStatus_DEGRADED EndpointHealthStatus = 5
+)
+
+type UpstreamHost struct {
+	IP     net.IP
+	Port   uint32
+	Health EndpointHealthStatus
+}
