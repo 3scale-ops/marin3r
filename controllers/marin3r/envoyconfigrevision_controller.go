@@ -29,12 +29,13 @@ import (
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	envoyconfigrevision "github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
@@ -254,11 +255,56 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 	)
 }
 
+// EndpointSlicesEventHandler returns an EventHandler that generates
+// reconcile requests for EndpointSlices
+func (r *EnvoyConfigRevisionReconciler) EndpointSlicesEventHandler() handler.EventHandler {
+	return handler.EnqueueRequestsFromMapFunc(
+		func(o client.Object) []reconcile.Request {
+			endpointSlice := o.(*discoveryv1.EndpointSlice)
+
+			list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
+			if err := r.Client.List(context.Background(), list); err != nil {
+				return []reconcile.Request{}
+			}
+
+			reconcileRequests := []reconcile.Request{}
+
+			for _, ecr := range list.Items {
+				if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
+					// check if the k8s EndpointSlice is relevant for this EnvoyConfigRevision
+					for _, r := range ecr.Spec.Resources {
+						if r.Type == string(envoy.Endpoint) && r.GenerateFromEndpointSlices != nil {
+
+							selector, err := metav1.LabelSelectorAsSelector(r.GenerateFromEndpointSlices.Selector)
+							if err != nil {
+								// skip this item in case of error
+								continue
+							}
+
+							// generate a reconcile request if this event is relevant for this revision
+							if selector.Matches(labels.Set(endpointSlice.GetLabels())) {
+								reconcileRequests = append(reconcileRequests,
+									reconcile.Request{NamespacedName: types.NamespacedName{
+										Name:      ecr.GetName(),
+										Namespace: ecr.GetNamespace(),
+									}})
+							}
+						}
+					}
+				}
+			}
+
+			return reconcileRequests
+		},
+	)
+}
+
 // SetupWithManager adds the controller to the manager
 func (r *EnvoyConfigRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&marin3rv1alpha1.EnvoyConfigRevision{}).
 		WithEventFilter(filterByAPIVersionPredicate(r.APIVersion, filterByAPIVersion)).
 		Watches(&source.Kind{Type: &corev1.Secret{}}, r.SecretsEventHandler()).
+		Watches(&source.Kind{Type: &discoveryv1.EndpointSlice{}}, r.EndpointSlicesEventHandler()).
 		Complete(r)
 }
