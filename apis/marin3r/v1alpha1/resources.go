@@ -44,14 +44,20 @@ type Resource struct {
 	// Specifies a label selector to watch for EndpointSlices that will
 	// be used to generate the endpoint resource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// +optionale
-	GenerateFromEndpointSlices *metav1.LabelSelector `json:"generateFromEndpointSlices,omitempty"`
+	// +optional
+	GenerateFromEndpointSlices *GenerateFromEndpointSlices `json:"generateFromEndpointSlices,omitempty"`
 	// Template specifies a template to generate a configuration proto. It is currently
 	// only supported to generate secret configuration resources from k8s Secrets
 	// +kubebuilder:validation:Enum=tlsCertificate;validationContext;
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Blueprint *string `json:"blueprint,omitempty"`
+}
+
+type GenerateFromEndpointSlices struct {
+	Selector    *metav1.LabelSelector `json:"selector"`
+	ClusterName string                `json:"clusterName"`
+	TargetPort  string                `json:"targetPort"`
 }
 
 // EnvoyResources holds each envoy api resource type

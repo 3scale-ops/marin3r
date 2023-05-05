@@ -95,7 +95,7 @@ func TestEnvoyConfig_ValidateResources(t *testing.T) {
 						Value: &runtime.RawExtension{
 							Raw: []byte(`{"name": "cluster"}`),
 						},
-						GenerateFromEndpointSlices: &metav1.LabelSelector{},
+						GenerateFromEndpointSlices: &GenerateFromEndpointSlices{},
 					}},
 				},
 			}, wantErr: true,
@@ -151,13 +151,13 @@ func TestEnvoyConfig_ValidateResources(t *testing.T) {
 			}, wantErr: true,
 		},
 		{
-			name: "Fails: generateFromEndpointSlice can only be used for secret",
+			name: "Fails: generateFromEndpointSlice can only be used for endpoints",
 			r: &EnvoyConfig{
 				Spec: EnvoyConfigSpec{
 					NodeID: "test",
 					Resources: []Resource{{
 						Type:                       "secret",
-						GenerateFromEndpointSlices: &metav1.LabelSelector{},
+						GenerateFromEndpointSlices: &GenerateFromEndpointSlices{},
 					}},
 				},
 			}, wantErr: true,
@@ -168,8 +168,12 @@ func TestEnvoyConfig_ValidateResources(t *testing.T) {
 				Spec: EnvoyConfigSpec{
 					NodeID: "test",
 					Resources: []Resource{{
-						Type:                       "endpoint",
-						GenerateFromEndpointSlices: &metav1.LabelSelector{MatchLabels: map[string]string{"label": "value"}},
+						Type: "endpoint",
+						GenerateFromEndpointSlices: &GenerateFromEndpointSlices{
+							Selector:    &metav1.LabelSelector{MatchLabels: map[string]string{"label": "value"}},
+							ClusterName: "test",
+							TargetPort:  "port",
+						},
 					}},
 				},
 			}, wantErr: false,
@@ -180,9 +184,12 @@ func TestEnvoyConfig_ValidateResources(t *testing.T) {
 				Spec: EnvoyConfigSpec{
 					NodeID: "test",
 					Resources: []Resource{{
-						Type:                       "endpoint",
-						GenerateFromEndpointSlices: &metav1.LabelSelector{MatchLabels: map[string]string{"label": "value"}},
-						Value:                      &runtime.RawExtension{},
+						Type: "endpoint",
+						GenerateFromEndpointSlices: &GenerateFromEndpointSlices{
+							Selector:    &metav1.LabelSelector{MatchLabels: map[string]string{"label": "value"}},
+							ClusterName: "test",
+							TargetPort:  "port",
+						}, Value: &runtime.RawExtension{},
 					}},
 				},
 			}, wantErr: true,
