@@ -8,6 +8,7 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -182,86 +183,162 @@ func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string)
 	return secret, err
 }
 
+// func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
+// 	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() []envoy.Resource,
+// 	secrets []string) *marin3rv1alpha1.EnvoyConfig {
+// 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
+
+// 	return &marin3rv1alpha1.EnvoyConfig{
+// 		ObjectMeta: metav1.ObjectMeta{
+// 			Name:      key.Name,
+// 			Namespace: key.Namespace,
+// 		},
+// 		Spec: marin3rv1alpha1.EnvoyConfigSpec{
+// 			EnvoyAPI: pointer.StringPtr(envoyAPI.String()),
+// 			NodeID:   nodeID,
+// 			EnvoyResources: &marin3rv1alpha1.EnvoyResources{
+// 				Endpoints: func() []marin3rv1alpha1.EnvoyResource {
+// 					endpoints := []marin3rv1alpha1.EnvoyResource{}
+// 					for _, resource := range endpointsGenFn() {
+// 						json, err := m.Marshal(resource)
+// 						if err != nil {
+// 							panic(err)
+// 						}
+// 						endpoints = append(endpoints, marin3rv1alpha1.EnvoyResource{Value: json})
+// 					}
+// 					return endpoints
+// 				}(),
+// 				Clusters: func() []marin3rv1alpha1.EnvoyResource {
+// 					clusters := []marin3rv1alpha1.EnvoyResource{}
+// 					for _, resource := range clustersGenFn() {
+// 						json, err := m.Marshal(resource)
+// 						if err != nil {
+// 							panic(err)
+// 						}
+// 						clusters = append(clusters, marin3rv1alpha1.EnvoyResource{Value: json})
+// 					}
+// 					return clusters
+// 				}(),
+// 				Routes: func() []marin3rv1alpha1.EnvoyResource {
+// 					routes := []marin3rv1alpha1.EnvoyResource{}
+// 					for _, resource := range routesGenFn() {
+// 						json, err := m.Marshal(resource)
+// 						if err != nil {
+// 							panic(err)
+// 						}
+// 						routes = append(routes, marin3rv1alpha1.EnvoyResource{Value: json})
+// 					}
+// 					return routes
+// 				}(),
+// 				Listeners: func() []marin3rv1alpha1.EnvoyResource {
+// 					listeners := []marin3rv1alpha1.EnvoyResource{}
+// 					for _, resource := range listenersGenFn() {
+// 						json, err := m.Marshal(resource)
+// 						if err != nil {
+// 							panic(err)
+// 						}
+// 						listeners = append(listeners, marin3rv1alpha1.EnvoyResource{Value: json})
+// 					}
+// 					return listeners
+// 				}(),
+// 				Secrets: func() []marin3rv1alpha1.EnvoySecretResource {
+// 					s := []marin3rv1alpha1.EnvoySecretResource{}
+// 					for _, name := range secrets {
+// 						s = append(s, marin3rv1alpha1.EnvoySecretResource{Name: name})
+// 					}
+// 					return s
+// 				}(),
+// 				ExtensionConfigs: func() []marin3rv1alpha1.EnvoyResource {
+// 					extensionConfigs := []marin3rv1alpha1.EnvoyResource{}
+// 					for _, resource := range extensionConfigsGenFn() {
+// 						json, err := m.Marshal(resource)
+// 						if err != nil {
+// 							panic(err)
+// 						}
+// 						extensionConfigs = append(extensionConfigs, marin3rv1alpha1.EnvoyResource{Value: json})
+// 					}
+// 					return extensionConfigs
+// 				}(),
+// 			},
+// 		},
+// 	}
+
+// }
+
 func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
 	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() []envoy.Resource,
 	secrets []string) *marin3rv1alpha1.EnvoyConfig {
 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
 
-	return &marin3rv1alpha1.EnvoyConfig{
+	ec := &marin3rv1alpha1.EnvoyConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      key.Name,
 			Namespace: key.Namespace,
 		},
 		Spec: marin3rv1alpha1.EnvoyConfigSpec{
-			EnvoyAPI: pointer.StringPtr(envoyAPI.String()),
-			NodeID:   nodeID,
-			EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-				Endpoints: func() []marin3rv1alpha1.EnvoyResource {
-					endpoints := []marin3rv1alpha1.EnvoyResource{}
-					for _, resource := range endpointsGenFn() {
-						json, err := m.Marshal(resource)
-						if err != nil {
-							panic(err)
-						}
-						endpoints = append(endpoints, marin3rv1alpha1.EnvoyResource{Value: json})
-					}
-					return endpoints
-				}(),
-				Clusters: func() []marin3rv1alpha1.EnvoyResource {
-					clusters := []marin3rv1alpha1.EnvoyResource{}
-					for _, resource := range clustersGenFn() {
-						json, err := m.Marshal(resource)
-						if err != nil {
-							panic(err)
-						}
-						clusters = append(clusters, marin3rv1alpha1.EnvoyResource{Value: json})
-					}
-					return clusters
-				}(),
-				Routes: func() []marin3rv1alpha1.EnvoyResource {
-					routes := []marin3rv1alpha1.EnvoyResource{}
-					for _, resource := range routesGenFn() {
-						json, err := m.Marshal(resource)
-						if err != nil {
-							panic(err)
-						}
-						routes = append(routes, marin3rv1alpha1.EnvoyResource{Value: json})
-					}
-					return routes
-				}(),
-				Listeners: func() []marin3rv1alpha1.EnvoyResource {
-					listeners := []marin3rv1alpha1.EnvoyResource{}
-					for _, resource := range listenersGenFn() {
-						json, err := m.Marshal(resource)
-						if err != nil {
-							panic(err)
-						}
-						listeners = append(listeners, marin3rv1alpha1.EnvoyResource{Value: json})
-					}
-					return listeners
-				}(),
-				Secrets: func() []marin3rv1alpha1.EnvoySecretResource {
-					s := []marin3rv1alpha1.EnvoySecretResource{}
-					for _, name := range secrets {
-						s = append(s, marin3rv1alpha1.EnvoySecretResource{Name: name})
-					}
-					return s
-				}(),
-				ExtensionConfigs: func() []marin3rv1alpha1.EnvoyResource {
-					extensionConfigs := []marin3rv1alpha1.EnvoyResource{}
-					for _, resource := range extensionConfigsGenFn() {
-						json, err := m.Marshal(resource)
-						if err != nil {
-							panic(err)
-						}
-						extensionConfigs = append(extensionConfigs, marin3rv1alpha1.EnvoyResource{Value: json})
-					}
-					return extensionConfigs
-				}(),
-			},
+			EnvoyAPI:  pointer.String(envoyAPI.String()),
+			NodeID:    nodeID,
+			Resources: []marin3rv1alpha1.Resource{},
 		},
 	}
 
+	resources := []marin3rv1alpha1.Resource{}
+
+	for _, resource := range endpointsGenFn() {
+		json, err := m.Marshal(resource)
+		if err != nil {
+			panic(err)
+		}
+		resources = append(resources, marin3rv1alpha1.Resource{
+			Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension(json)})
+	}
+
+	for _, resource := range clustersGenFn() {
+		json, err := m.Marshal(resource)
+		if err != nil {
+			panic(err)
+		}
+		resources = append(resources, marin3rv1alpha1.Resource{
+			Type: string(envoy.Cluster), Value: k8sutil.StringtoRawExtension(json)})
+	}
+
+	for _, resource := range routesGenFn() {
+		json, err := m.Marshal(resource)
+		if err != nil {
+			panic(err)
+		}
+		resources = append(resources, marin3rv1alpha1.Resource{
+			Type: string(envoy.Route), Value: k8sutil.StringtoRawExtension(json)})
+	}
+
+	for _, resource := range listenersGenFn() {
+		json, err := m.Marshal(resource)
+		if err != nil {
+			panic(err)
+		}
+		resources = append(resources, marin3rv1alpha1.Resource{
+			Type: string(envoy.Listener), Value: k8sutil.StringtoRawExtension(json)})
+	}
+
+	for _, name := range secrets {
+		resources = append(resources, marin3rv1alpha1.Resource{
+			Type:                  string(envoy.Secret),
+			GenerateFromTlsSecret: pointer.String(name),
+		})
+	}
+
+	for _, resource := range extensionConfigsGenFn() {
+		json, err := m.Marshal(resource)
+		if err != nil {
+			panic(err)
+		}
+		resources = append(resources, marin3rv1alpha1.Resource{
+			Type: string(envoy.ExtensionConfig), Value: k8sutil.StringtoRawExtension(json)})
+	}
+
+	ec.Spec.Resources = resources
+
+	return ec
 }
 
 func GetAddressV3(host string, port uint32) *envoy_config_core_v3.Address {
