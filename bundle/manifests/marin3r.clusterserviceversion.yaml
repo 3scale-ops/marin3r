@@ -71,7 +71,7 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/3scale/marin3r
-    createdAt: "2023-05-05T09:41:26Z"
+    createdAt: "2023-05-10T14:02:27Z"
     description: Lighweight, CRD based Envoy control plane for Kubernetes
     operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
@@ -339,7 +339,7 @@ spec:
           the envoy discovery service
         displayName: Resources
         path: resources
-      - description: Template specifies a template to generate a configuration proto.
+      - description: Blueprint specifies a template to generate a configuration proto.
           It is currently only supported to generate secret configuration resources
           from k8s Secrets
         displayName: Blueprint
@@ -354,7 +354,7 @@ spec:
       - description: Type is the type url for the protobuf message
         displayName: Type
         path: resources[0].type
-      - description: FromProto is the protobufer message that configures the resource.
+      - description: Value is the protobufer message that configures the resource.
           The proto must match the envoy configuration API v3 specification for the
           given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
         displayName: Value
@@ -404,7 +404,7 @@ spec:
         displayName: Envoy API
         path: envoyAPI
       - description: EnvoyResources holds the different types of resources suported
-          by the envoy discovery service
+          by the envoy discovery service DEPRECATED. Use the `resources` field instead.
         displayName: Envoy Resources
         path: envoyResources
       - description: 'Clusters is a list of the envoy Cluster resource type. API V3
@@ -520,7 +520,7 @@ spec:
           the envoy discovery service
         displayName: Resources
         path: resources
-      - description: Template specifies a template to generate a configuration proto.
+      - description: Blueprint specifies a template to generate a configuration proto.
           It is currently only supported to generate secret configuration resources
           from k8s Secrets
         displayName: Blueprint
@@ -535,7 +535,7 @@ spec:
       - description: Type is the type url for the protobuf message
         displayName: Type
         path: resources[0].type
-      - description: FromProto is the protobufer message that configures the resource.
+      - description: Value is the protobufer message that configures the resource.
           The proto must match the envoy configuration API v3 specification for the
           given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
         displayName: Value

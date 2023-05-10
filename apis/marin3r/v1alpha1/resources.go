@@ -31,7 +31,7 @@ type Resource struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Enum=listener;route;scopedRoute;cluster;endpoint;secret;runtime;extensionConfig;
 	Type string `json:"type"`
-	// FromProto is the protobufer message that configures the resource. The proto
+	// Value is the protobufer message that configures the resource. The proto
 	// must match the envoy configuration API v3 specification for the given resource
 	// type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -46,7 +46,7 @@ type Resource struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	GenerateFromEndpointSlices *GenerateFromEndpointSlices `json:"generateFromEndpointSlices,omitempty"`
-	// Template specifies a template to generate a configuration proto. It is currently
+	// Blueprint specifies a template to generate a configuration proto. It is currently
 	// only supported to generate secret configuration resources from k8s Secrets
 	// +kubebuilder:validation:Enum=tlsCertificate;validationContext;
 	// +operator-sdk:csv:customresourcedefinitions:type=spec

@@ -63,7 +63,8 @@ spec:
                 type: string
               envoyResources:
                 description: EnvoyResources holds the different types of resources
-                  suported by the envoy discovery service
+                  suported by the envoy discovery service DEPRECATED. Use the `resources`
+                  field instead.
                 properties:
                   clusters:
                     description: 'Clusters is a list of the envoy Cluster resource
@@ -272,7 +273,7 @@ spec:
                     resource
                   properties:
                     blueprint:
-                      description: Template specifies a template to generate a configuration
+                      description: Blueprint specifies a template to generate a configuration
                         proto. It is currently only supported to generate secret configuration
                         resources from k8s Secrets
                       enum:
@@ -357,7 +358,7 @@ spec:
                       - extensionConfig
                       type: string
                     value:
-                      description: FromProto is the protobufer message that configures
+                      description: Value is the protobufer message that configures
                         the resource. The proto must match the envoy configuration
                         API v3 specification for the given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
                       type: object
