@@ -104,19 +104,14 @@ var _ = Describe("Envoy pods", func() {
 			By("applying an EnvoyConfig that configures the Pod with a direct response")
 			key := types.NamespacedName{Name: "test-envoyconfig", Namespace: testNamespace}
 			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-				func() []envoy.Resource { return nil },
-				func() []envoy.Resource { return nil },
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")}
-				},
-				func() []envoy.Resource {
-					// Envoy listeners don't allow bind address changes
-					return []envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
-				},
-				nil)
+				nil,
+				nil,
+				[]envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")},
+				// Envoy listeners don't allow bind address changes
+				[]envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)},
+				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
+				nil,
+			)
 
 			Eventually(func() error {
 				return k8sClient.Create(context.Background(), ec)
@@ -186,18 +181,12 @@ var _ = Describe("Envoy pods", func() {
 			key := types.NamespacedName{Name: "test-envoyconfig", Namespace: testNamespace}
 			patch := client.MergeFrom(ec.DeepCopy())
 			ec.Spec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-				func() []envoy.Resource { return nil },
-				func() []envoy.Resource { return nil },
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")}
-				},
-				func() []envoy.Resource {
-					// Envoy listeners don't allow bind address changes
-					return []envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", 30333), nil)}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
-				},
+				nil,
+				nil,
+				[]envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")},
+				// Envoy listeners don't allow bind address changes
+				[]envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", 30333), nil)},
+				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
 				nil,
 			).Spec
 			err := k8sClient.Patch(context.Background(), ec, patch)
@@ -245,17 +234,11 @@ var _ = Describe("Envoy pods", func() {
 					key := types.NamespacedName{Name: "test-envoyconfig", Namespace: testNamespace}
 					patch := client.MergeFrom(ec.DeepCopy())
 					ec.Spec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-						func() []envoy.Resource { return nil },
-						func() []envoy.Resource { return nil },
-						func() []envoy.Resource {
-							return []envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")}
-						},
-						func() []envoy.Resource {
-							return []envoy.Resource{testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("self-signed-cert"))}
-						},
-						func() []envoy.Resource {
-							return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
-						},
+						nil,
+						nil,
+						[]envoy.Resource{testutil.DirectResponseRouteV3("direct_response", "OK")},
+						[]envoy.Resource{testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("self-signed-cert"))},
+						[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
 						[]string{"self-signed-cert"},
 					).Spec
 					err := k8sClient.Patch(context.Background(), ec, patch)

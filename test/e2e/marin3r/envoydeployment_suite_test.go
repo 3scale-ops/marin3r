@@ -100,21 +100,11 @@ var _ = Describe("EnvoyDeployment", func() {
 			By("applying an EnvoyConfig that will configure the envoy Deployment through service discovery")
 			key := types.NamespacedName{Name: "envoyconfig", Namespace: testNamespace}
 			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-				func() []envoy.Resource {
-					return []envoy.Resource{}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.ClusterWithStrictDNSV3("nginx", "nginx", 80)}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.ProxyPassRouteV3("proxypass", "nginx")}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
-				},
+				nil,
+				[]envoy.Resource{testutil.ClusterWithStrictDNSV3("nginx", "nginx", 80)},
+				[]envoy.Resource{testutil.ProxyPassRouteV3("proxypass", "nginx")},
+				[]envoy.Resource{testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)},
+				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
 				nil,
 			)
 			Eventually(func() error {

@@ -183,90 +183,8 @@ func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string)
 	return secret, err
 }
 
-// func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
-// 	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() []envoy.Resource,
-// 	secrets []string) *marin3rv1alpha1.EnvoyConfig {
-// 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
-
-// 	return &marin3rv1alpha1.EnvoyConfig{
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      key.Name,
-// 			Namespace: key.Namespace,
-// 		},
-// 		Spec: marin3rv1alpha1.EnvoyConfigSpec{
-// 			EnvoyAPI: pointer.StringPtr(envoyAPI.String()),
-// 			NodeID:   nodeID,
-// 			EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-// 				Endpoints: func() []marin3rv1alpha1.EnvoyResource {
-// 					endpoints := []marin3rv1alpha1.EnvoyResource{}
-// 					for _, resource := range endpointsGenFn() {
-// 						json, err := m.Marshal(resource)
-// 						if err != nil {
-// 							panic(err)
-// 						}
-// 						endpoints = append(endpoints, marin3rv1alpha1.EnvoyResource{Value: json})
-// 					}
-// 					return endpoints
-// 				}(),
-// 				Clusters: func() []marin3rv1alpha1.EnvoyResource {
-// 					clusters := []marin3rv1alpha1.EnvoyResource{}
-// 					for _, resource := range clustersGenFn() {
-// 						json, err := m.Marshal(resource)
-// 						if err != nil {
-// 							panic(err)
-// 						}
-// 						clusters = append(clusters, marin3rv1alpha1.EnvoyResource{Value: json})
-// 					}
-// 					return clusters
-// 				}(),
-// 				Routes: func() []marin3rv1alpha1.EnvoyResource {
-// 					routes := []marin3rv1alpha1.EnvoyResource{}
-// 					for _, resource := range routesGenFn() {
-// 						json, err := m.Marshal(resource)
-// 						if err != nil {
-// 							panic(err)
-// 						}
-// 						routes = append(routes, marin3rv1alpha1.EnvoyResource{Value: json})
-// 					}
-// 					return routes
-// 				}(),
-// 				Listeners: func() []marin3rv1alpha1.EnvoyResource {
-// 					listeners := []marin3rv1alpha1.EnvoyResource{}
-// 					for _, resource := range listenersGenFn() {
-// 						json, err := m.Marshal(resource)
-// 						if err != nil {
-// 							panic(err)
-// 						}
-// 						listeners = append(listeners, marin3rv1alpha1.EnvoyResource{Value: json})
-// 					}
-// 					return listeners
-// 				}(),
-// 				Secrets: func() []marin3rv1alpha1.EnvoySecretResource {
-// 					s := []marin3rv1alpha1.EnvoySecretResource{}
-// 					for _, name := range secrets {
-// 						s = append(s, marin3rv1alpha1.EnvoySecretResource{Name: name})
-// 					}
-// 					return s
-// 				}(),
-// 				ExtensionConfigs: func() []marin3rv1alpha1.EnvoyResource {
-// 					extensionConfigs := []marin3rv1alpha1.EnvoyResource{}
-// 					for _, resource := range extensionConfigsGenFn() {
-// 						json, err := m.Marshal(resource)
-// 						if err != nil {
-// 							panic(err)
-// 						}
-// 						extensionConfigs = append(extensionConfigs, marin3rv1alpha1.EnvoyResource{Value: json})
-// 					}
-// 					return extensionConfigs
-// 				}(),
-// 			},
-// 		},
-// 	}
-
-// }
-
 func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
-	endpointsGenFn, clustersGenFn, routesGenFn, listenersGenFn, extensionConfigsGenFn func() []envoy.Resource,
+	endpoints, clusters, routes, listeners, extension []envoy.Resource,
 	secrets []string) *marin3rv1alpha1.EnvoyConfig {
 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
 
@@ -284,7 +202,7 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 
 	resources := []marin3rv1alpha1.Resource{}
 
-	for _, resource := range endpointsGenFn() {
+	for _, resource := range endpoints {
 		json, err := m.Marshal(resource)
 		if err != nil {
 			panic(err)
@@ -293,7 +211,7 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 			Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension(json)})
 	}
 
-	for _, resource := range clustersGenFn() {
+	for _, resource := range clusters {
 		json, err := m.Marshal(resource)
 		if err != nil {
 			panic(err)
@@ -302,7 +220,7 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 			Type: string(envoy.Cluster), Value: k8sutil.StringtoRawExtension(json)})
 	}
 
-	for _, resource := range routesGenFn() {
+	for _, resource := range routes {
 		json, err := m.Marshal(resource)
 		if err != nil {
 			panic(err)
@@ -311,7 +229,7 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 			Type: string(envoy.Route), Value: k8sutil.StringtoRawExtension(json)})
 	}
 
-	for _, resource := range listenersGenFn() {
+	for _, resource := range listeners {
 		json, err := m.Marshal(resource)
 		if err != nil {
 			panic(err)
@@ -327,7 +245,7 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 		})
 	}
 
-	for _, resource := range extensionConfigsGenFn() {
+	for _, resource := range extension {
 		json, err := m.Marshal(resource)
 		if err != nil {
 			panic(err)
