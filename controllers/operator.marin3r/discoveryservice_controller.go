@@ -52,6 +52,7 @@ type DiscoveryServiceReconciler struct {
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=pods,verbs=list;watch;get
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="discovery.k8s.io",namespace=placeholder,resources=endpointslices,verbs=get;list;watch
 
 func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	logger := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
