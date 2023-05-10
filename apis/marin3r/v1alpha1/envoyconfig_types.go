@@ -72,6 +72,7 @@ type EnvoyConfigSpec struct {
 	// +optional
 	EnvoyAPI *string `json:"envoyAPI,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
+	// DEPRECATED. Use the `resources` field instead.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	EnvoyResources *EnvoyResources `json:"envoyResources,omitempty"`
