@@ -183,9 +183,13 @@ func GenerateTLSSecret(k8skey types.NamespacedName, commonName, duration string)
 	return secret, err
 }
 
+type EndpointDiscovery struct {
+	ClusterName, PortName, LabelKey, LabelValue string
+}
+
 func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy.APIVersion,
-	endpoints, clusters, routes, listeners, extension []envoy.Resource,
-	secrets []string) *marin3rv1alpha1.EnvoyConfig {
+	staticEndpoints, clusters, routes, listeners, extension []envoy.Resource,
+	secrets []string, eds []EndpointDiscovery) *marin3rv1alpha1.EnvoyConfig {
 	m := envoy_serializer.NewResourceMarshaller(envoy_serializer.JSON, envoyAPI)
 
 	ec := &marin3rv1alpha1.EnvoyConfig{
@@ -202,13 +206,24 @@ func GenerateEnvoyConfig(key types.NamespacedName, nodeID string, envoyAPI envoy
 
 	resources := []marin3rv1alpha1.Resource{}
 
-	for _, resource := range endpoints {
+	for _, resource := range staticEndpoints {
 		json, err := m.Marshal(resource)
 		if err != nil {
 			panic(err)
 		}
 		resources = append(resources, marin3rv1alpha1.Resource{
 			Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension(json)})
+	}
+
+	for _, e := range eds {
+		resources = append(resources, marin3rv1alpha1.Resource{
+			Type: string(envoy.Endpoint),
+			GenerateFromEndpointSlices: &marin3rv1alpha1.GenerateFromEndpointSlices{
+				Selector:    &metav1.LabelSelector{MatchLabels: map[string]string{e.LabelKey: e.LabelValue}},
+				ClusterName: e.ClusterName,
+				TargetPort:  e.PortName,
+			},
+		})
 	}
 
 	for _, resource := range clusters {

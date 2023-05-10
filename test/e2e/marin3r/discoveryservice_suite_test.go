@@ -36,10 +36,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 		n := &corev1.Namespace{}
 		Eventually(func() bool {
 			err := k8sClient.Get(context.Background(), types.NamespacedName{Name: testNamespace}, n)
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}, timeout, poll).Should(BeTrue())
 
 		By("creating a DiscoveryService instance")
@@ -49,7 +46,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 				Namespace: testNamespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image: pointer.StringPtr(image),
+				Image: pointer.String(image),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
@@ -57,10 +54,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 		Eventually(func() bool {
 			key := types.NamespacedName{Name: "instance", Namespace: testNamespace}
 			err := k8sClient.Get(context.Background(), key, ds)
-			if err != nil {
-				return false
-			}
-			return true
+			return err == nil
 		}, timeout, poll).Should(BeTrue())
 
 	})
@@ -136,7 +130,7 @@ var _ = Describe("DiscoveryService intall and lifecycle", func() {
 		It("reconciles the discovery service deployment", func() {
 
 			patch := client.MergeFrom(ds.DeepCopy())
-			ds.Spec.Debug = pointer.BoolPtr(true)
+			ds.Spec.Debug = pointer.Bool(true)
 			generation := ds.GetGeneration()
 			err := k8sClient.Patch(context.Background(), ds, patch)
 			Expect(err).ToNot(HaveOccurred())

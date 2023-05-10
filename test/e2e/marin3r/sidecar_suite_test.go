@@ -51,7 +51,7 @@ var _ = Describe("Envoy sidecars", func() {
 				Namespace: testNamespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image: pointer.StringPtr(image),
+				Image: pointer.String(image),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
@@ -106,6 +106,7 @@ var _ = Describe("Envoy sidecars", func() {
 				[]envoy.Resource{testutil.ProxyPassRouteV3("proxypass", "nginx")},
 				[]envoy.Resource{testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)},
 				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
+				nil,
 				nil,
 			)
 

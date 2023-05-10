@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
@@ -54,7 +53,7 @@ var _ = Describe("Envoy pods", func() {
 				Namespace: testNamespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image: pointer.StringPtr(image),
+				Image: pointer.String(image),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
@@ -88,7 +87,7 @@ var _ = Describe("Envoy pods", func() {
 
 	Context("Envoy Pod with xDS configured", func() {
 		var pod *corev1.Pod
-		var ec *v1alpha1.EnvoyConfig
+		var ec *marin3rv1alpha1.EnvoyConfig
 		var localPort int
 		var nodeID string
 		var stopCh chan struct{}
@@ -110,6 +109,7 @@ var _ = Describe("Envoy pods", func() {
 				// Envoy listeners don't allow bind address changes
 				[]envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)},
 				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
+				nil,
 				nil,
 			)
 
@@ -188,6 +188,7 @@ var _ = Describe("Envoy pods", func() {
 				[]envoy.Resource{testutil.HTTPListener("http", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", 30333), nil)},
 				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
 				nil,
+				nil,
 			).Spec
 			err := k8sClient.Patch(context.Background(), ec, patch)
 			Expect(err).ToNot(HaveOccurred())
@@ -240,6 +241,7 @@ var _ = Describe("Envoy pods", func() {
 						[]envoy.Resource{testutil.HTTPListener("https", "direct_response", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), testutil.TransportSocketV3("self-signed-cert"))},
 						[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
 						[]string{"self-signed-cert"},
+						nil,
 					).Spec
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())

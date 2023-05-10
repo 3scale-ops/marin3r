@@ -101,11 +101,12 @@ var _ = Describe("EnvoyDeployment", func() {
 			key := types.NamespacedName{Name: "envoyconfig", Namespace: testNamespace}
 			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
 				nil,
-				[]envoy.Resource{testutil.ClusterWithStrictDNSV3("nginx", "nginx", 80)},
+				[]envoy.Resource{testutil.ClusterWithEdsV3("nginx")},
 				[]envoy.Resource{testutil.ProxyPassRouteV3("proxypass", "nginx")},
 				[]envoy.Resource{testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)},
 				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
 				nil,
+				[]testutil.EndpointDiscovery{{ClusterName: "nginx", PortName: "http", LabelKey: "kubernetes.io/service-name", LabelValue: "nginx"}},
 			)
 			Eventually(func() error {
 				return k8sClient.Create(context.Background(), ec)

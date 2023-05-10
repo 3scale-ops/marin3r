@@ -60,7 +60,7 @@ func TestAPIs(t *testing.T) {
 	RunSpecs(t, "e2e test suite")
 }
 
-var _ = BeforeSuite(func(done Done) {
+var _ = BeforeSuite(func() {
 
 	logger = ctrl.Log.WithName("e2e")
 
@@ -68,7 +68,7 @@ var _ = BeforeSuite(func(done Done) {
 	nameGenerator = namegenerator.NewNameGenerator(seed)
 
 	testEnv = &envtest.Environment{
-		UseExistingCluster: pointer.BoolPtr(true),
+		UseExistingCluster: pointer.Bool(true),
 	}
 
 	var err error
@@ -84,7 +84,6 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8sClient).ToNot(BeNil())
 
-	close(done)
 })
 
 var _ = AfterSuite(func() {
