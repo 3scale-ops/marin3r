@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.11.1
+VERSION ?= 0.12.0-alpha.3
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -50,7 +50,7 @@ endif
 IMG ?= $(IMAGE_TAG_BASE):v$(VERSION)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.24
+ENVTEST_K8S_VERSION = 1.26
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -126,21 +126,18 @@ unit-test: $(COVER_OUTPUT_DIR) ## Run unit tests
 
 OPERATOR_COVERPROFILE = operator.coverprofile
 MARIN3R_COVERPROFILE = marin3r.coverprofile
-MARIN3R_WEBHOOK_COVERPROFILE = marin3r.webhook.coverprofile
 OPERATOR_WEBHOOK_COVERPROFILE = operator.webhook.coverprofile
 integration-test: export ACK_GINKGO_DEPRECATIONS=1.16.4
 integration-test: envtest ginkgo $(COVER_OUTPUT_DIR) ## Run integration tests
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_COVERPROFILE) ./controllers/marin3r
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_COVERPROFILE) ./controllers/operator.marin3r
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_WEBHOOK_COVERPROFILE) ./apis/marin3r
-		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -cover -coverpkg=$(COVERPKGS) -outputdir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_WEBHOOK_COVERPROFILE) ./apis/operator.marin3r
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -race -cover -coverpkg=$(COVERPKGS) -output-dir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_COVERPROFILE) ./controllers/operator.marin3r
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -race -cover -coverpkg=$(COVERPKGS) -output-dir=$(COVER_OUTPUT_DIR) -coverprofile=$(OPERATOR_WEBHOOK_COVERPROFILE) ./apis/operator.marin3r
+		KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) -p -r -race -cover -coverpkg=$(COVERPKGS) -output-dir=$(COVER_OUTPUT_DIR) -coverprofile=$(MARIN3R_COVERPROFILE) ./controllers/marin3r
 
 coverprofile: unit-test integration-test gocovmerge ## Calculates test  coverage from unit and integration tests
 	$(GOCOVMERGE) \
 		$(COVER_OUTPUT_DIR)/$(UNIT_COVERPROFILE) \
 		$(COVER_OUTPUT_DIR)/$(OPERATOR_COVERPROFILE) \
 		$(COVER_OUTPUT_DIR)/$(MARIN3R_COVERPROFILE) \
-		$(COVER_OUTPUT_DIR)/$(MARIN3R_WEBHOOK_COVERPROFILE) \
 		$(COVER_OUTPUT_DIR)/$(OPERATOR_WEBHOOK_COVERPROFILE) \
 		> $(COVER_OUTPUT_DIR)/$(COVERPROFILE)
 	$(MAKE) fix-cover COVERPROFILE=$(COVER_OUTPUT_DIR)/$(COVERPROFILE)
@@ -158,7 +155,7 @@ e2e-envtest-suite: docker-build kind-load-image manifests ginkgo deploy-test
 
 ##@ Build
 
-build: generate fmt vet go-generate ## Build manager binary.
+build: manifests generate fmt vet go-generate ## Build manager binary.
 	go build -o bin/manager main.go
 
 run: manifests generate fmt vet go-generate ## Run a controller from your host.
@@ -211,8 +208,8 @@ KIND ?= $(LOCALBIN)/kind
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.9.2
-GINKGO_VERSION ?= v1.16.5
+CONTROLLER_TOOLS_VERSION ?= v0.11.3
+GINKGO_VERSION ?= v2.9.1
 CRD_REFDOCS_VERSION ?= v0.0.8
 KIND_VERSION ?= v0.16.0
 
@@ -235,7 +232,7 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: ginkgo
 ginkgo: $(GINKGO) ## Download ginkgo locally if necessary
 $(GINKGO):
-	test -s $(GINKGO) || GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/ginkgo@$(GINKGO_VERSION)
+	test -s $(GINKGO) || GOBIN=$(LOCALBIN) go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 
 .PHONY: gocovmerge
 gocovmerge: $(GOCOVMERGE) ## Download gocovmerge locally if necessary
@@ -341,6 +338,12 @@ kind-load-image: export KUBECONFIG = $(PWD)/kubeconfig
 kind-load-image: kind ## Reload the marin3r:test image into the cluster
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 
+kind-refresh-image: export KUBECONFIG = ${PWD}/kubeconfig
+kind-refresh-image: manifests kind docker-build ## Reloads the image into the K8s cluster and deletes the old pods
+	$(MAKE) kind-load-image
+	kubectl -n marin3r-system delete pod -l control-plane=controller-manager
+	kubectl -n marin3r-system delete pod -l control-plane=controller-webhook
+
 kind-delete: ## Deletes the kind cluster and the registry
 kind-delete: kind
 	$(KIND) delete cluster
@@ -388,7 +391,7 @@ run-envoy: tmp/certs
 ##@ Other
 
 .PHONY: operator-sdk
-OPERATOR_SDK_RELEASE = v1.27.0
+OPERATOR_SDK_RELEASE = v1.28.0
 OPERATOR_SDK = bin/operator-sdk-$(OPERATOR_SDK_RELEASE)
 operator-sdk: ## Download operator-sdk locally if necessary.
 ifeq (,$(wildcard $(OPERATOR_SDK)))

@@ -36,26 +36,26 @@ func ParseAPIVersion(version string) (APIVersion, error) {
 	}
 }
 
-// Type is an enum of the supported envoy resource typeswe can just use a strings.Split to create the array of args from the custom resource field, with that each of the "words" will be passed correctly without the quotes around c
+// Type is an enum of the supported envoy resource types
 type Type string
 
 const (
 	// Endpoint is an envoy endpoint resource
-	Endpoint Type = "Endpoint"
+	Endpoint Type = "endpoint"
 	// Cluster is an envoy cluster resource
-	Cluster Type = "Cluster"
+	Cluster Type = "cluster"
 	// Route is an envoy route resource
-	Route Type = "Route"
+	Route Type = "route"
 	// ScopedRoute is an envoy scoped route resource
-	ScopedRoute Type = "ScopedRoute"
-	// VirtualHost is an enovy virtual host resource
-	VirtualHost Type = "VirtualHost"
+	ScopedRoute Type = "scopedRoute"
+	// VirtualHost is an enovy virtual host resource (not implemented)
+	VirtualHost Type = "virtualHost"
 	// Listener is an envoy listener resource
-	Listener Type = "Listener"
+	Listener Type = "listener"
 	// Secret is an envoy secret resource
-	Secret Type = "Secret"
+	Secret Type = "secret"
 	// Runtime is an envoy runtime resource
-	Runtime Type = "Runtime"
+	Runtime Type = "runtime"
 	// ExtensionConfig is an envoy extension config resource
-	ExtensionConfig Type = "ExtensionConfig"
+	ExtensionConfig Type = "extensionConfig"
 )

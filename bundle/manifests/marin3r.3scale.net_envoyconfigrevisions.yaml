@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: envoyconfigrevisions.marin3r.3scale.net
 spec:
@@ -272,6 +272,108 @@ spec:
                   to know which set of resources to send to each of the envoy clients
                   that connect to it.
                 type: string
+              resources:
+                description: Resources holds the different types of resources suported
+                  by the envoy discovery service
+                items:
+                  description: Resource holds serialized representation of an envoy
+                    resource
+                  properties:
+                    blueprint:
+                      description: Blueprint specifies a template to generate a configuration
+                        proto. It is currently only supported to generate secret configuration
+                        resources from k8s Secrets
+                      enum:
+                      - tlsCertificate
+                      - validationContext
+                      type: string
+                    generateFromEndpointSlices:
+                      description: Specifies a label selector to watch for EndpointSlices
+                        that will be used to generate the endpoint resource
+                      properties:
+                        clusterName:
+                          type: string
+                        selector:
+                          description: A label selector is a label query over a set
+                            of resources. The result of matchLabels and matchExpressions
+                            are ANDed. An empty label selector matches all objects.
+                            A null label selector matches no objects.
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: A label selector requirement is a selector
+                                  that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: operator represents a key's relationship
+                                      to a set of values. Valid operators are In,
+                                      NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: values is an array of string values.
+                                      If the operator is In or NotIn, the values array
+                                      must be non-empty. If the operator is Exists
+                                      or DoesNotExist, the values array must be empty.
+                                      This array is replaced during a strategic merge
+                                      patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: matchLabels is a map of {key,value} pairs.
+                                A single {key,value} in the matchLabels map is equivalent
+                                to an element of matchExpressions, whose key field
+                                is "key", the operator is "In", and the values array
+                                contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        targetPort:
+                          type: string
+                      required:
+                      - clusterName
+                      - selector
+                      - targetPort
+                      type: object
+                    generateFromTlsSecret:
+                      description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+                      type: string
+                    type:
+                      description: Type is the type url for the protobuf message
+                      enum:
+                      - listener
+                      - route
+                      - scopedRoute
+                      - cluster
+                      - endpoint
+                      - secret
+                      - runtime
+                      - extensionConfig
+                      type: string
+                    value:
+                      description: Value is the protobufer message that configures
+                        the resource. The proto must match the envoy configuration
+                        API v3 specification for the given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - type
+                  type: object
+                type: array
               serialization:
                 description: Serialization specicifies the serialization format used
                   to describe the resources. "json" and "yaml" are supported. "json"
@@ -285,7 +387,6 @@ spec:
                 description: Version is a hash of the EnvoyResources field
                 type: string
             required:
-            - envoyResources
             - nodeID
             - version
             type: object
@@ -299,8 +400,8 @@ spec:
                   description: "Condition contains details for one aspect of the current
                     state of this API Resource. --- This struct is intended for direct
                     use as an array at the field path .status.conditions.  For example,
-                    type FooStatus struct{ // Represents the observations of a foo's
-                    current state. // Known .status.conditions.type are: \"Available\",
+                    \n type FooStatus struct{ // Represents the observations of a
+                    foo's current state. // Known .status.conditions.type are: \"Available\",
                     \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
                     // +listType=map // +listMapKey=type Conditions []metav1.Condition
                     `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"

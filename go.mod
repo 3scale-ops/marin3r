@@ -6,7 +6,7 @@ require (
 	github.com/3scale-ops/basereconciler v0.1.0
 	github.com/MakeNowJust/heredoc v1.0.0
 	github.com/davecgh/go-spew v1.1.1
-	github.com/envoyproxy/go-control-plane v0.10.3
+	github.com/envoyproxy/go-control-plane v0.11.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.3
 	github.com/go-test/deep v1.1.0
@@ -26,6 +26,7 @@ require (
 	k8s.io/client-go v0.26.2
 	k8s.io/utils v0.0.0-20230313181309-38a27ef9d749
 	sigs.k8s.io/controller-runtime v0.14.5
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -93,5 +94,4 @@ require (
 	k8s.io/kube-openapi v0.0.0-20230308215209-15aac26d736a // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )

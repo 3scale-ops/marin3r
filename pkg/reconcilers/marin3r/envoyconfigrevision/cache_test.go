@@ -8,10 +8,11 @@ import (
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
-	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
+	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	"github.com/davecgh/go-spew/spew"
 	envoy_config_cluster_v3 "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
@@ -85,7 +86,7 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 	}
 	type args struct {
 		req       types.NamespacedName
-		resources *marin3rv1alpha1.EnvoyResources
+		resources []marin3rv1alpha1.Resource
 		nodeID    string
 		version   string
 	}
@@ -110,10 +111,12 @@ func TestCacheReconciler_Reconcile(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{
+						Type:  string(envoy.Endpoint),
+						Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}"),
+					},
+				},
 				version: "xxxx",
 				nodeID:  "node2",
 			},
@@ -167,7 +170,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 	}
 	type args struct {
 		req       types.NamespacedName
-		resources *marin3rv1alpha1.EnvoyResources
+		resources []marin3rv1alpha1.Resource
 	}
 	tests := []struct {
 		name    string
@@ -188,25 +191,14 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
-					},
-					Clusters: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("cluster"), Value: "{\"name\": \"cluster\"}"},
-					},
-					Routes: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("route"), Value: "{\"name\": \"route\"}"},
-					},
-					ScopedRoutes: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("scoped_route"), Value: "{\"name\": \"scoped_route\"}"},
-					},
-					Listeners: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("listener"), Value: "{\"name\": \"listener\"}"},
-					},
-					Runtimes: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("runtime"), Value: "{\"name\": \"runtime\"}"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
+					{Type: string(envoy.Cluster), Value: k8sutil.StringtoRawExtension("{\"name\": \"cluster\"}")},
+					{Type: string(envoy.Route), Value: k8sutil.StringtoRawExtension("{\"name\": \"route\"}")},
+					{Type: string(envoy.ScopedRoute), Value: k8sutil.StringtoRawExtension("{\"name\": \"scoped_route\"}")},
+					{Type: string(envoy.Listener), Value: k8sutil.StringtoRawExtension("{\"name\": \"listener\"}")},
+					{Type: string(envoy.Runtime), Value: k8sutil.StringtoRawExtension("{\"name\": \"runtime\"}")},
+				},
 			},
 			want: xdss_v3.NewSnapshot().
 				SetResources(envoy.Endpoint, []envoy.Resource{
@@ -241,10 +233,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("endpoint"), Value: "giberish"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("giberish")},
+				},
 			},
 			wantErr: true,
 			want:    xdss_v3.NewSnapshot(),
@@ -261,10 +252,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Clusters: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("cluster"), Value: "giberish"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Cluster), Value: k8sutil.StringtoRawExtension("giberish")},
+				},
 			},
 			wantErr: true,
 			want:    xdss_v3.NewSnapshot(),
@@ -281,10 +271,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Routes: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("route"), Value: "giberish"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Route), Value: k8sutil.StringtoRawExtension("giberish")},
+				},
 			},
 			wantErr: true,
 			want:    xdss_v3.NewSnapshot(),
@@ -301,10 +290,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					ScopedRoutes: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("scoped_route"), Value: "giberish"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.ScopedRoute), Value: k8sutil.StringtoRawExtension("giberish")},
+				},
 			},
 			wantErr: true,
 			want:    xdss_v3.NewSnapshot(),
@@ -321,10 +309,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Listeners: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("listener"), Value: "giberish"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Listener), Value: k8sutil.StringtoRawExtension("giberish")},
+				},
 			},
 			wantErr: true,
 			want:    xdss_v3.NewSnapshot(),
@@ -341,10 +328,9 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Runtimes: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("runtime"), Value: "giberish"},
-					}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Runtime), Value: k8sutil.StringtoRawExtension("giberish")},
+				},
 			},
 			wantErr: true,
 			want:    xdss_v3.NewSnapshot(),
@@ -354,19 +340,19 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClient(&corev1.Secret{
+				client: fake.NewClientBuilder().WithObjects(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "xx"},
 					Type:       corev1.SecretTypeTLS,
 					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
-				}),
+				}).Build(),
 				xdsCache:  xdss_v3.NewCache(),
 				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
 				generator: envoy_resources_v3.Generator{},
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Secrets: []marin3rv1alpha1.EnvoySecretResource{{Name: "secret"}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Secret), GenerateFromTlsSecret: pointer.String("secret")},
 				},
 			},
 			wantErr: false,
@@ -386,11 +372,11 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 		{
 			name: "Fails with wrong secret type",
 			fields: fields{
-				client: fake.NewFakeClient(&corev1.Secret{
+				client: fake.NewClientBuilder().WithObjects(&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "xx"},
 					Type:       corev1.SecretTypeBasicAuth,
 					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
-				}),
+				}).Build(),
 				ctx:       context.TODO(),
 				logger:    ctrl.Log.WithName("test"),
 				xdsCache:  xdss_v3.NewCache(),
@@ -399,9 +385,8 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Secrets: []marin3rv1alpha1.EnvoySecretResource{
-						{Name: "secret"}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Secret), GenerateFromTlsSecret: pointer.String("secret")},
 				},
 			},
 			wantErr: true,
@@ -419,9 +404,8 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			},
 			args: args{
 				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
-				resources: &marin3rv1alpha1.EnvoyResources{
-					Secrets: []marin3rv1alpha1.EnvoySecretResource{
-						{Name: "secret"}},
+				resources: []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Secret), GenerateFromTlsSecret: pointer.String("secret")},
 				},
 			},
 			wantErr: true,

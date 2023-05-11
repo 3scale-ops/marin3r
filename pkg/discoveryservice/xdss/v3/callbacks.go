@@ -23,6 +23,7 @@ import (
 	envoy_resources_v3 "github.com/3scale-ops/marin3r/pkg/envoy/resources/v3"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/util/backoff"
+	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_service_discovery_v3 "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	server_v3 "github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	"github.com/go-logr/logr"
@@ -45,7 +46,7 @@ func (cb *Callbacks) OnStreamOpen(ctx context.Context, id int64, typ string) err
 
 // OnStreamClosed implements go-control-plane/pkg/server/Callbacks.OnStreamClosed
 // OnStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
-func (cb *Callbacks) OnStreamClosed(id int64) {
+func (cb *Callbacks) OnStreamClosed(id int64, node *envoy_config_core_v3.Node) {
 	cb.Logger.V(1).Info("Stream closed", "StreamID", id)
 }
 
@@ -137,7 +138,7 @@ func (cb *Callbacks) OnFetchResponse(*envoy_service_discovery_v3.DiscoveryReques
 func (cb *Callbacks) OnDeltaStreamOpen(context.Context, int64, string) error { return nil }
 
 // OnDeltaStreamClosed is called immediately prior to closing an xDS stream with a stream ID.
-func (cb *Callbacks) OnDeltaStreamClosed(int64) {}
+func (cb *Callbacks) OnDeltaStreamClosed(int64, *envoy_config_core_v3.Node) {}
 
 // OnStreamDeltaRequest is called once a request is received on a stream.
 // Returning an error will end processing and close the stream. OnStreamClosed will still be called.

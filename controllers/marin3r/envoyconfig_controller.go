@@ -71,6 +71,18 @@ func (r *EnvoyConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return reconcile.Result{}, nil
 	}
 
+	// convert spec.EnvoyResources to spec.Resources
+	// all the code from this point on will make use solely
+	// of the spec.Resources field.
+	if ec.Spec.EnvoyResources != nil {
+		if resources, err := (ec.Spec.EnvoyResources).Resources(ec.GetSerialization()); err != nil {
+			return ctrl.Result{}, err
+		} else {
+			ec.Spec.Resources = resources
+			ec.Spec.EnvoyResources = nil
+		}
+	}
+
 	revisionReconciler := envoyconfig.NewRevisionReconciler(
 		ctx, log, r.Client, r.Scheme, ec,
 	)

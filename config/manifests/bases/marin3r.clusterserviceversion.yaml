@@ -16,6 +16,82 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - description: EnvoyConfig holds the configuration for a given envoy nodeID. The
+        spec of an EnvoyConfig object holds the Envoy resources that conform the desired
+        configuration for the given nodeID and that the discovery service will send
+        to any envoy client that identifies itself with that nodeID.
+      displayName: EnvoyConfig
+      kind: EnvoyConfig
+      name: envoyconfigs.marin3r.3scale.net
+      resources:
+      - kind: EnvoyConfigRevision
+        name: ""
+        version: v1alpha1
+      specDescriptors:
+      - description: EnvoyAPI is the version of envoy's API to use. Defaults to v3.
+        displayName: Envoy API
+        path: envoyAPI
+      - description: NodeID holds the envoy identifier for the discovery service to
+          know which set of resources to send to each of the envoy clients that connect
+          to it.
+        displayName: Node ID
+        path: nodeID
+      - description: Resources holds the different types of resources suported by
+          the envoy discovery service
+        displayName: Resources
+        path: resources
+      - description: Template specifies a template to generate a configuration proto.
+          It is currently only supported to generate secret configuration resources
+          from k8s Secrets
+        displayName: Blueprint
+        path: resources[0].blueprint
+      - description: Specifies a label selector to watch for EndpointSlices that will
+          be used to generate the endpoint resource
+        displayName: Generate From Endpoint Slices
+        path: resources[0].generateFromEndpointSlices
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Tls Secret
+        path: resources[0].generateFromTlsSecret
+      - description: Type is the type url for the protobuf message
+        displayName: Type
+        path: resources[0].type
+      - description: FromProto is the protobufer message that configures the resource.
+          The proto must match the envoy configuration API v3 specification for the
+          given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
+        displayName: Value
+        path: resources[0].value
+      statusDescriptors:
+      - description: CacheState summarizes all the observations about the EnvoyConfig
+          to give the user a concrete idea on the general status of the discovery
+          servie cache. It is intended only for human consumption. Other controllers
+          should relly on conditions to determine the status of the discovery server
+          cache.
+        displayName: Cache State
+        path: cacheState
+      - description: Conditions represent the latest available observations of an
+          object's state
+        displayName: Conditions
+        path: conditions
+      - description: DesiredVersion represents the resources version described in
+          the spec of the EnvoyConfig object
+        displayName: Desired Version
+        path: desiredVersion
+      - description: PublishedVersion is the config version currently served by the
+          envoy discovery service for the give nodeID
+        displayName: Published Version
+        path: publishedVersion
+      - description: ConfigRevisions is an ordered list of references to EnvoyConfigRevision
+          objects
+        displayName: Config Revisions
+        path: revisions
+      - description: Ref is a reference to the EnvoyConfigRevision object that holds
+          the configuration matching the Version field.
+        displayName: Ref
+        path: revisions[0].ref
+      - description: Version is a hash of the EnvoyResources field
+        displayName: Version
+        path: revisions[0].version
+      version: v1alpha2
     - description: DiscoveryServiceCertificate is an internal resource used to create
         certificates. This resource is used by the DiscoveryService controller to
         create the required certificates for the different components. Direct use
@@ -267,6 +343,30 @@ spec:
           to it.
         displayName: Node ID
         path: nodeID
+      - description: Resources holds the different types of resources suported by
+          the envoy discovery service
+        displayName: Resources
+        path: resources
+      - description: Blueprint specifies a template to generate a configuration proto.
+          It is currently only supported to generate secret configuration resources
+          from k8s Secrets
+        displayName: Blueprint
+        path: resources[0].blueprint
+      - description: Specifies a label selector to watch for EndpointSlices that will
+          be used to generate the endpoint resource
+        displayName: Generate From Endpoint Slices
+        path: resources[0].generateFromEndpointSlices
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Tls Secret
+        path: resources[0].generateFromTlsSecret
+      - description: Type is the type url for the protobuf message
+        displayName: Type
+        path: resources[0].type
+      - description: Value is the protobufer message that configures the resource.
+          The proto must match the envoy configuration API v3 specification for the
+          given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
+        displayName: Value
+        path: resources[0].value
       - description: Serialization specicifies the serialization format used to describe
           the resources. "json" and "yaml" are supported. "json" is used if unset.
         displayName: Serialization
@@ -312,7 +412,7 @@ spec:
         displayName: Envoy API
         path: envoyAPI
       - description: EnvoyResources holds the different types of resources suported
-          by the envoy discovery service
+          by the envoy discovery service DEPRECATED. Use the `resources` field instead.
         displayName: Envoy Resources
         path: envoyResources
       - description: 'Clusters is a list of the envoy Cluster resource type. API V3
@@ -424,6 +524,30 @@ spec:
           to it.
         displayName: Node ID
         path: nodeID
+      - description: Resources holds the different types of resources suported by
+          the envoy discovery service
+        displayName: Resources
+        path: resources
+      - description: Blueprint specifies a template to generate a configuration proto.
+          It is currently only supported to generate secret configuration resources
+          from k8s Secrets
+        displayName: Blueprint
+        path: resources[0].blueprint
+      - description: Specifies a label selector to watch for EndpointSlices that will
+          be used to generate the endpoint resource
+        displayName: Generate From Endpoint Slices
+        path: resources[0].generateFromEndpointSlices
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Tls Secret
+        path: resources[0].generateFromTlsSecret
+      - description: Type is the type url for the protobuf message
+        displayName: Type
+        path: resources[0].type
+      - description: Value is the protobufer message that configures the resource.
+          The proto must match the envoy configuration API v3 specification for the
+          given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
+        displayName: Value
+        path: resources[0].value
       - description: Serialization specicifies the serialization format used to describe
           the resources. "json" and "yaml" are supported. "json" is used if unset.
         displayName: Serialization

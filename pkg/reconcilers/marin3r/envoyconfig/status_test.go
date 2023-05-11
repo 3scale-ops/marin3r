@@ -27,9 +27,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
-						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						DesiredVersion:   pointer.String("6758fd786c"),
+						PublishedVersion: pointer.String("6758fd786c"),
+						CacheState:       pointer.String(marin3rv1alpha1.InSyncState),
 						ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 							{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "test"}},
 							{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "test"}},
@@ -41,7 +41,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					},
 				},
 				cacheState:       marin3rv1alpha1.InSyncState,
-				publishedVersion: "6ddbcdf795",
+				publishedVersion: "6758fd786c",
 				list: &marin3rv1alpha1.EnvoyConfigRevisionList{
 					Items: []marin3rv1alpha1.EnvoyConfigRevision{
 						{
@@ -62,9 +62,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
-						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						DesiredVersion:   pointer.String("6758fd786c"),
+						PublishedVersion: pointer.String("6758fd786c"),
+						CacheState:       pointer.String(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: []metav1.Condition{
 							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse, Message: "a"},
@@ -73,7 +73,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					},
 				},
 				cacheState:       marin3rv1alpha1.InSyncState,
-				publishedVersion: "6ddbcdf795",
+				publishedVersion: "6758fd786c",
 				list:             &marin3rv1alpha1.EnvoyConfigRevisionList{},
 			},
 			want: false,
@@ -83,9 +83,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
-						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						DesiredVersion:   pointer.String("6758fd786c"),
+						PublishedVersion: pointer.String("6758fd786c"),
+						CacheState:       pointer.String(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: []metav1.Condition{
 							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionTrue, Message: "a"},
@@ -94,7 +94,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					},
 				},
 				cacheState:       marin3rv1alpha1.InSyncState,
-				publishedVersion: "6ddbcdf795",
+				publishedVersion: "6758fd786c",
 				list:             &marin3rv1alpha1.EnvoyConfigRevisionList{},
 			},
 			want: false,
@@ -104,9 +104,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
-						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.RollbackFailedState),
+						DesiredVersion:   pointer.String("6758fd786c"),
+						PublishedVersion: pointer.String("6758fd786c"),
+						CacheState:       pointer.String(marin3rv1alpha1.RollbackFailedState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: []metav1.Condition{
 							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse, Message: "a"},
@@ -115,7 +115,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					},
 				},
 				cacheState:       marin3rv1alpha1.InSyncState,
-				publishedVersion: "6ddbcdf795",
+				publishedVersion: "6758fd786c",
 				list:             &marin3rv1alpha1.EnvoyConfigRevisionList{},
 			},
 			want: false,
@@ -125,9 +125,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("xxxx"),
-						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						DesiredVersion:   pointer.String("xxxx"),
+						PublishedVersion: pointer.String("6758fd786c"),
+						CacheState:       pointer.String(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: []metav1.Condition{
 							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse, Message: "a"},
@@ -136,7 +136,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					},
 				},
 				cacheState:       marin3rv1alpha1.InSyncState,
-				publishedVersion: "6ddbcdf795",
+				publishedVersion: "6758fd786c",
 				list:             &marin3rv1alpha1.EnvoyConfigRevisionList{},
 			},
 			want: false,
@@ -146,9 +146,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
-						PublishedVersion: pointer.StringPtr("xxxx"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						DesiredVersion:   pointer.String("6758fd786c"),
+						PublishedVersion: pointer.String("xxxx"),
+						CacheState:       pointer.String(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: []metav1.Condition{
 							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse, Message: "a"},
@@ -157,7 +157,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					},
 				},
 				cacheState:       marin3rv1alpha1.InSyncState,
-				publishedVersion: "6ddbcdf795",
+				publishedVersion: "6758fd786c",
 				list:             &marin3rv1alpha1.EnvoyConfigRevisionList{},
 			},
 			want: false,
@@ -167,9 +167,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
-						PublishedVersion: pointer.StringPtr("xxxx"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						DesiredVersion:   pointer.String("6758fd786c"),
+						PublishedVersion: pointer.String("xxxx"),
+						CacheState:       pointer.String(marin3rv1alpha1.InSyncState),
 						ConfigRevisions:  []marin3rv1alpha1.ConfigRevisionRef{},
 						Conditions: []metav1.Condition{
 							{Type: marin3rv1alpha1.CacheOutOfSyncCondition, Status: metav1.ConditionFalse, Message: "a"},
@@ -200,9 +200,9 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					Status: marin3rv1alpha1.EnvoyConfigStatus{
-						DesiredVersion:   pointer.StringPtr("6ddbcdf795"),
-						PublishedVersion: pointer.StringPtr("6ddbcdf795"),
-						CacheState:       pointer.StringPtr(marin3rv1alpha1.InSyncState),
+						DesiredVersion:   pointer.String("6758fd786c"),
+						PublishedVersion: pointer.String("6758fd786c"),
+						CacheState:       pointer.String(marin3rv1alpha1.InSyncState),
 						ConfigRevisions: []marin3rv1alpha1.ConfigRevisionRef{
 							{Version: "1", Ref: corev1.ObjectReference{Name: "ecr1", Namespace: "test"}},
 							{Version: "2", Ref: corev1.ObjectReference{Name: "ecr2", Namespace: "test"}},
@@ -214,7 +214,7 @@ func TestIsStatusReconciled(t *testing.T) {
 					},
 				},
 				cacheState:       marin3rv1alpha1.InSyncState,
-				publishedVersion: "6ddbcdf795",
+				publishedVersion: "6758fd786c",
 				list: &marin3rv1alpha1.EnvoyConfigRevisionList{
 					Items: []marin3rv1alpha1.EnvoyConfigRevision{
 						{

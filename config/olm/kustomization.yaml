@@ -11,16 +11,17 @@ namePrefix: marin3r-
 
 patchesStrategicMerge:
   - manager_patch.yaml
+
 patches:
+- path: manager_patch.yaml
+  target:
+    kind: Deployment
+    name: controller-manager
 - path: webhook_patch.yaml
   target:
-    group: apps
     kind: Deployment
     name: controller-webhook
-    version: v1
 - path: metrics_service_patch.yaml
   target:
-    group: ""
     kind: Service
     name: controller-manager-metrics-service
-    version: v1

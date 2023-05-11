@@ -88,6 +88,18 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, nil
 	}
 
+	// convert spec.EnvoyResources to spec.Resources
+	// all the code from this point on will make use solely
+	// of the spec.Resources field.
+	if ecr.Spec.EnvoyResources != nil {
+		if resources, err := (ecr.Spec.EnvoyResources).Resources(ecr.GetSerialization()); err != nil {
+			return ctrl.Result{}, err
+		} else {
+			ecr.Spec.Resources = resources
+			ecr.Spec.EnvoyResources = nil
+		}
+	}
+
 	if util.IsBeingDeleted(ecr) {
 		if !controllerutil.ContainsFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
 			return reconcile.Result{}, nil
@@ -108,7 +120,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 	// to the xds server cache
 	if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
 		var err error
-		decoder := envoy_serializer.NewResourceUnmarshaller(ecr.GetSerialization(), r.APIVersion)
+		decoder := envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, r.APIVersion)
 
 		cacheReconciler := envoyconfigrevision.NewCacheReconciler(
 			ctx, log, r.Client, r.XdsCache,
@@ -116,7 +128,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 			envoy_resources.NewGenerator(r.APIVersion),
 		)
 
-		vt, err = cacheReconciler.Reconcile(ctx, req.NamespacedName, ecr.Spec.EnvoyResources, ecr.Spec.NodeID, ecr.Spec.Version)
+		vt, err = cacheReconciler.Reconcile(ctx, req.NamespacedName, ecr.Spec.Resources, ecr.Spec.NodeID, ecr.Spec.Version)
 
 		// If a type errors.StatusError is returned it means that the config in spec.envoyResources is wrong
 		// and cannot be written into the xDS cache. This is true for any error loading all types of resources
@@ -161,7 +173,7 @@ func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *mari
 			Reason:  reason,
 			Message: msg,
 		})
-		ecr.Status.Tainted = pointer.BoolPtr(true)
+		ecr.Status.Tainted = pointer.Bool(true)
 
 		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
 			return err
@@ -220,16 +232,19 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 
 			for _, ecr := range list.Items {
 				if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
-					// check if the Secret is relevant for this EnvoyConfigRevision
-					for _, s := range ecr.Spec.EnvoyResources.Secrets {
+					// check if the k8s Secret is relevant for this EnvoyConfigRevision
+					for _, s := range ecr.Spec.Resources {
+						if s.Type == string(envoy.Secret) {
 
-						if (s.Ref != nil && s.Ref.Name == secret.GetName()) || (s.Name == secret.GetName()) {
-							reconcileRequests = append(reconcileRequests,
-								reconcile.Request{NamespacedName: types.NamespacedName{
-									Name:      ecr.GetName(),
-									Namespace: ecr.GetNamespace(),
-								}})
+							if *s.GenerateFromTlsSecret == secret.GetName() {
+								reconcileRequests = append(reconcileRequests,
+									reconcile.Request{NamespacedName: types.NamespacedName{
+										Name:      ecr.GetName(),
+										Namespace: ecr.GetNamespace(),
+									}})
+							}
 						}
+
 					}
 				}
 			}

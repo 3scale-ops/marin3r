@@ -6,11 +6,11 @@ import (
 )
 
 // +kubebuilder:object:generate:=false
-type ValidationError struct {
-	Errors ErrorList `json:"validationErrors"`
+type MultiError struct {
+	Errors ErrorList `json:"errors"`
 }
 
-func (ve ValidationError) Error() string {
+func (ve MultiError) Error() string {
 	b, _ := json.Marshal(ve)
 	return string(b)
 }
@@ -30,6 +30,6 @@ func (el ErrorList) MarshalJSON() ([]byte, error) {
 	return []byte("[" + strings.Join(marshalledList, ",") + "]"), nil
 }
 
-func NewValidationError(e []error) ValidationError {
-	return ValidationError{Errors: e}
+func NewMultiError(e []error) MultiError {
+	return MultiError{Errors: e}
 }

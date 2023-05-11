@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
   name: envoydeployments.operator.marin3r.3scale.net
 spec:
@@ -1070,10 +1070,11 @@ spec:
                                   - value
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               selectPolicy:
                                 description: selectPolicy is used to specify which
                                   policy should be used. If not set, the default value
-                                  MaxPolicySelect is used.
+                                  Max is used.
                                 type: string
                               stabilizationWindowSeconds:
                                 description: 'StabilizationWindowSeconds is the number
@@ -1126,10 +1127,11 @@ spec:
                                   - value
                                   type: object
                                 type: array
+                                x-kubernetes-list-type: atomic
                               selectPolicy:
                                 description: selectPolicy is used to specify which
                                   policy should be used. If not set, the default value
-                                  MaxPolicySelect is used.
+                                  Max is used.
                                 type: string
                               stabilizationWindowSeconds:
                                 description: 'StabilizationWindowSeconds is the number
@@ -1168,7 +1170,7 @@ spec:
                             should be set at once).
                           properties:
                             containerResource:
-                              description: container resource refers to a resource
+                              description: containerResource refers to a resource
                                 metric (such as those specified in requests and limits)
                                 known to Kubernetes describing a single container
                                 in each pod of the current scale target (e.g. CPU
@@ -1351,16 +1353,15 @@ spec:
                                 on an Ingress object).
                               properties:
                                 describedObject:
-                                  description: CrossVersionObjectReference contains
-                                    enough information to let you identify the referred
-                                    resource.
+                                  description: describedObject specifies the descriptions
+                                    of a object,such as kind,name apiVersion
                                   properties:
                                     apiVersion:
                                       description: API version of the referent
                                       type: string
                                     kind:
                                       description: 'Kind of the referent; More info:
-                                        https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"'
+                                        https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
                                       type: string
                                     name:
                                       description: 'Name of the referent; More info:
@@ -1683,6 +1684,26 @@ spec:
                 description: Resources holds the resource requirements to use for
                   the Envoy Deployment. Defaults to no resource requests nor limits.
                 properties:
+                  claims:
+                    description: "Claims lists the names of resources, defined in
+                      spec.resourceClaims, that are used by this container. \n This
+                      is an alpha field and requires enabling the DynamicResourceAllocation
+                      feature gate. \n This field is immutable."
+                    items:
+                      description: ResourceClaim references one entry in PodSpec.ResourceClaims.
+                      properties:
+                        name:
+                          description: Name must match the name of one entry in pod.spec.resourceClaims
+                            of the Pod where this field is used. It makes that resource
+                            available inside a container.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
                   limits:
                     additionalProperties:
                       anyOf:

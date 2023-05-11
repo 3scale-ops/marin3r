@@ -9,6 +9,7 @@ import (
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
+	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -78,10 +79,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Spec: marin3rv1alpha1.EnvoyConfigSpec{
 					EnvoyAPI: pointer.StringPtr("v3"),
 					NodeID:   nodeID,
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
-						}}},
+					Resources: []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
+					}},
 			}
 			err := k8sClient.Create(context.Background(), ec)
 			Expect(err).ToNot(HaveOccurred())
@@ -110,7 +110,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Validate the cache for the nodeID
-				wantRevision := reconcilerutil.Hash(ec.Spec.EnvoyResources)
+				wantRevision := reconcilerutil.Hash(ec.Spec.Resources)
 				wantSnap := xdss_v3.NewSnapshot().SetResources(envoy.Endpoint, []envoy.Resource{
 					&envoy_config_endpoint_v3.ClusterLoadAssignment{ClusterName: "endpoint"},
 				})
@@ -144,10 +144,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 				Spec: marin3rv1alpha1.EnvoyConfigSpec{
 					EnvoyAPI: pointer.StringPtr("v3"),
 					NodeID:   nodeID,
-					EnvoyResources: &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"endpoint\"}"},
-						}}},
+					Resources: []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
+					}},
 			}
 			err := k8sClient.Create(context.Background(), ec)
 			Expect(err).ToNot(HaveOccurred())
@@ -170,10 +169,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 				By("updating the EnvoyConfig with a wrong envoy v3 resource")
 				patch := client.MergeFrom(ec.DeepCopy())
-				ec.Spec.EnvoyResources = &marin3rv1alpha1.EnvoyResources{
-					Endpoints: []marin3rv1alpha1.EnvoyResource{
-						{Name: pointer.String("endpoint"), Value: "{\"wrong_key\": \"wrong_value\"}"},
-					}}
+				ec.Spec.Resources = []marin3rv1alpha1.Resource{
+					{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"wrong_key\": \"wrong_value\"}")},
+				}
 				err := k8sClient.Patch(context.Background(), ec, patch)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -199,10 +197,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 					By("updating again the EnvoyConfig with a correct envoy v3 resource")
 					patch := client.MergeFrom(ec.DeepCopy())
-					ec.Spec.EnvoyResources = &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"correct_endpoint\"}"},
-						}}
+					ec.Spec.Resources = []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"correct_endpoint\"}")},
+					}
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())
 
@@ -269,10 +266,9 @@ var _ = Describe("EnvoyConfig controller", func() {
 
 					By("updating again the EnvoyConfig with a correct envoy v3 resource")
 					patch := client.MergeFrom(ec.DeepCopy())
-					ec.Spec.EnvoyResources = &marin3rv1alpha1.EnvoyResources{
-						Endpoints: []marin3rv1alpha1.EnvoyResource{
-							{Name: pointer.String("endpoint"), Value: "{\"cluster_name\": \"correct_endpoint\"}"},
-						}}
+					ec.Spec.Resources = []marin3rv1alpha1.Resource{
+						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"correct_endpoint\"}")},
+					}
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())
 

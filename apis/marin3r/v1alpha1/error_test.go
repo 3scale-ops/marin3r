@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestValidationError_Error(t *testing.T) {
+func TestMultiError_Error(t *testing.T) {
 	type fields struct {
 		List []error
 	}
@@ -17,16 +17,16 @@ func TestValidationError_Error(t *testing.T) {
 		{
 			name:   "Returns a json string with errors",
 			fields: fields{List: []error{fmt.Errorf("error1"), fmt.Errorf("error2")}},
-			want:   `{"validationErrors":["error1","error2"]}`,
+			want:   `{"errors":["error1","error2"]}`,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ve := ValidationError{
+			ve := MultiError{
 				Errors: tt.fields.List,
 			}
 			if got := ve.Error(); got != tt.want {
-				t.Errorf("ValidationError.Error() = %v, want %v", got, tt.want)
+				t.Errorf("MultiError.Error() = %v, want %v", got, tt.want)
 			}
 		})
 	}

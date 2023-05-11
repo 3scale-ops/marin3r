@@ -68,7 +68,7 @@ func (r *RevisionReconciler) NodeID() string {
 func (r *RevisionReconciler) DesiredVersion() string {
 	if r.desiredVersion == nil {
 		// Store the version to avoid further computation of the same value
-		r.desiredVersion = pointer.StringPtr(r.Instance().GetEnvoyResourcesVersion())
+		r.desiredVersion = pointer.String(r.Instance().GetEnvoyResourcesVersion())
 	}
 	return *r.desiredVersion
 }
@@ -268,11 +268,10 @@ func (r *RevisionReconciler) newRevisionForCurrentResources() *marin3rv1alpha1.E
 			},
 		},
 		Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
-			NodeID:         r.NodeID(),
-			EnvoyAPI:       pointer.StringPtr(r.EnvoyAPI().String()),
-			Version:        r.DesiredVersion(),
-			Serialization:  pointer.StringPtr(string(r.Instance().GetSerialization())),
-			EnvoyResources: r.Instance().Spec.EnvoyResources,
+			NodeID:    r.NodeID(),
+			EnvoyAPI:  pointer.String(r.EnvoyAPI().String()),
+			Version:   r.DesiredVersion(),
+			Resources: r.Instance().Spec.Resources,
 		},
 	}
 }

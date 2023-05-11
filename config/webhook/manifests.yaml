@@ -39,7 +39,7 @@ webhooks:
       namespace: system
       path: /validate-marin3r-3scale-net-v1alpha1-envoyconfig
   failurePolicy: Fail
-  name: envoyconfig.marin3r.3scale.net
+  name: envoyconfig.marin3r.3scale.net-v1alpha1
   rules:
   - apiGroups:
     - marin3r.3scale.net
