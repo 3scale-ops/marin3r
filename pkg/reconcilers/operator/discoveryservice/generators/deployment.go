@@ -15,7 +15,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 
 	return func() *appsv1.Deployment {
 
-		return &appsv1.Deployment{
+		deployment := &appsv1.Deployment{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Deployment",
 				APIVersion: appsv1.SchemeGroupVersion.String(),
@@ -26,7 +26,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 				Labels:    cfg.labels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32Ptr(1),
+				Replicas: pointer.Int32(1),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: cfg.labels(),
 				},
@@ -138,9 +138,15 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 						},
 					},
 				},
-				RevisionHistoryLimit:    pointer.Int32Ptr(10),
-				ProgressDeadlineSeconds: pointer.Int32Ptr(600),
+				RevisionHistoryLimit:    pointer.Int32(10),
+				ProgressDeadlineSeconds: pointer.Int32(600),
 			},
 		}
+
+		if cfg.PodPriorityClass != nil {
+			deployment.Spec.Template.Spec.PriorityClassName = *cfg.PodPriorityClass
+		}
+
+		return deployment
 	}
 }

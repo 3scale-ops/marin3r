@@ -30,15 +30,6 @@ const (
 	DiscoveryServiceKind string = "DiscoveryService"
 	// DiscoveryServiceListKind is the Kind of the DiscoveryServiceList resources
 	DiscoveryServiceListKind string = "DiscoveryServiceList"
-	// DiscoveryServiceEnabledKey is the label key that the mutating webhook uses
-	// to determine if mutation is enabled for a Pod
-	DiscoveryServiceEnabledKey string = "marin3r.3scale.net/status"
-	// DiscoveryServiceEnabledValue is the label value that the mutating webhook uses
-	// to determine if mutation is enabled for a Pod
-	DiscoveryServiceEnabledValue string = "enabled"
-	// DiscoveryServiceLabelKey is the label key that the mutating webhook uses to determine if
-	// Pod mutation is enabled in a namespace
-	DiscoveryServiceLabelKey string = "marin3r.3scale.net/discovery-service"
 	// DiscoveryServiceCertificateHashLabelKey is the label in the discovery service Deployment that
 	// stores the hash of the current server certificate
 	DiscoveryServiceCertificateHashLabelKey string = "marin3r.3scale.net/server-certificate-hash"
@@ -107,6 +98,10 @@ type DiscoveryServiceSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ServiceConfig *ServiceConfig `json:"serviceConfig,omitempty"`
+	// PriorityClass to assign the discovery service Pod to
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	PodPriorityClass *string `json:"podPriorityClass,omitempty"`
 }
 
 // DiscoveryServiceStatus defines the observed state of DiscoveryService
@@ -260,6 +255,14 @@ func (d *DiscoveryService) defaultServiceConfig() *ServiceConfig {
 		Name: d.OwnedObjectName(),
 		Type: ClusterIPType,
 	}
+}
+
+// PodPriorityClass returns the pod's priority class
+func (d *DiscoveryService) GetPriorityClass() *string {
+	if d.Spec.PodPriorityClass != nil {
+		return d.Spec.PodPriorityClass
+	}
+	return nil
 }
 
 // OwnedObjectName returns the name of the resources the discoveryservices controller
