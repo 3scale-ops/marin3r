@@ -302,9 +302,7 @@ endif
 
 deploy-cert-manager: ## Deployes cert-manager in the K8s cluster specified in ~/.kube/config.
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.3/cert-manager.yaml
-	while [[ $$(kubectl -n cert-manager get deployment cert-manager-webhook -o 'jsonpath={.status.readyReplicas}') != "1" ]]; \
-		do echo "waiting for cert-manager webhook" && sleep 3; \
-	done
+	kubectl -n cert-manager wait --timeout=300s --for=condition=Available deployments --all
 
 # Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
 # This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:

@@ -51,7 +51,7 @@ var _ = Describe("Envoy sidecars", func() {
 				Namespace: testNamespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image: pointer.StringPtr(image),
+				Image: pointer.String(image),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
@@ -101,21 +101,12 @@ var _ = Describe("Envoy sidecars", func() {
 			By("applaying an EnvoyConfig that will configure the envoy sidecar through service discovery")
 			key := types.NamespacedName{Name: "nginx-envoyconfig", Namespace: testNamespace}
 			ec = testutil.GenerateEnvoyConfig(key, nodeID, envoy.APIv3,
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.EndpointV3("nginx", "127.0.0.1", 80)}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.ClusterWithEdsV3("nginx")}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.ProxyPassRouteV3("proxypass", "nginx")}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)}
-				},
-				func() []envoy.Resource {
-					return []envoy.Resource{testutil.HTTPFilterRouter("router_filter")}
-				},
+				[]envoy.Resource{testutil.EndpointV3("nginx", "127.0.0.1", 80)},
+				[]envoy.Resource{testutil.ClusterWithEdsV3("nginx")},
+				[]envoy.Resource{testutil.ProxyPassRouteV3("proxypass", "nginx")},
+				[]envoy.Resource{testutil.HTTPListener("http", "proxypass", "router_filter", testutil.GetAddressV3("0.0.0.0", envoyListenerPort), nil)},
+				[]envoy.Resource{testutil.HTTPFilterRouter("router_filter")},
+				nil,
 				nil,
 			)
 
