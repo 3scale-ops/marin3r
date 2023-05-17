@@ -19,9 +19,11 @@ package v1alpha1
 import (
 	"testing"
 
+	"github.com/3scale-ops/marin3r/pkg/envoy"
+	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 )
 
 func TestEnvoyConfig_ValidateResources(t *testing.T) {
@@ -80,7 +82,7 @@ func TestEnvoyConfig_ValidateResources(t *testing.T) {
 						Value: &runtime.RawExtension{
 							Raw: []byte(`{"name": "cluster"}`),
 						},
-						Blueprint: new(string),
+						Blueprint: new(Blueprint),
 					}},
 				},
 			}, wantErr: true,
@@ -224,7 +226,7 @@ func TestEnvoyConfig_ValidateResources(t *testing.T) {
 					NodeID: "test",
 					Resources: []Resource{{
 						Type:      "endpoint",
-						Blueprint: new(string),
+						Blueprint: new(Blueprint),
 					}},
 				},
 			}, wantErr: true,
@@ -256,11 +258,11 @@ func TestEnvoyConfig_ValidateEnvoyResources(t *testing.T) {
 			fields: fields{
 				Spec: EnvoyConfigSpec{
 					NodeID:        "test",
-					Serialization: pointer.String("json"),
-					EnvoyAPI:      pointer.String("v3"),
+					Serialization: pointer.New(envoy_serializer.JSON),
+					EnvoyAPI:      pointer.New(envoy.APIv3),
 					EnvoyResources: &EnvoyResources{
 						Clusters: []EnvoyResource{{
-							Name: pointer.String("cluster"),
+							Name: pointer.New("cluster"),
 							// the connect_timeout value unit is wrong
 							Value: `{"name":"cluster1","type":"STRICT_DNS","connect_timeout":"2xs","load_assignment":{"cluster_name":"cluster1"}}`,
 						}},
@@ -274,11 +276,11 @@ func TestEnvoyConfig_ValidateEnvoyResources(t *testing.T) {
 			fields: fields{
 				Spec: EnvoyConfigSpec{
 					NodeID:        "test",
-					Serialization: pointer.String("yaml"),
-					EnvoyAPI:      pointer.String("v3"),
+					Serialization: pointer.New(envoy_serializer.YAML),
+					EnvoyAPI:      pointer.New(envoy.APIv3),
 					EnvoyResources: &EnvoyResources{
 						Listeners: []EnvoyResource{{
-							Name: pointer.String("test"),
+							Name: pointer.New("test"),
 							// the "port" property should be "port_value"
 							Value: `
                               name: listener1
@@ -328,7 +330,7 @@ func TestEnvoyConfig_Validate(t *testing.T) {
 					NodeID: "test",
 					EnvoyResources: &EnvoyResources{
 						Clusters: []EnvoyResource{{
-							Name:  pointer.String("cluster"),
+							Name:  pointer.New("cluster"),
 							Value: `{"name":"cluster1","type":"STRICT_DNS","connect_timeout":"2s","load_assignment":{"cluster_name":"cluster1"}}`,
 						}},
 					},

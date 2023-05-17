@@ -5,10 +5,10 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 func TestGeneratorOptions_ServerCertificate(t *testing.T) {
@@ -57,7 +57,7 @@ func TestGeneratorOptions_ServerCertificate(t *testing.T) {
 				},
 				Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 					CommonName:          "test-test",
-					IsServerCertificate: pointer.BoolPtr(true),
+					IsServerCertificate: pointer.New(true),
 					ValidFor:            int64(10),
 					Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 						CASigned: &operatorv1alpha1.CASignedConfig{

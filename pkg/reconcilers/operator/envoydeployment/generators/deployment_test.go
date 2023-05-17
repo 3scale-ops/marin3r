@@ -7,12 +7,12 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"github.com/go-test/deep"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 )
 
 func TestGeneratorOptions_Deployment(t *testing.T) {
@@ -37,10 +37,10 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				ExposedPorts:              []operatorv1alpha1.ContainerPort{{Name: "port", Port: 8080}},
 				AdminPort:                 9901,
 				AdminAccessLogPath:        "/dev/null",
-				Replicas:                  operatorv1alpha1.ReplicasSpec{Static: pointer.Int32Ptr(1)},
+				Replicas:                  operatorv1alpha1.ReplicasSpec{Static: pointer.New(int32(1))},
 				LivenessProbe:             operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 30, TimeoutSeconds: 1, PeriodSeconds: 10, SuccessThreshold: 1, FailureThreshold: 10},
 				ReadinessProbe:            operatorv1alpha1.ProbeSpec{InitialDelaySeconds: 15, TimeoutSeconds: 1, PeriodSeconds: 5, SuccessThreshold: 1, FailureThreshold: 1},
-				InitManager:               &operatorv1alpha1.InitManager{Image: pointer.StringPtr("init-manager:latest")},
+				InitManager:               &operatorv1alpha1.InitManager{Image: pointer.New("init-manager:latest")},
 			},
 			want: &appsv1.Deployment{
 				TypeMeta: metav1.TypeMeta{
@@ -58,7 +58,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.New(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app.kubernetes.io/name":       "marin3r",
@@ -83,7 +83,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  defaults.DeploymentClientCertificate + "-instance",
-											DefaultMode: pointer.Int32(420),
+											DefaultMode: pointer.New(int32(420)),
 										},
 									},
 								},
@@ -221,7 +221,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 								},
 							},
 							RestartPolicy:                 corev1.RestartPolicyAlways,
-							TerminationGracePeriodSeconds: pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
+							TerminationGracePeriodSeconds: pointer.New(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     corev1.DNSClusterFirst,
 							ServiceAccountName:            "default",
 							DeprecatedServiceAccount:      "default",
@@ -242,8 +242,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointer.Int32Ptr(10),
-					ProgressDeadlineSeconds: pointer.Int32Ptr(600),
+					RevisionHistoryLimit:    pointer.New(int32(10)),
+					ProgressDeadlineSeconds: pointer.New(int32(600)),
 				},
 			},
 		},

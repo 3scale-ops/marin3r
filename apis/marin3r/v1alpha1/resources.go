@@ -5,11 +5,11 @@ import (
 
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 )
 
@@ -30,7 +30,7 @@ type Resource struct {
 	// Type is the type url for the protobuf message
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Enum=listener;route;scopedRoute;cluster;endpoint;secret;runtime;extensionConfig;
-	Type string `json:"type"`
+	Type envoy.Type `json:"type"`
 	// Value is the protobufer message that configures the resource. The proto
 	// must match the envoy configuration API v3 specification for the given resource
 	// type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
@@ -51,7 +51,7 @@ type Resource struct {
 	// +kubebuilder:validation:Enum=tlsCertificate;validationContext;
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Blueprint *string `json:"blueprint,omitempty"`
+	Blueprint *Blueprint `json:"blueprint,omitempty"`
 }
 
 type GenerateFromEndpointSlices struct {
@@ -150,9 +150,9 @@ func (in *EnvoyResources) Resources(serialization envoy_serializer.Serialization
 	}
 	for _, deprecatedResource := range in.Secrets {
 		r := Resource{
-			Type:                  string(envoy.Secret),
+			Type:                  envoy.Secret,
 			GenerateFromTlsSecret: &deprecatedResource.Name,
-			Blueprint:             pointer.String(string(TlsCertificate)),
+			Blueprint:             pointer.New(TlsCertificate),
 		}
 		resources = append(resources, r)
 	}
@@ -195,7 +195,7 @@ func (res *EnvoyResource) Resource(rType envoy.Type, serialization envoy_seriali
 	}
 
 	return Resource{
-		Type: string(rType),
+		Type: rType,
 		Value: &runtime.RawExtension{
 			Raw: b,
 		},

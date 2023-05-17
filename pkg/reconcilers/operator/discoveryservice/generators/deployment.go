@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 )
 
 func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
@@ -26,7 +26,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 				Labels:    cfg.labels(),
 			},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: pointer.Int32(1),
+				Replicas: pointer.New(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: cfg.labels(),
 				},
@@ -46,7 +46,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  cfg.ServerCertName(),
-										DefaultMode: pointer.Int32Ptr(420),
+										DefaultMode: pointer.New(int32(420)),
 									},
 								},
 							},
@@ -55,7 +55,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 								VolumeSource: corev1.VolumeSource{
 									Secret: &corev1.SecretVolumeSource{
 										SecretName:  cfg.RootCertName(),
-										DefaultMode: pointer.Int32Ptr(420),
+										DefaultMode: pointer.New(int32(420)),
 									},
 								},
 							},
@@ -117,7 +117,7 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 							},
 						},
 						RestartPolicy:                 corev1.RestartPolicyAlways,
-						TerminationGracePeriodSeconds: pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
+						TerminationGracePeriodSeconds: pointer.New(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 						DNSPolicy:                     corev1.DNSClusterFirst,
 						ServiceAccountName:            cfg.ResourceName(),
 						DeprecatedServiceAccount:      cfg.ResourceName(),
@@ -138,8 +138,8 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 						},
 					},
 				},
-				RevisionHistoryLimit:    pointer.Int32(10),
-				ProgressDeadlineSeconds: pointer.Int32(600),
+				RevisionHistoryLimit:    pointer.New(int32(10)),
+				ProgressDeadlineSeconds: pointer.New(int32(600)),
 			},
 		}
 

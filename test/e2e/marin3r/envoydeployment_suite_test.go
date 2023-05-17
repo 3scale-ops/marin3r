@@ -11,6 +11,7 @@ import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	testutil "github.com/3scale-ops/marin3r/test/e2e/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,7 +20,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -52,7 +52,7 @@ var _ = Describe("EnvoyDeployment", func() {
 				Namespace: testNamespace,
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceSpec{
-				Image: pointer.String(image),
+				Image: pointer.New(image),
 			},
 		}
 		err = k8sClient.Create(context.Background(), ds)
@@ -144,8 +144,8 @@ var _ = Describe("EnvoyDeployment", func() {
 				Spec: operatorv1alpha1.EnvoyDeploymentSpec{
 					DiscoveryServiceRef: ds.GetName(),
 					EnvoyConfigRef:      ec.GetName(),
-					Image:               pointer.String(defaults.ImageRepo + ":" + envoyVersionV3),
-					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.String(image)},
+					Image:               pointer.New(defaults.ImageRepo + ":" + envoyVersionV3),
+					InitManager:         &operatorv1alpha1.InitManager{Image: pointer.New(image)},
 				},
 			}
 

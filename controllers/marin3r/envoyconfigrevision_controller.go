@@ -29,6 +29,7 @@ import (
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	envoyconfigrevision "github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -38,7 +39,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -175,7 +175,7 @@ func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *mari
 			Reason:  reason,
 			Message: msg,
 		})
-		ecr.Status.Tainted = pointer.Bool(true)
+		ecr.Status.Tainted = pointer.New(true)
 
 		if err := r.Client.Status().Patch(ctx, ecr, patch); err != nil {
 			return err
@@ -236,7 +236,7 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 				if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
 					// check if the k8s Secret is relevant for this EnvoyConfigRevision
 					for _, s := range ecr.Spec.Resources {
-						if s.Type == string(envoy.Secret) {
+						if s.Type == envoy.Secret {
 
 							if *s.GenerateFromTlsSecret == secret.GetName() {
 								reconcileRequests = append(reconcileRequests,
@@ -274,7 +274,7 @@ func (r *EnvoyConfigRevisionReconciler) EndpointSlicesEventHandler() handler.Eve
 				if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
 					// check if the k8s EndpointSlice is relevant for this EnvoyConfigRevision
 					for _, r := range ecr.Spec.Resources {
-						if r.Type == string(envoy.Endpoint) && r.GenerateFromEndpointSlices != nil {
+						if r.Type == envoy.Endpoint && r.GenerateFromEndpointSlices != nil {
 
 							selector, err := metav1.LabelSelectorAsSelector(r.GenerateFromEndpointSlices.Selector)
 							if err != nil {

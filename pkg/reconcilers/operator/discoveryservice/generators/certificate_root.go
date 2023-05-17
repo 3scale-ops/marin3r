@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 func (cfg *GeneratorOptions) RootCertificationAuthority() func() *operatorv1alpha1.DiscoveryServiceCertificate {
@@ -25,7 +25,7 @@ func (cfg *GeneratorOptions) RootCertificationAuthority() func() *operatorv1alph
 			},
 			Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 				CommonName: fmt.Sprintf("%s-%s", cfg.RootCertificateCommonNamePrefix, cfg.InstanceName),
-				IsCA:       pointer.BoolPtr(true),
+				IsCA:       pointer.New(true),
 				ValidFor:   int64(cfg.RootCertificateDuration.Seconds()),
 				Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 					SelfSigned: &operatorv1alpha1.SelfSignedConfig{},

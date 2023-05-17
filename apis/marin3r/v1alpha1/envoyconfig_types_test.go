@@ -23,9 +23,9 @@ import (
 	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 )
 
 func TestEnvoyConfig_GetEnvoyAPIVersion(t *testing.T) {
@@ -44,7 +44,7 @@ func TestEnvoyConfig_GetEnvoyAPIVersion(t *testing.T) {
 			func() *EnvoyConfig {
 				return &EnvoyConfig{
 					Spec: EnvoyConfigSpec{
-						EnvoyAPI: pointer.StringPtr("v3"),
+						EnvoyAPI: pointer.New(envoy.APIv3),
 					},
 				}
 			},
@@ -78,7 +78,7 @@ func TestEnvoyConfig_GetSerialization(t *testing.T) {
 			func() *EnvoyConfig {
 				return &EnvoyConfig{
 					Spec: EnvoyConfigSpec{
-						Serialization: pointer.StringPtr("yaml"),
+						Serialization: pointer.New(envoy_serializer.YAML),
 					},
 				}
 			},

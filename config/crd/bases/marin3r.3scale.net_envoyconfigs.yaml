@@ -374,7 +374,6 @@ spec:
                   is used if unset.
                 enum:
                 - json
-                - b64json
                 - yaml
                 type: string
             required:

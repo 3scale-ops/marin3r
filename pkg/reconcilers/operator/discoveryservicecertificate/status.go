@@ -5,8 +5,8 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 // IsStatusReconciled calculates the status of the resource
@@ -16,12 +16,12 @@ func IsStatusReconciled(dsc *operatorv1alpha1.DiscoveryServiceCertificate, certi
 	ok := true
 
 	if dsc.Status.GetCertificateHash() != certificateHash {
-		dsc.Status.CertificateHash = pointer.StringPtr(certificateHash)
+		dsc.Status.CertificateHash = pointer.New(certificateHash)
 		ok = false
 	}
 
 	if dsc.Status.IsReady() != ready {
-		dsc.Status.Ready = pointer.BoolPtr(ready)
+		dsc.Status.Ready = pointer.New(ready)
 		ok = false
 	}
 

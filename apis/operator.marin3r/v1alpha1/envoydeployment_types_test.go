@@ -1,4 +1,4 @@
-/*
+/*v1alpha1
 
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,12 +22,12 @@ import (
 	"time"
 
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 )
 
 func TestEnvoyDeployment_Image(t *testing.T) {
@@ -45,7 +45,7 @@ func TestEnvoyDeployment_Image(t *testing.T) {
 		{"With explicitly set options",
 			func() *EnvoyDeployment {
 				return &EnvoyDeployment{
-					Spec: EnvoyDeploymentSpec{Image: pointer.StringPtr("image:test")},
+					Spec: EnvoyDeploymentSpec{Image: pointer.New("image:test")},
 				}
 			},
 			"image:test",
@@ -187,7 +187,7 @@ func TestEnvoyDeployment_AdminAccessLogPath(t *testing.T) {
 		{"With explicitly set options",
 			func() *EnvoyDeployment {
 				return &EnvoyDeployment{
-					Spec: EnvoyDeploymentSpec{AdminAccessLogPath: pointer.StringPtr("/my/log/file")},
+					Spec: EnvoyDeploymentSpec{AdminAccessLogPath: pointer.New("/my/log/file")},
 				}
 			},
 			"/my/log/file",
@@ -214,7 +214,7 @@ func TestEnvoyDeployment_Replicas(t *testing.T) {
 			func() *EnvoyDeployment {
 				return &EnvoyDeployment{}
 			},
-			ReplicasSpec{Static: pointer.Int32Ptr(DefaultReplicas)},
+			ReplicasSpec{Static: pointer.New(DefaultReplicas)},
 		},
 		{"With explicitly set options",
 			func() *EnvoyDeployment {
@@ -232,13 +232,13 @@ func TestEnvoyDeployment_Replicas(t *testing.T) {
 			func() *EnvoyDeployment {
 				return &EnvoyDeployment{
 					Spec: EnvoyDeploymentSpec{Replicas: &ReplicasSpec{
-						Static:  pointer.Int32Ptr(3),
+						Static:  pointer.New(int32(3)),
 						Dynamic: &DynamicReplicasSpec{},
 					}},
 				}
 			},
 			ReplicasSpec{
-				Static: pointer.Int32Ptr(3),
+				Static: pointer.New(int32(3)),
 			},
 		},
 	}
@@ -419,7 +419,7 @@ func TestInitManager_GetImage(t *testing.T) {
 		},
 		{
 			name:   "returns value",
-			fields: fields{Image: pointer.StringPtr("test")},
+			fields: fields{Image: pointer.New("test")},
 			want:   "test",
 		},
 	}
@@ -450,7 +450,7 @@ func TestShutdownManager_GetDrainTime(t *testing.T) {
 		{
 			name: "Returns value",
 			fields: fields{
-				DrainTime: pointer.Int64(100),
+				DrainTime: pointer.New(int64(100)),
 			},
 			want: 100,
 		},

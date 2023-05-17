@@ -19,7 +19,6 @@ package v1alpha1
 import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -58,13 +57,13 @@ type EnvoyConfigRevisionSpec struct {
 	// +kubebuilder:validation:Enum=v3
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	EnvoyAPI *string `json:"envoyAPI,omitempty"`
+	EnvoyAPI *envoy.APIVersion `json:"envoyAPI,omitempty"`
 	// Serialization specicifies the serialization format used to describe the resources. "json" and "yaml"
 	// are supported. "json" is used if unset.
 	// +kubebuilder:validation:Enum=json;b64json;yaml
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Serialization *string `json:"serialization,omitempty"`
+	Serialization *envoy_serializer.Serialization `json:"serialization,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional

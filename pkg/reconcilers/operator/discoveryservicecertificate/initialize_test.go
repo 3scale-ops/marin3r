@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"k8s.io/utils/pointer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 )
 
 func TestIsInitialized(t *testing.T) {
@@ -21,8 +21,8 @@ func TestIsInitialized(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-						IsServerCertificate:      pointer.BoolPtr(false),
-						IsCA:                     pointer.BoolPtr(false),
+						IsServerCertificate:      pointer.New(false),
+						IsCA:                     pointer.New(false),
 						Hosts:                    []string{"host"},
 						CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{Enabled: true},
 					},
@@ -35,7 +35,7 @@ func TestIsInitialized(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-						IsCA:                     pointer.BoolPtr(false),
+						IsCA:                     pointer.New(false),
 						Hosts:                    []string{"host"},
 						CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{Enabled: true},
 					},
@@ -48,7 +48,7 @@ func TestIsInitialized(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-						IsServerCertificate:      pointer.BoolPtr(false),
+						IsServerCertificate:      pointer.New(false),
 						Hosts:                    []string{"host"},
 						CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{Enabled: true},
 					},
@@ -62,8 +62,8 @@ func TestIsInitialized(t *testing.T) {
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 						CommonName:               "test",
-						IsServerCertificate:      pointer.BoolPtr(false),
-						IsCA:                     pointer.BoolPtr(false),
+						IsServerCertificate:      pointer.New(false),
+						IsCA:                     pointer.New(false),
 						CertificateRenewalConfig: &operatorv1alpha1.CertificateRenewalConfig{Enabled: true},
 					},
 				},
@@ -75,8 +75,8 @@ func TestIsInitialized(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-						IsServerCertificate: pointer.BoolPtr(false),
-						IsCA:                pointer.BoolPtr(false),
+						IsServerCertificate: pointer.New(false),
+						IsCA:                pointer.New(false),
 						Hosts:               []string{"host"},
 					},
 				},

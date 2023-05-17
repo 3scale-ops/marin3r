@@ -62,15 +62,15 @@ type EnvoyConfigSpec struct {
 	NodeID string `json:"nodeID"`
 	// Serialization specicifies the serialization format used to describe the resources. "json" and "yaml"
 	// are supported. "json" is used if unset.
-	// +kubebuilder:validation:Enum=json;b64json;yaml
+	// +kubebuilder:validation:Enum=json;yaml
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Serialization *string `json:"serialization,omitempty"`
+	Serialization *envoy_serializer.Serialization `json:"serialization,omitempty"`
 	// EnvoyAPI is the version of envoy's API to use. Defaults to v3.
 	// +kubebuilder:validation:Enum=v3
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	EnvoyAPI *string `json:"envoyAPI,omitempty"`
+	EnvoyAPI *envoy.APIVersion `json:"envoyAPI,omitempty"`
 	// EnvoyResources holds the different types of resources suported by the envoy discovery service
 	// DEPRECATED. Use the `resources` field instead.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec

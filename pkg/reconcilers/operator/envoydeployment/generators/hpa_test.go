@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 func TestGeneratorOptions_HPA(t *testing.T) {
@@ -25,7 +25,7 @@ func TestGeneratorOptions_HPA(t *testing.T) {
 				Namespace:    "default",
 				Replicas: operatorv1alpha1.ReplicasSpec{
 					Dynamic: &operatorv1alpha1.DynamicReplicasSpec{
-						MinReplicas: pointer.Int32Ptr(2),
+						MinReplicas: pointer.New(int32(2)),
 						MaxReplicas: 4,
 						Metrics: []autoscalingv2.MetricSpec{
 							{
@@ -34,7 +34,7 @@ func TestGeneratorOptions_HPA(t *testing.T) {
 									Name: corev1.ResourceCPU,
 									Target: autoscalingv2.MetricTarget{
 										Type:               autoscalingv2.UtilizationMetricType,
-										AverageUtilization: pointer.Int32Ptr(50),
+										AverageUtilization: pointer.New(int32(50)),
 									},
 								},
 							},
@@ -63,7 +63,7 @@ func TestGeneratorOptions_HPA(t *testing.T) {
 						Kind:       "Deployment",
 						Name:       "marin3r-envoydeployment-instance",
 					},
-					MinReplicas: pointer.Int32Ptr(2),
+					MinReplicas: pointer.New(int32(2)),
 					MaxReplicas: 4,
 					Metrics: []autoscalingv2.MetricSpec{
 						{
@@ -72,7 +72,7 @@ func TestGeneratorOptions_HPA(t *testing.T) {
 								Name: corev1.ResourceCPU,
 								Target: autoscalingv2.MetricTarget{
 									Type:               autoscalingv2.UtilizationMetricType,
-									AverageUtilization: pointer.Int32Ptr(50),
+									AverageUtilization: pointer.New(int32(50)),
 								},
 							},
 						},

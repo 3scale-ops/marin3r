@@ -6,7 +6,7 @@ import (
 
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
-	"k8s.io/utils/pointer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 )
 
 func TestEnvoyResources_Resources(t *testing.T) {
@@ -49,7 +49,7 @@ func TestEnvoyResources_Resources(t *testing.T) {
 			want: []Resource{
 				{Type: "endpoint", Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
 				{Type: "cluster", Value: k8sutil.StringtoRawExtension("{\"name\": \"cluster\"}")},
-				{Type: "secret", GenerateFromTlsSecret: pointer.String("secret"), Blueprint: pointer.String(string(TlsCertificate))},
+				{Type: "secret", GenerateFromTlsSecret: pointer.New("secret"), Blueprint: pointer.New(TlsCertificate)},
 			},
 			wantErr: false,
 		},
@@ -72,7 +72,7 @@ func TestEnvoyResources_Resources(t *testing.T) {
 			want: []Resource{
 				{Type: "endpoint", Value: k8sutil.StringtoRawExtension("{\"cluster_name\":\"endpoint\"}")},
 				{Type: "cluster", Value: k8sutil.StringtoRawExtension("{\"name\":\"cluster\"}")},
-				{Type: "secret", GenerateFromTlsSecret: pointer.String("secret"), Blueprint: pointer.String(string(TlsCertificate))},
+				{Type: "secret", GenerateFromTlsSecret: pointer.New("secret"), Blueprint: pointer.New(TlsCertificate)},
 			},
 			wantErr: false,
 		},

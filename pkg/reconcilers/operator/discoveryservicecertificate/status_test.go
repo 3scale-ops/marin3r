@@ -5,8 +5,8 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 var t1, t2 time.Time
@@ -35,8 +35,8 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
-						Ready:           pointer.BoolPtr(true),
-						CertificateHash: pointer.StringPtr("xxxx"),
+						Ready:           pointer.New(true),
+						CertificateHash: pointer.New("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
 						Conditions:      []metav1.Condition{},
@@ -54,8 +54,8 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
-						Ready:           pointer.BoolPtr(false),
-						CertificateHash: pointer.StringPtr("xxxx"),
+						Ready:           pointer.New(false),
+						CertificateHash: pointer.New("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
 						Conditions:      []metav1.Condition{},
@@ -73,8 +73,8 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
-						Ready:           pointer.BoolPtr(true),
-						CertificateHash: pointer.StringPtr("xxxx"),
+						Ready:           pointer.New(true),
+						CertificateHash: pointer.New("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t2},
 						Conditions:      []metav1.Condition{},
@@ -92,8 +92,8 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
-						Ready:           pointer.BoolPtr(true),
-						CertificateHash: pointer.StringPtr("xxxx"),
+						Ready:           pointer.New(true),
+						CertificateHash: pointer.New("xxxx"),
 						NotBefore:       &metav1.Time{},
 						NotAfter:        &metav1.Time{Time: t2},
 						Conditions:      []metav1.Condition{},
@@ -111,8 +111,8 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
-						Ready:           pointer.BoolPtr(true),
-						CertificateHash: pointer.StringPtr("xxxx"),
+						Ready:           pointer.New(true),
+						CertificateHash: pointer.New("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{},
 						Conditions:      []metav1.Condition{},
@@ -130,8 +130,8 @@ func TestIsStatusReconciled(t *testing.T) {
 			args: args{
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Status: operatorv1alpha1.DiscoveryServiceCertificateStatus{
-						Ready:           pointer.BoolPtr(true),
-						CertificateHash: pointer.StringPtr("xxxx"),
+						Ready:           pointer.New(true),
+						CertificateHash: pointer.New("xxxx"),
 						NotBefore:       &metav1.Time{Time: t1},
 						NotAfter:        &metav1.Time{Time: t1},
 					},
