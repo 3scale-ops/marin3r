@@ -167,8 +167,17 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 
 			// Validate secret holds a certificate
 			if s.Type == "kubernetes.io/tls" {
-				res := r.generator.NewSecret(name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
+				var res envoy.Resource
+
+				switch resourceDefinition.GetBlueprint() {
+				case marin3rv1alpha1.TlsCertificate:
+					res = r.generator.NewTlsCertificateSecret(name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
+				case marin3rv1alpha1.TlsValidationContext:
+					res = r.generator.NewValidationContextSecret(name, string(s.Data[secretCertificate]))
+				}
+
 				secrets = append(secrets, res)
+
 			} else {
 				err := resourceLoaderError(
 					req, name, field.NewPath("spec", "resources").Index(idx).Child("ref"),

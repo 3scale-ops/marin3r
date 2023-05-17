@@ -24,6 +24,8 @@ const (
 	TlsValidationContext Blueprint = "tlsValidationContext"
 )
 
+const defaultBlueprint Blueprint = TlsCertificate
+
 // Resource holds serialized representation of an envoy
 // resource
 type Resource struct {
@@ -52,6 +54,13 @@ type Resource struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Blueprint *Blueprint `json:"blueprint,omitempty"`
+}
+
+func (r *Resource) GetBlueprint() Blueprint {
+	if r.Blueprint != nil {
+		return *r.Blueprint
+	}
+	return defaultBlueprint
 }
 
 type GenerateFromEndpointSlices struct {
