@@ -84,6 +84,9 @@ spec:
                 - rootCertificateAuthority
                 - serverCertificate
                 type: object
+              podPriorityClass:
+                description: PriorityClass to assign the discovery service Pod to
+                type: string
               resources:
                 description: Resources holds the Resource Requirements to use for
                   the discovery service Deployment. When not set it defaults to no

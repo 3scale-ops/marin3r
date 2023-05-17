@@ -24,6 +24,7 @@ type GeneratorOptions struct {
 	DeploymentImage                   string
 	DeploymentResources               corev1.ResourceRequirements
 	Debug                             bool
+	PodPriorityClass                  *string
 }
 
 func (cfg *GeneratorOptions) labels() map[string]string {

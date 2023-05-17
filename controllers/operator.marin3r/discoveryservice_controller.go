@@ -79,10 +79,10 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		Namespace:                         ds.GetNamespace(),
 		RootCertificateNamePrefix:         "marin3r-ca-cert",
 		RootCertificateCommonNamePrefix:   "marin3r-ca",
-		RootCertificateDuration:           func() (d time.Duration) { d, _ = time.ParseDuration("26280h"); return }(), // 3 years
+		RootCertificateDuration:           ds.GetRootCertificateAuthorityOptions().Duration.Duration,
 		ServerCertificateNamePrefix:       "marin3r-server-cert",
 		ServerCertificateCommonNamePrefix: "marin3r-server",
-		ServerCertificateDuration:         func() (d time.Duration) { d, _ = time.ParseDuration("2160h"); return }(), // 90 days,
+		ServerCertificateDuration:         ds.GetServerCertificateOptions().Duration.Duration,
 		ClientCertificateDuration:         func() (d time.Duration) { d, _ = time.ParseDuration("48h"); return }(),
 		XdsServerPort:                     int32(ds.GetXdsServerPort()),
 		MetricsServerPort:                 int32(ds.GetMetricsPort()),
@@ -90,6 +90,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		DeploymentImage:                   ds.GetImage(),
 		DeploymentResources:               ds.Resources(),
 		Debug:                             ds.Debug(),
+		PodPriorityClass:                  ds.GetPriorityClass(),
 	}
 
 	serverCertHash, err := r.calculateServerCertificateHash(ctx, types.NamespacedName{Name: gen.ServerCertName(), Namespace: gen.Namespace})

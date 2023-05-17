@@ -40,6 +40,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				DeploymentImage:                   "test:latest",
 				DeploymentResources:               corev1.ResourceRequirements{},
 				Debug:                             true,
+				PodPriorityClass:                  pointer.String("highest"),
 			},
 			args{hash: "hash"},
 			&appsv1.Deployment{
@@ -156,6 +157,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 							DeprecatedServiceAccount:      "marin3r-test",
 							SecurityContext:               &corev1.PodSecurityContext{},
 							SchedulerName:                 corev1.DefaultSchedulerName,
+							PriorityClassName:             "highest",
 						},
 					},
 					Strategy: appsv1.DeploymentStrategy{
