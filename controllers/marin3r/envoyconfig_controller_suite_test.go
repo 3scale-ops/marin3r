@@ -10,6 +10,7 @@ import (
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	testutil "github.com/3scale-ops/marin3r/pkg/util/test"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	. "github.com/onsi/ginkgo/v2"
@@ -19,7 +20,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -77,10 +77,10 @@ var _ = Describe("EnvoyConfig controller", func() {
 			ec = &marin3rv1alpha1.EnvoyConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: namespace},
 				Spec: marin3rv1alpha1.EnvoyConfigSpec{
-					EnvoyAPI: pointer.StringPtr("v3"),
+					EnvoyAPI: pointer.New(envoy.APIv3),
 					NodeID:   nodeID,
 					Resources: []marin3rv1alpha1.Resource{
-						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
+						{Type: envoy.Endpoint, Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
 					}},
 			}
 			err := k8sClient.Create(context.Background(), ec)
@@ -142,10 +142,10 @@ var _ = Describe("EnvoyConfig controller", func() {
 			ec = &marin3rv1alpha1.EnvoyConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: namespace},
 				Spec: marin3rv1alpha1.EnvoyConfigSpec{
-					EnvoyAPI: pointer.StringPtr("v3"),
+					EnvoyAPI: pointer.New(envoy.APIv3),
 					NodeID:   nodeID,
 					Resources: []marin3rv1alpha1.Resource{
-						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
+						{Type: envoy.Endpoint, Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"endpoint\"}")},
 					}},
 			}
 			err := k8sClient.Create(context.Background(), ec)
@@ -170,7 +170,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 				By("updating the EnvoyConfig with a wrong envoy v3 resource")
 				patch := client.MergeFrom(ec.DeepCopy())
 				ec.Spec.Resources = []marin3rv1alpha1.Resource{
-					{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"wrong_key\": \"wrong_value\"}")},
+					{Type: envoy.Endpoint, Value: k8sutil.StringtoRawExtension("{\"wrong_key\": \"wrong_value\"}")},
 				}
 				err := k8sClient.Patch(context.Background(), ec, patch)
 				Expect(err).ToNot(HaveOccurred())
@@ -198,7 +198,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					By("updating again the EnvoyConfig with a correct envoy v3 resource")
 					patch := client.MergeFrom(ec.DeepCopy())
 					ec.Spec.Resources = []marin3rv1alpha1.Resource{
-						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"correct_endpoint\"}")},
+						{Type: envoy.Endpoint, Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"correct_endpoint\"}")},
 					}
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())
@@ -267,7 +267,7 @@ var _ = Describe("EnvoyConfig controller", func() {
 					By("updating again the EnvoyConfig with a correct envoy v3 resource")
 					patch := client.MergeFrom(ec.DeepCopy())
 					ec.Spec.Resources = []marin3rv1alpha1.Resource{
-						{Type: string(envoy.Endpoint), Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"correct_endpoint\"}")},
+						{Type: envoy.Endpoint, Value: k8sutil.StringtoRawExtension("{\"cluster_name\": \"correct_endpoint\"}")},
 					}
 					err := k8sClient.Patch(context.Background(), ec, patch)
 					Expect(err).ToNot(HaveOccurred())

@@ -8,12 +8,12 @@ import (
 
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	envoy_config_core_v3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_config_endpoint_v3 "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	"github.com/go-logr/logr"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -53,15 +53,15 @@ func TestEndpoints(t *testing.T) {
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Addresses:  []string{"127.0.0.1"},
-								Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+								Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 							},
 							{
 								Addresses:  []string{"127.0.0.2"},
-								Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+								Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 							},
 						},
 						Ports: []discoveryv1.EndpointPort{
-							{Name: pointer.String("port"), Port: pointer.Int32(1001)},
+							{Name: pointer.New("port"), Port: pointer.New(int32(1001))},
 						},
 					},
 				).Build(),
@@ -134,11 +134,11 @@ func TestEndpoints(t *testing.T) {
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Addresses:  []string{"127.0.0.1"},
-								Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+								Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 							},
 						},
 						Ports: []discoveryv1.EndpointPort{
-							{Name: pointer.String("port"), Port: pointer.Int32(1001)},
+							{Name: pointer.New("port"), Port: pointer.New(int32(1001))},
 						},
 					},
 				).Build(),
@@ -169,11 +169,11 @@ func TestEndpoints(t *testing.T) {
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Addresses:  []string{"127.0.0.1"},
-								Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+								Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 							},
 						},
 						Ports: []discoveryv1.EndpointPort{
-							{Name: pointer.String("port"), Port: pointer.Int32(1001)},
+							{Name: pointer.New("port"), Port: pointer.New(int32(1001))},
 						},
 					},
 				).Build(),
@@ -224,16 +224,16 @@ func Test_endpointSlices_to_UpstreamHosts(t *testing.T) {
 							Endpoints: []discoveryv1.Endpoint{
 								{
 									Addresses:  []string{"127.0.0.1"},
-									Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+									Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 								},
 								{
 									Addresses:  []string{"127.0.0.2"},
-									Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+									Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 								},
 							},
 							Ports: []discoveryv1.EndpointPort{
-								{Name: pointer.String("port1"), Port: pointer.Int32(1001)},
-								{Name: pointer.String("port2"), Port: pointer.Int32(1002)},
+								{Name: pointer.New("port1"), Port: pointer.New(int32(1001))},
+								{Name: pointer.New("port2"), Port: pointer.New(int32(1002))},
 							},
 						},
 						{
@@ -241,16 +241,16 @@ func Test_endpointSlices_to_UpstreamHosts(t *testing.T) {
 							Endpoints: []discoveryv1.Endpoint{
 								{
 									Addresses:  []string{"127.0.0.3"},
-									Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+									Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 								},
 								{
 									Addresses:  []string{"127.0.0.4"},
-									Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(false)},
+									Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(false)},
 								},
 							},
 							Ports: []discoveryv1.EndpointPort{
-								{Name: pointer.String("port1"), Port: pointer.Int32(1001)},
-								{Name: pointer.String("port2"), Port: pointer.Int32(1002)},
+								{Name: pointer.New("port1"), Port: pointer.New(int32(1001))},
+								{Name: pointer.New("port2"), Port: pointer.New(int32(1002))},
 							},
 						},
 					},
@@ -300,7 +300,7 @@ func Test_endpointSlices_to_UpstreamHosts(t *testing.T) {
 				esl: &discoveryv1.EndpointSliceList{
 					Items: []discoveryv1.EndpointSlice{{
 						Ports: []discoveryv1.EndpointPort{
-							{Name: pointer.String("port1"), Port: pointer.Int32(1001)},
+							{Name: pointer.New("port1"), Port: pointer.New(int32(1001))},
 						}}},
 				},
 				portName: "other-port",
@@ -318,15 +318,15 @@ func Test_endpointSlices_to_UpstreamHosts(t *testing.T) {
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Addresses:  []string{"xxxx"},
-								Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+								Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 							},
 							{
 								Addresses:  []string{"127.0.0.2"},
-								Conditions: discoveryv1.EndpointConditions{Ready: pointer.Bool(true)},
+								Conditions: discoveryv1.EndpointConditions{Ready: pointer.New(true)},
 							},
 						},
 						Ports: []discoveryv1.EndpointPort{
-							{Name: pointer.String("port1"), Port: pointer.Int32(1001)},
+							{Name: pointer.New("port1"), Port: pointer.New(int32(1001))},
 						},
 					}},
 				},
@@ -368,9 +368,9 @@ func Test_health(t *testing.T) {
 			name: "HEALTHY",
 			args: args{
 				ec: discoveryv1.EndpointConditions{
-					Ready:       pointer.Bool(true),
-					Serving:     pointer.Bool(true),
-					Terminating: pointer.Bool(false),
+					Ready:       pointer.New(true),
+					Serving:     pointer.New(true),
+					Terminating: pointer.New(false),
 				},
 			},
 			want: envoy.HealthStatus_HEALTHY,
@@ -379,8 +379,8 @@ func Test_health(t *testing.T) {
 			name: "HEALTHY",
 			args: args{
 				ec: discoveryv1.EndpointConditions{
-					Ready:   pointer.Bool(true),
-					Serving: pointer.Bool(true),
+					Ready:   pointer.New(true),
+					Serving: pointer.New(true),
 				},
 			},
 			want: envoy.HealthStatus_HEALTHY,
@@ -389,7 +389,7 @@ func Test_health(t *testing.T) {
 			name: "HEALTHY",
 			args: args{
 				ec: discoveryv1.EndpointConditions{
-					Ready: pointer.Bool(true),
+					Ready: pointer.New(true),
 				},
 			},
 			want: envoy.HealthStatus_HEALTHY,
@@ -398,7 +398,7 @@ func Test_health(t *testing.T) {
 			name: "UNHEALTHY",
 			args: args{
 				ec: discoveryv1.EndpointConditions{
-					Ready: pointer.Bool(false),
+					Ready: pointer.New(false),
 				},
 			},
 			want: envoy.HealthStatus_UNHEALTHY,
@@ -407,7 +407,7 @@ func Test_health(t *testing.T) {
 			name: "UNHEALTHY",
 			args: args{
 				ec: discoveryv1.EndpointConditions{
-					Serving: pointer.Bool(false),
+					Serving: pointer.New(false),
 				},
 			},
 			want: envoy.HealthStatus_UNHEALTHY,
@@ -423,7 +423,7 @@ func Test_health(t *testing.T) {
 			name: "DRAINING",
 			args: args{
 				ec: discoveryv1.EndpointConditions{
-					Terminating: pointer.Bool(true),
+					Terminating: pointer.New(true),
 				},
 			},
 			want: envoy.HealthStatus_DRAINING,

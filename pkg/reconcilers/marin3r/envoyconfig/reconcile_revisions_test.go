@@ -10,6 +10,7 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	k8sutil "github.com/3scale-ops/marin3r/pkg/util/k8s"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"github.com/go-logr/logr"
 	"github.com/go-test/deep"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -17,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -166,7 +166,7 @@ func TestRevisionReconciler_EnvoyAPI(t *testing.T) {
 	}{
 		{
 			"Returns the envoy API version of the EnvoyConfig instance to reconcile",
-			testRevisionReconcilerBuilder(s, &marin3rv1alpha1.EnvoyConfig{Spec: marin3rv1alpha1.EnvoyConfigSpec{EnvoyAPI: pointer.String("v3")}}),
+			testRevisionReconcilerBuilder(s, &marin3rv1alpha1.EnvoyConfig{Spec: marin3rv1alpha1.EnvoyConfigSpec{EnvoyAPI: pointer.New(envoy.APIv3)}}),
 			envoy.APIv3,
 		},
 	}
@@ -198,7 +198,7 @@ func TestRevisionReconciler_DesiredVersion(t *testing.T) {
 	}{
 		{
 			"Returns the DesiredVersion",
-			fields{context.TODO(), logr.Logger{}, nil, nil, nil, pointer.String("xxxx"), nil, nil, nil},
+			fields{context.TODO(), logr.Logger{}, nil, nil, nil, pointer.New("xxxx"), nil, nil, nil},
 			"xxxx",
 		},
 	}
@@ -284,7 +284,7 @@ func TestRevisionReconciler_PublishedVersion(t *testing.T) {
 	}{
 		{
 			"Returns the PublishedVersion",
-			fields{context.TODO(), logr.Logger{}, nil, nil, nil, nil, pointer.String("xxxx"), nil, nil},
+			fields{context.TODO(), logr.Logger{}, nil, nil, nil, nil, pointer.New("xxxx"), nil, nil},
 			"xxxx",
 		},
 	}
@@ -327,7 +327,7 @@ func TestRevisionReconciler_GetCacheState(t *testing.T) {
 	}{
 		{
 			"Returns the CacheState",
-			fields{context.TODO(), logr.Logger{}, nil, nil, nil, nil, nil, pointer.String(marin3rv1alpha1.InSyncState), nil},
+			fields{context.TODO(), logr.Logger{}, nil, nil, nil, nil, nil, pointer.New(marin3rv1alpha1.InSyncState), nil},
 			marin3rv1alpha1.InSyncState,
 		},
 	}
@@ -365,70 +365,70 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 		want    ctrl.Result
 		wantErr bool
 	}{
-		// {
-		// 	name: "Creates a new EnvoyConfigRevision, no error and requeue",
-		// 	fields: fields{
-		// 		ctx:    context.TODO(),
-		// 		logger: ctrl.Log.WithName("test"),
-		// 		client: fake.NewFakeClientWithScheme(s),
-		// 		scheme: s,
-		// 		ec: &marin3rv1alpha1.EnvoyConfig{
-		// 			TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
-		// 			ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
-		// 			Spec: marin3rv1alpha1.EnvoyConfigSpec{
-		// 				NodeID:    "node",
-		// 				Resources: []marin3rv1alpha1.Resource{},
-		// 			},
-		// 		},
-		// 	},
-		// 	want:    ctrl.Result{Requeue: true},
-		// 	wantErr: false,
-		// },
-		// {
-		// 	name: "Multiple EnvoyConfigRevision for current version, error and requeue",
-		// 	fields: fields{
-		// 		ctx:    context.TODO(),
-		// 		logger: ctrl.Log.WithName("test"),
-		// 		client: fake.NewFakeClientWithScheme(s,
-		// 			&marin3rv1alpha1.EnvoyConfigRevision{
-		// 				TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
-		// 				ObjectMeta: metav1.ObjectMeta{
-		// 					Name: "ecr1", Namespace: "test",
-		// 					Labels: map[string]string{
-		// 						filters.NodeIDTag:   "node",
-		// 						filters.EnvoyAPITag: envoy.APIv3.String(),
-		// 						filters.VersionTag:  reconcilerutil.Hash([]marin3rv1alpha1.Resource{}),
-		// 					},
-		// 				},
-		// 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
-		// 			},
-		// 			&marin3rv1alpha1.EnvoyConfigRevision{
-		// 				TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
-		// 				ObjectMeta: metav1.ObjectMeta{
-		// 					Name: "ecr2", Namespace: "test",
-		// 					Labels: map[string]string{
-		// 						filters.NodeIDTag:   "node",
-		// 						filters.EnvoyAPITag: envoy.APIv3.String(),
-		// 						filters.VersionTag:  reconcilerutil.Hash([]marin3rv1alpha1.Resource{}),
-		// 					},
-		// 				},
-		// 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
-		// 			},
-		// 		),
-		// 		scheme: s,
-		// 		ec: &marin3rv1alpha1.EnvoyConfig{
-		// 			TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
-		// 			ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
-		// 			Spec: marin3rv1alpha1.EnvoyConfigSpec{
-		// 				NodeID:    "node",
-		// 				EnvoyAPI:  pointer.String(envoy.APIv3.String()),
-		// 				Resources: []marin3rv1alpha1.Resource{},
-		// 			},
-		// 		},
-		// 	},
-		// 	want:    ctrl.Result{},
-		// 	wantErr: true,
-		// },
+		{
+			name: "Creates a new EnvoyConfigRevision, no error and requeue",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewFakeClientWithScheme(s),
+				scheme: s,
+				ec: &marin3rv1alpha1.EnvoyConfig{
+					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
+					Spec: marin3rv1alpha1.EnvoyConfigSpec{
+						NodeID:    "node",
+						Resources: []marin3rv1alpha1.Resource{},
+					},
+				},
+			},
+			want:    ctrl.Result{Requeue: true},
+			wantErr: false,
+		},
+		{
+			name: "Multiple EnvoyConfigRevision for current version, error and requeue",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewFakeClientWithScheme(s,
+					&marin3rv1alpha1.EnvoyConfigRevision{
+						TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "ecr1", Namespace: "test",
+							Labels: map[string]string{
+								filters.NodeIDTag:   "node",
+								filters.EnvoyAPITag: envoy.APIv3.String(),
+								filters.VersionTag:  reconcilerutil.Hash([]marin3rv1alpha1.Resource{}),
+							},
+						},
+						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
+					},
+					&marin3rv1alpha1.EnvoyConfigRevision{
+						TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "ecr2", Namespace: "test",
+							Labels: map[string]string{
+								filters.NodeIDTag:   "node",
+								filters.EnvoyAPITag: envoy.APIv3.String(),
+								filters.VersionTag:  reconcilerutil.Hash([]marin3rv1alpha1.Resource{}),
+							},
+						},
+						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
+					},
+				),
+				scheme: s,
+				ec: &marin3rv1alpha1.EnvoyConfig{
+					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
+					ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
+					Spec: marin3rv1alpha1.EnvoyConfigSpec{
+						NodeID:    "node",
+						EnvoyAPI:  pointer.New(envoy.APIv3),
+						Resources: []marin3rv1alpha1.Resource{},
+					},
+				},
+			},
+			want:    ctrl.Result{},
+			wantErr: true,
+		},
 		{
 			name: "EnvoyConfigRevision exists for current version, reconcile without error or requeue",
 			fields: fields{
@@ -454,7 +454,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "ec", Namespace: "test"},
 					Spec: marin3rv1alpha1.EnvoyConfigSpec{
 						NodeID:    "node",
-						EnvoyAPI:  pointer.String(envoy.APIv3.String()),
+						EnvoyAPI:  pointer.New(envoy.APIv3),
 						Resources: []marin3rv1alpha1.Resource{},
 					},
 				},
@@ -770,18 +770,18 @@ func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
 			),
 			want: &marin3rv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "node-v3-78d7857494",
+					Name:      "node-v3-6b64fb99b6",
 					Namespace: "test",
 					Labels: map[string]string{
 						filters.EnvoyAPITag: envoy.APIv3.String(),
 						filters.NodeIDTag:   "node",
-						filters.VersionTag:  "78d7857494",
+						filters.VersionTag:  "6b64fb99b6",
 					},
 				},
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:   "node",
-					EnvoyAPI: pointer.String(envoy.APIv3.String()),
-					Version:  "78d7857494",
+					EnvoyAPI: pointer.New(envoy.APIv3),
+					Version:  "6b64fb99b6",
 					Resources: []marin3rv1alpha1.Resource{
 						{
 							Type:  "endpoint",

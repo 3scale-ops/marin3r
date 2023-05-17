@@ -85,7 +85,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 	for idx, resourceDefinition := range resources {
 		switch resourceDefinition.Type {
 
-		case string(envoy.Endpoint):
+		case envoy.Endpoint:
 
 			if resourceDefinition.GenerateFromEndpointSlices != nil {
 				// Endpoint discovery enabled
@@ -112,7 +112,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 				endpoints = append(endpoints, res)
 			}
 
-		case string(envoy.Cluster):
+		case envoy.Cluster:
 			res := r.generator.New(envoy.Cluster)
 			if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
 				return nil,
@@ -123,7 +123,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 			}
 			clusters = append(clusters, res)
 
-		case string(envoy.Route):
+		case envoy.Route:
 			res := r.generator.New(envoy.Route)
 			if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
 				return nil,
@@ -134,7 +134,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 			}
 			routes = append(routes, res)
 
-		case string(envoy.ScopedRoute):
+		case envoy.ScopedRoute:
 			res := r.generator.New(envoy.ScopedRoute)
 			if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
 				return nil,
@@ -145,7 +145,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 			}
 			scopedRoutes = append(scopedRoutes, res)
 
-		case string(envoy.Listener):
+		case envoy.Listener:
 			res := r.generator.New(envoy.Listener)
 			if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
 				return nil,
@@ -156,7 +156,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 			}
 			listeners = append(listeners, res)
 
-		case string(envoy.Secret):
+		case envoy.Secret:
 			s := &corev1.Secret{}
 			// The webhook will ensure this pointer is set
 			name := *resourceDefinition.GenerateFromTlsSecret
@@ -178,7 +178,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 
 			}
 
-		case string(envoy.Runtime):
+		case envoy.Runtime:
 			res := r.generator.New(envoy.Runtime)
 			if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
 				return nil,
@@ -189,7 +189,7 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 			}
 			runtimes = append(runtimes, res)
 
-		case string(envoy.ExtensionConfig):
+		case envoy.ExtensionConfig:
 			res := r.generator.New(envoy.ExtensionConfig)
 			if err := r.decoder.Unmarshal(string(resourceDefinition.Value.Raw), res); err != nil {
 				return nil,

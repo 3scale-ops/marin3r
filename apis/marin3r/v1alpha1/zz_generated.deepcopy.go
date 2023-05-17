@@ -22,6 +22,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/3scale-ops/marin3r/pkg/envoy"
+	serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -166,12 +168,12 @@ func (in *EnvoyConfigRevisionSpec) DeepCopyInto(out *EnvoyConfigRevisionSpec) {
 	*out = *in
 	if in.EnvoyAPI != nil {
 		in, out := &in.EnvoyAPI, &out.EnvoyAPI
-		*out = new(string)
+		*out = new(envoy.APIVersion)
 		**out = **in
 	}
 	if in.Serialization != nil {
 		in, out := &in.Serialization, &out.Serialization
-		*out = new(string)
+		*out = new(serializer.Serialization)
 		**out = **in
 	}
 	if in.EnvoyResources != nil {
@@ -244,12 +246,12 @@ func (in *EnvoyConfigSpec) DeepCopyInto(out *EnvoyConfigSpec) {
 	*out = *in
 	if in.Serialization != nil {
 		in, out := &in.Serialization, &out.Serialization
-		*out = new(string)
+		*out = new(serializer.Serialization)
 		**out = **in
 	}
 	if in.EnvoyAPI != nil {
 		in, out := &in.EnvoyAPI, &out.EnvoyAPI
-		*out = new(string)
+		*out = new(envoy.APIVersion)
 		**out = **in
 	}
 	if in.EnvoyResources != nil {
@@ -469,7 +471,7 @@ func (in *Resource) DeepCopyInto(out *Resource) {
 	}
 	if in.Blueprint != nil {
 		in, out := &in.Blueprint, &out.Blueprint
-		*out = new(string)
+		*out = new(Blueprint)
 		**out = **in
 	}
 }

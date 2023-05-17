@@ -5,11 +5,11 @@ import (
 
 	envoy_container "github.com/3scale-ops/marin3r/pkg/envoy/container"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 )
 
 func (cfg *GeneratorOptions) Deployment() func() *appsv1.Deployment {
@@ -104,7 +104,7 @@ func (cfg *GeneratorOptions) Deployment() func() *appsv1.Deployment {
 								d := cfg.ShutdownManager.GetDrainTime()
 								return &d
 							}
-							return pointer.Int64(corev1.DefaultTerminationGracePeriodSeconds)
+							return pointer.New(int64(corev1.DefaultTerminationGracePeriodSeconds))
 						}(),
 						SecurityContext: &corev1.PodSecurityContext{},
 						SchedulerName:   corev1.DefaultSchedulerName,
@@ -123,8 +123,8 @@ func (cfg *GeneratorOptions) Deployment() func() *appsv1.Deployment {
 						},
 					},
 				},
-				RevisionHistoryLimit:    pointer.Int32(10),
-				ProgressDeadlineSeconds: pointer.Int32(600),
+				RevisionHistoryLimit:    pointer.New(int32(10)),
+				ProgressDeadlineSeconds: pointer.New(int32(600)),
 			},
 		}
 

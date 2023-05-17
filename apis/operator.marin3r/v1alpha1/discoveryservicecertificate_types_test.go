@@ -19,8 +19,8 @@ package v1alpha1
 import (
 	"testing"
 
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/utils/pointer"
 )
 
 func TestDiscoveryServiceCertificate_IsServerCertificate(t *testing.T) {
@@ -39,7 +39,7 @@ func TestDiscoveryServiceCertificate_IsServerCertificate(t *testing.T) {
 			func() *DiscoveryServiceCertificate {
 				return &DiscoveryServiceCertificate{
 					Spec: DiscoveryServiceCertificateSpec{
-						IsServerCertificate: pointer.BoolPtr(true),
+						IsServerCertificate: pointer.New(true),
 					},
 				}
 			},
@@ -73,7 +73,7 @@ func TestDiscoveryServiceCertificate_IsCA(t *testing.T) {
 			func() *DiscoveryServiceCertificate {
 				return &DiscoveryServiceCertificate{
 					Spec: DiscoveryServiceCertificateSpec{
-						IsCA: pointer.BoolPtr(true),
+						IsCA: pointer.New(true),
 					},
 				}
 			},
@@ -175,7 +175,7 @@ func TestDiscoveryServiceCertificateStatus_IsReady(t *testing.T) {
 			func() *DiscoveryServiceCertificate {
 				return &DiscoveryServiceCertificate{
 					Status: DiscoveryServiceCertificateStatus{
-						Ready: pointer.BoolPtr(true),
+						Ready: pointer.New(true),
 					},
 				}
 			},
@@ -209,7 +209,7 @@ func TestDiscoveryServiceCertificateStatus_GetCertificateHash(t *testing.T) {
 			func() *DiscoveryServiceCertificate {
 				return &DiscoveryServiceCertificate{
 					Status: DiscoveryServiceCertificateStatus{
-						CertificateHash: pointer.StringPtr("xxxx"),
+						CertificateHash: pointer.New("xxxx"),
 					},
 				}
 			},

@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
@@ -27,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -83,9 +83,9 @@ var _ = Describe("EnvoyDeployment webhook", func() {
 					EnvoyConfigRef:      "test",
 					DiscoveryServiceRef: "test",
 					Replicas: &ReplicasSpec{
-						Static: pointer.Int32Ptr(5),
+						Static: pointer.New(int32(5)),
 						Dynamic: &DynamicReplicasSpec{
-							MinReplicas: pointer.Int32Ptr(2),
+							MinReplicas: pointer.New(int32(2)),
 							MaxReplicas: 10,
 						},
 					},

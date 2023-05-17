@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/3scale-ops/marin3r/pkg/image"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
 )
 
 func TestDiscoveryService_Resources(t *testing.T) {
@@ -271,7 +271,7 @@ func TestDiscoveryService_GetImage(t *testing.T) {
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
-						Image: pointer.StringPtr("image:test"),
+						Image: pointer.New("image:test"),
 					},
 				}
 			},
@@ -305,7 +305,7 @@ func TestDiscoveryService_Debug(t *testing.T) {
 			func() *DiscoveryService {
 				return &DiscoveryService{
 					Spec: DiscoveryServiceSpec{
-						Debug: pointer.BoolPtr(true),
+						Debug: pointer.New(true),
 					},
 				}
 			},

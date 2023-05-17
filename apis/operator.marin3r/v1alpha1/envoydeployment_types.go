@@ -21,11 +21,11 @@ import (
 	"time"
 
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 )
 
 const (
@@ -175,7 +175,7 @@ func (ed *EnvoyDeployment) AdminAccessLogPath() string {
 
 func (ed *EnvoyDeployment) Replicas() ReplicasSpec {
 	if ed.Spec.Replicas == nil {
-		return ReplicasSpec{Static: pointer.Int32Ptr(DefaultReplicas)}
+		return ReplicasSpec{Static: pointer.New(DefaultReplicas)}
 	}
 	if ed.Spec.Replicas.Static != nil {
 		return ReplicasSpec{Static: ed.Spec.Replicas.Static}

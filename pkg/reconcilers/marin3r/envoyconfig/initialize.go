@@ -2,7 +2,7 @@ package reconcilers
 
 import (
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
-	"k8s.io/utils/pointer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -13,7 +13,7 @@ func IsInitialized(ec *marin3rv1alpha1.EnvoyConfig) bool {
 	ok := true
 
 	if ec.Spec.EnvoyAPI == nil {
-		ec.Spec.EnvoyAPI = pointer.String(string(ec.GetEnvoyAPIVersion()))
+		ec.Spec.EnvoyAPI = pointer.New(ec.GetEnvoyAPIVersion())
 		ok = false
 	}
 

@@ -9,11 +9,11 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/filters"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig/revisions"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -68,7 +68,7 @@ func (r *RevisionReconciler) NodeID() string {
 func (r *RevisionReconciler) DesiredVersion() string {
 	if r.desiredVersion == nil {
 		// Store the version to avoid further computation of the same value
-		r.desiredVersion = pointer.String(r.Instance().GetEnvoyResourcesVersion())
+		r.desiredVersion = pointer.New(r.Instance().GetEnvoyResourcesVersion())
 	}
 	return *r.desiredVersion
 }
@@ -269,7 +269,7 @@ func (r *RevisionReconciler) newRevisionForCurrentResources() *marin3rv1alpha1.E
 		},
 		Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 			NodeID:    r.NodeID(),
-			EnvoyAPI:  pointer.String(r.EnvoyAPI().String()),
+			EnvoyAPI:  pointer.New(r.EnvoyAPI()),
 			Version:   r.DesiredVersion(),
 			Resources: r.Instance().Spec.Resources,
 		},

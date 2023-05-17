@@ -2,7 +2,7 @@ package reconcilers
 
 import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	"k8s.io/utils/pointer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 )
 
 // IsInitialized checks whether the EnvoyConfigRevision object is initialized
@@ -12,11 +12,11 @@ func IsInitialized(dsc *operatorv1alpha1.DiscoveryServiceCertificate) bool {
 	ok := true
 
 	if dsc.Spec.IsServerCertificate == nil {
-		dsc.Spec.IsServerCertificate = pointer.BoolPtr(dsc.IsServerCertificate())
+		dsc.Spec.IsServerCertificate = pointer.New(dsc.IsServerCertificate())
 		ok = false
 	}
 	if dsc.Spec.IsCA == nil {
-		dsc.Spec.IsCA = pointer.BoolPtr(dsc.IsCA())
+		dsc.Spec.IsCA = pointer.New(dsc.IsCA())
 		ok = false
 	}
 	if dsc.Spec.Hosts == nil {

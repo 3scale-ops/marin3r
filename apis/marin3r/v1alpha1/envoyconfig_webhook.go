@@ -91,7 +91,7 @@ func (r *EnvoyConfig) ValidateResources() error {
 
 		switch res.Type {
 
-		case string(envoy.Secret):
+		case envoy.Secret:
 			if res.GenerateFromTlsSecret == nil {
 				errList = append(errList, fmt.Errorf("'generateFromTlsSecret' cannot be empty for type '%s'", envoy.Secret))
 			}
@@ -102,7 +102,7 @@ func (r *EnvoyConfig) ValidateResources() error {
 				errList = append(errList, fmt.Errorf("'generateFromEndpointSlice' can only be used type '%s'", envoy.Endpoint))
 			}
 
-		case string(envoy.Endpoint):
+		case envoy.Endpoint:
 			if res.GenerateFromEndpointSlices != nil && res.Value != nil {
 				errList = append(errList, fmt.Errorf("only one of 'generateFromEndpointSlice', 'value' allowed for type '%s'", envoy.Secret))
 			}

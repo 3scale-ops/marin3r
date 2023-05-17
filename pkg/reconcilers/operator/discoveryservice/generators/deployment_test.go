@@ -5,12 +5,12 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 )
 
 func TestGeneratorOptions_Deployment(t *testing.T) {
@@ -40,7 +40,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				DeploymentImage:                   "test:latest",
 				DeploymentResources:               corev1.ResourceRequirements{},
 				Debug:                             true,
-				PodPriorityClass:                  pointer.String("highest"),
+				PodPriorityClass:                  pointer.New("highest"),
 			},
 			args{hash: "hash"},
 			&appsv1.Deployment{
@@ -59,7 +59,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
-					Replicas: pointer.Int32Ptr(1),
+					Replicas: pointer.New(int32(1)),
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"app.kubernetes.io/name":       "marin3r",
@@ -85,7 +85,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "server-cert-test",
-											DefaultMode: pointer.Int32Ptr(420),
+											DefaultMode: pointer.New(int32(420)),
 										},
 									},
 								},
@@ -94,7 +94,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									VolumeSource: corev1.VolumeSource{
 										Secret: &corev1.SecretVolumeSource{
 											SecretName:  "ca-cert-test",
-											DefaultMode: pointer.Int32Ptr(420),
+											DefaultMode: pointer.New(int32(420)),
 										},
 									},
 								},
@@ -151,7 +151,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 								},
 							},
 							RestartPolicy:                 corev1.RestartPolicyAlways,
-							TerminationGracePeriodSeconds: pointer.Int64Ptr(corev1.DefaultTerminationGracePeriodSeconds),
+							TerminationGracePeriodSeconds: pointer.New(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 							DNSPolicy:                     corev1.DNSClusterFirst,
 							ServiceAccountName:            "marin3r-test",
 							DeprecatedServiceAccount:      "marin3r-test",
@@ -173,8 +173,8 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointer.Int32Ptr(10),
-					ProgressDeadlineSeconds: pointer.Int32Ptr(600),
+					RevisionHistoryLimit:    pointer.New(int32(10)),
+					ProgressDeadlineSeconds: pointer.New(int32(600)),
 				},
 			},
 		},

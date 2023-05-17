@@ -6,13 +6,13 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/util/pki"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -129,7 +129,7 @@ var _ = Describe("DiscoveryServiceCertificate controller", func() {
 				},
 				Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
 					CommonName: "test",
-					IsCA:       pointer.BoolPtr(true),
+					IsCA:       pointer.New(true),
 					ValidFor:   3600,
 					Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
 						SelfSigned: &operatorv1alpha1.SelfSignedConfig{},
