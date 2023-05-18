@@ -381,7 +381,7 @@ run-envoy: tmp/certs
 	docker run -ti --rm \
 		--network=host \
 		--add-host marin3r.default.svc:127.0.0.1 \
-		-v $$(pwd)/tmp/certs:/etc/envoy/tls \
+		-v $$(pwd)/tmp/certs/client:/etc/envoy/tls \
 		-v $$(pwd)/examples/local:/config \
 		envoyproxy/envoy:$(ENVOY_VERSION) \
 		envoy -c /config/envoy-client-bootstrap.yaml $(ARGS)
