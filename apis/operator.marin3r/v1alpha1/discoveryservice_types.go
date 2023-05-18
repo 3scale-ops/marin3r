@@ -41,6 +41,8 @@ const (
 
 	// DefaultMetricsPort is the default port where the discovery service metrics server listens
 	DefaultMetricsPort uint32 = 8383
+	// DefaultProbePort is the default port where the probe server listens
+	DefaultProbePort uint32 = 8384
 	// DefaultXdsServerPort is the default port where the discovery service xds server port listens
 	DefaultXdsServerPort uint32 = 18000
 	// DefaultRootCertificateDuration is the default root CA certificate duration
@@ -97,6 +99,10 @@ type DiscoveryServiceSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	MetricsPort *uint32 `json:"metricsPort,omitempty"`
+	// ProbePort is the port where healthz endpoint is served. Defaults to 8384.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ProbePort *uint32 `json:"probePort,omitempty"`
 	// ServiceConfig configures the way the DiscoveryService endpoints are exposed
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
@@ -261,6 +267,14 @@ func (d *DiscoveryService) GetMetricsPort() uint32 {
 		return *d.Spec.MetricsPort
 	}
 	return DefaultMetricsPort
+}
+
+// GetProbePort returns the port the healthz server will listen at
+func (d *DiscoveryService) GetProbePort() uint32 {
+	if d.Spec.ProbePort != nil {
+		return *d.Spec.ProbePort
+	}
+	return DefaultProbePort
 }
 
 // GetServiceConfig returns the Service configuration for the discovery service servers

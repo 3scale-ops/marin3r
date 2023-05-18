@@ -5,6 +5,7 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -20,6 +21,7 @@ type GeneratorOptions struct {
 	ClientCertificateDuration         time.Duration
 	XdsServerPort                     int32
 	MetricsServerPort                 int32
+	ProbePort                         int32
 	ServiceType                       operatorv1alpha1.ServiceType
 	DeploymentImage                   string
 	DeploymentResources               corev1.ResourceRequirements
@@ -42,6 +44,10 @@ func (cfg *GeneratorOptions) RootCertName() string {
 
 func (cfg *GeneratorOptions) ServerCertName() string {
 	return fmt.Sprintf("%s-%s", cfg.ServerCertificateNamePrefix, cfg.InstanceName)
+}
+
+func (cfg *GeneratorOptions) ClientCertName() string {
+	return defaults.SidecarClientCertificate
 }
 
 func (cfg *GeneratorOptions) ResourceName() string {

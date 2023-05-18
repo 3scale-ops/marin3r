@@ -59,6 +59,15 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 									},
 								},
 							},
+							{
+								Name: "client-cert",
+								VolumeSource: corev1.VolumeSource{
+									Secret: &corev1.SecretVolumeSource{
+										SecretName:  cfg.ClientCertName(),
+										DefaultMode: pointer.New(int32(420)),
+									},
+								},
+							},
 						},
 						Containers: []corev1.Container{
 							{
@@ -69,8 +78,10 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 										"discovery-service",
 										"--server-certificate-path=/etc/marin3r/tls/server",
 										"--ca-certificate-path=/etc/marin3r/tls/ca",
-										func() string { return fmt.Sprintf("--xdss-port=%v", cfg.XdsServerPort) }(),
-										func() string { return fmt.Sprintf("--metrics-bind-address=:%v", cfg.MetricsServerPort) }(),
+										"--client-certificate-path=/etc/marin3r/tls/client",
+										fmt.Sprintf("--xdss-port=%v", cfg.XdsServerPort),
+										fmt.Sprintf("--metrics-bind-address=:%v", cfg.MetricsServerPort),
+										fmt.Sprintf("--health-probe-bind-address=:%v", cfg.ProbePort),
 									}
 									if cfg.Debug {
 										args = append(args, "--debug")
@@ -98,6 +109,24 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 										},
 									}},
 								},
+								LivenessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path:   "/healthz",
+											Port:   intstr.FromInt(int(cfg.ProbePort)),
+											Scheme: corev1.URISchemeHTTP,
+										},
+									},
+								},
+								ReadinessProbe: &corev1.Probe{
+									ProbeHandler: corev1.ProbeHandler{
+										HTTPGet: &corev1.HTTPGetAction{
+											Path:   "/readyz",
+											Port:   intstr.FromInt(int(cfg.ProbePort)),
+											Scheme: corev1.URISchemeHTTP,
+										},
+									},
+								},
 								Resources: cfg.DeploymentResources,
 								VolumeMounts: []corev1.VolumeMount{
 									{
@@ -109,6 +138,11 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 										Name:      "ca-cert",
 										ReadOnly:  true,
 										MountPath: "/etc/marin3r/tls/ca/",
+									},
+									{
+										Name:      "client-cert",
+										ReadOnly:  true,
+										MountPath: "/etc/marin3r/tls/client/",
 									},
 								},
 								TerminationMessagePath:   corev1.TerminationMessagePathDefault,

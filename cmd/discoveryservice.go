@@ -17,12 +17,14 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
@@ -31,6 +33,9 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -56,6 +61,7 @@ var (
 
 	xdssPort                     int
 	xdssTLSServerCertificatePath string
+	xdssTLSClientCertificatePath string
 	xdssTLSCACertificatePath     string
 	dsScheme                     = apimachineryruntime.NewScheme()
 )
@@ -75,6 +81,8 @@ func init() {
 		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
 	discoveryServiceCmd.Flags().StringVar(&xdssTLSCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
 		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
+	discoveryServiceCmd.Flags().StringVar(&xdssTLSClientCertificatePath, "client-certificate-path", "/etc/marin3r/tls/client",
+		fmt.Sprintf("The path where the client certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
 
 }
 
@@ -156,11 +164,21 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+	// register healthz and readyz checks
+	if err := mgr.AddHealthzCheck("gRPC", xdssHealthzCheck(ctrl.Log.WithName("XdssHealthzCheck"))); err != nil {
 		setupLog.Error(err, "unable to set up health check")
 		os.Exit(1)
 	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
+	if err := mgr.AddReadyzCheck("gRPC", xdssHealthzCheck(ctrl.Log.WithName("XdssHealthzCheck"))); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("ping", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
@@ -180,6 +198,37 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	setupLog.Info("Controller has shut down")
 }
 
+func xdssHealthzCheck(logger logr.Logger) healthz.Checker {
+	return func(_ *http.Request) error {
+
+		tlsConfig := &tls.Config{
+			Certificates:       []tls.Certificate{loadCertificate(xdssTLSClientCertificatePath, setupLog)},
+			ClientCAs:          loadCA(xdssTLSCACertificatePath, setupLog),
+			InsecureSkipVerify: true,
+		}
+
+		transport, err := grpc.Dial(fmt.Sprintf("localhost:%d", xdssPort),
+			grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		)
+		if err != nil {
+			logger.Error(err, "could not connect with gRPC server")
+			os.Exit(1)
+		}
+
+		client := grpc_health_v1.NewHealthClient(transport)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+
+		if _, err := client.Check(ctx, &grpc_health_v1.HealthCheckRequest{}); err != nil {
+			logger.Error(err, "healthcheck failed")
+			return err
+		}
+
+		return nil
+	}
+}
+
 func loadCertificate(directory string, logger logr.Logger) tls.Certificate {
 	certificate, err := tls.LoadX509KeyPair(
 		fmt.Sprintf("%s/%s", directory, certificateFile),
@@ -194,7 +243,7 @@ func loadCertificate(directory string, logger logr.Logger) tls.Certificate {
 
 func loadCA(directory string, logger logr.Logger) *x509.CertPool {
 	certPool := x509.NewCertPool()
-	if bs, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", directory, certificateFile)); err != nil {
+	if bs, err := os.ReadFile(fmt.Sprintf("%s/%s", directory, certificateFile)); err != nil {
 		logger.Error(err, "Failed to read client ca cert")
 		os.Exit(1)
 	} else {

@@ -374,6 +374,7 @@ run-ds: manifests generate fmt vet go-generate tmp/certs
 		discovery-service \
 		--server-certificate-path tmp/certs/server \
 		--ca-certificate-path tmp/certs/ca \
+		--client-certificate-path tmp/certs/client \
 		--debug
 
 run-envoy: ## runs an envoy process in a container that will try to connect to a local discovery service

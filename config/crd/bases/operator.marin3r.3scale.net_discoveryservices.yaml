@@ -87,6 +87,11 @@ spec:
               podPriorityClass:
                 description: PriorityClass to assign the discovery service Pod to
                 type: string
+              probePort:
+                description: ProbePort is the port where healthz endpoint is served.
+                  Defaults to 8384.
+                format: int32
+                type: integer
               resources:
                 description: Resources holds the Resource Requirements to use for
                   the discovery service Deployment. When not set it defaults to no
@@ -96,8 +101,7 @@ spec:
                     description: "Claims lists the names of resources, defined in
                       spec.resourceClaims, that are used by this container. \n This
                       is an alpha field and requires enabling the DynamicResourceAllocation
-                      feature gate. \n This field is immutable. It can only be set
-                      for containers."
+                      feature gate. \n This field is immutable."
                     items:
                       description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                       properties:
@@ -133,8 +137,7 @@ spec:
                     description: 'Requests describes the minimum amount of compute
                       resources required. If Requests is omitted for a container,
                       it defaults to Limits if that is explicitly specified, otherwise
-                      to an implementation-defined value. Requests cannot exceed Limits.
-                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                     type: object
                 type: object
               serviceConfig:
