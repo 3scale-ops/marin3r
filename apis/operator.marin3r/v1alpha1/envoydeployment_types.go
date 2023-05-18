@@ -20,11 +20,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/status"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -386,8 +389,28 @@ func (im *InitManager) GetImage() string {
 	return defaults.InitMgrImage()
 }
 
+// ensure the status implements the AppStatus interface from "github.com/3scale-ops/basereconciler/status"
+var _ status.AppStatus = &EnvoyDeploymentStatus{}
+
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment
-type EnvoyDeploymentStatus struct{}
+type EnvoyDeploymentStatus struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	DeploymentName *string `json:"deploymentName,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	*appsv1.DeploymentStatus `json:"deploymentStatus,omitempty"`
+	// internal fields
+	status.UnimplementedStatefulSetStatus `json:"-"`
+}
+
+func (eds *EnvoyDeploymentStatus) GetDeploymentStatus(key types.NamespacedName) *appsv1.DeploymentStatus {
+	return eds.DeploymentStatus
+}
+
+func (eds *EnvoyDeploymentStatus) SetDeploymentStatus(key types.NamespacedName, s *appsv1.DeploymentStatus) {
+	eds.DeploymentStatus = s
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
@@ -404,6 +427,12 @@ type EnvoyDeployment struct {
 
 	Spec   EnvoyDeploymentSpec   `json:"spec,omitempty"`
 	Status EnvoyDeploymentStatus `json:"status,omitempty"`
+}
+
+var _ status.ObjectWithAppStatus = &EnvoyDeployment{}
+
+func (ed *EnvoyDeployment) GetStatus() status.AppStatus {
+	return &ed.Status
 }
 
 //+kubebuilder:object:root=true

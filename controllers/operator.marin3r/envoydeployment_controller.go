@@ -29,6 +29,7 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/envoydeployment/generators"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/resource_extensions"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -64,9 +65,9 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	ed := &operatorv1alpha1.EnvoyDeployment{}
 	key := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
-	result, err := r.GetInstance(ctx, key, ed, nil, nil)
-	if result != nil || err != nil {
-		return *result, err
+	err := r.GetInstance(ctx, key, ed, nil, nil)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Temporary code to remove finalizers from EnvoyDeployment resources
@@ -147,8 +148,21 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		},
 	}
 
-	if err := r.ReconcileOwnedResources(ctx, ds, res); err != nil {
+	if err := r.ReconcileOwnedResources(ctx, ed, res); err != nil {
 		logger.Error(err, "unable to update owned resources")
+		return ctrl.Result{}, err
+	}
+
+	// reconcile the status
+	err = r.ReconcileStatus(ctx, ed, []types.NamespacedName{gen.OwnedResourceKey()}, nil,
+		func() bool {
+			if ed.Status.DeploymentName == nil || *ed.Status.DeploymentName != gen.OwnedResourceKey().Name {
+				ed.Status.DeploymentName = pointer.New(gen.OwnedResourceKey().Name)
+				return true
+			}
+			return false
+		})
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
