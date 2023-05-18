@@ -336,7 +336,7 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 			want:    xdss_v3.NewSnapshot(),
 		},
 		{
-			name: "Loads secret resources into the snapshot (v3)",
+			name: "Loads secret:tlsCertificate resources into the snapshot (v3)",
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
@@ -368,6 +368,44 @@ func TestCacheReconciler_GenerateSnapshot(t *testing.T) {
 								CertificateChain: &envoy_config_core_v3.DataSource{
 									Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
 								}}}}}),
+		},
+		{
+			name: "Loads secret:validationContext resources into the snapshot (v3)",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewClientBuilder().WithObjects(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "xx"},
+					Type:       corev1.SecretTypeTLS,
+					Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
+				}).Build(),
+				xdsCache:  xdss_v3.NewCache(),
+				decoder:   envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, envoy.APIv3),
+				generator: envoy_resources_v3.Generator{},
+			},
+			args: args{
+				req: types.NamespacedName{Name: "xx", Namespace: "xx"},
+				resources: []marin3rv1alpha1.Resource{
+					{
+						Type:                  envoy.Secret,
+						GenerateFromTlsSecret: pointer.New("secret"),
+						Blueprint:             pointer.New(marin3rv1alpha1.TlsValidationContext),
+					},
+				},
+			},
+			wantErr: false,
+			want: xdss_v3.NewSnapshot().
+				SetResources(envoy.Secret, []envoy.Resource{
+					&envoy_extensions_transport_sockets_tls_v3.Secret{
+						Name: "secret",
+						Type: &envoy_extensions_transport_sockets_tls_v3.Secret_ValidationContext{
+							ValidationContext: &envoy_extensions_transport_sockets_tls_v3.CertificateValidationContext{
+								TrustedCa: &envoy_config_core_v3.DataSource{
+									Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte("cert")},
+								},
+							},
+						},
+					}}),
 		},
 		{
 			name: "Fails with wrong secret type",

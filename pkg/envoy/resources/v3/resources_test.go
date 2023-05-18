@@ -60,7 +60,7 @@ func TestSecretGenerator_New(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := Generator{}
-			if got := g.NewSecret(tt.args.name, tt.args.privateKey, tt.args.certificateChain); !proto.Equal(got, tt.want) {
+			if got := g.NewTlsCertificateSecret(tt.args.name, tt.args.privateKey, tt.args.certificateChain); !proto.Equal(got, tt.want) {
 				t.Errorf("SecretGenerator.New() = %v, want %v", got, tt.want)
 			}
 		})
