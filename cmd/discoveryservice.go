@@ -22,9 +22,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
@@ -38,6 +36,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -88,18 +87,16 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	ctx := signals.SetupSignalHandler()
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             dsScheme,
-		MetricsBindAddress: metricsAddr,
-		LeaderElection:     false,
-		Namespace:          os.Getenv("WATCH_NAMESPACE"),
+		Scheme:                 dsScheme,
+		MetricsBindAddress:     metricsAddr,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         false,
+		Namespace:              os.Getenv("WATCH_NAMESPACE"),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
-	// watch for syscalls
-	stopCh := setupSignalHandler()
 
 	var wait sync.WaitGroup
 
@@ -131,7 +128,7 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 			setupLog.Error(err, "unable to create k8s client for xdss")
 			os.Exit(1)
 		}
-		if err := xdss.Start(client, os.Getenv("WATCH_NAMESPACE"), stopCh); err != nil {
+		if err := xdss.Start(client, os.Getenv("WATCH_NAMESPACE")); err != nil {
 			setupLog.Error(err, "xDS server returned an unrecoverable error, shutting down")
 			os.Exit(1)
 		}
@@ -156,6 +153,15 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 		DiscoveryStats: xdss.GetDiscoveryStats(envoy.APIv3),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv3)))
+		os.Exit(1)
+	}
+
+	if err := mgr.AddHealthzCheck("health", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
 
@@ -199,30 +205,4 @@ func loadCA(directory string, logger logr.Logger) *x509.CertPool {
 		}
 	}
 	return certPool
-}
-
-var onlyOneSignalHandler = make(chan struct{})
-
-// SetupSignalHandler registers for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the program
-// is terminated with exit code 1.
-func setupSignalHandler() (stopCh <-chan struct{}) {
-	close(onlyOneSignalHandler) // panics when called twice
-
-	stop := make(chan struct{})
-	c := make(chan os.Signal, 2)
-	signal.Notify(c,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-	go func() {
-		<-c
-		close(stop)
-		<-c
-		os.Exit(1) // second signal. Exit directly.
-	}()
-
-	return stop
 }

@@ -99,7 +99,7 @@ func NewXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logg
 }
 
 // Start starts an xDS server at the given port.
-func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string, stopCh <-chan struct{}) error {
+func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string) error {
 
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
@@ -119,7 +119,7 @@ func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string, stop
 	)
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", xdss.xDSPort))
 	if err != nil {
-		setupLog.Error(err, "Error starting aDS server")
+		setupLog.Error(err, "Error starting ADS server")
 		return err
 	}
 
@@ -146,7 +146,7 @@ func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string, stop
 	// wait until channel stopCh closed or an error is received
 	select {
 
-	case <-stopCh:
+	case <-xdss.ctx.Done():
 		setupLog.Info("shutting down xds server")
 		close(stopGC)
 		stopped := make(chan struct{})
