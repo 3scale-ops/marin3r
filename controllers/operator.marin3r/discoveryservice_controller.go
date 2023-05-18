@@ -25,6 +25,7 @@ import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/resource_extensions"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -60,9 +61,9 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 
 	ds := &operatorv1alpha1.DiscoveryService{}
 	key := types.NamespacedName{Name: request.Name, Namespace: request.Namespace}
-	result, err := r.GetInstance(ctx, key, ds, nil, nil)
-	if result != nil || err != nil {
-		return *result, err
+	err := r.GetInstance(ctx, key, ds, nil, nil)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Temporary code to remove finalizers from DiscoveryService resources
@@ -122,6 +123,19 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 	// requeue if the server certificate is not ready
 	if serverCertHash == "" {
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// reconcile the status
+	err = r.ReconcileStatus(ctx, ds, []types.NamespacedName{{Name: gen.ResourceName(), Namespace: ds.GetNamespace()}}, nil,
+		func() bool {
+			if ds.Status.DeploymentName == nil || *ds.Status.DeploymentName != gen.ResourceName() {
+				ds.Status.DeploymentName = pointer.New(gen.ResourceName())
+				return true
+			}
+			return false
+		})
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil

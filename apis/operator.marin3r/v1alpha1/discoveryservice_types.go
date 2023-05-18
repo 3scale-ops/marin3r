@@ -20,9 +20,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/status"
 	"github.com/3scale-ops/marin3r/pkg/image"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const (
@@ -106,10 +109,22 @@ type DiscoveryServiceSpec struct {
 
 // DiscoveryServiceStatus defines the observed state of DiscoveryService
 type DiscoveryServiceStatus struct {
-	// Conditions represent the latest available observations of an object's state
-	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	DeploymentName *string `json:"deploymentName,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	*appsv1.DeploymentStatus `json:"deploymentStatus,omitempty"`
+	// internal fields
+	status.UnimplementedStatefulSetStatus `json:"-"`
+}
+
+func (dss *DiscoveryServiceStatus) GetDeploymentStatus(key types.NamespacedName) *appsv1.DeploymentStatus {
+	return dss.DeploymentStatus
+}
+
+func (dss *DiscoveryServiceStatus) SetDeploymentStatus(key types.NamespacedName, s *appsv1.DeploymentStatus) {
+	dss.DeploymentStatus = s
 }
 
 // PKIConfig has configuration for the PKI that marin3r manages for the
@@ -153,6 +168,12 @@ type DiscoveryService struct {
 
 	Spec   DiscoveryServiceSpec   `json:"spec,omitempty"`
 	Status DiscoveryServiceStatus `json:"status,omitempty"`
+}
+
+var _ status.ObjectWithAppStatus = &DiscoveryService{}
+
+func (d *DiscoveryService) GetStatus() status.AppStatus {
+	return &d.Status
 }
 
 // Resources returns the Pod resources for the discovery service pod
