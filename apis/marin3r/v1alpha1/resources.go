@@ -215,12 +215,12 @@ func (res *EnvoyResource) Resource(rType envoy.Type, serialization envoy_seriali
 // to take a secret from. Only Secrets within the same namespace can
 // be referred.
 type EnvoySecretResource struct {
-	// Name of the envoy resource. If ref is not set, a Secret with this same
-	// name will be fetched from within the namespace.
+	// Name of the envoy tslCerticate secret resource. The certificate will be fetched
+	// from a Kubernetes Secrets of type 'kubernetes.io/tls' with this same name.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Name string `json:"name"`
-	// Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref'
-	// cannot point to a different namespace.
+	// DEPRECATED: this field is deprecated and it's value will be ignored. The 'name' of the
+	// Kubernetes Secret must match the 'name' field.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors="urn:alm:descriptor:io.kubernetes:SecretReference"
 	// +optional
 	Ref *corev1.SecretReference `json:"ref,omitempty"`

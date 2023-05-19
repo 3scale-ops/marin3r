@@ -351,6 +351,11 @@ func (in *DiscoveryServiceSpec) DeepCopyInto(out *DiscoveryServiceSpec) {
 		*out = new(uint32)
 		**out = **in
 	}
+	if in.ProbePort != nil {
+		in, out := &in.ProbePort, &out.ProbePort
+		*out = new(uint32)
+		**out = **in
+	}
 	if in.ServiceConfig != nil {
 		in, out := &in.ServiceConfig, &out.ServiceConfig
 		*out = new(ServiceConfig)
