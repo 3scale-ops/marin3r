@@ -73,40 +73,37 @@ metadata:
 spec:
   nodeID: my-proxy
   serialization: yaml
-  envoyResources:
-    secrets:
-      - name: my-certificate
-        ref:
-          name: my-certificate-secret-resource
-          namespace: default
-    listeners:
-      - name: https
-        value: |
-          name: https
-          address: { socket_address: { address: 0.0.0.0, port_value: 1443 }}
-          filter_chains:
-            - filters:
-              - name: envoy.http_connection_manager
-                typed_config:
-                  "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
-                  stat_prefix: ingress_http
-                  route_config:
-                    name: local_route
-                    virtual_hosts:
-                      - name: my-proxy
-                        domains: ["*"]
-                        routes:
-                          - match: { prefix: "/" }
-                            direct_response: { status: 200, body: { inline_string: ok }}
-                  http_filters: [ name: envoy.router ]
-              transport_socket:
-                name: envoy.transport_sockets.tls
-                typed_config:
-                  "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
-                  common_tls_context:
-                    tls_certificate_sds_secret_configs:
-                      - name: my-certificate
-                        sds_config: { ads: {}}
+  resources:
+    - type: secret
+      generateFromTlsSecret: my-certificate
+      blueprint: tlsCertificate
+    - type: listener
+      value
+        name: https
+        address: { socket_address: { address: 0.0.0.0, port_value: 1443 }}
+        filter_chains:
+          - filters:
+            - name: envoy.http_connection_manager
+              typed_config:
+                "@type": type.googleapis.com/envoy.config.filter.network.http_connection_manager.v2.HttpConnectionManager
+                stat_prefix: ingress_http
+                route_config:
+                  name: local_route
+                  virtual_hosts:
+                    - name: my-proxy
+                      domains: ["*"]
+                      routes:
+                        - match: { prefix: "/" }
+                          direct_response: { status: 200, body: { inline_string: ok }}
+                http_filters: [ name: envoy.router ]
+            transport_socket:
+              name: envoy.transport_sockets.tls
+              typed_config:
+                "@type": "type.googleapis.com/envoy.api.v2.auth.DownstreamTlsContext"
+                common_tls_context:
+                  tls_certificate_sds_secret_configs:
+                    - name: my-certificate
+                      sds_config: { ads: {}}
 ```
 
 Using references to kubernetes Secret resources avoids having to write sensitive information like the certificate's private key directly into the EnvoyConfig custom resource. This is a standard way to manage sensitive information inside Kubernetes and allows to safely keep the EnvoyConfig custom resources under version control.
