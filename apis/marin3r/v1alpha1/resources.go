@@ -21,7 +21,7 @@ const (
 	// TlsCertificate
 	TlsCertificate Blueprint = "tlsCertificate"
 	// TlsValidationContext
-	TlsValidationContext Blueprint = "tlsValidationContext"
+	TlsValidationContext Blueprint = "validationContext"
 )
 
 const defaultBlueprint Blueprint = TlsCertificate
