@@ -24,26 +24,35 @@ spec:
   nodeID: envoy
   serialization: yaml
   envoyAPI: v3
-  envoyResources:
-    listeners:
-      - value: |
-          name: http
-          address: { socket_address: { address: 0.0.0.0, port_value: 8080 } }
-          filter_chains:
-            - filters:
-                - name: envoy.filters.network.http_connection_manager
-                  typed_config:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                    stat_prefix: ingress_http
-                    route_config:
-                      name: route
-                      virtual_hosts:
-                        - name: any
-                          domains: ["*"]
-                          routes:
-                            - {"match":{"prefix":"/"},"direct_response":{"status":200}}
-                    http_filters:
-                      - name: envoy.filters.http.router
+  resources:
+  - type: listener
+    value:
+      name: http
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      filter_chains:
+      - filters:
+        - name: envoy.filters.network.http_connection_manager
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+            http_filters:
+            - name: envoy.filters.http.router
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            route_config:
+              name: route
+              virtual_hosts:
+              - domains:
+                - '*'
+                name: any
+                routes:
+                - direct_response:
+                    status: 200
+                  match:
+                    prefix: /
+            stat_prefix: ingress_http
 EOF
 ```
 

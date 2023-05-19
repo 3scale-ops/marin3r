@@ -50,39 +50,50 @@ spec:
   nodeID: kuard
   serialization: yaml
   envoyAPI: v3
-  envoyResources:
-    clusters:
-      - value: |
-          name: kuard
-          connect_timeout: 10ms
-          type: STRICT_DNS
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: kuard
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address: { address: 127.0.0.1, port_value: 8080 }
-    listeners:
-      - value: |
-          name: http
-          address: { socket_address: { address: 0.0.0.0, port_value: 8081 } }
-          filter_chains:
-            - filters:
-                - name: envoy.filters.network.http_connection_manager
-                  typed_config:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                    stat_prefix: ingress_https
-                    route_config:
-                      name: local_route
-                      virtual_hosts:
-                        - name: any
-                          domains: ["*"]
-                          routes:
-                            [{ match: { prefix: "/" }, route: { cluster: "kuard" } }]
-                    http_filters:
-                      - name: envoy.filters.http.router
+  resources:
+    - type: cluster
+      value:
+        name: kuard
+        type: STRICT_DNS
+        connect_timeout: 0.01s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: kuard
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: 127.0.0.1
+                        port_value: 8080
+    - type: listener
+      value:
+        name: http
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 8081
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  http_filters:
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - domains:
+                          - "*"
+                        name: any
+                        routes:
+                          - match:
+                              prefix: /
+                            route:
+                              cluster: kuard
+                  stat_prefix: ingress_https
 EOF
 ```
 
@@ -119,7 +130,7 @@ Check that the setup works using the following curl:
 
 ## **Modify the Envoy configuration**
 
-Modify the EnvoyConfig resource to change the port that the http listener binds to. This is incorrect and the Envoy proxy will reject it because address changes are not allowed in listener resources (the correct way of doing this would be to add a new listener and then remove the old one).
+Modify the EnvoyConfig resource to point the listener to an inexistent cluster. This is incorrect and the Envoy proxy will reject this configuration change.
 
 ```bash
 cat <<'EOF' | kubectl apply -f -
@@ -129,42 +140,50 @@ metadata:
   name: kuard
 spec:
   nodeID: kuard
-  serialization: yaml
-  envoyAPI: v3
-  envoyResources:
-    clusters:
-      - value: |
-          name: kuard
-          connect_timeout: 10ms
-          type: STRICT_DNS
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: kuard
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address: { address: 127.0.0.1, port_value: 8080 }
-    listeners:
-      - value: |
-          name: http
-          # Changed listener port from 8081 to 5000
-          address: { socket_address: { address: 0.0.0.0, port_value: 5000 } }
-          filter_chains:
-            - filters:
-                - name: envoy.filters.network.http_connection_manager
-                  typed_config:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                    stat_prefix: ingress_https
-                    route_config:
-                      name: local_route
-                      virtual_hosts:
-                        - name: any
-                          domains: ["*"]
-                          routes:
-                            [{ match: { prefix: "/" }, route: { cluster: "kuard" } }]
-                    http_filters:
-                      - name: envoy.filters.http.router
+  resources:
+  - type: cluster
+    value:
+      connect_timeout: 0.01s
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: kuard
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: 127.0.0.1
+                  port_value: 8080
+      name: kuard
+      type: STRICT_DNS
+  - type: listener
+    value:
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 5000
+      filter_chains:
+      - filters:
+        - name: envoy.filters.network.http_connection_manager
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+            http_filters:
+            - name: envoy.filters.http.router
+              typed_config:
+                '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+            route_config:
+              name: local_route
+              virtual_hosts:
+              - domains:
+                - '*'
+                name: any
+                routes:
+                - match:
+                    prefix: /
+                  route:
+                    cluster: other
+            stat_prefix: ingress_https
+      name: http
 EOF
 ```
 
