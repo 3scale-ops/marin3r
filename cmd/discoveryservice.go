@@ -17,14 +17,14 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"net/http"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
+	"time"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
@@ -33,11 +33,15 @@ import (
 	envoy "github.com/3scale-ops/marin3r/pkg/envoy"
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
@@ -57,6 +61,7 @@ var (
 
 	xdssPort                     int
 	xdssTLSServerCertificatePath string
+	xdssTLSClientCertificatePath string
 	xdssTLSCACertificatePath     string
 	dsScheme                     = apimachineryruntime.NewScheme()
 )
@@ -76,6 +81,8 @@ func init() {
 		fmt.Sprintf("The path where the server certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
 	discoveryServiceCmd.Flags().StringVar(&xdssTLSCACertificatePath, "ca-certificate-path", "/etc/marin3r/tls/ca",
 		fmt.Sprintf("The path where the CA certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
+	discoveryServiceCmd.Flags().StringVar(&xdssTLSClientCertificatePath, "client-certificate-path", "/etc/marin3r/tls/client",
+		fmt.Sprintf("The path where the client certificate '%s' and key '%s' files are located", certificateFile, certificateKeyFile))
 
 }
 
@@ -88,18 +95,16 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	ctx := signals.SetupSignalHandler()
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:             dsScheme,
-		MetricsBindAddress: metricsAddr,
-		LeaderElection:     false,
-		Namespace:          os.Getenv("WATCH_NAMESPACE"),
+		Scheme:                 dsScheme,
+		MetricsBindAddress:     metricsAddr,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         false,
+		Namespace:              os.Getenv("WATCH_NAMESPACE"),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
-	// watch for syscalls
-	stopCh := setupSignalHandler()
 
 	var wait sync.WaitGroup
 
@@ -131,7 +136,7 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 			setupLog.Error(err, "unable to create k8s client for xdss")
 			os.Exit(1)
 		}
-		if err := xdss.Start(client, os.Getenv("WATCH_NAMESPACE"), stopCh); err != nil {
+		if err := xdss.Start(client, os.Getenv("WATCH_NAMESPACE")); err != nil {
 			setupLog.Error(err, "xDS server returned an unrecoverable error, shutting down")
 			os.Exit(1)
 		}
@@ -159,6 +164,25 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// register healthz and readyz checks
+	if err := mgr.AddHealthzCheck("gRPC", xdssHealthzCheck(ctrl.Log.WithName("XdssHealthzCheck"))); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddHealthzCheck("ping", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
+	if err := mgr.AddReadyzCheck("gRPC", xdssHealthzCheck(ctrl.Log.WithName("XdssHealthzCheck"))); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		os.Exit(1)
+	}
+	if err := mgr.AddReadyzCheck("ping", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		os.Exit(1)
+	}
+
 	// Start the controllers
 	wait.Add(1)
 	go func() {
@@ -172,6 +196,37 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	// Wait for shutdown
 	wait.Wait()
 	setupLog.Info("Controller has shut down")
+}
+
+func xdssHealthzCheck(logger logr.Logger) healthz.Checker {
+	return func(_ *http.Request) error {
+
+		tlsConfig := &tls.Config{
+			Certificates:       []tls.Certificate{loadCertificate(xdssTLSClientCertificatePath, setupLog)},
+			ClientCAs:          loadCA(xdssTLSCACertificatePath, setupLog),
+			InsecureSkipVerify: true,
+		}
+
+		transport, err := grpc.Dial(fmt.Sprintf("localhost:%d", xdssPort),
+			grpc.WithTransportCredentials(credentials.NewTLS(tlsConfig)),
+		)
+		if err != nil {
+			logger.Error(err, "could not connect with gRPC server")
+			os.Exit(1)
+		}
+
+		client := grpc_health_v1.NewHealthClient(transport)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+
+		if _, err := client.Check(ctx, &grpc_health_v1.HealthCheckRequest{}); err != nil {
+			logger.Error(err, "healthcheck failed")
+			return err
+		}
+
+		return nil
+	}
 }
 
 func loadCertificate(directory string, logger logr.Logger) tls.Certificate {
@@ -188,7 +243,7 @@ func loadCertificate(directory string, logger logr.Logger) tls.Certificate {
 
 func loadCA(directory string, logger logr.Logger) *x509.CertPool {
 	certPool := x509.NewCertPool()
-	if bs, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", directory, certificateFile)); err != nil {
+	if bs, err := os.ReadFile(fmt.Sprintf("%s/%s", directory, certificateFile)); err != nil {
 		logger.Error(err, "Failed to read client ca cert")
 		os.Exit(1)
 	} else {
@@ -199,30 +254,4 @@ func loadCA(directory string, logger logr.Logger) *x509.CertPool {
 		}
 	}
 	return certPool
-}
-
-var onlyOneSignalHandler = make(chan struct{})
-
-// SetupSignalHandler registers for SIGTERM and SIGINT. A stop channel is returned
-// which is closed on one of these signals. If a second signal is caught, the program
-// is terminated with exit code 1.
-func setupSignalHandler() (stopCh <-chan struct{}) {
-	close(onlyOneSignalHandler) // panics when called twice
-
-	stop := make(chan struct{})
-	c := make(chan os.Signal, 2)
-	signal.Notify(c,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-	go func() {
-		<-c
-		close(stop)
-		<-c
-		os.Exit(1) // second signal. Exit directly.
-	}()
-
-	return stop
 }

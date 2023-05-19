@@ -3,7 +3,7 @@
 CERTS_BASE_PATH=tmp/certs
 CA_CERT_PATH=${CERTS_BASE_PATH}/ca
 SERVER_CERT_PATH=${CERTS_BASE_PATH}/server
-ENVOY_CERT=${CERTS_BASE_PATH}/envoy-client
+CLIENT_CERT_PATH=${CERTS_BASE_PATH}/client
 
 mkdir -p ${CA_CERT_PATH}
 go run hack/gen_cert.go \
@@ -23,10 +23,11 @@ go run hack/gen_cert.go \
     --signer-key=${CA_CERT_PATH}/tls.key \
     --out ${SERVER_CERT_PATH}/tls
 
+mkdir -p ${CLIENT_CERT_PATH}
 go run hack/gen_cert.go \
     --not-before=$(date '+%Y-%m-%dT%H:%M:%SZ') \
     --not-after=$(date '+%Y-%m-%dT%H:%M:%SZ' -d '+10 years') \
     --signer-cert=${CA_CERT_PATH}/tls.crt \
     --common-name=envoy-client \
     --signer-key=${CA_CERT_PATH}/tls.key \
-    --out ${ENVOY_CERT}
+    --out ${CLIENT_CERT_PATH}/tls

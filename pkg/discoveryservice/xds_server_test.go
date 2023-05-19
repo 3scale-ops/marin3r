@@ -18,8 +18,8 @@ import (
 	"context"
 	"crypto/tls"
 	"reflect"
-	"sync"
 	"testing"
+	"time"
 
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
@@ -65,38 +65,27 @@ func TestNewXdsServer(t *testing.T) {
 
 func TestXdsServer_Start(t *testing.T) {
 
-	tests := []struct {
-		name string
-		xdss *XdsServer
-	}{
-		{
-			"Runs the ads server",
-			&XdsServer{
-				context.Background(),
-				10000,
-				&tls.Config{},
-				server_v3.NewServer(context.Background(), snapshotCacheV3, &xdss_v3.Callbacks{Logger: ctrl.Log}),
-				snapshotCacheV3,
-				&xdss_v3.Callbacks{Logger: ctrl.Log},
-				stats.New(),
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var wait sync.WaitGroup
-			stopCh := make(chan struct{})
-			wait.Add(1)
-			go func() {
-				if err := tt.xdss.Start(fake.NewSimpleClientset(), "ns", stopCh); err != nil {
-					t.Errorf("TestXdsServer_Start = non nil error: '%s'", err)
-				}
-				wait.Done()
-			}()
-			close(stopCh)
-			wait.Wait()
-		})
-	}
+	t.Run("Runs the ads server", func(t *testing.T) {
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(100*time.Millisecond))
+		defer cancel()
+		xdss := &XdsServer{
+			ctx,
+			10000,
+			&tls.Config{},
+			server_v3.NewServer(context.Background(), snapshotCacheV3, &xdss_v3.Callbacks{Logger: ctrl.Log}),
+			snapshotCacheV3,
+			&xdss_v3.Callbacks{Logger: ctrl.Log},
+			stats.New(),
+		}
+
+		go func() {
+			if err := xdss.Start(fake.NewSimpleClientset(), "ns"); err != nil {
+				t.Errorf("TestXdsServer_Start = non nil error: '%s'", err)
+			}
+		}()
+
+		<-xdss.ctx.Done()
+	})
 }
 
 func TestXdsServer_GetCache(t *testing.T) {

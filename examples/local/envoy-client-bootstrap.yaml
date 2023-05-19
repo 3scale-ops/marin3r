@@ -56,6 +56,6 @@ static_resources:
           common_tls_context:
             tls_certificates:
               - certificate_chain:
-                  filename: /etc/envoy/tls/envoy-client.crt
+                  filename: /etc/envoy/tls/tls.crt
                 private_key:
-                  filename: /etc/envoy/tls/envoy-client.key
+                  filename: /etc/envoy/tls/tls.key

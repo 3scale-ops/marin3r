@@ -87,6 +87,7 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		ClientCertificateDuration:         func() (d time.Duration) { d, _ = time.ParseDuration("48h"); return }(),
 		XdsServerPort:                     int32(ds.GetXdsServerPort()),
 		MetricsServerPort:                 int32(ds.GetMetricsPort()),
+		ProbePort:                         int32(ds.GetProbePort()),
 		ServiceType:                       operatorv1alpha1.ClusterIPType,
 		DeploymentImage:                   ds.GetImage(),
 		DeploymentResources:               ds.Resources(),

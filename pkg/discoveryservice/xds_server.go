@@ -36,6 +36,8 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -99,7 +101,7 @@ func NewXdsServer(ctx context.Context, xDSPort uint, tlsConfig *tls.Config, logg
 }
 
 // Start starts an xDS server at the given port.
-func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string, stopCh <-chan struct{}) error {
+func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string) error {
 
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
@@ -117,18 +119,23 @@ func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string, stop
 			MaxConnectionAgeGrace: grpcMaxConnectionAgeGrace * time.Second,
 		}),
 	)
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", xdss.xDSPort))
 	if err != nil {
-		setupLog.Error(err, "Error starting aDS server")
+		setupLog.Error(err, "Error starting ADS server")
 		return err
 	}
 
 	// channel to receive errors from the gorutine running the server
 	errCh := make(chan error)
 
-	// goroutine to run server
+	// register the ADS with the gRPC server
 	envoy_service_discovery_v3.RegisterAggregatedDiscoveryServiceServer(grpcServer, xdss.serverV3)
 
+	// register a health check with the gRPC server
+	grpc_health_v1.RegisterHealthServer(grpcServer, health.NewServer())
+
+	// goroutine to run server
 	go func() {
 		if err = grpcServer.Serve(lis); err != nil {
 			errCh <- err
@@ -146,7 +153,7 @@ func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string, stop
 	// wait until channel stopCh closed or an error is received
 	select {
 
-	case <-stopCh:
+	case <-xdss.ctx.Done():
 		setupLog.Info("shutting down xds server")
 		close(stopGC)
 		stopped := make(chan struct{})
