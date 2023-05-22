@@ -17,16 +17,16 @@ As of today, the discovery service runs in a single pod.
 
 The mechanism by which configurations get to the discovery service server and are then delivered to envoy proxies follows the follwing design:
 
-- Users or other software/controllers create EnvoyConfig custom resources in the Kubernetes API. The EnvoyConfig controller watches these resources and generates owned EnvoyConfigRevision custom resources, one per version of the envoy resources contained in the EnvoyConfig custom resource (in the `spec.envoyResources` field), up to a maximum of 10. This is effectively a list of the config versions that have been applied to a set of envoy proxies over time.
+- Users or other software/controllers create EnvoyConfig custom resources in the Kubernetes API. The EnvoyConfig controller watches these resources and generates owned EnvoyConfigRevision custom resources, one per version of the envoy resources contained in the EnvoyConfig custom resource (in the `spec.resources` field), up to a maximum of 10. This is effectively a list of the config versions that have been applied to a set of envoy proxies over time.
 
 - Only one of the EnvoyConfigRevisions holds the current version of the config. This is called the **published version** and is marked in the EnvoyConfigRevision with the `RevisionPublished` condition. It is the EnvoyConfig controller the one deciding which of its owned EnvoyConfigRevisions is the one actually published. The algorithm used to decide which is one it should be is:
 
     1. EnvoyConfig controller keeps a list of EnvoyConfigRevision references in `status.configRevisions`, ordered by time of publication. The last published revision holds the highest array index position.
-    2. Revisions are versioned by computing the hash of the `spec.envoyResources` field.
+    2. Revisions are versioned by computing the hash of the `spec.resources` field.
     3. The revision with the highest array index that is not marked with the `RevisionTainted` condition is marked with the `RevisionPublished` condition, effectively getting it published.
     4. All other owned EnvoyConfigRevisions get the `RevisionPublished` condition set to `false`.
 
-- When an EnvoyConfig resource gets updated, the hash of `spec.envoyResources` is recalculated and a new EnvoyConfigRevision for that hash is created. If an EnvoyConfigRevision already exists that matches the hash, the existing reference in `status.configRevisions` that points to that EnvoyConfigRevision gets moved to the array's highest index position, effectively triggering the publication of that revision.
+- When an EnvoyConfig resource gets updated, the hash of `spec.resources` is recalculated and a new EnvoyConfigRevision for that hash is created. If an EnvoyConfigRevision already exists that matches the hash, the existing reference in `status.configRevisions` that points to that EnvoyConfigRevision gets moved to the array's highest index position, effectively triggering the publication of that revision.
 
 - The EnvoyConfigRevision controller watches events on EnvoyConfigRevision custom resources. Whenever it receives an event on one, it checks if the revision is marked as published. If so, loads the envoy resources from serizalized format into proto message objects and writes them to the xDS server in-memory cache. The xDS server will start delivering the new config to the envoy proxies as soon as it detects changes in the in-memory cache.
 
@@ -63,7 +63,7 @@ The in-memory cache is built by the discovery service with the process described
 
 The discovery service can also deliver certificates to the envoy proxies. When an envoy configuration references an envoy secret resource to be used as a certificate (the secret type must be "kubernetes.io/tls"), this needs to be specified in the EnvoyConfig custom resource as a reference to a kubernetes Secret.
 
-For example, in the following EnvoyConfig there is a listener configured for TLS termination. The TLS config of the listener specifies that the certificate needs to be retrieved from the discovery service, referencing it by name. This name needs to match the name given to the secret in the secret reference in `spec.envoyResources.secrets`.
+For example, in the following EnvoyConfig there is a listener configured for TLS termination. The TLS config of the listener specifies that the certificate needs to be retrieved from the discovery service, referencing it by name. This name needs to match the name given to the secret in the secret reference in `spec.resources`.
 
 ```yaml
 apiVersion: marin3r.3scale.net/v1alpha1

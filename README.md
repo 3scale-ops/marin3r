@@ -167,7 +167,7 @@ spec:
   # nodeID. The nodeID of an Envoy proxy can be specified using the "--node-id" command
   # line flag
   nodeID: proxy
-  # envoyResources is where users can write the different type of resources supported by MARIN3R
+  # resources is where users can write the different type of resources supported by MARIN3R
   resources:
     # type "secret" field holds references to Kubernetes Secrets. Only Secrets of type
     # "kubernetes.io/tls" can be referenced. Any certificate referenced from another Envoy
