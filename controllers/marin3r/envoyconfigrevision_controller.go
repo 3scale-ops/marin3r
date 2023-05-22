@@ -157,7 +157,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
-		return ctrl.Result{Requeue: true, RequeueAfter: 60 * time.Second}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: 30 * time.Second}, nil
 	}
 
 	return ctrl.Result{}, nil

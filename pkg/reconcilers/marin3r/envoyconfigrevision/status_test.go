@@ -199,8 +199,8 @@ func TestIsStatusReconciled(t *testing.T) {
 				versionTrackerFactory: func() *marin3rv1alpha1.VersionTracker { return &marin3rv1alpha1.VersionTracker{Endpoints: "aaaa"} },
 				dStats: func() *stats.Stats {
 					return stats.NewWithItems(map[string]cache.Item{
-						"test:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(2), Expiration: int64(0)},
-						"test:" + resource_v3.EndpointType + ":aaaa:pod-aaaa:nack_counter":          {Object: int64(1), Expiration: int64(0)},
+						"test:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(7), Expiration: int64(0)},
+						"test:" + resource_v3.EndpointType + ":aaaa:pod-aaaa:nack_counter":          {Object: int64(6), Expiration: int64(0)},
 					}, time.Now())
 				},
 			},
@@ -412,7 +412,7 @@ func Test_calculateRevisionTaintedCondition(t *testing.T) {
 					"node:" + resource_v3.EndpointType + ":*:pod-cccc:request_counter:stream_3": {Object: int64(1), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":*:pod-dddd:request_counter:stream_4": {Object: int64(1), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(2), Expiration: int64(0)},
-					"node:" + resource_v3.EndpointType + ":xxxx:pod-aaaa:nack_counter":          {Object: int64(1), Expiration: int64(0)},
+					"node:" + resource_v3.EndpointType + ":xxxx:pod-aaaa:nack_counter":          {Object: int64(5), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-bbbb:nack_counter":          {Object: int64(10), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-cccc:nack_counter":          {Object: int64(10), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-dddd:nack_counter":          {Object: int64(10), Expiration: int64(0)},
@@ -444,7 +444,7 @@ func Test_calculateRevisionTaintedCondition(t *testing.T) {
 					"node:" + resource_v3.EndpointType + ":*:pod-cccc:request_counter:stream_3": {Object: int64(1), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":*:pod-dddd:request_counter:stream_4": {Object: int64(1), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":*:pod-aaaa:request_counter:stream_1": {Object: int64(2), Expiration: int64(0)},
-					"node:" + resource_v3.EndpointType + ":xxxx:pod-aaaa:nack_counter":          {Object: int64(1), Expiration: int64(0)},
+					"node:" + resource_v3.EndpointType + ":xxxx:pod-aaaa:nack_counter":          {Object: int64(5), Expiration: int64(0)},
 					"node:" + resource_v3.EndpointType + ":xxxx:pod-bbbb:nack_counter":          {Object: int64(10), Expiration: int64(0)},
 				}, time.Now()),
 				thresshold: 0.5,
