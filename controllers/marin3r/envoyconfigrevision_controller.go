@@ -132,9 +132,9 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		vt, err = cacheReconciler.Reconcile(ctx, req.NamespacedName, ecr.Spec.Resources, ecr.Spec.NodeID, ecr.Spec.Version)
 
-		// If a type errors.StatusError is returned it means that the config in spec.envoyResources is wrong
+		// If a type errors.StatusError is returned it means that the config in spec.resources is wrong
 		// and cannot be written into the xDS cache. This is true for any error loading all types of resources
-		// except for Secrets. Secrets are dynamically loaded from the API and transient failures are possible, so
+		// except for Secrets and generated Endpoints, which are dynamically loaded from the k8s API. In those cases
 		// setting a permanent taint could occur for a transient failure, which is not desirable.
 		if err != nil {
 			switch err.(type) {
