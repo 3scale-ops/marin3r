@@ -343,7 +343,7 @@ func TestStats_GetPercentageFailing(t *testing.T) {
 				"node:endpoint:*:pod-bbbb:request_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-cccc:request_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-dddd:request_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
-				"node:endpoint:xxxx:pod-aaaa:nack_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
+				"node:endpoint:xxxx:pod-aaaa:nack_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
 				"node:endpoint:xxxx:pod-bbbb:nack_counter": {Object: int64(10), Expiration: int64(defaultExpiration)},
 			},
 			args: args{
@@ -360,7 +360,7 @@ func TestStats_GetPercentageFailing(t *testing.T) {
 				"node:endpoint:*:pod-bbbb:request_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-cccc:request_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
 				"node:endpoint:*:pod-dddd:request_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
-				"node:endpoint:xxxx:pod-aaaa:nack_counter": {Object: int64(1), Expiration: int64(defaultExpiration)},
+				"node:endpoint:xxxx:pod-aaaa:nack_counter": {Object: int64(5), Expiration: int64(defaultExpiration)},
 				"node:endpoint:xxxx:pod-bbbb:nack_counter": {Object: int64(10), Expiration: int64(defaultExpiration)},
 				"node:endpoint:xxxx:pod-cccc:nack_counter": {Object: int64(10), Expiration: int64(defaultExpiration)},
 				"node:endpoint:xxxx:pod-dddd:nack_counter": {Object: int64(10), Expiration: int64(defaultExpiration)},

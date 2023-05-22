@@ -108,7 +108,7 @@ func (s *Stats) GetPercentageFailing(nodeID, rType, version string) float64 {
 	failing := 0
 	pods := s.GetSubscribedPods(nodeID, rType)
 	for pod := range pods {
-		if v, err := s.GetCounter(nodeID, rType, version, pod, "nack_counter"); err == nil && v > 0 {
+		if v, err := s.GetCounter(nodeID, rType, version, pod, "nack_counter"); err == nil && v >= 5 {
 			failing++
 		}
 	}

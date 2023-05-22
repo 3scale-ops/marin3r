@@ -341,6 +341,7 @@ kind-refresh-image: manifests kind docker-build ## Reloads the image into the K8
 	$(MAKE) kind-load-image
 	kubectl -n marin3r-system delete pod -l control-plane=controller-manager
 	kubectl -n marin3r-system delete pod -l control-plane=controller-webhook
+	kubectl -n default delete pod -l app.kubernetes.io/component=discovery-service
 
 kind-delete: ## Deletes the kind cluster and the registry
 kind-delete: kind
