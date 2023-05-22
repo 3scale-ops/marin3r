@@ -32,7 +32,6 @@ Lighweight, CRD based Envoy control plane for Kubernetes:
     - Walkthrough: [Validation of Envoy resources](docs/walkthroughs/configuration-validation.md)
     - Walkthrough: [Self-Healing](docs/walkthroughs/self-healing.md)
     - Walkthrough: [Connection draining with the shutdown manager](docs/walkthroughs/envoy-connection-draining-on-shutdown.md)
-    - Walkthrough: [Upgrading Envoy API from v2 to v3](docs/walkthroughs/upgrading-v2-to-v3.md)
 - [**Configuration**](#configuration)
   - [**API reference**](docs/api-reference/reference.asciidoc)
   - [**EnvoyConfig custom resource**](#envoyconfig-custom-resource)
