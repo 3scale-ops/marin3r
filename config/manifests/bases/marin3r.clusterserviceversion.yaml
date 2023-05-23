@@ -196,6 +196,13 @@ spec:
         path: pkiConfg.serverCertificate.duration
       - displayName: Secret Name
         path: pkiConfg.serverCertificate.secretName
+      - description: PriorityClass to assign the discovery service Pod to
+        displayName: Pod Priority Class
+        path: podPriorityClass
+      - description: ProbePort is the port where healthz endpoint is served. Defaults
+          to 8384.
+        displayName: Probe Port
+        path: probePort
       - description: Resources holds the Resource Requirements to use for the discovery
           service Deployment. When not set it defaults to no resource requests nor
           limits. CPU and Memory resources are supported.
@@ -213,11 +220,6 @@ spec:
           to 18000.
         displayName: Xds Server Port
         path: xdsServerPort
-      statusDescriptors:
-      - description: Conditions represent the latest available observations of an
-          object's state
-        displayName: Conditions
-        path: conditions
       version: v1alpha1
     - description: EnvoyConfigRevision is an internal resource that stores a specific
         version of an EnvoyConfig resource. EnvoyConfigRevisions are automatically
@@ -328,12 +330,13 @@ spec:
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
-      - description: Name of the envoy resource. If ref is not set, a Secret with
-          this same name will be fetched from within the namespace.
+      - description: Name of the envoy tslCerticate secret resource. The certificate
+          will be fetched from a Kubernetes Secrets of type 'kubernetes.io/tls' with
+          this same name.
         displayName: Name
         path: envoyResources.secrets[0].name
-      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls".
-          The value of 'ref' cannot point to a different namespace.
+      - description: 'DEPRECATED: this field is deprecated and it''s value will be
+          ignored. The ''name'' of the Kubernetes Secret must match the ''name'' field.'
         displayName: Ref
         path: envoyResources.secrets[0].ref
         x-descriptors:
@@ -509,12 +512,13 @@ spec:
       - description: Secrets is a list of references to Kubernetes Secret objects.
         displayName: Secrets
         path: envoyResources.secrets
-      - description: Name of the envoy resource. If ref is not set, a Secret with
-          this same name will be fetched from within the namespace.
+      - description: Name of the envoy tslCerticate secret resource. The certificate
+          will be fetched from a Kubernetes Secrets of type 'kubernetes.io/tls' with
+          this same name.
         displayName: Name
         path: envoyResources.secrets[0].name
-      - description: Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls".
-          The value of 'ref' cannot point to a different namespace.
+      - description: 'DEPRECATED: this field is deprecated and it''s value will be
+          ignored. The ''name'' of the Kubernetes Secret must match the ''name'' field.'
         displayName: Ref
         path: envoyResources.secrets[0].ref
         x-descriptors:

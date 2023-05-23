@@ -27,19 +27,22 @@ Lighweight, CRD based Envoy control plane for Kubernetes:
     - [**Install using kustomize**](#install-using-kustomize)
   - [**Deploy a discovery service**](#deploy-a-discovery-service)
   - [**Next steps**](#next-steps)
+    - Walkthrough: [TLS offloading with Envoy sidecars](docs/walkthroughs/tls-offloading-sidecars.md)
+    - Walkthrough: [Path routing using Envoy in a Kubernetes Deployment](docs/walkthroughs/path-routing-envoydeployment.md)
+    - Walkthrough: [Validation of Envoy resources](docs/walkthroughs/configuration-validation.md)
+    - Walkthrough: [Self-Healing](docs/walkthroughs/self-healing.md)
+    - Walkthrough: [Connection draining with the shutdown manager](docs/walkthroughs/envoy-connection-draining-on-shutdown.md)
 - [**Configuration**](#configuration)
-  - [**API reference**](#api-reference)
+  - [**API reference**](docs/api-reference/reference.asciidoc)
   - [**EnvoyConfig custom resource**](#envoyconfig-custom-resource)
   - [**Secrets**](#secrets)
   - [**Sidecar injection configuration**](#sidecar-injection-configuration)
-- [**Use cases**](#use-cases)
-  - [**Ratelimit**](#ratelimit)
-- [**Design docs**](#design-docs)
-  - [**Discovery service**](#discovery-service)
-  - [**Sidecar injection**](#sidecar-injection)
-  - [**Operator**](#operator)
-- [**Development**](#development)
-- [**Release**](#release)
+- **Design docs**
+  - [**Discovery service**](docs/design/discovery-service.md)
+  - [**Sidecar injection**](docs/design/sidecar-injection.md)
+  - [**Operator**](docs/design/operator.md)
+- [**Development**](docs/development/README.md)
+- [**Release**](docs/release.md)
 
 ## **Overview**
 
@@ -164,49 +167,104 @@ spec:
   # nodeID. The nodeID of an Envoy proxy can be specified using the "--node-id" command
   # line flag
   nodeID: proxy
-  # Resources can be written either in json or in yaml, being json the default if
-  # not specified
-  serialization: json
-  # Resources can be written using Envoy API v3.
-  envoyAPI: v3
-  # envoyResources is where users can write the different type of resources supported by MARIN3R
-  envoyResources:
-    # the "secrets" field holds references to Kubernetes Secrets. Only Secrets of type
+  # resources is where users can write the different type of resources supported by MARIN3R
+  resources:
+    # type "secret" field holds references to Kubernetes Secrets. Only Secrets of type
     # "kubernetes.io/tls" can be referenced. Any certificate referenced from another Envoy
     # resource (for example a listener or a cluster) needs to be present here so marin3r
     # knows where to get the certificate from.
-    secrets:
-        # name is the name of the kubernetes Secret that holds the certificate and by which it can be
-        # referenced to from other resources
-      - name: certificate
-    # Endpoints is a list of the Envoy ClusterLoadAssignment resource type.
+    - type: secret
+      # generateFromTlsSecret is the name of the kubernetes Secret that holds the certificate and by which it can be
+      # referenced to from other resources
+      generateFromTlsSecret: certificate
+      # use "tlsCertificate" to generate a secret for a tlsCertificate (https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-tlscertificate)
+      # use "validationContext" to generate a secret for a validationContext (https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/transport_sockets/tls/v3/common.proto#extensions-transport-sockets-tls-v3-certificatevalidationcontext)
+      blueprint: tlsCertificate
+
+    # type "endpoint" is an Envoy ClusterLoadAssignment resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/endpoint/v3/endpoint.proto
-    endpoints:
-      - value: {"clusterName":"cluster1","endpoints":[{"lbEndpoints":[{"endpoint":{"address":{"socketAddress":{"address":"127.0.0.1","portValue":8080}}}}]}]}
-    # Clusters is a list of the Envoy Cluster resource type.
+    - type: endpoint
+      value:
+        clusterName: cluster
+        endpoints:
+        - lbEndpoints:
+          - endpoint:
+              address:
+                socketAddress:
+                  address: 127.0.0.1
+                  portValue: 8080
+
+    # type "endpoint" also supports dynamic discovery of endpoints by watching EndpointSlice kubernetes resources.
+    - type: endpoint
+      generateFromEndpointSlices:
+        selector:
+          matchLabels:
+            kubernetes.io/service-name: my-service
+        clusterName: cluster
+        targetPort: http
+
+    # type "cluster" is an Envoy Cluster resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/cluster/v3/cluster.proto
-    clusters:
-      - value: {"name":"cluster1","type":"STRICT_DNS","connectTimeout":"2s","loadAssignment":{"clusterName":"cluster1","endpoints":[]}}
-    # Routes is a list of the Envoy Route resource type.
+    - type: cluster
+      value:
+        name: cluster
+        type: STRICT_DNS
+        connectTimeout: 2s
+        loadAssignment:
+          clusterName: cluster1
+          endpoints: []
+
+    # type "route" is an Envoy Route resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/route.proto
-    routes:
-      - value: {"name":"route1","virtual_hosts":[{"name":"vhost","domains":["*"],"routes":[{"match":{"prefix":"/"},"direct_response":{"status":200}}]}]}
-    # ScopedRoutes is a list of the Envoy Scoped Route resource type.
+    - type: route
+      value:
+        name: route1
+        virtual_hosts:
+        - name: vhost
+          domains:
+          - "*"
+          routes:
+          - match:
+              prefix: "/"
+            direct_response:
+              status: 200
+
+    # type "scopedRoutes" is an Envoy Scoped Route resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/route/v3/scoped_route.proto
-    scopedRoutes:
-      - value: {"name":"scoped_route1","route_configuration_name":"route1","key":{"fragments":[{"string_key":"test"}]}}
-    # Listeners is a list of the Envoy Listener resource type.
+    - type: scopedRoute
+      value:
+        name: scoped_route1
+        route_configuration_name: route1
+        key:
+          fragments:
+          - string_key: test
+
+    # type "listener" is an Envoy Listener resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/listener/v3/listener.proto
-    listeners:
-      - value: {"name":"listener1","address":{"socketAddress":{"address":"0.0.0.0","portValue":8443}}}
-    # Runtimes is a list of the Envoy Runtime resource type.
+    - type: listener
+      value:
+        name: listener1
+        address:
+          socketAddress:
+            address: 0.0.0.0
+            portValue: 8443
+
+    # type "runtime" is an Envoy Runtime resource type.
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/runtime/v3/rtds.proto
-    runtimes:
-      - value: {"name":"runtime1","layer":{"static_layer_0":"value"}}
-    # ExtensionConfigs is a list of the envoy ExtensionConfig resource type
+    - type: runtime
+      value:
+        name: runtime1
+        layer:
+          static_layer_0: value
+
+    # type "extensionConfig" is an Envoy ExtensionConfig resource type
     # API V3 reference: https://www.envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/extension.proto
-    extensionConfigs:
-      - value: {"name":"http_filter1","typed_config":{"@type":"type.googleapis.com/envoy.extensions.filters.http.router.v3.Router","dynamic_stats":false}}
+    - type: extensionConfig
+      value:
+        name: http_filter1
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+          dynamic_stats: false
 ```
 
 ### **Secrets**
@@ -219,9 +277,10 @@ To use a certificate from a kubernetes Secret refer it like this from an EnvoyCo
 
 ```yaml
 spec:
-  envoyResources:
-    secrets:
-      - name: certificate
+  resources:
+    - type: secret
+      generateFromTlsSecret: certificate
+      blueprint: tlsCertificate
 ```
 
 This certificate can then be referenced in an Envoy cluster/listener with the following snippet (check the kuard example):
@@ -279,25 +338,3 @@ The `port` syntax is a comma-separated list of `name:port[:protocol]` as in `"en
 #### `marin3r.3scale.net/host-port-mappings` syntax
 
 The `host-port-mappings` syntax is a comma-separated list of `container-port-name:host-port-number` as in `"envoy-http:1080,envoy-https:1443"`.
-
-## **Use cases**
-
-### [**Ratelimit**](/docs/use-cases/ratelimit/README.md)
-
-## **Design docs**
-
-For an in-depth look at how MARIN3R works, check the [design docs](/docs/design).
-
-### [**Discovery service**](/docs/design/discovery-service.md)
-
-### [**Sidecar injection**](/docs/design/sidecar-injection.md)
-
-### [**Operator**](/docs/design/operator.md)
-
-## **Development**
-
-You can find development documentation [here](/docs/development/README.md).
-
-## **Release**
-
-You can find release process documentation [here](/docs/release.md).

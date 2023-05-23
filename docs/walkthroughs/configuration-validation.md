@@ -15,27 +15,25 @@ cat <<'EOF' | kubectl apply -f -
 apiVersion: marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
-  name: kuard
+  name: example
 spec:
-  nodeID: kuard
-  serialization: yaml
-  envoyAPI: v3
-  envoyResources:
-    secrets:
-      - name: kuard-certificate
-    clusters:
-      - value: |
-          name: kuard
-          connect_timeout: 10 miliseconds
-          type: STRICT_DNS
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: kuard
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address: { address: 127.0.0.1, port_value: 8080 }
+  nodeID: example
+  resources:
+  - type: cluster
+    value:
+      name: example
+      type: STRICT_DNS
+      connect_timeout: 10 miliseconds
+      lb_policy: ROUND_ROBIN
+      load_assignment:
+        cluster_name: example
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: 127.0.0.1
+                  port_value: 8080
 EOF
 ```
 

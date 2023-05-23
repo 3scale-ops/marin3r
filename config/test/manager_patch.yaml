@@ -12,3 +12,6 @@ spec:
             - operator
             - --leader-elect
             - --debug
+          env:
+            - name: MARIN3R_IMAGE
+              value: quay.io/3scale/marin3r:test

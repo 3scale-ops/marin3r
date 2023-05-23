@@ -22,6 +22,18 @@ Package v1alpha1 contains API Schema definitions for the envoy v1alpha1 API grou
 
 
 
+[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-blueprint"]
+==== Blueprint (string) 
+
+Blueprint is an enum of the supported blueprints for generated resources
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-resource[$$Resource$$]
+****
+
+
+
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-configrevisionref"]
 ==== ConfigRevisionRef 
 
@@ -135,9 +147,10 @@ EnvoyConfigRevisionSpec defines the desired state of EnvoyConfigRevision
 | Field | Description
 | *`nodeID`* __string__ | NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
 | *`version`* __string__ | Version is a hash of the EnvoyResources field
-| *`envoyAPI`* __string__ | EnvoyAPI is the version of envoy's API to use. Defaults to v3.
-| *`serialization`* __string__ | Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
+| *`envoyAPI`* __APIVersion__ | EnvoyAPI is the version of envoy's API to use. Defaults to v3.
+| *`serialization`* __Serialization__ | Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
 | *`envoyResources`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresources[$$EnvoyResources$$]__ | EnvoyResources holds the different types of resources suported by the envoy discovery service
+| *`resources`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-resource[$$Resource$$] array__ | Resources holds the different types of resources suported by the envoy discovery service
 |===
 
 
@@ -176,9 +189,10 @@ EnvoyConfigSpec defines the desired state of EnvoyConfig
 |===
 | Field | Description
 | *`nodeID`* __string__ | NodeID holds the envoy identifier for the discovery service to know which set of resources to send to each of the envoy clients that connect to it.
-| *`serialization`* __string__ | Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
-| *`envoyAPI`* __string__ | EnvoyAPI is the version of envoy's API to use. Defaults to v3.
-| *`envoyResources`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresources[$$EnvoyResources$$]__ | EnvoyResources holds the different types of resources suported by the envoy discovery service
+| *`serialization`* __Serialization__ | Serialization specicifies the serialization format used to describe the resources. "json" and "yaml" are supported. "json" is used if unset.
+| *`envoyAPI`* __APIVersion__ | EnvoyAPI is the version of envoy's API to use. Defaults to v3.
+| *`envoyResources`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyresources[$$EnvoyResources$$]__ | EnvoyResources holds the different types of resources suported by the envoy discovery service DEPRECATED. Use the `resources` field instead.
+| *`resources`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-resource[$$Resource$$] array__ | Resources holds the different types of resources suported by the envoy discovery service
 |===
 
 
@@ -259,13 +273,54 @@ EnvoySecretResource holds a reference to a k8s Secret from where to take a secre
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`name`* __string__ | Name of the envoy resource. If ref is not set, a Secret with this same name will be fetched from within the namespace.
-| *`ref`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#secretreference-v1-core[$$SecretReference$$]__ | Ref is a reference to a Kubernetes Secret of type "kubernetes.io/tls". The value of 'ref' cannot point to a different namespace.
+| *`name`* __string__ | Name of the envoy tslCerticate secret resource. The certificate will be fetched from a Kubernetes Secrets of type 'kubernetes.io/tls' with this same name.
+| *`ref`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#secretreference-v1-core[$$SecretReference$$]__ | DEPRECATED: this field is deprecated and it's value will be ignored. The 'name' of the Kubernetes Secret must match the 'name' field.
 |===
 
 
 
 
+[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-generatefromendpointslices"]
+==== GenerateFromEndpointSlices 
+
+
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-resource[$$Resource$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`selector`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#labelselector-v1-meta[$$LabelSelector$$]__ | 
+| *`clusterName`* __string__ | 
+| *`targetPort`* __string__ | 
+|===
+
+
+
+
+[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-resource"]
+==== Resource 
+
+Resource holds serialized representation of an envoy resource
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfigrevisionspec[$$EnvoyConfigRevisionSpec$$]
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-envoyconfigspec[$$EnvoyConfigSpec$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`type`* __Type__ | Type is the type url for the protobuf message
+| *`value`* __RawExtension__ | Value is the protobufer message that configures the resource. The proto must match the envoy configuration API v3 specification for the given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
+| *`generateFromTlsSecret`* __string__ | The name of a Kubernetes Secret of type "kubernetes.io/tls"
+| *`generateFromEndpointSlices`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-generatefromendpointslices[$$GenerateFromEndpointSlices$$]__ | Specifies a label selector to watch for EndpointSlices that will be used to generate the endpoint resource
+| *`blueprint`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-blueprint[$$Blueprint$$]__ | Blueprint specifies a template to generate a configuration proto. It is currently only supported to generate secret configuration resources from k8s Secrets
+|===
 
 
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-versiontracker"]
@@ -541,7 +596,9 @@ DiscoveryServiceSpec defines the desired state of DiscoveryService
 | *`pkiConfg`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-pkiconfig[$$PKIConfig$$]__ | PKIConfig has configuration for the PKI that marin3r manages for the different certificates it requires
 | *`xdsServerPort`* __integer__ | XdsServerPort is the port where the xDS server listens. Defaults to 18000.
 | *`metricsPort`* __integer__ | MetricsPort is the port where metrics are served. Defaults to 8383.
+| *`probePort`* __integer__ | ProbePort is the port where healthz endpoint is served. Defaults to 8384.
 | *`serviceConfig`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-serviceconfig[$$ServiceConfig$$]__ | ServiceConfig configures the way the DiscoveryService endpoints are exposed
+| *`podPriorityClass`* __string__ | PriorityClass to assign the discovery service Pod to
 |===
 
 
@@ -558,7 +615,8 @@ DiscoveryServiceStatus defines the observed state of DiscoveryService
 [cols="25a,75a", options="header"]
 |===
 | Field | Description
-| *`conditions`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#condition-v1-meta[$$Condition$$] array__ | Conditions represent the latest available observations of an object's state
+| *`deploymentName`* __string__ | 
+| *`deploymentStatus`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#deploymentstatus-v1-apps[$$DeploymentStatus$$]__ | 
 |===
 
 
@@ -577,8 +635,8 @@ DiscoveryServiceStatus defines the observed state of DiscoveryService
 | Field | Description
 | *`minReplicas`* __integer__ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available.
 | *`maxReplicas`* __integer__ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas.
-| *`metrics`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#metricspec-v2beta2-autoscaling[$$MetricSpec$$] array__ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization.
-| *`behavior`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#horizontalpodautoscalerbehavior-v2beta2-autoscaling[$$HorizontalPodAutoscalerBehavior$$]__ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used.
+| *`metrics`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#metricspec-v2-autoscaling[$$MetricSpec$$] array__ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization.
+| *`behavior`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#horizontalpodautoscalerbehavior-v2-autoscaling[$$HorizontalPodAutoscalerBehavior$$]__ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used.
 |===
 
 
@@ -655,6 +713,22 @@ EnvoyDeploymentSpec defines the desired state of EnvoyDeployment
 |===
 
 
+[id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-envoydeploymentstatus"]
+==== EnvoyDeploymentStatus 
+
+EnvoyDeploymentStatus defines the observed state of EnvoyDeployment
+
+.Appears In:
+****
+- xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-envoydeployment[$$EnvoyDeployment$$]
+****
+
+[cols="25a,75a", options="header"]
+|===
+| Field | Description
+| *`deploymentName`* __string__ | 
+| *`deploymentStatus`* __link:https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.23/#deploymentstatus-v1-apps[$$DeploymentStatus$$]__ | 
+|===
 
 
 [id="{anchor_prefix}-github-com-3scale-ops-marin3r-apis-operator-marin3r-v1alpha1-initmanager"]

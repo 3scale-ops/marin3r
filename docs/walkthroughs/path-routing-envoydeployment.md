@@ -106,41 +106,50 @@ metadata:
   name: envoy
 spec:
   nodeID: envoy
-  serialization: yaml
-  envoyAPI: v3
-  envoyResources:
-    clusters:
-      - value: |
-          name: upstream-a
-          connect_timeout: 10ms
-          type: STRICT_DNS
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: upstream-a
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address: { address: upstream-a, port_value: 8080 }
-    listeners:
-      - value: |
-          name: http
-          address: { socket_address: { address: 0.0.0.0, port_value: 8080 } }
-          filter_chains:
-            - filters:
-                - name: envoy.filters.network.http_connection_manager
-                  typed_config:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                    stat_prefix: ingress_http
-                    route_config:
-                      name: route
-                      virtual_hosts:
-                        - name: any
-                          domains: ["*"]
-                          routes:
-                            - { match: { prefix: "/a" }, route: { cluster: "upstream-a" } }
-                    http_filters:
-                      - name: envoy.filters.http.router
+  resources:
+    - type: cluster
+      value:
+        name: upstream-a
+        type: STRICT_DNS
+        connect_timeout: 0.01s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: upstream-a
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: upstream-a
+                        port_value: 8080
+    - type: listener
+      value:
+        name: http
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 8080
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  http_filters:
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  route_config:
+                    name: route
+                    virtual_hosts:
+                      - domains:
+                          - "*"
+                        name: any
+                        routes:
+                          - match:
+                              prefix: /a
+                            route:
+                              cluster: upstream-a
+                  stat_prefix: ingress_http
 EOF
 ```
 
@@ -231,54 +240,69 @@ metadata:
   name: envoy
 spec:
   nodeID: envoy
-  serialization: yaml
-  envoyAPI: v3
-  envoyResources:
-    clusters:
-      - value: |
-          name: upstream-a
-          connect_timeout: 10ms
-          type: STRICT_DNS
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: upstream-a
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address: { address: upstream-a, port_value: 8080 }
-      - value: |
-          name: upstream-b
-          connect_timeout: 10ms
-          type: STRICT_DNS
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: upstream-b
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address: { address: upstream-b, port_value: 8080 }
-    listeners:
-      - value: |
-          name: http
-          address: { socket_address: { address: 0.0.0.0, port_value: 8080 } }
-          filter_chains:
-            - filters:
-                - name: envoy.filters.network.http_connection_manager
-                  typed_config:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                    stat_prefix: ingress_http
-                    route_config:
-                      name: route
-                      virtual_hosts:
-                        - name: any
-                          domains: ["*"]
-                          routes:
-                            - { match: { prefix: "/a" }, route: { cluster: "upstream-a" } }
-                            - { match: { prefix: "/b" }, route: { cluster: "upstream-b" } }
-                    http_filters:
-                      - name: envoy.filters.http.router
+  resources:
+    - type: cluster
+      value:
+        name: upstream-a
+        type: STRICT_DNS
+        connect_timeout: 0.01s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: upstream-a
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: upstream-a
+                        port_value: 8080
+    - type: cluster
+      value:
+        name: upstream-b
+        type: STRICT_DNS
+        connect_timeout: 0.01s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: upstream-b
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: upstream-b
+                        port_value: 8080
+    - type: listener
+      value:
+        name: http
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 8080
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
+                typed_config:
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  http_filters:
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  route_config:
+                    name: route
+                    virtual_hosts:
+                      - domains:
+                          - "*"
+                        name: any
+                        routes:
+                          - match:
+                              prefix: /a
+                            route:
+                              cluster: upstream-a
+                          - match:
+                              prefix: /b
+                            route:
+                              cluster: upstream-b
+                  stat_prefix: ingress_http
 EOF
 ```
 
@@ -342,6 +366,6 @@ Execute the following commands to delete the resources created in this walkthoug
 ```bash
 kubectl delete envoydeployment envoy
 kubectl delete envoyconfig envoy
-kubectl delete deployment upstream-a
-kubectl delete deployment upstream-b
+kubectl delete deployment upstream-a upstream-b
+kubectl delete service upstream-a upstream-b
 ```

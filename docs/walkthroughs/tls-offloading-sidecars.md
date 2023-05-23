@@ -82,51 +82,63 @@ metadata:
   name: kuard
 spec:
   nodeID: kuard
-  serialization: yaml
-  envoyAPI: v3
-  envoyResources:
-    secrets:
-      - name: kuard-certificate
-    clusters:
-      - value: |
-          name: kuard
-          connect_timeout: 10ms
-          type: STRICT_DNS
-          lb_policy: ROUND_ROBIN
-          load_assignment:
-            cluster_name: kuard
-            endpoints:
-              - lb_endpoints:
-                  - endpoint:
-                      address:
-                        socket_address: { address: 127.0.0.1, port_value: 8080 }
-    listeners:
-      - value: |
-          name: https
-          address: { socket_address: { address: 0.0.0.0, port_value: 8443 } }
-          filter_chains:
-            - transport_socket:
-                name: envoy.transport_sockets.tls
+  resources:
+    - type: secret
+      generateFromTlsSecret: kuard-certificate
+      blueprint: tlsCertificate
+    - type: cluster
+      value:
+        name: kuard
+        type: STRICT_DNS
+        connect_timeout: 0.01s
+        lb_policy: ROUND_ROBIN
+        load_assignment:
+          cluster_name: kuard
+          endpoints:
+            - lb_endpoints:
+                - endpoint:
+                    address:
+                      socket_address:
+                        address: 127.0.0.1
+                        port_value: 8080
+    - type: listener
+      value:
+        name: https
+        address:
+          socket_address:
+            address: 0.0.0.0
+            port_value: 8443
+        filter_chains:
+          - filters:
+              - name: envoy.filters.network.http_connection_manager
                 typed_config:
-                  "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
-                  common_tls_context:
-                    tls_certificate_sds_secret_configs:
-                      - name: kuard-certificate
-                        sds_config: { ads: {}, resource_api_version: "V3" }
-              filters:
-                - name: envoy.filters.network.http_connection_manager
-                  typed_config:
-                    "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
-                    stat_prefix: ingress_https
-                    route_config:
-                      name: local_route
-                      virtual_hosts:
-                        - name: kuard
-                          domains: ["*"]
-                          routes:
-                            [{ match: { prefix: "/" }, route: { cluster: "kuard" } }]
-                    http_filters:
-                      - name: envoy.filters.http.router
+                  "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                  http_filters:
+                    - name: envoy.filters.http.router
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+                  route_config:
+                    name: local_route
+                    virtual_hosts:
+                      - domains:
+                          - "*"
+                        name: kuard
+                        routes:
+                          - match:
+                              prefix: /
+                            route:
+                              cluster: kuard
+                  stat_prefix: ingress_https
+            transport_socket:
+              name: envoy.transport_sockets.tls
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+                common_tls_context:
+                  tls_certificate_sds_secret_configs:
+                    - name: kuard-certificate
+                      sds_config:
+                        ads: {}
+                        resource_api_version: V3
 EOF
 ```
 

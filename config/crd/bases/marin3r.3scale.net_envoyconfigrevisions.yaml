@@ -244,14 +244,14 @@ spec:
                         the same namespace can be referred.
                       properties:
                         name:
-                          description: Name of the envoy resource. If ref is not set,
-                            a Secret with this same name will be fetched from within
-                            the namespace.
+                          description: Name of the envoy tslCerticate secret resource.
+                            The certificate will be fetched from a Kubernetes Secrets
+                            of type 'kubernetes.io/tls' with this same name.
                           type: string
                         ref:
-                          description: Ref is a reference to a Kubernetes Secret of
-                            type "kubernetes.io/tls". The value of 'ref' cannot point
-                            to a different namespace.
+                          description: 'DEPRECATED: this field is deprecated and it''s
+                            value will be ignored. The ''name'' of the Kubernetes
+                            Secret must match the ''name'' field.'
                           properties:
                             name:
                               description: name is unique within a namespace to reference
