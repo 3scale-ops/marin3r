@@ -173,7 +173,7 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/3scale/marin3r
-    createdAt: "2023-05-22T14:59:28Z"
+    createdAt: "2023-05-23T15:33:36Z"
     description: Lighweight, CRD based Envoy control plane for Kubernetes
     operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
