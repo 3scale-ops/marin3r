@@ -31,7 +31,12 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/resource_extensions"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	corev1 "k8s.io/api/core/v1"
+	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,6 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // EnvoyDeploymentReconciler reconciles a EnvoyDeployment object
@@ -184,6 +190,11 @@ func (r *EnvoyDeploymentReconciler) getEnvoyConfig(ctx context.Context, key type
 func (r *EnvoyDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&operatorv1alpha1.EnvoyDeployment{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&operatorv1alpha1.DiscoveryServiceCertificate{}).
+		Owns(&policyv1.PodDisruptionBudget{}).
+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
+		Watches(&source.Kind{Type: &corev1.Secret{TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfig"}}}, r.EnvoyConfigHandler()).
 		Complete(r)
 }
 
