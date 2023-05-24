@@ -95,11 +95,12 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	ctx := signals.SetupSignalHandler()
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:                 dsScheme,
-		MetricsBindAddress:     metricsAddr,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         false,
-		Namespace:              os.Getenv("WATCH_NAMESPACE"),
+		Scheme:                     dsScheme,
+		MetricsBindAddress:         metricsAddr,
+		HealthProbeBindAddress:     probeAddr,
+		LeaderElectionID:           "2cfbe7d6.marin3r.3scale.net",
+		LeaderElectionResourceLock: "leases",
+		Namespace:                  os.Getenv("WATCH_NAMESPACE"),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
