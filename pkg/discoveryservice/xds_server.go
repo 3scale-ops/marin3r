@@ -158,7 +158,8 @@ func (xdss *XdsServer) Start(client kubernetes.Interface, namespace string) erro
 		close(stopGC)
 		stopped := make(chan struct{})
 		go func() {
-			grpcServer.GracefulStop()
+			// don't wait, stop immediately
+			grpcServer.Stop()
 			close(stopped)
 		}()
 

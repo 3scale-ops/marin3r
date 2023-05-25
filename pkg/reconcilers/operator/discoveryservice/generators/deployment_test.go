@@ -196,17 +196,7 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 						},
 					},
 					Strategy: appsv1.DeploymentStrategy{
-						Type: appsv1.RollingUpdateDeploymentStrategyType,
-						RollingUpdate: &appsv1.RollingUpdateDeployment{
-							MaxUnavailable: &intstr.IntOrString{
-								Type:   intstr.String,
-								StrVal: "25%",
-							},
-							MaxSurge: &intstr.IntOrString{
-								Type:   intstr.String,
-								StrVal: "25%",
-							},
-						},
+						Type: appsv1.RecreateDeploymentStrategyType,
 					},
 					RevisionHistoryLimit:    pointer.New(int32(10)),
 					ProgressDeadlineSeconds: pointer.New(int32(600)),
