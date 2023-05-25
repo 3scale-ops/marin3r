@@ -1,0 +1,38 @@
+---
+image: quay.io/3scale/marin3r-bundle:v0.9.1
+name: marin3r.v0.9.1
+package: marin3r
+properties:
+- type: olm.gvk
+  value:
+    group: marin3r.3scale.net
+    kind: EnvoyConfig
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: marin3r.3scale.net
+    kind: EnvoyConfigRevision
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: operator.marin3r.3scale.net
+    kind: DiscoveryService
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: operator.marin3r.3scale.net
+    kind: DiscoveryServiceCertificate
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: operator.marin3r.3scale.net
+    kind: EnvoyDeployment
+    version: v1alpha1
+- type: olm.package
+  value:
+    packageName: marin3r
+    version: 0.9.1
+relatedImages:
+- image: quay.io/3scale/marin3r:v0.9.1
+  name: ""
+schema: olm.bundle
