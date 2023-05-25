@@ -1,0 +1,38 @@
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: EnvoyDeployment
+metadata:
+  name: kuard
+spec:
+  discoveryServiceRef: instance
+  envoyConfigRef: kuard
+  ports:
+    - name: https
+      port: 8443
+  extraArgs:
+    - --component-log-level
+    - http:debug
+  adminAccessLogPath: /dev/stdout
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "100m"
+    limits:
+      memory: "128Mi"
+      cpu: "500m"
+  replicas:
+    dynamic:
+      minReplicas: 1
+      maxReplicas: 10
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 50
+  podDisruptionBudget:
+    minAvailable: 1
+  shutdownManager: {}
+    # image: quay.io/3scale/marin3r:test
+  # initManager:
+  #   image: quay.io/3scale/marin3r:test

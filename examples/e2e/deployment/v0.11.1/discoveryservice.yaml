@@ -3,7 +3,6 @@ kind: DiscoveryService
 metadata:
   name: instance
 spec:
-  image: quay.io/3scale/marin3r:test
   debug: true
 
 
