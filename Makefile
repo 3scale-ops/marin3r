@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.12.0
+VERSION ?= 0.12.1-alpha.1
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -190,6 +190,10 @@ deploy-test: manifests kustomize ## Deploy controller (test configuration) to th
 undeploy-test: manifests kustomize ## Undeploy controller (test configuration) from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/test | kubectl delete -f -
 
+deploy-cert-manager: ## Deployes cert-manager in the K8s cluster specified in ~/.kube/config.
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.3/cert-manager.yaml
+	kubectl -n cert-manager wait --timeout=300s --for=condition=Available deployments --all
+
 ##@ Build Dependencies
 
 ## Location to install dependencies to
@@ -299,17 +303,24 @@ ifneq ($(origin CATALOG_BASE_IMG), undefined)
 FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
 endif
 
+.PHONY: catalog-add-bundle-to-alpha
+catalog-add-bundle-to-alpha: opm ## Adds a bundle to a file based catalog
+	$(OPM) render $(BUNDLE_IMGS) -oyaml > catalog/marin3r/objects/marin3r.v$(VERSION).clusterserviceversion.yaml
+	yq -i '.entries += {"name": "marin3r.v$(VERSION)","replaces":"$(shell yq '.entries[-1].name' catalog/marin3r/alpha-channel.yaml)"}' catalog/marin3r/alpha-channel.yaml
 
-deploy-cert-manager: ## Deployes cert-manager in the K8s cluster specified in ~/.kube/config.
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.7.3/cert-manager.yaml
-	kubectl -n cert-manager wait --timeout=300s --for=condition=Available deployments --all
+.PHONY: catalog-add-bundle-to-stable
+catalog-add-bundle-to-stable: opm ## Adds a bundle to a file based catalog
+	$(OPM) render $(BUNDLE_IMGS) -oyaml > catalog/marin3r/objects/marin3r.v$(VERSION).clusterserviceversion.yaml
+	yq -i '.entries += {"name": "marin3r.v$(VERSION)","replaces":"$(shell yq '.entries[-1].name' catalog/marin3r/alpha-channel.yaml)"}' catalog/marin3r/alpha-channel.yaml
+	yq -i '.entries += {"name": "marin3r.v$(VERSION)","replaces":"$(shell yq '.entries[-1].name' catalog/marin3r/stable-channel.yaml)"}' catalog/marin3r/stable-channel.yaml
 
-# Build a catalog image by adding bundle images to an empty catalog using the operator package manager tool, 'opm'.
-# This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:
-# https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
 .PHONY: catalog-build
 catalog-build: opm ## Build a catalog image.
-	$(OPM) index add --container-tool docker --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
+	docker build -f catalog/marin3r.Dockerfile -t $(CATALOG_IMG) catalog/
+
+.PHONY: catalog-run
+catalog-run:
+	docker run --rm -p 50051:50051 $(CATALOG_IMG)
 
 # Push the catalog image.
 .PHONY: catalog-push

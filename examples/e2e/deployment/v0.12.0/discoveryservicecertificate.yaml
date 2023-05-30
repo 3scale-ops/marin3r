@@ -1,0 +1,12 @@
+---
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: DiscoveryServiceCertificate
+metadata:
+  name: kuard
+spec:
+  commonName: kuard.test1.svc
+  validFor: 3600
+  signer:
+    selfSigned: {}
+  secretRef:
+    name: kuard
