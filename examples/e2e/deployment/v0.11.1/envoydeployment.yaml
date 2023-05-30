@@ -33,6 +33,6 @@ spec:
   podDisruptionBudget:
     minAvailable: 1
   shutdownManager: {}
-    # image: quay.io/3scale/marin3r:test
-  # initManager:
-  #   image: quay.io/3scale/marin3r:test
+    image: quay.io/3scale/marin3r:test
+  initManager:
+    image: quay.io/3scale/marin3r:test
