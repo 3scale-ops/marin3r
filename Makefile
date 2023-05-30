@@ -303,10 +303,12 @@ ifneq ($(origin CATALOG_BASE_IMG), undefined)
 FROM_INDEX_OPT := --from-index $(CATALOG_BASE_IMG)
 endif
 
+.PHONY: catalog-add-bundle-to-alpha
 catalog-add-bundle-to-alpha: opm ## Adds a bundle to a file based catalog
 	$(OPM) render $(BUNDLE_IMGS) -oyaml > catalog/marin3r/objects/marin3r.v$(VERSION).clusterserviceversion.yaml
 	yq -i '.entries += {"name": "marin3r.v$(VERSION)","replaces":"$(shell yq '.entries[-1].name' catalog/marin3r/alpha-channel.yaml)"}' catalog/marin3r/alpha-channel.yaml
 
+.PHONY: catalog-add-bundle-to-stable
 catalog-add-bundle-to-stable: opm ## Adds a bundle to a file based catalog
 	$(OPM) render $(BUNDLE_IMGS) -oyaml > catalog/marin3r/objects/marin3r.v$(VERSION).clusterserviceversion.yaml
 	yq -i '.entries += {"name": "marin3r.v$(VERSION)","replaces":"$(shell yq '.entries[-1].name' catalog/marin3r/alpha-channel.yaml)"}' catalog/marin3r/alpha-channel.yaml
@@ -316,8 +318,10 @@ catalog-add-bundle-to-stable: opm ## Adds a bundle to a file based catalog
 catalog-build: opm ## Build a catalog image.
 	docker build -f catalog/marin3r.Dockerfile -t $(CATALOG_IMG) catalog/
 
+.PHONY: catalog-run
 catalog-run:
 	docker run --rm -p 50051:50051 $(CATALOG_IMG)
+
 # Push the catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
