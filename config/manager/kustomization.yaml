@@ -13,7 +13,7 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/3scale/marin3r
-  newTag: v0.12.1-alpha.2
+  newTag: v0.12.1
 
 patchesStrategicMerge:
 - custom/manager_patch.yaml
