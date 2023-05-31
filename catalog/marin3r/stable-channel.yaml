@@ -14,7 +14,12 @@ entries:
   - name: marin3r.v0.11.1
     replaces: marin3r.v0.11.0
   - name: marin3r.v0.12.0
+  - name: marin3r.v0.12.1
     replaces: marin3r.v0.11.1
+    skips:
+      # bundle v0.12.0 is skipped due to a bug
+      # see https://github.com/3scale-ops/marin3r/pull/190
+      - marin3r.v0.12.0
 name: stable
 package: marin3r
 schema: olm.channel
