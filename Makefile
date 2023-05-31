@@ -365,7 +365,9 @@ prepare-alpha-release: generate fmt vet manifests go-generate bundle ## Generate
 prepare-stable-release: generate fmt vet manifests go-generate bundle refdocs ## Generates bundle manifests for stable channel release
 	$(MAKE) bundle CHANNELS=alpha,stable DEFAULT_CHANNEL=stable
 
-bundle-publish: docker-build docker-push bundle-build bundle-push catalog-build catalog-push catalog-retag-latest ## Generates and pushes all required images for a release
+bundle-publish: docker-build docker-push bundle-build bundle-push ## Builds and pushes operator and bundle images
+
+catalog-publish: catalog-build catalog-push catalog-retag-latest ## Builds and pushes the catalog image
 
 get-new-release: ## Checks if a release with the name $(VERSION) already exists in https://github.com/3scale-ops/marin3r/releases
 	@hack/new-release.sh v$(VERSION)
