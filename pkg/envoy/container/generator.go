@@ -152,6 +152,9 @@ func (cc *ContainerConfig) Containers() []corev1.Container {
 				},
 				InitialDelaySeconds: 3,
 				PeriodSeconds:       10,
+				TimeoutSeconds:      1,
+				SuccessThreshold:    1,
+				FailureThreshold:    3,
 			},
 			Lifecycle: &corev1.Lifecycle{
 				PreStop: &corev1.LifecycleHandler{
