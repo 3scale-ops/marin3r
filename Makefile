@@ -314,18 +314,24 @@ catalog-add-bundle-to-stable: opm ## Adds a bundle to a file based catalog
 	yq -i '.entries += {"name": "marin3r.v$(VERSION)","replaces":"$(shell yq '.entries[-1].name' catalog/marin3r/alpha-channel.yaml)"}' catalog/marin3r/alpha-channel.yaml
 	yq -i '.entries += {"name": "marin3r.v$(VERSION)","replaces":"$(shell yq '.entries[-1].name' catalog/marin3r/stable-channel.yaml)"}' catalog/marin3r/stable-channel.yaml
 
+# Validate the catalog.
+.PHONY: catalog-validate
+catalog-validate: ## Push a catalog image.
+	$(OPM) validate catalog/marin3r
+
 .PHONY: catalog-build
-catalog-build: opm ## Build a catalog image.
+catalog-build: opm catalog-validate ## Build a catalog image.
 	docker build -f catalog/marin3r.Dockerfile -t $(CATALOG_IMG) catalog/
 
 .PHONY: catalog-run
-catalog-run:
+catalog-run: catalog-build
 	docker run --rm -p 50051:50051 $(CATALOG_IMG)
 
 # Push the catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
 
 ##@ Kind Deployment
 
