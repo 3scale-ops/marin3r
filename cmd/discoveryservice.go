@@ -215,6 +215,7 @@ func xdssHealthzCheck(logger logr.Logger) healthz.Checker {
 			logger.Error(err, "could not connect with gRPC server")
 			os.Exit(1)
 		}
+		defer transport.Close()
 
 		client := grpc_health_v1.NewHealthClient(transport)
 
