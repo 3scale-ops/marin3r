@@ -215,10 +215,11 @@ func xdssHealthzCheck(logger logr.Logger) healthz.Checker {
 			logger.Error(err, "could not connect with gRPC server")
 			os.Exit(1)
 		}
+		defer transport.Close()
 
 		client := grpc_health_v1.NewHealthClient(transport)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
 
 		if _, err := client.Check(ctx, &grpc_health_v1.HealthCheckRequest{}); err != nil {

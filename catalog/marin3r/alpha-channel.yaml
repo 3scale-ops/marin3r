@@ -24,6 +24,10 @@ entries:
     # bundle v0.12.0 is skipped due to a bug
     # see https://github.com/3scale-ops/marin3r/pull/190
     skipRange: ">=0.11.1 <0.12.1"
+  - name: marin3r.v0.12.2-alpha.1
+    replaces: marin3r.v0.12.1
+  - name: marin3r.v0.12.2-alpha.2
+    replaces: marin3r.v0.12.2-alpha.1
 name: alpha
 package: marin3r
 schema: olm.channel
