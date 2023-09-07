@@ -63,6 +63,9 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 	key := types.NamespacedName{Name: request.Name, Namespace: request.Namespace}
 	err := r.GetInstance(ctx, key, ds, nil, nil)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
 	}
 

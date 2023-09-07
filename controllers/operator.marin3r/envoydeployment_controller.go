@@ -73,6 +73,9 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	key := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
 	err := r.GetInstance(ctx, key, ed, nil, nil)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, err
 	}
 
