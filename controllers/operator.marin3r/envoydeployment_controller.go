@@ -71,9 +71,9 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	ed := &operatorv1alpha1.EnvoyDeployment{}
 	key := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
-	err := r.GetInstance(ctx, key, ed, nil, nil)
-	if err != nil {
-		return ctrl.Result{}, err
+	result, err := r.GetInstance(ctx, key, ed, nil, nil)
+	if result != nil || err != nil {
+		return *result, err
 	}
 
 	// Temporary code to remove finalizers from EnvoyDeployment resources

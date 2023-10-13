@@ -61,9 +61,9 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 
 	ds := &operatorv1alpha1.DiscoveryService{}
 	key := types.NamespacedName{Name: request.Name, Namespace: request.Namespace}
-	err := r.GetInstance(ctx, key, ds, nil, nil)
-	if err != nil {
-		return ctrl.Result{}, err
+	result, err := r.GetInstance(ctx, key, ds, nil, nil)
+	if result != nil || err != nil {
+		return *result, err
 	}
 
 	// Temporary code to remove finalizers from DiscoveryService resources
