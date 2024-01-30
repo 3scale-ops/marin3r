@@ -115,9 +115,8 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	if err := (&operatorcontroller.DiscoveryServiceCertificateReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate")),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "discoveryservicecertificate")
 		os.Exit(1)

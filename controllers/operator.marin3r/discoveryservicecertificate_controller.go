@@ -19,13 +19,12 @@ package controllers
 import (
 	"context"
 
+	"github.com/3scale-ops/basereconciler/reconciler"
+	reconciler_util "github.com/3scale-ops/basereconciler/util"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	discoveryservicecertificate "github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate"
 	marin3r_provider "github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservicecertificate/providers/marin3r"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,49 +35,54 @@ import (
 
 // DiscoveryServiceCertificateReconciler reconciles a DiscoveryServiceCertificate object
 type DiscoveryServiceCertificateReconciler struct {
-	// This Client, initialized using mgr.Client() above, is a split Client
-	// that reads objects from the cache and writes to the apiserver
-	Client client.Client
-	Scheme *runtime.Scheme
-	Log    logr.Logger
+	*reconciler.Reconciler
 }
 
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=discoveryservicecertificates/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch;create;update;patch
 
-func (r *DiscoveryServiceCertificateReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
+func (r *DiscoveryServiceCertificateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
 
-	// Fetch the DiscoveryServiceCertificate instance
+	// // Fetch the DiscoveryServiceCertificate instance
+	// dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
+	// err := r.Client.Get(ctx, request.NamespacedName, dsc)
+	// if err != nil {
+	// 	if errors.IsNotFound(err) {
+	// 		// Request object not found, could have been deleted after reconcile request.
+	// 		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+	// 		// Return and don't requeue
+	// 		return ctrl.Result{}, nil
+	// 	}
+	// 	return ctrl.Result{}, err
+	// }
+
+	// if ok := discoveryservicecertificate.IsInitialized(dsc); !ok {
+	// 	if err := r.Client.Update(ctx, dsc); err != nil {
+	// 		log.Error(err, "unable to update DiscoveryServiceCertificate")
+	// 		return ctrl.Result{}, err
+	// 	}
+	// 	log.Info("initialized DiscoveryServiceCertificate resource")
+	// 	return reconcile.Result{}, nil
+	// }
+
+	ctx, log := r.Logger(ctx, "name", req.Name, "namespace", req.Namespace)
 	dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	err := r.Client.Get(ctx, request.NamespacedName, dsc)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, err
-	}
-
-	if ok := discoveryservicecertificate.IsInitialized(dsc); !ok {
-		if err := r.Client.Update(ctx, dsc); err != nil {
-			log.Error(err, "unable to update DiscoveryServiceCertificate")
-			return ctrl.Result{}, err
-		}
-		log.Info("initialized DiscoveryServiceCertificate resource")
-		return reconcile.Result{}, nil
+	result := r.ManageResourceLifecycle(ctx, req, dsc,
+		reconciler.WithInitializationFunc(reconciler_util.ResourceDefaulter(dsc)),
+	)
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
 	// Only the internal certificate provider is currently supported
 	provider := marin3r_provider.NewCertificateProvider(ctx, log, r.Client, r.Scheme, dsc)
 
 	certificateReconciler := discoveryservicecertificate.NewCertificateReconciler(ctx, log, r.Client, r.Scheme, dsc, provider)
-	result, err := certificateReconciler.Reconcile()
-	if result.Requeue || err != nil {
-		return result, err
+	reconcilerResult, err := certificateReconciler.Reconcile()
+	if reconcilerResult.Requeue || err != nil {
+		return reconcilerResult, err
 	}
 
 	if ok := discoveryservicecertificate.IsStatusReconciled(dsc, certificateReconciler.GetCertificateHash(),

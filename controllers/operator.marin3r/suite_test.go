@@ -100,9 +100,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&DiscoveryServiceCertificateReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate")),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
