@@ -45,10 +45,6 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 			},
 			args{hash: "hash"},
 			&appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Deployment",
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-test",
 					Namespace: "default",
@@ -152,6 +148,10 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 												Scheme: corev1.URISchemeHTTP,
 											},
 										},
+										FailureThreshold: 3,
+										PeriodSeconds:    10,
+										SuccessThreshold: 1,
+										TimeoutSeconds:   1,
 									},
 									ReadinessProbe: &corev1.Probe{
 										ProbeHandler: corev1.ProbeHandler{
@@ -161,6 +161,10 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 												Scheme: corev1.URISchemeHTTP,
 											},
 										},
+										FailureThreshold: 3,
+										PeriodSeconds:    10,
+										SuccessThreshold: 1,
+										TimeoutSeconds:   1,
 									},
 									Resources: corev1.ResourceRequirements{},
 									VolumeMounts: []corev1.VolumeMount{
@@ -180,36 +184,26 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 											MountPath: "/etc/marin3r/tls/client/",
 										},
 									},
-									TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-									TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-									ImagePullPolicy:          corev1.PullIfNotPresent,
+									ImagePullPolicy: corev1.PullIfNotPresent,
 								},
 							},
-							RestartPolicy:                 corev1.RestartPolicyAlways,
 							TerminationGracePeriodSeconds: pointer.New(int64(corev1.DefaultTerminationGracePeriodSeconds)),
-							DNSPolicy:                     corev1.DNSClusterFirst,
 							ServiceAccountName:            "marin3r-test",
 							DeprecatedServiceAccount:      "marin3r-test",
-							SecurityContext:               &corev1.PodSecurityContext{},
-							SchedulerName:                 corev1.DefaultSchedulerName,
 							PriorityClassName:             "highest",
 						},
 					},
 					Strategy: appsv1.DeploymentStrategy{
 						Type: appsv1.RecreateDeploymentStrategyType,
 					},
-					RevisionHistoryLimit:    pointer.New(int32(10)),
-					ProgressDeadlineSeconds: pointer.New(int32(600)),
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			got := cfg.Deployment(tt.args.hash)()
-			if diff := cmp.Diff(got, tt.want); len(diff) > 0 {
-				t.Errorf("GeneratorOptions.Deployment() = got diff %v", diff)
+			if diff := cmp.Diff(tt.opts.Deployment(tt.args.hash)(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.Deployment() DIFF:\n %v", diff)
 			}
 		})
 	}

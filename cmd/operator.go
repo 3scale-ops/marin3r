@@ -107,8 +107,8 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	if err := (&operatorcontroller.DiscoveryServiceReconciler{
-		Reconciler: reconciler.NewFromManager(mgr),
-		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("discoveryservice")),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "discoveryservice")
 		os.Exit(1)
@@ -124,8 +124,8 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	if err = (&operatorcontroller.EnvoyDeploymentReconciler{
-		Reconciler: reconciler.NewFromManager(mgr),
-		Log:        ctrl.Log.WithName("controllers").WithName("envoydeployment"),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("envoydeployment")),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "EnvoyDeployment")
 		os.Exit(1)

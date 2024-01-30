@@ -22,15 +22,14 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/mutators"
 	"github.com/3scale-ops/basereconciler/reconciler"
-	"github.com/3scale-ops/basereconciler/resources"
+	"github.com/3scale-ops/basereconciler/resource"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/envoydeployment/generators"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/resource_extensions"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -40,17 +39,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // EnvoyDeploymentReconciler reconciles a EnvoyDeployment object
 type EnvoyDeploymentReconciler struct {
-	reconciler.Reconciler
-	Log logr.Logger
+	*reconciler.Reconciler
 }
 
 //+kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=envoydeployments,verbs=get;list;watch;create;update;patch;delete
@@ -66,23 +62,12 @@ type EnvoyDeploymentReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := r.Log.WithValues("envoydeployment", req.NamespacedName)
-	ctx = log.IntoContext(ctx, logger)
 
+	ctx, logger := r.Logger(ctx, "name", req.Name, "namespace", req.Namespace)
 	ed := &operatorv1alpha1.EnvoyDeployment{}
-	key := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
-	result, err := r.GetInstance(ctx, key, ed, nil, nil)
-	if result != nil || err != nil {
-		return *result, err
-	}
-
-	// Temporary code to remove finalizers from EnvoyDeployment resources
-	if controllerutil.ContainsFinalizer(ed, operatorv1alpha1.Finalizer) {
-		controllerutil.RemoveFinalizer(ed, operatorv1alpha1.Finalizer)
-		if err := r.Client.Update(ctx, ed); err != nil {
-			logger.Error(err, "unable to remove finalizer")
-		}
-		return ctrl.Result{}, nil
+	result := r.ManageResourceLifecycle(ctx, req, ed)
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
 	// Get the address of the DiscoveryService instance
@@ -134,33 +119,23 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		InitManager:               ed.Spec.InitManager,
 	}
 
-	res := []reconciler.Resource{
-		resource_extensions.DiscoveryServiceCertificateTemplate{
-			Template:  gen.ClientCertificate(),
-			IsEnabled: true,
-		},
-		resources.DeploymentTemplate{
-			Template:        gen.Deployment(),
-			EnforceReplicas: ed.Replicas().Dynamic == nil,
-			IsEnabled:       true,
-		},
-		resources.HorizontalPodAutoscalerTemplate{
-			Template:  gen.HPA(),
-			IsEnabled: ed.Replicas().Dynamic != nil,
-		},
-		resources.PodDisruptionBudgetTemplate{
-			Template:  gen.PDB(),
-			IsEnabled: !reflect.DeepEqual(ed.PodDisruptionBudget(), operatorv1alpha1.PodDisruptionBudgetSpec{}),
-		},
+	resources := []resource.TemplateInterface{
+		resource.NewTemplateFromObjectFunction(gen.ClientCertificate).Apply(dscDefaulter),
+		resource.NewTemplateFromObjectFunction(gen.Deployment).
+			WithMutation(mutators.SetDeploymentReplicas(ed.Replicas().Dynamic == nil)),
+		resource.NewTemplateFromObjectFunction(gen.HPA).
+			WithEnabled(ed.Replicas().Dynamic != nil),
+		resource.NewTemplateFromObjectFunction(gen.PDB).
+			WithEnabled(!reflect.DeepEqual(ed.PodDisruptionBudget(), operatorv1alpha1.PodDisruptionBudgetSpec{})),
 	}
 
-	if err := r.ReconcileOwnedResources(ctx, ed, res); err != nil {
-		logger.Error(err, "unable to update owned resources")
-		return ctrl.Result{}, err
+	result = r.ReconcileOwnedResources(ctx, ed, resources)
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
 	// reconcile the status
-	err = r.ReconcileStatus(ctx, ed, []types.NamespacedName{gen.OwnedResourceKey()}, nil,
+	result = r.ReconcileStatus(ctx, ed, []types.NamespacedName{gen.OwnedResourceKey()}, nil,
 		func() bool {
 			if ed.Status.DeploymentName == nil || *ed.Status.DeploymentName != gen.OwnedResourceKey().Name {
 				ed.Status.DeploymentName = pointer.New(gen.OwnedResourceKey().Name)
@@ -168,8 +143,8 @@ func (r *EnvoyDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			}
 			return false
 		})
-	if err != nil {
-		return ctrl.Result{}, err
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
 	return ctrl.Result{}, nil

@@ -20,27 +20,24 @@ import (
 	"context"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/mutators"
 	"github.com/3scale-ops/basereconciler/reconciler"
-	"github.com/3scale-ops/basereconciler/resources"
+	"github.com/3scale-ops/basereconciler/resource"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/discoveryservice/generators"
-	"github.com/3scale-ops/marin3r/pkg/reconcilers/resource_extensions"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
-	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DiscoveryServiceReconciler reconciles a DiscoveryService object
 type DiscoveryServiceReconciler struct {
-	reconciler.Reconciler
-	Log logr.Logger
+	*reconciler.Reconciler
 }
 
 // +kubebuilder:rbac:groups=operator.marin3r.3scale.net,namespace=placeholder,resources=*,verbs=*
@@ -55,24 +52,13 @@ type DiscoveryServiceReconciler struct {
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups="discovery.k8s.io",namespace=placeholder,resources=endpointslices,verbs=get;list;watch
 
-func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	logger := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
-	ctx = log.IntoContext(ctx, logger)
+func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
+	ctx, _ = r.Logger(ctx, "name", req.Name, "namespace", req.Namespace)
 	ds := &operatorv1alpha1.DiscoveryService{}
-	key := types.NamespacedName{Name: request.Name, Namespace: request.Namespace}
-	result, err := r.GetInstance(ctx, key, ds, nil, nil)
-	if result != nil || err != nil {
-		return *result, err
-	}
-
-	// Temporary code to remove finalizers from DiscoveryService resources
-	if controllerutil.ContainsFinalizer(ds, operatorv1alpha1.Finalizer) {
-		controllerutil.RemoveFinalizer(ds, operatorv1alpha1.Finalizer)
-		if err := r.Client.Update(ctx, ds); err != nil {
-			logger.Error(err, "unable to remove finalizer")
-		}
-		return ctrl.Result{}, nil
+	result := r.ManageResourceLifecycle(ctx, req, ds)
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
 	gen := generators.GeneratorOptions{
@@ -100,34 +86,28 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 		return ctrl.Result{}, err
 	}
 
-	res := []reconciler.Resource{
-		resource_extensions.DiscoveryServiceCertificateTemplate{Template: gen.RootCertificationAuthority(), IsEnabled: true},
-		resource_extensions.DiscoveryServiceCertificateTemplate{Template: gen.ServerCertificate(), IsEnabled: true},
-		resource_extensions.DiscoveryServiceCertificateTemplate{Template: gen.ClientCertificate(), IsEnabled: true},
-		resources.ServiceAccountTemplate{Template: gen.ServiceAccount(), IsEnabled: true},
-		resources.RoleTemplate{Template: gen.Role(), IsEnabled: true},
-		resources.RoleBindingTemplate{Template: gen.RoleBinding(), IsEnabled: true},
-		resources.ServiceTemplate{Template: gen.Service(), IsEnabled: true},
-		resources.DeploymentTemplate{
-			Template:        gen.Deployment(serverCertHash),
-			EnforceReplicas: true,
-			// wait until the server certificate is ready before Deployment creation
-			IsEnabled: serverCertHash != "",
-		},
+	resources := []resource.TemplateInterface{
+		resource.NewTemplateFromObjectFunction(gen.RootCertificationAuthority).Apply(dscDefaulter),
+		resource.NewTemplateFromObjectFunction(gen.ServerCertificate).Apply(dscDefaulter),
+		resource.NewTemplateFromObjectFunction(gen.ClientCertificate).Apply(dscDefaulter),
+		resource.NewTemplateFromObjectFunction(gen.ServiceAccount),
+		resource.NewTemplateFromObjectFunction(gen.Role),
+		resource.NewTemplateFromObjectFunction(gen.RoleBinding),
+		resource.NewTemplateFromObjectFunction(gen.Service).WithMutation(mutators.SetServiceLiveValues()),
+		resource.NewTemplateFromObjectFunction(gen.Deployment(serverCertHash)).WithEnabled(serverCertHash != ""),
 	}
 
-	if err := r.ReconcileOwnedResources(ctx, ds, res); err != nil {
-		logger.Error(err, "unable to update owned resources")
-		return ctrl.Result{}, err
+	result = r.ReconcileOwnedResources(ctx, ds, resources)
+	if result.ShouldReturn() {
+		return result.Values()
 	}
-
 	// requeue if the server certificate is not ready
 	if serverCertHash == "" {
 		return ctrl.Result{Requeue: true}, nil
 	}
 
 	// reconcile the status
-	err = r.ReconcileStatus(ctx, ds, []types.NamespacedName{{Name: gen.ResourceName(), Namespace: ds.GetNamespace()}}, nil,
+	result = r.ReconcileStatus(ctx, ds, []types.NamespacedName{{Name: gen.ResourceName(), Namespace: ds.GetNamespace()}}, nil,
 		func() bool {
 			if ds.Status.DeploymentName == nil || *ds.Status.DeploymentName != gen.ResourceName() {
 				ds.Status.DeploymentName = pointer.New(gen.ResourceName())
@@ -135,8 +115,8 @@ func (r *DiscoveryServiceReconciler) Reconcile(ctx context.Context, request ctrl
 			}
 			return false
 		})
-	if err != nil {
-		return ctrl.Result{}, err
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
 	return ctrl.Result{}, nil
@@ -156,6 +136,12 @@ func (r *DiscoveryServiceReconciler) calculateServerCertificateHash(ctx context.
 		return "", err
 	}
 	return serverDSC.Status.GetCertificateHash(), nil
+}
+
+func dscDefaulter(o client.Object) (*operatorv1alpha1.DiscoveryServiceCertificate, error) {
+	dsc := o.(*operatorv1alpha1.DiscoveryServiceCertificate)
+	dsc.Default()
+	return dsc, nil
 }
 
 // SetupWithManager adds the controller to the manager

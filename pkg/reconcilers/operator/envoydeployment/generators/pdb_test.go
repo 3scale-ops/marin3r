@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/google/go-cmp/cmp"
 	policyv1 "k8s.io/api/policy/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -26,10 +26,6 @@ func TestGeneratorOptions_PDB(t *testing.T) {
 				},
 			},
 			want: &policyv1.PodDisruptionBudget{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "PodDisruptionBudget",
-					APIVersion: policyv1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-envoydeployment-instance",
 					Namespace: "default",
@@ -56,9 +52,8 @@ func TestGeneratorOptions_PDB(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			if got := cfg.PDB()(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.PDB() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.opts.PDB(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.PDB() DIFF:\n %v", diff)
 			}
 		})
 	}

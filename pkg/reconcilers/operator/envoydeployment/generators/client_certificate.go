@@ -6,34 +6,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (cfg *GeneratorOptions) ClientCertificate() func() *operatorv1alpha1.DiscoveryServiceCertificate {
+func (cfg *GeneratorOptions) ClientCertificate() *operatorv1alpha1.DiscoveryServiceCertificate {
 
-	return func() *operatorv1alpha1.DiscoveryServiceCertificate {
-
-		return &operatorv1alpha1.DiscoveryServiceCertificate{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "DiscoveryServiceCertificate",
-				APIVersion: operatorv1alpha1.GroupVersion.String(),
+	return &operatorv1alpha1.DiscoveryServiceCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cfg.ClientCertificateName,
+			Namespace: cfg.Namespace,
+			Labels:    cfg.labels(),
+		},
+		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
+			CommonName: cfg.ClientCertificateName,
+			ValidFor:   int64(cfg.ClientCertificateDuration.Seconds()),
+			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+				CASigned: &operatorv1alpha1.CASignedConfig{
+					SecretRef: corev1.SecretReference{
+						Name:      cfg.SigningCertificateName,
+						Namespace: cfg.Namespace,
+					}},
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cfg.ClientCertificateName,
-				Namespace: cfg.Namespace,
-				Labels:    cfg.labels(),
+			SecretRef: corev1.SecretReference{
+				Name: cfg.ClientCertificateName,
 			},
-			Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-				CommonName: cfg.ClientCertificateName,
-				ValidFor:   int64(cfg.ClientCertificateDuration.Seconds()),
-				Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
-					CASigned: &operatorv1alpha1.CASignedConfig{
-						SecretRef: corev1.SecretReference{
-							Name:      cfg.SigningCertificateName,
-							Namespace: cfg.Namespace,
-						}},
-				},
-				SecretRef: corev1.SecretReference{
-					Name: cfg.ClientCertificateName,
-				},
-			},
-		}
+		},
 	}
 }

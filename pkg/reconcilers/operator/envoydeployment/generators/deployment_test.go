@@ -8,7 +8,7 @@ import (
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
-	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,10 +43,6 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 				InitManager:               &operatorv1alpha1.InitManager{Image: pointer.New("init-manager:latest")},
 			},
 			want: &appsv1.Deployment{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Deployment",
-					APIVersion: appsv1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-envoydeployment-instance",
 					Namespace: "default",
@@ -146,9 +142,9 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 										MountPath: defaults.EnvoyConfigBasePath,
 									},
 								},
-								ImagePullPolicy:          corev1.PullIfNotPresent,
 								TerminationMessagePath:   corev1.TerminationMessagePathDefault,
 								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
+								ImagePullPolicy:          corev1.PullIfNotPresent,
 							}},
 							Containers: []corev1.Container{
 								{
@@ -220,13 +216,9 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 									ImagePullPolicy:          corev1.PullIfNotPresent,
 								},
 							},
-							RestartPolicy:                 corev1.RestartPolicyAlways,
 							TerminationGracePeriodSeconds: pointer.New(int64(corev1.DefaultTerminationGracePeriodSeconds)),
-							DNSPolicy:                     corev1.DNSClusterFirst,
 							ServiceAccountName:            "default",
 							DeprecatedServiceAccount:      "default",
-							SecurityContext:               &corev1.PodSecurityContext{},
-							SchedulerName:                 corev1.DefaultSchedulerName,
 						},
 					},
 					Strategy: appsv1.DeploymentStrategy{
@@ -242,17 +234,14 @@ func TestGeneratorOptions_Deployment(t *testing.T) {
 							},
 						},
 					},
-					RevisionHistoryLimit:    pointer.New(int32(10)),
-					ProgressDeadlineSeconds: pointer.New(int32(600)),
 				},
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			if diff := deep.Equal(cfg.Deployment()(), tt.want); len(diff) > 0 {
-				t.Errorf("GeneratorOptions.Deployment() = diff %v", diff)
+			if diff := cmp.Diff(tt.opts.Deployment(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.Deployment() DIFF:\n %v", diff)
 			}
 		})
 	}

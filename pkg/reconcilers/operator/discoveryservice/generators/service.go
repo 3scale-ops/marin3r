@@ -7,50 +7,43 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (cfg *GeneratorOptions) Service() func() *corev1.Service {
+func (cfg *GeneratorOptions) Service() *corev1.Service {
 
-	return func() *corev1.Service {
-
-		return &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Service",
-				APIVersion: corev1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cfg.ResourceName(),
-				Namespace: cfg.Namespace,
-				Labels:    cfg.labels(),
-			},
-			Spec: corev1.ServiceSpec{
-				Type: func() corev1.ServiceType {
-					if cfg.ServiceType == operatorv1alpha1.LoadBalancerType {
-						return corev1.ServiceTypeLoadBalancer
-					}
-					return corev1.ServiceTypeClusterIP
-				}(),
-				ClusterIP: func() string {
-					if cfg.ServiceType == operatorv1alpha1.HeadlessType {
-						return "None"
-					}
-					return ""
-				}(),
-				Selector:        cfg.labels(),
-				SessionAffinity: corev1.ServiceAffinityNone,
-				Ports: []corev1.ServicePort{
-					{
-						Name:       "discovery",
-						Port:       cfg.XdsServerPort,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromString("discovery"),
-					},
-					{
-						Name:       "metrics",
-						Port:       cfg.MetricsServerPort,
-						Protocol:   corev1.ProtocolTCP,
-						TargetPort: intstr.FromString("metrics"),
-					},
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cfg.ResourceName(),
+			Namespace: cfg.Namespace,
+			Labels:    cfg.labels(),
+		},
+		Spec: corev1.ServiceSpec{
+			Type: func() corev1.ServiceType {
+				if cfg.ServiceType == operatorv1alpha1.LoadBalancerType {
+					return corev1.ServiceTypeLoadBalancer
+				}
+				return corev1.ServiceTypeClusterIP
+			}(),
+			ClusterIP: func() string {
+				if cfg.ServiceType == operatorv1alpha1.HeadlessType {
+					return "None"
+				}
+				return ""
+			}(),
+			Selector:        cfg.labels(),
+			SessionAffinity: corev1.ServiceAffinityNone,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "discovery",
+					Port:       cfg.XdsServerPort,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromString("discovery"),
+				},
+				{
+					Name:       "metrics",
+					Port:       cfg.MetricsServerPort,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromString("metrics"),
 				},
 			},
-		}
+		},
 	}
 }

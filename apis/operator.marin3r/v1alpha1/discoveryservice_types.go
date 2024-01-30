@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/3scale-ops/basereconciler/status"
+	"github.com/3scale-ops/basereconciler/reconciler"
 	"github.com/3scale-ops/marin3r/pkg/image"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -122,7 +122,7 @@ type DiscoveryServiceStatus struct {
 	// +optional
 	*appsv1.DeploymentStatus `json:"deploymentStatus,omitempty"`
 	// internal fields
-	status.UnimplementedStatefulSetStatus `json:"-"`
+	reconciler.UnimplementedStatefulSetStatus `json:"-"`
 }
 
 func (dss *DiscoveryServiceStatus) GetDeploymentStatus(key types.NamespacedName) *appsv1.DeploymentStatus {
@@ -176,9 +176,9 @@ type DiscoveryService struct {
 	Status DiscoveryServiceStatus `json:"status,omitempty"`
 }
 
-var _ status.ObjectWithAppStatus = &DiscoveryService{}
+var _ reconciler.ObjectWithAppStatus = &DiscoveryService{}
 
-func (d *DiscoveryService) GetStatus() status.AppStatus {
+func (d *DiscoveryService) GetStatus() reconciler.AppStatus {
 	return &d.Status
 }
 

@@ -5,8 +5,8 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -41,10 +41,6 @@ func TestGeneratorOptions_Service(t *testing.T) {
 			},
 			args{hash: "hash"},
 			&corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Service",
-					APIVersion: corev1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-test",
 					Namespace: "default",
@@ -102,10 +98,6 @@ func TestGeneratorOptions_Service(t *testing.T) {
 			},
 			args{hash: "hash"},
 			&corev1.Service{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Service",
-					APIVersion: corev1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-test",
 					Namespace: "default",
@@ -146,9 +138,8 @@ func TestGeneratorOptions_Service(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			if got := cfg.Service()(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.Service() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.opts.Service(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.Service() DIFF:\n %v", diff)
 			}
 		})
 	}
