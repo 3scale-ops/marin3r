@@ -19,12 +19,10 @@ package controllers
 import (
 	"context"
 
+	"github.com/3scale-ops/basereconciler/reconciler"
+	reconciler_util "github.com/3scale-ops/basereconciler/util"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	envoyconfig "github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfig"
-
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -32,9 +30,7 @@ import (
 
 // EnvoyConfigReconciler reconciles a EnvoyConfig object
 type EnvoyConfigReconciler struct {
-	Client client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	*reconciler.Reconciler
 }
 
 // Reconcile progresses EnvoyConfig resources to its desired state
@@ -44,60 +40,47 @@ type EnvoyConfigReconciler struct {
 // +kubebuilder:rbac:groups=marin3r.3scale.net,namespace=placeholder,resources=envoyconfigrevisions/status,verbs=get;update;patch
 
 func (r *EnvoyConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
-	// Fetch the EnvoyConfig instance
+	ctx, logger := r.Logger(ctx, "name", req.Name, "namespace", req.Namespace)
 	ec := &marin3rv1alpha1.EnvoyConfig{}
-	err := r.Client.Get(ctx, req.NamespacedName, ec)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return ctrl.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return ctrl.Result{}, err
+	result := r.ManageResourceLifecycle(ctx, req, ec,
+		// Apply defaults
+		reconciler.WithInitializationFunc(reconciler_util.ResourceDefaulter(ec)),
+		// convert spec.EnvoyResources to spec.Resources
+		reconciler.WithInMemoryInitializationFunc(func(ctx context.Context, c client.Client, o client.Object) error {
+			if ec.Spec.EnvoyResources != nil {
+				ec := o.(*marin3rv1alpha1.EnvoyConfig)
+				if resources, err := (ec.Spec.EnvoyResources).Resources(ec.GetSerialization()); err != nil {
+					return err
+				} else {
+					ec.Spec.Resources = resources
+					ec.Spec.EnvoyResources = nil
+				}
+			}
+			return nil
+		}),
+	)
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
-	log = log.WithValues("nodeID", ec.Spec.NodeID, "envoyAPI", ec.GetEnvoyAPIVersion())
-
-	if ok := envoyconfig.IsInitialized(ec); !ok {
-		if err := r.Client.Update(ctx, ec); err != nil {
-			log.Error(err, "unable to update EnvoyConfig")
-			return ctrl.Result{}, err
-		}
-		log.Info("initialized EnvoyConfig resource")
-		return reconcile.Result{}, nil
-	}
-
-	// convert spec.EnvoyResources to spec.Resources
-	// all the code from this point on will make use solely
-	// of the spec.Resources field.
-	if ec.Spec.EnvoyResources != nil {
-		if resources, err := (ec.Spec.EnvoyResources).Resources(ec.GetSerialization()); err != nil {
-			return ctrl.Result{}, err
-		} else {
-			ec.Spec.Resources = resources
-			ec.Spec.EnvoyResources = nil
-		}
-	}
+	logger = logger.WithValues("nodeID", ec.Spec.NodeID, "envoyAPI", ec.GetEnvoyAPIVersion())
 
 	revisionReconciler := envoyconfig.NewRevisionReconciler(
-		ctx, log, r.Client, r.Scheme, ec,
+		ctx, logger, r.Client, r.Scheme, ec,
 	)
 
-	result, err := revisionReconciler.Reconcile()
-	if result.Requeue || err != nil {
-		return result, err
+	reconcilerResult, err := revisionReconciler.Reconcile()
+	if reconcilerResult.Requeue || err != nil {
+		return reconcilerResult, err
 	}
 
 	if ok := envoyconfig.IsStatusReconciled(ec, revisionReconciler.GetCacheState(), revisionReconciler.PublishedVersion(), revisionReconciler.GetRevisionList()); !ok {
 		if err := r.Client.Status().Update(ctx, ec); err != nil {
-			log.Error(err, "unable to update EnvoyConfig status")
+			logger.Error(err, "unable to update EnvoyConfig status")
 			return ctrl.Result{}, err
 		}
-		log.Info("status updated for EnvoyConfig resource")
+		logger.Info("status updated for EnvoyConfig resource")
 		return reconcile.Result{}, nil
 	}
 
