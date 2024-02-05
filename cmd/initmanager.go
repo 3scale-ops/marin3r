@@ -173,7 +173,7 @@ func parseBindAddress(address string) (string, uint32, error) {
 
 	var err error
 	var host string
-	var port int
+	var port int64
 
 	var parts []string
 	if parts = strings.Split(address, ":"); len(parts) != 2 {
@@ -186,7 +186,7 @@ func parseBindAddress(address string) (string, uint32, error) {
 		return "", 0, err
 	}
 
-	if port, err = strconv.Atoi(parts[1]); err != nil {
+	if port, err = strconv.ParseInt(parts[1], 10, 32); err != nil {
 		return "", 0, fmt.Errorf("unable to parse port value in 'spec.envoyStaticConfig.adminBindAddress'")
 	}
 
