@@ -90,21 +90,4 @@ func init() {
 				"subjects",
 			},
 		})
-	// config.SetDefaultReconcileConfigForGVK(
-	// 	schema.FromAPIVersionAndKind("v1", "ServiceAccount"),
-	// 	config.ReconcileConfigForGVK{
-	// 		EnsureProperties: []string{
-	// 			"metadata.annotations",
-	// 			"metadata.labels",
-	// 		},
-	// 	})
-	// config.SetDefaultReconcileConfigForGVK(
-	// 	schema.FromAPIVersionAndKind(operatorv1alpha1.GroupVersion.String(), operatorv1alpha1.DiscoveryServiceCertificateKind),
-	// 	config.ReconcileConfigForGVK{
-	// 		EnsureProperties: []string{
-	// 			"metadata.annotations",
-	// 			"metadata.labels",
-	// 			"spec",
-	// 		},
-	// 	})
 }

@@ -43,29 +43,6 @@ type DiscoveryServiceCertificateReconciler struct {
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch;create;update;patch
 
 func (r *DiscoveryServiceCertificateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// log := r.Log.WithValues("name", request.Name, "namespace", request.Namespace)
-
-	// // Fetch the DiscoveryServiceCertificate instance
-	// dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
-	// err := r.Client.Get(ctx, request.NamespacedName, dsc)
-	// if err != nil {
-	// 	if errors.IsNotFound(err) {
-	// 		// Request object not found, could have been deleted after reconcile request.
-	// 		// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-	// 		// Return and don't requeue
-	// 		return ctrl.Result{}, nil
-	// 	}
-	// 	return ctrl.Result{}, err
-	// }
-
-	// if ok := discoveryservicecertificate.IsInitialized(dsc); !ok {
-	// 	if err := r.Client.Update(ctx, dsc); err != nil {
-	// 		log.Error(err, "unable to update DiscoveryServiceCertificate")
-	// 		return ctrl.Result{}, err
-	// 	}
-	// 	log.Info("initialized DiscoveryServiceCertificate resource")
-	// 	return reconcile.Result{}, nil
-	// }
 
 	ctx, log := r.Logger(ctx, "name", req.Name, "namespace", req.Namespace)
 	dsc := &operatorv1alpha1.DiscoveryServiceCertificate{}
