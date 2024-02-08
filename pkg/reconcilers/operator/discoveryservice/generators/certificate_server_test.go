@@ -6,8 +6,8 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,10 +41,6 @@ func TestGeneratorOptions_ServerCertificate(t *testing.T) {
 			},
 			args{hash: "hash"},
 			&operatorv1alpha1.DiscoveryServiceCertificate{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       operatorv1alpha1.DiscoveryServiceCertificateKind,
-					APIVersion: operatorv1alpha1.GroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "server-cert-test",
 					Namespace: "default",
@@ -75,9 +71,8 @@ func TestGeneratorOptions_ServerCertificate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			if got := cfg.ServerCertificate()(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.ServerCertificate() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.opts.ServerCertificate(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.ServerCertificate() DIFF:\n %v", diff)
 			}
 		})
 	}

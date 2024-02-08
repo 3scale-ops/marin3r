@@ -5,10 +5,10 @@ import (
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
+	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -43,10 +43,6 @@ func TestGeneratorOptions_HPA(t *testing.T) {
 				},
 			},
 			want: &autoscalingv2.HorizontalPodAutoscaler{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HorizontalPodAutoscaler",
-					APIVersion: autoscalingv2.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-envoydeployment-instance",
 					Namespace: "default",
@@ -83,9 +79,8 @@ func TestGeneratorOptions_HPA(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			if got := cfg.HPA()(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.HPA() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.opts.HPA(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.HPA() DIFF:\n %v", diff)
 			}
 		})
 	}

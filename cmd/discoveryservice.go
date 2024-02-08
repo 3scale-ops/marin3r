@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/reconciler"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	marin3rcontroller "github.com/3scale-ops/marin3r/controllers/marin3r"
@@ -145,18 +146,16 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 
 	// Start controllers
 	if err := (&marin3rcontroller.EnvoyConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("envoyconfig"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("envoyconfig")),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "envoyconfig")
 		os.Exit(1)
 	}
 
 	if err := (&marin3rcontroller.EnvoyConfigRevisionReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv3))),
-		Scheme:         mgr.GetScheme(),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName(fmt.Sprintf("envoyconfigrevision_%s", string(envoy.APIv3)))),
 		XdsCache:       xdss.GetCache(envoy.APIv3),
 		APIVersion:     envoy.APIv3,
 		DiscoveryStats: xdss.GetDiscoveryStats(envoy.APIv3),

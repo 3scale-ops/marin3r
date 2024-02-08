@@ -16,10 +16,6 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 	return func() *appsv1.Deployment {
 
 		deployment := &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Deployment",
-				APIVersion: appsv1.SchemeGroupVersion.String(),
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      cfg.ResourceName(),
 				Namespace: cfg.Namespace,
@@ -117,6 +113,10 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 											Scheme: corev1.URISchemeHTTP,
 										},
 									},
+									FailureThreshold: 3,
+									PeriodSeconds:    10,
+									SuccessThreshold: 1,
+									TimeoutSeconds:   1,
 								},
 								ReadinessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{
@@ -126,6 +126,10 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 											Scheme: corev1.URISchemeHTTP,
 										},
 									},
+									FailureThreshold: 3,
+									PeriodSeconds:    10,
+									SuccessThreshold: 1,
+									TimeoutSeconds:   1,
 								},
 								Resources: cfg.DeploymentResources,
 								VolumeMounts: []corev1.VolumeMount{
@@ -145,25 +149,17 @@ func (cfg *GeneratorOptions) Deployment(hash string) func() *appsv1.Deployment {
 										MountPath: "/etc/marin3r/tls/client/",
 									},
 								},
-								TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-								TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-								ImagePullPolicy:          corev1.PullIfNotPresent,
+								ImagePullPolicy: corev1.PullIfNotPresent,
 							},
 						},
-						RestartPolicy:                 corev1.RestartPolicyAlways,
 						TerminationGracePeriodSeconds: pointer.New(int64(corev1.DefaultTerminationGracePeriodSeconds)),
-						DNSPolicy:                     corev1.DNSClusterFirst,
 						ServiceAccountName:            cfg.ResourceName(),
 						DeprecatedServiceAccount:      cfg.ResourceName(),
-						SecurityContext:               &corev1.PodSecurityContext{},
-						SchedulerName:                 corev1.DefaultSchedulerName,
 					},
 				},
 				Strategy: appsv1.DeploymentStrategy{
 					Type: appsv1.RecreateDeploymentStrategyType,
 				},
-				RevisionHistoryLimit:    pointer.New(int32(10)),
-				ProgressDeadlineSeconds: pointer.New(int32(600)),
 			},
 		}
 

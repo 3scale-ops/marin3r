@@ -21,7 +21,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/3scale-ops/basereconciler/util"
+	"github.com/3scale-ops/basereconciler/reconciler"
+	reconciler_util "github.com/3scale-ops/basereconciler/util"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss"
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
@@ -41,7 +42,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -51,9 +51,7 @@ import (
 
 // EnvoyConfigRevisionReconciler reconciles a EnvoyConfigRevision object
 type EnvoyConfigRevisionReconciler struct {
-	Client         client.Client
-	Log            logr.Logger
-	Scheme         *runtime.Scheme
+	*reconciler.Reconciler
 	XdsCache       xdss.Cache
 	APIVersion     envoy.APIVersion
 	DiscoveryStats *stats.Stats
@@ -65,55 +63,36 @@ type EnvoyConfigRevisionReconciler struct {
 // +kubebuilder:rbac:groups="core",namespace=placeholder,resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="discovery.k8s.io",namespace=placeholder,resources=endpointslices,verbs=get;list;watch
 func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("name", req.Name, "namespace", req.Namespace)
 
-	// Fetch the EnvoyConfigRevision instance
+	ctx, logger := r.Logger(ctx, "name", req.Name, "namespace", req.Namespace)
 	ecr := &marin3rv1alpha1.EnvoyConfigRevision{}
-	err := r.Client.Get(ctx, req.NamespacedName, ecr)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return ctrl.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return ctrl.Result{}, err
-	}
-
-	if ok := envoyconfigrevision.IsInitialized(ecr); !ok {
-		if err := r.Client.Update(ctx, ecr); err != nil {
-			log.Error(err, "unable to update EnvoyConfigRevision")
-			return ctrl.Result{}, err
-		}
-		log.Info("initialized EnvoyConfigRevision resource")
-		return reconcile.Result{}, nil
-	}
-
-	// convert spec.EnvoyResources to spec.Resources
-	// all the code from this point on will make use solely
-	// of the spec.Resources field.
-	if ecr.Spec.EnvoyResources != nil {
-		if resources, err := (ecr.Spec.EnvoyResources).Resources(ecr.GetSerialization()); err != nil {
-			return ctrl.Result{}, err
-		} else {
-			ecr.Spec.Resources = resources
-			ecr.Spec.EnvoyResources = nil
-		}
-	}
-
-	if util.IsBeingDeleted(ecr) {
-		if !controllerutil.ContainsFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer) {
-			return reconcile.Result{}, nil
-		}
-		envoyconfigrevision.CleanupLogic(ecr, r.XdsCache, r.DiscoveryStats, log)
-		controllerutil.RemoveFinalizer(ecr, marin3rv1alpha1.EnvoyConfigRevisionFinalizer)
-		if err = r.Client.Update(ctx, ecr); err != nil {
-			log.Error(err, "unable to update EnvoyConfigRevision")
-			return reconcile.Result{}, err
-		}
-		log.Info("finalized EnvoyConfigRevision resource")
-		return reconcile.Result{}, nil
+	result := r.ManageResourceLifecycle(ctx, req, ecr,
+		// Apply defaults
+		reconciler.WithInitializationFunc(reconciler_util.ResourceDefaulter(ecr)),
+		// convert spec.EnvoyResources to spec.Resources
+		reconciler.WithInMemoryInitializationFunc(func(ctx context.Context, c client.Client, o client.Object) error {
+			if ecr.Spec.EnvoyResources != nil {
+				ecr := o.(*marin3rv1alpha1.EnvoyConfigRevision)
+				if resources, err := (ecr.Spec.EnvoyResources).Resources(ecr.GetSerialization()); err != nil {
+					return err
+				} else {
+					ecr.Spec.Resources = resources
+					ecr.Spec.EnvoyResources = nil
+				}
+			}
+			return nil
+		}),
+		// set finalizer
+		reconciler.WithFinalizer(marin3rv1alpha1.EnvoyConfigRevisionFinalizer),
+		// cleanup logic
+		reconciler.WithFinalizationFunc(func(context.Context, client.Client) error {
+			envoyconfigrevision.CleanupLogic(ecr, r.XdsCache, r.DiscoveryStats, logger)
+			logger.Info("finalized EnvoyConfigRevision resource")
+			return nil
+		}),
+	)
+	if result.ShouldReturn() {
+		return result.Values()
 	}
 
 	var vt *marin3rv1alpha1.VersionTracker = nil
@@ -125,7 +104,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		decoder := envoy_serializer.NewResourceUnmarshaller(envoy_serializer.JSON, r.APIVersion)
 
 		cacheReconciler := envoyconfigrevision.NewCacheReconciler(
-			ctx, log, r.Client, r.XdsCache,
+			ctx, logger, r.Client, r.XdsCache,
 			decoder,
 			envoy_resources.NewGenerator(r.APIVersion),
 		)
@@ -139,8 +118,8 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 		if err != nil {
 			switch err.(type) {
 			case *errors.StatusError:
-				log.Error(err, fmt.Sprintf("%v", err))
-				if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error(), log); err != nil {
+				logger.Error(err, fmt.Sprintf("%v", err))
+				if err := r.taintSelf(ctx, ecr, "FailedLoadingResources", err.Error(), logger); err != nil {
 					return ctrl.Result{}, err
 				}
 			default:
@@ -151,9 +130,9 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	if ok := envoyconfigrevision.IsStatusReconciled(ecr, vt, r.XdsCache, r.DiscoveryStats); !ok {
 		if err := r.Client.Status().Update(ctx, ecr); err != nil {
-			log.Error(err, "unable to update EnvoyConfigRevision status")
+			logger.Error(err, "unable to update EnvoyConfigRevision status")
 		}
-		log.Info("status updated for EnvoyConfigRevision resource")
+		logger.Info("status updated for EnvoyConfigRevision resource")
 	}
 
 	if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
@@ -165,7 +144,7 @@ func (r *EnvoyConfigRevisionReconciler) Reconcile(ctx context.Context, req ctrl.
 }
 
 func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *marin3rv1alpha1.EnvoyConfigRevision,
-	reason, msg string, log logr.Logger) error {
+	reason, msg string, logger logr.Logger) error {
 
 	if !meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionTaintedCondition) {
 		patch := client.MergeFrom(ecr.DeepCopy())
@@ -181,7 +160,7 @@ func (r *EnvoyConfigRevisionReconciler) taintSelf(ctx context.Context, ecr *mari
 			return err
 		}
 
-		log.Info(fmt.Sprintf("Tainted revision: %q", msg))
+		logger.Info(fmt.Sprintf("Tainted revision: %q", msg))
 	}
 	return nil
 }

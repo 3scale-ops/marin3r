@@ -20,6 +20,7 @@ import (
 	reconcilerutil "github.com/3scale-ops/basereconciler/util"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
+	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -166,6 +167,13 @@ func (ec *EnvoyConfig) GetSerialization() envoy_serializer.Serialization {
 // univoquely identifies the version of the resources.
 func (ec *EnvoyConfig) GetEnvoyResourcesVersion() string {
 	return reconcilerutil.Hash(ec.Spec.Resources)
+}
+
+// Default implements defaulting for the EnvoyConfig resource
+func (ec *EnvoyConfig) Default() {
+	if ec.Spec.EnvoyAPI == nil {
+		ec.Spec.EnvoyAPI = pointer.New(ec.GetEnvoyAPIVersion())
+	}
 }
 
 // +kubebuilder:object:root=true

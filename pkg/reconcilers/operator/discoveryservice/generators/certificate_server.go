@@ -9,36 +9,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (cfg *GeneratorOptions) ServerCertificate() func() *operatorv1alpha1.DiscoveryServiceCertificate {
+func (cfg *GeneratorOptions) ServerCertificate() *operatorv1alpha1.DiscoveryServiceCertificate {
 
-	return func() *operatorv1alpha1.DiscoveryServiceCertificate {
-
-		return &operatorv1alpha1.DiscoveryServiceCertificate{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       operatorv1alpha1.DiscoveryServiceCertificateKind,
-				APIVersion: operatorv1alpha1.GroupVersion.String(),
+	return &operatorv1alpha1.DiscoveryServiceCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cfg.ServerCertName(),
+			Namespace: cfg.Namespace,
+			Labels:    cfg.labels(),
+		},
+		Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
+			CommonName:          fmt.Sprintf("%s-%s", cfg.ServerCertificateCommonNamePrefix, cfg.InstanceName),
+			IsServerCertificate: pointer.New(true),
+			ValidFor:            int64(cfg.ServerCertificateDuration.Seconds()),
+			Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+				CASigned: &operatorv1alpha1.CASignedConfig{
+					SecretRef: corev1.SecretReference{
+						Name:      cfg.RootCertName(),
+						Namespace: cfg.Namespace,
+					}},
 			},
-			ObjectMeta: metav1.ObjectMeta{
+			SecretRef: corev1.SecretReference{
 				Name:      cfg.ServerCertName(),
 				Namespace: cfg.Namespace,
-				Labels:    cfg.labels(),
 			},
-			Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
-				CommonName:          fmt.Sprintf("%s-%s", cfg.ServerCertificateCommonNamePrefix, cfg.InstanceName),
-				IsServerCertificate: pointer.New(true),
-				ValidFor:            int64(cfg.ServerCertificateDuration.Seconds()),
-				Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
-					CASigned: &operatorv1alpha1.CASignedConfig{
-						SecretRef: corev1.SecretReference{
-							Name:      cfg.RootCertName(),
-							Namespace: cfg.Namespace,
-						}},
-				},
-				SecretRef: corev1.SecretReference{
-					Name:      cfg.ServerCertName(),
-					Namespace: cfg.Namespace,
-				},
-			},
-		}
+		},
 	}
 }

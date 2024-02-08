@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/3scale-ops/basereconciler/reconciler"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
 	"github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/stats"
@@ -98,17 +99,21 @@ var _ = BeforeSuite(func() {
 
 	// Add the EnvoyConfig controller
 	err = (&EnvoyConfigReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("envoyconfig"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: &reconciler.Reconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("envoyconfig"),
+			Scheme: mgr.GetScheme(),
+		},
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	// Add the EnvoyConfigRevision v3 controller
 	ecrV3Reconciler = &EnvoyConfigRevisionReconciler{
-		Client:         mgr.GetClient(),
-		Log:            ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v3"),
-		Scheme:         mgr.GetScheme(),
+		Reconciler: &reconciler.Reconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("envoyconfigrevision_v3"),
+			Scheme: mgr.GetScheme(),
+		},
 		XdsCache:       xdss_v3.NewCache(),
 		APIVersion:     envoy.APIv3,
 		DiscoveryStats: stats.New(),

@@ -50,7 +50,7 @@ endif
 IMG ?= $(IMAGE_TAG_BASE):v$(VERSION)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.26
+ENVTEST_K8S_VERSION = 1.27
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -337,7 +337,7 @@ catalog-push: ## Push a catalog image.
 
 kind-create: export KUBECONFIG = $(PWD)/kubeconfig
 kind-create: tmp docker-build kind ## Runs a k8s kind cluster with a local registry in "localhost:5000" and ports 1080 and 1443 exposed to the host
-	$(KIND) create cluster --wait 5m --config test/kind.yaml --image kindest/node:v1.25.2
+	$(KIND) create cluster --wait 5m --config test/kind.yaml --image kindest/node:v1.27.10
 	$(MAKE) deploy-cert-manager
 	$(KIND) load docker-image quay.io/3scale/marin3r:test --name kind
 

@@ -1,25 +1,93 @@
 package controllers
 
 import (
-	"github.com/3scale-ops/basereconciler/reconciler"
-	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	corev1 "k8s.io/api/core/v1"
-	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
+	"github.com/3scale-ops/basereconciler/config"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func init() {
-	reconciler.Config.AnnotationsDomain = "marin3r.3scale.net"
-	reconciler.Config.ResourcePruner = false
-	reconciler.Config.ManagedTypes = reconciler.NewManagedTypes().
-		Register(&appsv1.DeploymentList{}).
-		Register(&corev1.ServiceList{}).
-		Register(&rbacv1.RoleList{}).
-		Register(&rbacv1.RoleBindingList{}).
-		Register(&corev1.ServiceAccountList{}).
-		Register(&operatorv1alpha1.DiscoveryServiceCertificateList{}).
-		Register(&policyv1.PodDisruptionBudgetList{}).
-		Register(&autoscalingv2.HorizontalPodAutoscalerList{})
+	config.SetAnnotationsDomain("marin3r.3scale.net")
+	config.DisableResourcePruner()
+	config.DisableDynamicWatches()
+	config.SetDefaultReconcileConfigForGVK(
+		schema.FromAPIVersionAndKind("v1", "Service"),
+		config.ReconcileConfigForGVK{
+			EnsureProperties: []string{
+				"metadata.annotations",
+				"metadata.labels",
+				"spec.type",
+				"spec.ports",
+				"spec.selector",
+				"spec.clusterIP",
+				"spec.clusterIPs",
+			},
+		})
+	config.SetDefaultReconcileConfigForGVK(
+		schema.FromAPIVersionAndKind("apps/v1", "Deployment"),
+		config.ReconcileConfigForGVK{
+			EnsureProperties: []string{
+				"metadata.annotations",
+				"metadata.labels",
+				"spec.minReadySeconds",
+				"spec.replicas",
+				"spec.selector",
+				"spec.strategy",
+				"spec.template.metadata.labels",
+				"spec.template.metadata.annotations",
+				"spec.template.spec",
+			},
+			IgnoreProperties: []string{
+				"metadata.annotations['deployment.kubernetes.io/revision']",
+				"spec.template.spec.dnsPolicy",
+				"spec.template.spec.schedulerName",
+				"spec.template.spec.restartPolicy",
+				"spec.template.spec.securityContext",
+				"spec.template.spec.containers[*].terminationMessagePath",
+				"spec.template.spec.containers[*].terminationMessagePolicy",
+				"spec.template.spec.initContainers[*].terminationMessagePath",
+				"spec.template.spec.initContainers[*].terminationMessagePolicy",
+			},
+		})
+	config.SetDefaultReconcileConfigForGVK(
+		schema.FromAPIVersionAndKind("autoscaling/v2", "HorizontalPodAutoscaler"),
+		config.ReconcileConfigForGVK{
+			EnsureProperties: []string{
+				"metadata.annotations",
+				"metadata.labels",
+				"spec.scaleTargetRef",
+				"spec.minReplicas",
+				"spec.maxReplicas",
+				"spec.metrics",
+			},
+		})
+	config.SetDefaultReconcileConfigForGVK(
+		schema.FromAPIVersionAndKind("policy/v1", "PodDisruptionBudget"),
+		config.ReconcileConfigForGVK{
+			EnsureProperties: []string{
+				"metadata.annotations",
+				"metadata.labels",
+				"spec.maxUnavailable",
+				"spec.minAvailable",
+				"spec.selector",
+			},
+		})
+	config.SetDefaultReconcileConfigForGVK(
+		schema.FromAPIVersionAndKind("rbac.authorization.k8s.io/v1", "Role"),
+		config.ReconcileConfigForGVK{
+			EnsureProperties: []string{
+				"metadata.annotations",
+				"metadata.labels",
+				"rules",
+			},
+		})
+	config.SetDefaultReconcileConfigForGVK(
+		schema.FromAPIVersionAndKind("rbac.authorization.k8s.io/v1", "RoleBinding"),
+		config.ReconcileConfigForGVK{
+			EnsureProperties: []string{
+				"metadata.annotations",
+				"metadata.labels",
+				"roleRef",
+				"subjects",
+			},
+		})
 }

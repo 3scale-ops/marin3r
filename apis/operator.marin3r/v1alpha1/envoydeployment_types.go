@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/3scale-ops/basereconciler/status"
+	"github.com/3scale-ops/basereconciler/reconciler"
 	defaults "github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
 	appsv1 "k8s.io/api/apps/v1"
@@ -390,7 +390,7 @@ func (im *InitManager) GetImage() string {
 }
 
 // ensure the status implements the AppStatus interface from "github.com/3scale-ops/basereconciler/status"
-var _ status.AppStatus = &EnvoyDeploymentStatus{}
+var _ reconciler.AppStatus = &EnvoyDeploymentStatus{}
 
 // EnvoyDeploymentStatus defines the observed state of EnvoyDeployment
 type EnvoyDeploymentStatus struct {
@@ -401,7 +401,7 @@ type EnvoyDeploymentStatus struct {
 	// +optional
 	*appsv1.DeploymentStatus `json:"deploymentStatus,omitempty"`
 	// internal fields
-	status.UnimplementedStatefulSetStatus `json:"-"`
+	reconciler.UnimplementedStatefulSetStatus `json:"-"`
 }
 
 func (eds *EnvoyDeploymentStatus) GetDeploymentStatus(key types.NamespacedName) *appsv1.DeploymentStatus {
@@ -429,9 +429,9 @@ type EnvoyDeployment struct {
 	Status EnvoyDeploymentStatus `json:"status,omitempty"`
 }
 
-var _ status.ObjectWithAppStatus = &EnvoyDeployment{}
+var _ reconciler.ObjectWithAppStatus = &EnvoyDeployment{}
 
-func (ed *EnvoyDeployment) GetStatus() status.AppStatus {
+func (ed *EnvoyDeployment) GetStatus() reconciler.AppStatus {
 	return &ed.Status
 }
 

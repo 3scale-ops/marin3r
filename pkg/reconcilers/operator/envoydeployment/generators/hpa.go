@@ -6,36 +6,29 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (cfg *GeneratorOptions) HPA() func() *autoscalingv2.HorizontalPodAutoscaler {
+func (cfg *GeneratorOptions) HPA() *autoscalingv2.HorizontalPodAutoscaler {
 
-	return func() *autoscalingv2.HorizontalPodAutoscaler {
-
-		return &autoscalingv2.HorizontalPodAutoscaler{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "HorizontalPodAutoscaler",
-				APIVersion: autoscalingv2.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cfg.resourceName(),
-				Namespace: cfg.Namespace,
-				Labels:    cfg.labels(),
-			},
-			Spec: func() autoscalingv2.HorizontalPodAutoscalerSpec {
-				if cfg.Replicas.Dynamic == nil {
-					return autoscalingv2.HorizontalPodAutoscalerSpec{}
-				}
-				return autoscalingv2.HorizontalPodAutoscalerSpec{
-					ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
-						APIVersion: appsv1.SchemeGroupVersion.String(),
-						Kind:       "Deployment",
-						Name:       cfg.resourceName(),
-					},
-					MinReplicas: cfg.Replicas.Dynamic.MinReplicas,
-					MaxReplicas: cfg.Replicas.Dynamic.MaxReplicas,
-					Metrics:     cfg.Replicas.Dynamic.Metrics,
-					Behavior:    cfg.Replicas.Dynamic.Behavior,
-				}
-			}(),
-		}
+	return &autoscalingv2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cfg.resourceName(),
+			Namespace: cfg.Namespace,
+			Labels:    cfg.labels(),
+		},
+		Spec: func() autoscalingv2.HorizontalPodAutoscalerSpec {
+			if cfg.Replicas.Dynamic == nil {
+				return autoscalingv2.HorizontalPodAutoscalerSpec{}
+			}
+			return autoscalingv2.HorizontalPodAutoscalerSpec{
+				ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
+					APIVersion: appsv1.SchemeGroupVersion.String(),
+					Kind:       "Deployment",
+					Name:       cfg.resourceName(),
+				},
+				MinReplicas: cfg.Replicas.Dynamic.MinReplicas,
+				MaxReplicas: cfg.Replicas.Dynamic.MaxReplicas,
+				Metrics:     cfg.Replicas.Dynamic.Metrics,
+				Behavior:    cfg.Replicas.Dynamic.Behavior,
+			}
+		}(),
 	}
 }

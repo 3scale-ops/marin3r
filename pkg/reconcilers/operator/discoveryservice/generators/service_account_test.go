@@ -5,8 +5,8 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -40,10 +40,6 @@ func TestGeneratorOptions_ServiceAccount(t *testing.T) {
 			},
 			args{hash: "hash"},
 			&corev1.ServiceAccount{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "ServiceAccount",
-					APIVersion: corev1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-test",
 					Namespace: "default",
@@ -58,9 +54,8 @@ func TestGeneratorOptions_ServiceAccount(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			if got := cfg.ServiceAccount()(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.ServiceAccount() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.opts.ServiceAccount(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.ServiceAccount() DIFF:\n %v", diff)
 			}
 		})
 	}

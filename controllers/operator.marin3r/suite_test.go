@@ -94,21 +94,20 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&DiscoveryServiceReconciler{
-		Reconciler: reconciler.NewFromManager(mgr),
-		Log:        ctrl.Log.WithName("controllers").WithName("discoveryservice"),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("discoveryservice")),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&DiscoveryServiceCertificateReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate"),
-		Scheme: mgr.GetScheme(),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("discoveryservicecertificate")),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&EnvoyDeploymentReconciler{
-		Reconciler: reconciler.NewFromManager(mgr),
-		Log:        ctrl.Log.WithName("controllers").WithName("envoydeployment"),
+		Reconciler: reconciler.NewFromManager(mgr).
+			WithLogger(ctrl.Log.WithName("controllers").WithName("envoydeployment")),
 	}).SetupWithManager(mgr)
 	Expect(err).ToNot(HaveOccurred())
 

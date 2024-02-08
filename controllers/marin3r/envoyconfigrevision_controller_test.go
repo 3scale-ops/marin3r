@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/3scale-ops/basereconciler/reconciler"
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	xdss_v3 "github.com/3scale-ops/marin3r/pkg/discoveryservice/xdss/v3"
 	"github.com/3scale-ops/marin3r/pkg/envoy"
@@ -35,10 +36,12 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 			},
 		}
 		r := &EnvoyConfigRevisionReconciler{
-			Client:   fake.NewFakeClient(ecr),
-			Scheme:   scheme.Scheme,
+			Reconciler: &reconciler.Reconciler{
+				Client: fake.NewClientBuilder().WithObjects(ecr).Build(),
+				Scheme: scheme.Scheme,
+				Log:    ctrl.Log.WithName("test"),
+			},
 			XdsCache: xdss_v3.NewCache(),
-			Log:      ctrl.Log.WithName("test"),
 		}
 		if err := r.taintSelf(context.TODO(), ecr, "test", "test", r.Log); err != nil {
 			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() error = %v", err)

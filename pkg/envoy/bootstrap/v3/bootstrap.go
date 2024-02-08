@@ -46,8 +46,12 @@ func (c *Config) GenerateStatic() (string, error) {
 					Name: "xds_client_certificate",
 					SdsConfig: &envoy_config_core_v3.ConfigSource{
 						ResourceApiVersion: envoy_config_core_v3.ApiVersion_V3,
-						ConfigSourceSpecifier: &envoy_config_core_v3.ConfigSource_Path{
-							Path: c.Options.SdsConfigSourcePath,
+						// Path: c.Options.SdsConfigSourcePath,
+						ConfigSourceSpecifier: &envoy_config_core_v3.ConfigSource_PathConfigSource{
+							PathConfigSource: &envoy_config_core_v3.PathConfigSource{
+								Path: c.Options.SdsConfigSourcePath,
+								// WatchedDirectory: &envoy_config_core_v3.WatchedDirectory{},
+							},
 						},
 					},
 				},

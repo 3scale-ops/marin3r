@@ -5,9 +5,9 @@ import (
 	"time"
 
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -41,10 +41,6 @@ func TestGeneratorOptions_RoleBinding(t *testing.T) {
 			},
 			args{hash: "hash"},
 			&rbacv1.RoleBinding{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "RoleBinding",
-					APIVersion: rbacv1.SchemeGroupVersion.String(),
-				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "marin3r-test",
 					Namespace: "default",
@@ -72,9 +68,8 @@ func TestGeneratorOptions_RoleBinding(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := tt.opts
-			if got := cfg.RoleBinding()(); !equality.Semantic.DeepEqual(got, tt.want) {
-				t.Errorf("GeneratorOptions.RoleBinding() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(tt.opts.RoleBinding(), tt.want); len(diff) > 0 {
+				t.Errorf("GeneratorOptions.RoleBinding() DIFF:\n %v", diff)
 			}
 		})
 	}

@@ -14,7 +14,7 @@ const (
 
 const (
 	// common defaults
-	EnvoyRelease                    string        = "v1.23.2"
+	EnvoyRelease                    string        = "v1.29.0"
 	ImageRepo                       string        = "envoyproxy/envoy"
 	Image                           string        = ImageRepo + ":" + EnvoyRelease
 	EnvoyConfigBasePath             string        = "/etc/envoy/bootstrap"
