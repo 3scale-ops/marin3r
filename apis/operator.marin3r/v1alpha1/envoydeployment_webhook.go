@@ -21,6 +21,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -38,21 +39,21 @@ func (r *EnvoyDeployment) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &EnvoyDeployment{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *EnvoyDeployment) ValidateCreate() error {
+func (r *EnvoyDeployment) ValidateCreate() (admission.Warnings, error) {
 	envoydeploymentlog.V(1).Info("validate create", "name", r.Name)
 
-	return r.Validate()
+	return nil, r.Validate()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *EnvoyDeployment) ValidateUpdate(old runtime.Object) error {
+func (r *EnvoyDeployment) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	envoydeploymentlog.V(1).Info("validate update", "name", r.Name)
 
-	return r.Validate()
+	return nil, r.Validate()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *EnvoyDeployment) ValidateDelete() error { return nil }
+func (r *EnvoyDeployment) ValidateDelete() (admission.Warnings, error) { return nil, nil }
 
 // Validate checks that the spec of the EnvoyDeployment resource is correct
 func (r *EnvoyDeployment) Validate() error {

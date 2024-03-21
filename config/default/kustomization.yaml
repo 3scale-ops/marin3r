@@ -51,19 +51,18 @@ patches:
     kind: Service
     name: controller-manager-metrics-service
     version: v1
-# [CUSTOM: cluster scope] Uncomment this for cluster scoped installations
-# - path: custom/clusterrole_patch.yaml
-#   target:
-#     group: rbac.authorization.k8s.io
-#     kind: Role
-#     name: manager-role
-#     version: v1
-# - path: custom/clusterrolebinding_patch.yaml
-#   target:
-#     group: rbac.authorization.k8s.io
-#     kind: RoleBinding
-#     name: manager-rolebinding
-#     version: v1
+- path: custom/clusterrole_patch.yaml
+  target:
+    group: rbac.authorization.k8s.io
+    kind: Role
+    name: manager-role
+    version: v1
+- path: custom/clusterrolebinding_patch.yaml
+  target:
+    group: rbac.authorization.k8s.io
+    kind: RoleBinding
+    name: manager-rolebinding
+    version: v1
 
 # the following config is for teaching kustomize how to do var substitution
 vars:

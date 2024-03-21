@@ -33,7 +33,7 @@ func TestListRevisions(t *testing.T) {
 	}{
 		{
 			"Returns all EnvoyConfigRevisions for the nodeID",
-			fake.NewFakeClientWithScheme(s,
+			fake.NewClientBuilder().WithScheme(s).WithObjects(
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
@@ -49,7 +49,7 @@ func TestListRevisions(t *testing.T) {
 					Namespace: "test",
 					Labels:    map[string]string{filters.NodeIDTag: "other"},
 				}},
-			),
+			).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).Build(),
 			"test",
 			[]filters.RevisionFilter{filters.ByNodeID("test")},
 			2,
@@ -57,7 +57,7 @@ func TestListRevisions(t *testing.T) {
 		},
 		{
 			"Returns all EnvoyConfigRevisions for the nodeID and version",
-			fake.NewFakeClientWithScheme(s,
+			fake.NewClientBuilder().WithScheme(s).WithObjects(
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
@@ -73,7 +73,7 @@ func TestListRevisions(t *testing.T) {
 					Namespace: "test",
 					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "3"},
 				}},
-			),
+			).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).Build(),
 			"test",
 			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			1,
@@ -81,7 +81,7 @@ func TestListRevisions(t *testing.T) {
 		},
 		{
 			"Only returns revisions in the same Namespace",
-			fake.NewFakeClientWithScheme(s,
+			fake.NewClientBuilder().WithScheme(s).WithObjects(
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr",
 					Namespace: "test",
@@ -92,7 +92,7 @@ func TestListRevisions(t *testing.T) {
 					Namespace: "other",
 					Labels:    map[string]string{filters.NodeIDTag: "test"},
 				}},
-			),
+			).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).Build(),
 			"test",
 			[]filters.RevisionFilter{filters.ByNodeID("test")},
 			1,
@@ -100,7 +100,7 @@ func TestListRevisions(t *testing.T) {
 		},
 		{
 			"Returns an error if no revisions are found that match the provided filters",
-			fake.NewFakeClientWithScheme(s),
+			fake.NewClientBuilder().WithScheme(s).Build(),
 			"test",
 			[]filters.RevisionFilter{filters.ByNodeID("test")},
 			0,
@@ -132,7 +132,7 @@ func TestGetRevision(t *testing.T) {
 	}{
 		{
 			"Returns all the EnvoyConfigRevisions that match the given filters",
-			fake.NewFakeClientWithScheme(s,
+			fake.NewClientBuilder().WithScheme(s).WithObjects(
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
@@ -148,7 +148,7 @@ func TestGetRevision(t *testing.T) {
 					Namespace: "test",
 					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "3"},
 				}},
-			),
+			).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).Build(),
 			"test",
 			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
@@ -160,7 +160,7 @@ func TestGetRevision(t *testing.T) {
 		},
 		{
 			"Returns an error if API returns more than one EnvoyConfigRevision",
-			fake.NewFakeClientWithScheme(s,
+			fake.NewClientBuilder().WithScheme(s).WithObjects(
 				&marin3rv1alpha1.EnvoyConfigRevision{ObjectMeta: metav1.ObjectMeta{
 					Name:      "ecr1",
 					Namespace: "test",
@@ -176,7 +176,7 @@ func TestGetRevision(t *testing.T) {
 					Namespace: "test",
 					Labels:    map[string]string{filters.NodeIDTag: "test", filters.VersionTag: "3"},
 				}},
-			),
+			).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).Build(),
 			"test",
 			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			nil,
@@ -184,7 +184,7 @@ func TestGetRevision(t *testing.T) {
 		},
 		{
 			"Returns an error if API returns no EnvoyConfigRevision",
-			fake.NewFakeClientWithScheme(s),
+			fake.NewClientBuilder().WithScheme(s).Build(),
 			"test",
 			[]filters.RevisionFilter{filters.ByNodeID("test"), filters.ByVersion("1")},
 			nil,

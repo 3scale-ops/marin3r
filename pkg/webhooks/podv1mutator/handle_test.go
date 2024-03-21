@@ -42,11 +42,8 @@ func TestPodMutator_Handle(t *testing.T) {
 			fields: fields{
 				Client: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(
 					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "instance", Namespace: "default"}},
-				).Build(),
-				decoder: func() *admission.Decoder {
-					d, _ := admission.NewDecoder(scheme.Scheme)
-					return d
-				}(),
+				).WithStatusSubresource(&operatorv1alpha1.DiscoveryService{}).Build(),
+				decoder: admission.NewDecoder(scheme.Scheme),
 			},
 			args: args{
 				ctx: context.TODO(),
@@ -96,7 +93,7 @@ func TestPodMutator_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			a := &PodMutator{
 				Client:  tt.fields.Client,
-				decoder: tt.fields.decoder,
+				Decoder: tt.fields.decoder,
 			}
 			got := a.Handle(tt.args.ctx, tt.args.req)
 			sort.SliceStable(got.Patches, func(i, j int) bool {
@@ -135,10 +132,7 @@ func TestPodMutator_InjectDecoder(t *testing.T) {
 				decoder: nil,
 			},
 			args: args{
-				d: func() *admission.Decoder {
-					d, _ := admission.NewDecoder(scheme.Scheme)
-					return d
-				}(),
+				d: admission.NewDecoder(scheme.Scheme),
 			},
 			wantErr: false,
 		},
@@ -147,7 +141,7 @@ func TestPodMutator_InjectDecoder(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			a := &PodMutator{
 				Client:  tt.fields.Client,
-				decoder: tt.fields.decoder,
+				Decoder: tt.fields.decoder,
 			}
 			if err := a.InjectDecoder(tt.args.d); (err != nil) != tt.wantErr {
 				t.Errorf("PodMutator.InjectDecoder() error = %v, wantErr %v", err, tt.wantErr)

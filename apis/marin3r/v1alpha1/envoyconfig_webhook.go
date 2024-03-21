@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -43,25 +44,25 @@ func (r *EnvoyConfig) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Validator = &EnvoyConfig{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *EnvoyConfig) ValidateCreate() error {
+func (r *EnvoyConfig) ValidateCreate() (admission.Warnings, error) {
 	validationlog.Info("ValidateCreate", "type", "EnvoyConfig", "resource", util.ObjectKey(r).String())
 	if err := r.Validate(); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *EnvoyConfig) ValidateUpdate(old runtime.Object) error {
+func (r *EnvoyConfig) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	validationlog.Info("validateUpdate", "type", "EnvoyConfig", "resource", util.ObjectKey(r).String())
 	if err := r.Validate(); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *EnvoyConfig) ValidateDelete() error { return nil }
+func (r *EnvoyConfig) ValidateDelete() (admission.Warnings, error) { return nil, nil }
 
 // Validates the EnvoyConfig resource
 func (r *EnvoyConfig) Validate() error {

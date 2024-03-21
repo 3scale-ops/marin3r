@@ -31,7 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
@@ -90,21 +92,33 @@ func runWebhook(cmd *cobra.Command, args []string) {
 
 	options := ctrl.Options{
 		Scheme:                 webhookScheme,
-		MetricsBindAddress:     "0",
 		HealthProbeBindAddress: probeAddr,
-		Port:                   webhookPort,
 		LeaderElection:         false,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			// Setup the webhook
+			Port:     webhookPort,
+			CertDir:  webhookTLSCertDir,
+			CertName: webhookTLSCertName,
+			KeyName:  webhookTLSKeyName,
+		}),
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 	}
 
 	if strings.Contains(watchNamespace, ",") {
-		setupLog.Info(fmt.Sprintf("webhook in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
-		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
-	} else if watchNamespace == "" {
-		setupLog.Info("webhook in Cluster scope mode will be watching all namespaces")
-		options.Namespace = watchNamespace
+		setupLog.Info(fmt.Sprintf("manager in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
+		options.Cache = cache.Options{DefaultNamespaces: map[string]cache.Config{}}
+		for _, ns := range strings.Split(watchNamespace, ",") {
+			options.Cache.DefaultNamespaces[ns] = cache.Config{}
+		}
+	} else if watchNamespace != "" {
+		setupLog.Info(fmt.Sprintf("manager in Namespaced mode will be watching namespace %q", watchNamespace))
+		options.Cache = cache.Options{DefaultNamespaces: map[string]cache.Config{
+			watchNamespace: {},
+		}}
 	} else {
-		setupLog.Info(fmt.Sprintf("webhook in Namespaced mode will be watching namespace %q", watchNamespace))
-		options.Namespace = watchNamespace
+		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
 	}
 
 	mgr, err := ctrl.NewManager(cfg, options)
@@ -113,16 +127,15 @@ func runWebhook(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Setup the webhook
-	hookServer := mgr.GetWebhookServer()
-	hookServer.CertDir = webhookTLSCertDir
-	hookServer.KeyName = webhookTLSKeyName
-	hookServer.CertName = webhookTLSCertName
-	hookServer.Port = webhookPort
-
 	// Register the Pod mutating webhook
+	hookServer := mgr.GetWebhookServer()
 	ctrl.Log.Info("registering the pod mutating webhook with webhook server")
-	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{Handler: &podv1mutator.PodMutator{Client: mgr.GetClient()}})
+	hookServer.Register(podv1mutator.MutatePath, &webhook.Admission{
+		Handler: &podv1mutator.PodMutator{
+			Client:  mgr.GetClient(),
+			Decoder: admission.NewDecoder(mgr.GetScheme()),
+		},
+	})
 
 	// Register the EnvoyConfig v1alpha1 webhooks
 	if err = (&marin3rv1alpha1.EnvoyConfig{}).SetupWebhookWithManager(mgr); err != nil {
