@@ -93,8 +93,8 @@ func (r *EnvoyConfig) ValidateResources() error {
 		switch res.Type {
 
 		case envoy.Secret:
-			if res.GenerateFromTlsSecret == nil {
-				errList = append(errList, fmt.Errorf("'generateFromTlsSecret' cannot be empty for type '%s'", envoy.Secret))
+			if res.GenerateFromTlsSecret == nil && res.GenerateFromOpaqueSecret == nil {
+				errList = append(errList, fmt.Errorf("one of 'generateFromTlsSecret', 'generateFromOpaqueSecret' must be set for type '%s'", envoy.Secret))
 			}
 			if res.Value != nil {
 				errList = append(errList, fmt.Errorf("'value' cannot be used for type '%s'", envoy.Secret))

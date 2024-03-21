@@ -11,7 +11,8 @@ type Generator interface {
 	New(rType envoy.Type) envoy.Resource
 	NewTlsCertificateSecret(string, string, string) envoy.Resource
 	NewValidationContextSecret(string, string) envoy.Resource
-	NewSecretFromPath(string, string, string) envoy.Resource
+	NewGenericSecret(string, string) envoy.Resource
+	NewTlsSecretFromPath(string, string, string) envoy.Resource
 	NewClusterLoadAssignment(string, ...envoy.UpstreamHost) envoy.Resource
 }
 

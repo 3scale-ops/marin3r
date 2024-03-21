@@ -199,7 +199,7 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 		&marin3rv1alpha1.EnvoyConfigRevisionList{},
 		func(event client.Object, o client.Object) bool {
 			secret := event.(*corev1.Secret)
-			if secret.Type != corev1.SecretTypeTLS {
+			if secret.Type != corev1.SecretTypeTLS && secret.Type != corev1.SecretTypeOpaque {
 				return false
 			}
 			ecr := o.(*marin3rv1alpha1.EnvoyConfigRevision)
@@ -207,7 +207,8 @@ func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandl
 				// check if the k8s Secret is relevant for this EnvoyConfigRevision
 				for _, s := range ecr.Spec.Resources {
 					if s.Type == envoy.Secret {
-						if *s.GenerateFromTlsSecret == secret.GetName() {
+						if (s.GenerateFromTlsSecret != nil && *s.GenerateFromTlsSecret == secret.GetName()) ||
+							(s.GenerateFromOpaqueSecret != nil && s.GenerateFromOpaqueSecret.Name == secret.GetName()) {
 							return true
 						}
 					}
