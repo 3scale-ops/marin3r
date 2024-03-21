@@ -1,6 +1,6 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
-github.com/3scale-ops/basereconciler v0.0.0-20240315170512-e51bc0f8a608 h1:p38EEPFlvAk4ALwln4ujq8SEhNXc4mMELegKy14JJX0=
-github.com/3scale-ops/basereconciler v0.0.0-20240315170512-e51bc0f8a608/go.mod h1:bLk2Jn6trasK88DBCAROnVs67wXP3/qxfY3AGbohHhw=
+github.com/3scale-ops/basereconciler v0.5.1 h1:0CaK3CyBAbO+HzrxnEQWIiKurvXebXjflqQNiv8iSfY=
+github.com/3scale-ops/basereconciler v0.5.1/go.mod h1:bLk2Jn6trasK88DBCAROnVs67wXP3/qxfY3AGbohHhw=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
