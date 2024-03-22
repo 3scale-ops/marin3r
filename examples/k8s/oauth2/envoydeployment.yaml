@@ -1,10 +1,10 @@
 apiVersion: operator.marin3r.3scale.net/v1alpha1
 kind: EnvoyDeployment
 metadata:
-  name: kuard
+  name: oauth-proxy
 spec:
   discoveryServiceRef: instance
-  envoyConfigRef: kuard
+  envoyConfigRef: oauth-proxy
   ports:
     - name: https
       port: 8443
@@ -38,3 +38,18 @@ spec:
     image: quay.io/3scale/marin3r:test
   initManager:
     image: quay.io/3scale/marin3r:test
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth-proxy
+spec:
+  selector:
+    app.kubernetes.io/component: envoy-deployment
+    app.kubernetes.io/instance: oauth-proxy
+    app.kubernetes.io/name: marin3r
+  ports:
+    - protocol: TCP
+      port: 8443
+      targetPort: 8443

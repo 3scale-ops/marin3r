@@ -1,9 +1,9 @@
 apiVersion: marin3r.3scale.net/v1alpha1
 kind: EnvoyConfig
 metadata:
-  name: kuard
+  name: oauth-proxy
 spec:
-  nodeID: kuard
+  nodeID: oauth-proxy
   resources:
     - type: listener
       value:

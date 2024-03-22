@@ -33,7 +33,7 @@ replacements:
     targets:
       - select:
           kind: EnvoyConfig
-          name: kuard
+          name: oauth-proxy
         fieldPaths:
           - spec.resources.0.value.filter_chains.0.filters.0.typed_config.http_filters.0.typed_config.config.credentials.client_id
   - source:
@@ -43,6 +43,6 @@ replacements:
     targets:
       - select:
           kind: EnvoyConfig
-          name: kuard
+          name: oauth-proxy
         fieldPaths:
           - spec.resources.0.value.filter_chains.0.filters.0.typed_config.http_filters.0.typed_config.config.redirect_uri
