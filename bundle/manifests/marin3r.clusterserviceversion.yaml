@@ -173,7 +173,7 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/3scale/marin3r
-    createdAt: "2024-03-22T16:54:59Z"
+    createdAt: "2024-03-22T17:37:16Z"
     description: Lighweight, CRD based Envoy control plane for Kubernetes
     operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
@@ -453,7 +453,8 @@ spec:
           be used to generate the endpoint resource
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
-      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+      - description: The name of a Kubernetes Secret of type "Opaque". It will generate
+          an envoy "generic secret" proto.
         displayName: Generate From Opaque Secret
         path: resources[0].generateFromOpaqueSecret
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
@@ -638,7 +639,8 @@ spec:
           be used to generate the endpoint resource
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
-      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+      - description: The name of a Kubernetes Secret of type "Opaque". It will generate
+          an envoy "generic secret" proto.
         displayName: Generate From Opaque Secret
         path: resources[0].generateFromOpaqueSecret
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"

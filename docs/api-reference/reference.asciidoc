@@ -318,7 +318,7 @@ Resource holds serialized representation of an envoy resource
 | *`type`* __Type__ | Type is the type url for the protobuf message
 | *`value`* __RawExtension__ | Value is the protobufer message that configures the resource. The proto must match the envoy configuration API v3 specification for the given resource type (https://www.envoyproxy.io/docs/envoy/latest/api-docs/xds_protocol#resource-types)
 | *`generateFromTlsSecret`* __string__ | The name of a Kubernetes Secret of type "kubernetes.io/tls"
-| *`generateFromOpaqueSecret`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-secretkeyselector[$$SecretKeySelector$$]__ | The name of a Kubernetes Secret of type "kubernetes.io/tls"
+| *`generateFromOpaqueSecret`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-secretkeyselector[$$SecretKeySelector$$]__ | The name of a Kubernetes Secret of type "Opaque". It will generate an envoy "generic secret" proto.
 | *`generateFromEndpointSlices`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-generatefromendpointslices[$$GenerateFromEndpointSlices$$]__ | Specifies a label selector to watch for EndpointSlices that will be used to generate the endpoint resource
 | *`blueprint`* __xref:{anchor_prefix}-github-com-3scale-ops-marin3r-apis-marin3r-v1alpha1-blueprint[$$Blueprint$$]__ | Blueprint specifies a template to generate a configuration proto. It is currently only supported to generate secret configuration resources from k8s Secrets
 |===

@@ -343,7 +343,8 @@ spec:
                       - targetPort
                       type: object
                     generateFromOpaqueSecret:
-                      description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+                      description: The name of a Kubernetes Secret of type "Opaque".
+                        It will generate an envoy "generic secret" proto.
                       properties:
                         alias:
                           description: A unique name to refer to the name:key combination

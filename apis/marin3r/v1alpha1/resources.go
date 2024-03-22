@@ -43,7 +43,8 @@ type Resource struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	GenerateFromTlsSecret *string `json:"generateFromTlsSecret,omitempty"`
-	// The name of a Kubernetes Secret of type "kubernetes.io/tls"
+	// The name of a Kubernetes Secret of type "Opaque". It will generate an
+	// envoy "generic secret" proto.
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	GenerateFromOpaqueSecret *SecretKeySelector `json:"generateFromOpaqueSecret,omitempty"`

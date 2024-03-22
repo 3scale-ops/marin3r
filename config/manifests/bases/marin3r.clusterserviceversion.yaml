@@ -359,7 +359,8 @@ spec:
           be used to generate the endpoint resource
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
-      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+      - description: The name of a Kubernetes Secret of type "Opaque". It will generate
+          an envoy "generic secret" proto.
         displayName: Generate From Opaque Secret
         path: resources[0].generateFromOpaqueSecret
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
@@ -544,7 +545,8 @@ spec:
           be used to generate the endpoint resource
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
-      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+      - description: The name of a Kubernetes Secret of type "Opaque". It will generate
+          an envoy "generic secret" proto.
         displayName: Generate From Opaque Secret
         path: resources[0].generateFromOpaqueSecret
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
