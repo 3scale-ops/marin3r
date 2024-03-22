@@ -102,17 +102,8 @@ func inspectVersion() (string, bool) {
 func listProtoPackages(ref string, isPseudoVersion bool) []string {
 	var list []string
 
-	// var refName plumbing.ReferenceName
-	// if isPseudoVersion {
-	// 	refName = plumbing.NewBranchReferenceName("main")
-	// 	// ref = plumbing.NewHashReference(n plumbing.ReferenceName, h plumbing.Hash)
-	// } else {
-	// 	refName = plumbing.NewTagReferenceName(ref)
-	// }
-	// log.Printf("ReferenceName: %s", refName.String())
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           "https://" + sourceModuleName,
-		Depth:         1,
 		ReferenceName: plumbing.NewBranchReferenceName("main"),
 		SingleBranch:  true,
 	})
