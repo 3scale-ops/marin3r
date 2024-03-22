@@ -89,10 +89,6 @@ type SecretKeySelector struct {
 	Alias string `json:"alias"`
 }
 
-func (sks *SecretKeySelector) SecretKey() string {
-	return sks.Key
-}
-
 type GenerateFromEndpointSlices struct {
 	Selector    *metav1.LabelSelector `json:"selector"`
 	ClusterName string                `json:"clusterName"`
