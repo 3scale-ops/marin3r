@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -89,7 +90,9 @@ var _ = BeforeSuite(func() {
 		Scheme: scheme.Scheme,
 		// Disable the metrics port to allow running the
 		// test suite in parallel
-		MetricsBindAddress: "0",
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 	})
 	Expect(err).ToNot(HaveOccurred())
 

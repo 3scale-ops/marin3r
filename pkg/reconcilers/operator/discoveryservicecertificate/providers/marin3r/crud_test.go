@@ -46,14 +46,14 @@ func TestNewCertificateProvider(t *testing.T) {
 			args: args{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc:    &operatorv1alpha1.DiscoveryServiceCertificate{},
 			},
 			want: &CertificateProvider{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc:    &operatorv1alpha1.DiscoveryServiceCertificate{},
 			},
@@ -86,7 +86,7 @@ func TestCertificateProvider_CreateCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -106,8 +106,8 @@ func TestCertificateProvider_CreateCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s, &corev1.
-					Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"}}),
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"}}).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -159,13 +159,13 @@ func TestCertificateProvider_GetCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s, &corev1.
-					Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
-					Data: map[string][]byte{
-						tlsCertificateKey: []byte("xxxx"),
-						tlsPrivateKeyKey:  []byte("xxxx"),
-					}}),
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
+						Data: map[string][]byte{
+							tlsCertificateKey: []byte("xxxx"),
+							tlsPrivateKeyKey:  []byte("xxxx"),
+						}}).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -187,7 +187,7 @@ func TestCertificateProvider_GetCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -247,13 +247,13 @@ func TestCertificateProvider_UpdateCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s, &corev1.
-					Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
-					Data: map[string][]byte{
-						tlsCertificateKey: []byte("xxxx"),
-						tlsPrivateKeyKey:  []byte("xxxx"),
-					}}),
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
+						Data: map[string][]byte{
+							tlsCertificateKey: []byte("xxxx"),
+							tlsPrivateKeyKey:  []byte("xxxx"),
+						}}).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -273,7 +273,7 @@ func TestCertificateProvider_UpdateCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -324,7 +324,7 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s,
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
 						Data: map[string][]byte{
@@ -337,7 +337,7 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 							tlsCertificateKey: test.TestValidCertificate(),
 							tlsPrivateKeyKey:  []byte("xxxx"),
 						}},
-				),
+				).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -356,7 +356,7 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s,
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
 						Data: map[string][]byte{
@@ -369,7 +369,7 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 							tlsCertificateKey: test.TestExpiredCertificate(),
 							tlsPrivateKeyKey:  []byte("xxxx"),
 						}},
-				),
+				).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -388,14 +388,14 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s,
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
 						Data: map[string][]byte{
 							tlsCertificateKey: test.TestIssuerCertificate(),
 							tlsPrivateKeyKey:  test.TestIssuerKey(),
 						}},
-				),
+				).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -414,14 +414,14 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s,
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
 						Data: map[string][]byte{
 							tlsCertificateKey: test.TestExpiredCertificate(),
 							tlsPrivateKeyKey:  []byte("xxxx"),
 						}},
-				),
+				).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -472,15 +472,15 @@ func TestCertificateProvider_getIssuerCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s, &corev1.
-					Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
-					Type:       corev1.SecretTypeTLS,
-					Data: map[string][]byte{
-						tlsCertificateKey: test.TestIssuerCertificate(),
-						tlsPrivateKeyKey:  test.TestIssuerKey(),
-					},
-				}),
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
+						Type:       corev1.SecretTypeTLS,
+						Data: map[string][]byte{
+							tlsCertificateKey: test.TestIssuerCertificate(),
+							tlsPrivateKeyKey:  test.TestIssuerKey(),
+						},
+					}).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -510,7 +510,7 @@ func TestCertificateProvider_getIssuerCertificate(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -577,7 +577,7 @@ func TestCertificateProvider_genSecret(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{

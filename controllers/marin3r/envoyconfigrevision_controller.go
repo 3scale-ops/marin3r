@@ -39,14 +39,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // EnvoyConfigRevisionReconciler reconciles a EnvoyConfigRevision object
@@ -198,84 +195,60 @@ func filterByAPIVersionPredicate(version envoy.APIVersion,
 // SecretsEventHandler returns an EventHandler that generates
 // reconcile requests for Secrets
 func (r *EnvoyConfigRevisionReconciler) SecretsEventHandler() handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(
-		func(o client.Object) []reconcile.Request {
-			secret := o.(*corev1.Secret)
+	return r.FilteredEventHandler(
+		&marin3rv1alpha1.EnvoyConfigRevisionList{},
+		func(event client.Object, o client.Object) bool {
+			secret := event.(*corev1.Secret)
 			if secret.Type != corev1.SecretTypeTLS {
-				return []reconcile.Request{}
+				return false
 			}
-			list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
-			if err := r.Client.List(context.Background(), list); err != nil {
-				return []reconcile.Request{}
-			}
-
-			reconcileRequests := []reconcile.Request{}
-
-			for _, ecr := range list.Items {
-				if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
-					// check if the k8s Secret is relevant for this EnvoyConfigRevision
-					for _, s := range ecr.Spec.Resources {
-						if s.Type == envoy.Secret {
-
-							if *s.GenerateFromTlsSecret == secret.GetName() {
-								reconcileRequests = append(reconcileRequests,
-									reconcile.Request{NamespacedName: types.NamespacedName{
-										Name:      ecr.GetName(),
-										Namespace: ecr.GetNamespace(),
-									}})
-							}
+			ecr := o.(*marin3rv1alpha1.EnvoyConfigRevision)
+			if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
+				// check if the k8s Secret is relevant for this EnvoyConfigRevision
+				for _, s := range ecr.Spec.Resources {
+					if s.Type == envoy.Secret {
+						if *s.GenerateFromTlsSecret == secret.GetName() {
+							return true
 						}
-
 					}
+
 				}
 			}
-
-			return reconcileRequests
+			return false
 		},
+		logr.Discard(),
 	)
 }
 
 // EndpointSlicesEventHandler returns an EventHandler that generates
 // reconcile requests for EndpointSlices
 func (r *EnvoyConfigRevisionReconciler) EndpointSlicesEventHandler() handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(
-		func(o client.Object) []reconcile.Request {
-			endpointSlice := o.(*discoveryv1.EndpointSlice)
+	return r.FilteredEventHandler(
+		&marin3rv1alpha1.EnvoyConfigRevisionList{},
+		func(event client.Object, o client.Object) bool {
+			endpointSlice := event.(*discoveryv1.EndpointSlice)
+			ecr := o.(*marin3rv1alpha1.EnvoyConfigRevision)
+			if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
+				// check if the k8s EndpointSlice is relevant for this EnvoyConfigRevision
+				for _, r := range ecr.Spec.Resources {
+					if r.Type == envoy.Endpoint && r.GenerateFromEndpointSlices != nil {
 
-			list := &marin3rv1alpha1.EnvoyConfigRevisionList{}
-			if err := r.Client.List(context.Background(), list); err != nil {
-				return []reconcile.Request{}
-			}
+						selector, err := metav1.LabelSelectorAsSelector(r.GenerateFromEndpointSlices.Selector)
+						if err != nil {
+							// skip this item in case of error
+							continue
+						}
 
-			reconcileRequests := []reconcile.Request{}
-
-			for _, ecr := range list.Items {
-				if meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionPublishedCondition) {
-					// check if the k8s EndpointSlice is relevant for this EnvoyConfigRevision
-					for _, r := range ecr.Spec.Resources {
-						if r.Type == envoy.Endpoint && r.GenerateFromEndpointSlices != nil {
-
-							selector, err := metav1.LabelSelectorAsSelector(r.GenerateFromEndpointSlices.Selector)
-							if err != nil {
-								// skip this item in case of error
-								continue
-							}
-
-							// generate a reconcile request if this event is relevant for this revision
-							if selector.Matches(labels.Set(endpointSlice.GetLabels())) {
-								reconcileRequests = append(reconcileRequests,
-									reconcile.Request{NamespacedName: types.NamespacedName{
-										Name:      ecr.GetName(),
-										Namespace: ecr.GetNamespace(),
-									}})
-							}
+						// generate a reconcile request if this event is relevant for this revision
+						if selector.Matches(labels.Set(endpointSlice.GetLabels())) {
+							return true
 						}
 					}
 				}
 			}
-
-			return reconcileRequests
+			return false
 		},
+		logr.Discard(),
 	)
 }
 
@@ -284,7 +257,7 @@ func (r *EnvoyConfigRevisionReconciler) SetupWithManager(mgr ctrl.Manager) error
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&marin3rv1alpha1.EnvoyConfigRevision{}).
 		WithEventFilter(filterByAPIVersionPredicate(r.APIVersion, filterByAPIVersion)).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, r.SecretsEventHandler()).
-		Watches(&source.Kind{Type: &discoveryv1.EndpointSlice{}}, r.EndpointSlicesEventHandler()).
+		Watches(&corev1.Secret{}, r.SecretsEventHandler()).
+		Watches(&discoveryv1.EndpointSlice{}, r.EndpointSlicesEventHandler()).
 		Complete(r)
 }

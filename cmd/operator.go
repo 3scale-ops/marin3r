@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	marin3rv1alpha1 "github.com/3scale-ops/marin3r/apis/marin3r/v1alpha1"
 	operatorv1alpha1 "github.com/3scale-ops/marin3r/apis/operator.marin3r/v1alpha1"
@@ -80,24 +81,29 @@ func runOperator(cmd *cobra.Command, args []string) {
 	}
 
 	options := ctrl.Options{
-		Scheme:                     operatorScheme,
-		MetricsBindAddress:         metricsAddr,
+		Scheme: operatorScheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             leaderElect,
 		LeaderElectionID:           "2cfbe7d6.operator.marin3r.3scale.net",
 		LeaderElectionResourceLock: "leases",
-		Namespace:                  watchNamespace, // namespaced-scope when the value is not an empty string
 	}
 
 	if strings.Contains(watchNamespace, ",") {
 		setupLog.Info(fmt.Sprintf("manager in MultiNamespaced mode will be watching namespaces %q", watchNamespace))
-		options.NewCache = cache.MultiNamespacedCacheBuilder(strings.Split(watchNamespace, ","))
-	} else if watchNamespace == "" {
-		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
-		options.Namespace = watchNamespace
-	} else {
+		options.Cache = cache.Options{DefaultNamespaces: map[string]cache.Config{}}
+		for _, ns := range strings.Split(watchNamespace, ",") {
+			options.Cache.DefaultNamespaces[ns] = cache.Config{}
+		}
+	} else if watchNamespace != "" {
 		setupLog.Info(fmt.Sprintf("manager in Namespaced mode will be watching namespace %q", watchNamespace))
-		options.Namespace = watchNamespace
+		options.Cache = cache.Options{DefaultNamespaces: map[string]cache.Config{
+			watchNamespace: {},
+		}}
+	} else {
+		setupLog.Info("manager in Cluster scope mode will be watching all namespaces")
 	}
 
 	mgr, err := ctrl.NewManager(cfg, options)

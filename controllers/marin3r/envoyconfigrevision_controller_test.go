@@ -37,7 +37,7 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 		}
 		r := &EnvoyConfigRevisionReconciler{
 			Reconciler: &reconciler.Reconciler{
-				Client: fake.NewClientBuilder().WithObjects(ecr).Build(),
+				Client: fake.NewClientBuilder().WithObjects(ecr).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).Build(),
 				Scheme: scheme.Scheme,
 				Log:    ctrl.Log.WithName("test"),
 			},
@@ -46,7 +46,9 @@ func TestEnvoyConfigRevisionReconciler_taintSelf(t *testing.T) {
 		if err := r.taintSelf(context.TODO(), ecr, "test", "test", r.Log); err != nil {
 			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() error = %v", err)
 		}
-		r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr)
+		if err := r.Client.Get(context.TODO(), types.NamespacedName{Name: "ecr", Namespace: "default"}, ecr); err != nil {
+			t.Error(err)
+		}
 		if !meta.IsStatusConditionTrue(ecr.Status.Conditions, marin3rv1alpha1.RevisionTaintedCondition) {
 			t.Errorf("EnvoyConfigRevisionReconciler.taintSelf() ecr is not tainted")
 		}

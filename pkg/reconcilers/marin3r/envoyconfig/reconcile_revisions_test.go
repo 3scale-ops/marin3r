@@ -33,8 +33,10 @@ func init() {
 	)
 }
 
-func testRevisionReconcilerBuilder(s *runtime.Scheme, instance *marin3rv1alpha1.EnvoyConfig, objs ...runtime.Object) RevisionReconciler {
-	return RevisionReconciler{context.TODO(), ctrl.Log.WithName("test"), fake.NewFakeClientWithScheme(s, objs...), s, instance, nil, nil, nil, nil}
+func testRevisionReconcilerBuilder(s *runtime.Scheme, instance *marin3rv1alpha1.EnvoyConfig, objs ...client.Object) RevisionReconciler {
+	return RevisionReconciler{context.TODO(), ctrl.Log.WithName("test"),
+		fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfig{}).WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).Build(),
+		s, instance, nil, nil, nil, nil}
 }
 
 func TestNewRevisionReconciler(t *testing.T) {
@@ -370,7 +372,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
@@ -389,7 +391,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s,
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
 					&marin3rv1alpha1.EnvoyConfigRevision{
 						TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
 						ObjectMeta: metav1.ObjectMeta{
@@ -414,7 +416,10 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
 					},
-				),
+				).
+					WithStatusSubresource(&marin3rv1alpha1.EnvoyConfig{}).
+					WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).
+					Build(),
 				scheme: s,
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},
@@ -434,7 +439,7 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 			fields: fields{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s,
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
 					&marin3rv1alpha1.EnvoyConfigRevision{
 						TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfigRevision", APIVersion: "v1alpha1"},
 						ObjectMeta: metav1.ObjectMeta{
@@ -447,7 +452,10 @@ func TestRevisionReconciler_Reconcile(t *testing.T) {
 						},
 						Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{},
 					},
-				),
+				).
+					WithStatusSubresource(&marin3rv1alpha1.EnvoyConfig{}).
+					WithStatusSubresource(&marin3rv1alpha1.EnvoyConfigRevision{}).
+					Build(),
 				scheme: s,
 				ec: &marin3rv1alpha1.EnvoyConfig{
 					TypeMeta:   metav1.TypeMeta{Kind: "EnvoyConfig", APIVersion: "v1alpha1"},

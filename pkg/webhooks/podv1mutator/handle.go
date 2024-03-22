@@ -23,8 +23,11 @@ const (
 // PodMutator injects envoy containers into Pods
 type PodMutator struct {
 	Client  client.Client
-	decoder *admission.Decoder
+	Decoder *admission.Decoder
 }
+
+// PodMutator Iimplements admission.Handler.
+var _ admission.Handler = &PodMutator{}
 
 //+kubebuilder:webhook:path=/pod-v1-mutate,mutating=true,failurePolicy=fail,sideEffects=None,groups=core,resources=pods,verbs=create,versions=v1,name=sidecar-injector.marin3r.3scale.net,admissionReviewVersions=v1
 
@@ -32,7 +35,7 @@ type PodMutator struct {
 func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	pod := &corev1.Pod{}
 
-	err := a.decoder.Decode(req, pod)
+	err := a.Decoder.Decode(req, pod)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -77,6 +80,6 @@ func (a *PodMutator) Handle(ctx context.Context, req admission.Request) admissio
 
 // InjectDecoder injects the decoder.
 func (a *PodMutator) InjectDecoder(d *admission.Decoder) error {
-	a.decoder = d
+	a.Decoder = d
 	return nil
 }

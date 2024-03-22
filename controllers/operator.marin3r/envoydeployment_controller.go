@@ -30,18 +30,15 @@ import (
 	"github.com/3scale-ops/marin3r/pkg/envoy/container/defaults"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/operator/envoydeployment/generators"
 	"github.com/3scale-ops/marin3r/pkg/util/pointer"
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 // EnvoyDeploymentReconciler reconciles a EnvoyDeployment object
@@ -161,6 +158,38 @@ func (r *EnvoyDeploymentReconciler) getEnvoyConfig(ctx context.Context, key type
 	return ec, nil
 }
 
+// EnvoyConfigHandler returns an EventHandler to watch for EnvoyConfigs
+func (r *EnvoyDeploymentReconciler) EnvoyConfigHandler() handler.EventHandler {
+	return r.FilteredEventHandler(
+		&operatorv1alpha1.EnvoyDeploymentList{},
+		func(event client.Object, o client.Object) bool {
+			ec := event.(*marin3rv1alpha1.EnvoyConfig)
+			ed := o.(*operatorv1alpha1.EnvoyDeployment)
+			if ed.Spec.EnvoyConfigRef == ec.GetName() {
+				return true
+			}
+			return false
+		},
+		logr.Discard(),
+	)
+}
+
+// EnvoyConfigHandler returns an EventHandler to watch for DiscoveryServices
+func (r *EnvoyDeploymentReconciler) DiscoveryServiceHandler() handler.EventHandler {
+	return r.FilteredEventHandler(
+		&operatorv1alpha1.EnvoyDeploymentList{},
+		func(event client.Object, o client.Object) bool {
+			ds := event.(*operatorv1alpha1.DiscoveryService)
+			ed := o.(*operatorv1alpha1.EnvoyDeployment)
+			if ed.Spec.DiscoveryServiceRef == ds.GetName() {
+				return true
+			}
+			return false
+		},
+		logr.Discard(),
+	)
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *EnvoyDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -169,32 +198,7 @@ func (r *EnvoyDeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&operatorv1alpha1.DiscoveryServiceCertificate{}).
 		Owns(&policyv1.PodDisruptionBudget{}).
 		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
-		Watches(&source.Kind{Type: &corev1.Secret{TypeMeta: metav1.TypeMeta{Kind: "EnvoyConfig"}}}, r.EnvoyConfigHandler()).
+		Watches(&marin3rv1alpha1.EnvoyConfig{}, r.EnvoyConfigHandler()).
+		Watches(&operatorv1alpha1.DiscoveryService{}, r.DiscoveryServiceHandler()).
 		Complete(r)
-}
-
-// EnvoyConfigHandler returns an EventHandler to watch for EnvoyConfigs
-func (r *EnvoyDeploymentReconciler) EnvoyConfigHandler() handler.EventHandler {
-	return handler.EnqueueRequestsFromMapFunc(
-		func(o client.Object) []reconcile.Request {
-			edList := &operatorv1alpha1.EnvoyDeploymentList{}
-			if err := r.Client.List(context.TODO(), edList, client.InNamespace(o.GetNamespace())); err != nil {
-				r.Log.Error(err, "unable to retrieve the list of EnvoyDeployment resources in the namespace",
-					"Type", "EnvoyConfig", "Name", o.GetName(), "Namespace", o.GetNamespace())
-				return []reconcile.Request{}
-			}
-
-			// Return a reconcile event for all EnvoyDeployments that have a reference to this EnvoyConfig
-			req := []reconcile.Request{}
-			for _, ed := range edList.Items {
-				if ed.Spec.EnvoyConfigRef == o.GetName() {
-					req = append(req, reconcile.Request{
-						NamespacedName: types.NamespacedName{Name: ed.GetName(), Namespace: ed.GetNamespace()},
-					})
-				}
-			}
-
-			return req
-		},
-	)
 }

@@ -101,7 +101,7 @@ func TestNewCertificateReconciler(t *testing.T) {
 			args: args{
 				ctx:      context.TODO(),
 				logger:   ctrl.Log.WithName("test"),
-				client:   fake.NewFakeClientWithScheme(s),
+				client:   fake.NewClientBuilder().WithScheme(s).Build(),
 				s:        s,
 				dsc:      &operatorv1alpha1.DiscoveryServiceCertificate{},
 				provider: &testCertificateProvider{},
@@ -109,7 +109,7 @@ func TestNewCertificateReconciler(t *testing.T) {
 			want: CertificateReconciler{
 				ctx:      context.TODO(),
 				logger:   ctrl.Log.WithName("test"),
-				client:   fake.NewFakeClientWithScheme(s),
+				client:   fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme:   s,
 				dsc:      &operatorv1alpha1.DiscoveryServiceCertificate{},
 				provider: &testCertificateProvider{},
@@ -139,7 +139,7 @@ func TestCertificateReconciler_IsReady(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc:    &operatorv1alpha1.DiscoveryServiceCertificate{},
 				ready:  true,
@@ -166,7 +166,7 @@ func TestCertificateReconciler_GetCertificateHash(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc:    &operatorv1alpha1.DiscoveryServiceCertificate{},
 				hash:   "xxxx",
@@ -199,7 +199,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -237,7 +237,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -276,7 +276,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -317,7 +317,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -358,7 +358,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
@@ -407,7 +407,7 @@ func TestCertificateReconciler_Reconcile(t *testing.T) {
 			r: &CertificateReconciler{
 				ctx:    context.TODO(),
 				logger: ctrl.Log.WithName("test"),
-				client: fake.NewFakeClientWithScheme(s),
+				client: fake.NewClientBuilder().WithScheme(s).Build(),
 				scheme: s,
 				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
 					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},

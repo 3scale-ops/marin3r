@@ -47,7 +47,7 @@ func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 				ctx: context.TODO(),
 				clnt: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(
 					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
-				).Build(),
+				).WithStatusSubresource(&operatorv1alpha1.DiscoveryService{}).Build(),
 				namespace: "test",
 				annotations: map[string]string{
 					"marin3r.3scale.net/node-id":                                                "node-id",
@@ -110,7 +110,7 @@ func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 				ctx: context.TODO(),
 				clnt: fake.NewClientBuilder().WithObjects(
 					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
-				).Build(),
+				).WithStatusSubresource(&operatorv1alpha1.DiscoveryService{}).Build(),
 				namespace: "test",
 				annotations: map[string]string{
 					"marin3r.3scale.net/node-id": "node-id",
@@ -154,7 +154,7 @@ func Test_envoySidecarConfig_PopulateFromAnnotation(t *testing.T) {
 				ctx: context.TODO(),
 				clnt: fake.NewClientBuilder().WithObjects(
 					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
-				).Build(),
+				).WithStatusSubresource(&operatorv1alpha1.DiscoveryService{}).Build(),
 				namespace: "test",
 				annotations: map[string]string{
 					"marin3r.3scale.net/node-id":                         "node-id",
@@ -830,7 +830,7 @@ func Test_envoySidecarConfig_GetDiscoveryServiceAddress(t *testing.T) {
 							},
 						},
 					},
-				).Build(),
+				).WithStatusSubresource(&operatorv1alpha1.DiscoveryService{}).Build(),
 				namespace: "test",
 				annotations: map[string]string{
 					"marin3r.3scale.net/discovery-service.name": "ds",
@@ -854,7 +854,7 @@ func Test_envoySidecarConfig_GetDiscoveryServiceAddress(t *testing.T) {
 							},
 						},
 					},
-				).Build(),
+				).WithStatusSubresource(&operatorv1alpha1.DiscoveryService{}).Build(),
 				namespace:   "test",
 				annotations: map[string]string{},
 			},
@@ -883,7 +883,7 @@ func Test_envoySidecarConfig_GetDiscoveryServiceAddress(t *testing.T) {
 				clnt: fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(
 					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "ds", Namespace: "test"}},
 					&operatorv1alpha1.DiscoveryService{ObjectMeta: metav1.ObjectMeta{Name: "other", Namespace: "test"}},
-				).Build(),
+				).WithStatusSubresource(&operatorv1alpha1.DiscoveryService{}).Build(),
 				namespace:   "test",
 				annotations: map[string]string{},
 			},
