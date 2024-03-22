@@ -173,14 +173,14 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/3scale/marin3r
-    createdAt: "2024-03-21T15:45:14Z"
+    createdAt: "2024-03-22T16:54:59Z"
     description: Lighweight, CRD based Envoy control plane for Kubernetes
     operators.operatorframework.io/builder: operator-sdk-v1.28.0
     operators.operatorframework.io/internal-objects: '["envoyconfigrevisions.marin3r.3scale.net","discoveryservicecertificates.operator.marin3r.3scale.net"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
     repository: https://github.com/3scale-ops/marin3r
     support: Red Hat, Inc.
-  name: marin3r.v0.13.0-alpha.1
+  name: marin3r.v0.13.0-alpha.2
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -454,6 +454,9 @@ spec:
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Opaque Secret
+        path: resources[0].generateFromOpaqueSecret
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
         displayName: Generate From Tls Secret
         path: resources[0].generateFromTlsSecret
       - description: Type is the type url for the protobuf message
@@ -635,6 +638,9 @@ spec:
           be used to generate the endpoint resource
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Opaque Secret
+        path: resources[0].generateFromOpaqueSecret
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
         displayName: Generate From Tls Secret
         path: resources[0].generateFromTlsSecret
@@ -919,7 +925,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.13.0-alpha.1
+                image: quay.io/3scale/marin3r:v0.13.0-alpha.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -977,7 +983,7 @@ spec:
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/3scale/marin3r:v0.13.0-alpha.1
+                image: quay.io/3scale/marin3r:v0.13.0-alpha.2
                 livenessProbe:
                   httpGet:
                     path: /healthz
@@ -1284,7 +1290,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
-  version: 0.13.0-alpha.1
+  version: 0.13.0-alpha.2
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

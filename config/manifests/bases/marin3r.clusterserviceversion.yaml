@@ -360,6 +360,9 @@ spec:
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Opaque Secret
+        path: resources[0].generateFromOpaqueSecret
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
         displayName: Generate From Tls Secret
         path: resources[0].generateFromTlsSecret
       - description: Type is the type url for the protobuf message
@@ -541,6 +544,9 @@ spec:
           be used to generate the endpoint resource
         displayName: Generate From Endpoint Slices
         path: resources[0].generateFromEndpointSlices
+      - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
+        displayName: Generate From Opaque Secret
+        path: resources[0].generateFromOpaqueSecret
       - description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
         displayName: Generate From Tls Secret
         path: resources[0].generateFromTlsSecret
