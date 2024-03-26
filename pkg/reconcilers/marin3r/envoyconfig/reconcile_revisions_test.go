@@ -778,18 +778,18 @@ func TestRevisionReconciler_newRevisionForCurrentResources(t *testing.T) {
 			),
 			want: &marin3rv1alpha1.EnvoyConfigRevision{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "node-v3-6b64fb99b6",
+					Name:      "node-v3-85cdf4df4",
 					Namespace: "test",
 					Labels: map[string]string{
 						filters.EnvoyAPITag: envoy.APIv3.String(),
 						filters.NodeIDTag:   "node",
-						filters.VersionTag:  "6b64fb99b6",
+						filters.VersionTag:  "85cdf4df4",
 					},
 				},
 				Spec: marin3rv1alpha1.EnvoyConfigRevisionSpec{
 					NodeID:   "node",
 					EnvoyAPI: pointer.New(envoy.APIv3),
-					Version:  "6b64fb99b6",
+					Version:  "85cdf4df4",
 					Resources: []marin3rv1alpha1.Resource{
 						{
 							Type:  "endpoint",

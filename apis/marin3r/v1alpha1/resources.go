@@ -43,6 +43,11 @@ type Resource struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	GenerateFromTlsSecret *string `json:"generateFromTlsSecret,omitempty"`
+	// The name of a Kubernetes Secret of type "Opaque". It will generate an
+	// envoy "generic secret" proto.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	GenerateFromOpaqueSecret *SecretKeySelector `json:"generateFromOpaqueSecret,omitempty"`
 	// Specifies a label selector to watch for EndpointSlices that will
 	// be used to generate the endpoint resource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -61,6 +66,27 @@ func (r *Resource) GetBlueprint() Blueprint {
 		return *r.Blueprint
 	}
 	return defaultBlueprint
+}
+
+func (r *Resource) SecretRef() (string, error) {
+	if r.Type != envoy.Secret {
+		return "", fmt.Errorf("not a secret type")
+	}
+	if r.GenerateFromOpaqueSecret != nil {
+		return r.GenerateFromOpaqueSecret.Name, nil
+	} else if r.GenerateFromTlsSecret != nil {
+		return *r.GenerateFromTlsSecret, nil
+	}
+	return "", fmt.Errorf("secret reference not set")
+}
+
+type SecretKeySelector struct {
+	// The name of the secret in the pod's namespace to select from.
+	Name string `json:"name"`
+	// The key of the secret to select from.  Must be a valid secret key.
+	Key string `json:"key"`
+	// A unique name to refer to the name:key combination
+	Alias string `json:"alias"`
 }
 
 type GenerateFromEndpointSlices struct {

@@ -1,0 +1,41 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kuard
+  labels:
+    app: kuard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kuard
+  template:
+    metadata:
+      labels:
+        app: kuard
+    spec:
+      containers:
+        - name: kuard
+          image: gcr.io/kuar-demo/kuard-amd64:blue
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuard
+  labels:
+    app: kuard
+spec:
+  clusterIP: None
+  selector:
+    app: kuard
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: http

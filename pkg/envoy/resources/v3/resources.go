@@ -82,9 +82,21 @@ func (g Generator) NewValidationContextSecret(name, certificateChain string) env
 	}
 }
 
+func (g Generator) NewGenericSecret(name string, value string) envoy.Resource {
+	return &envoy_extensions_transport_sockets_tls_v3.Secret{
+		Name: name,
+		Type: &envoy_extensions_transport_sockets_tls_v3.Secret_GenericSecret{
+			GenericSecret: &envoy_extensions_transport_sockets_tls_v3.GenericSecret{
+				Secret: &envoy_config_core_v3.DataSource{
+					Specifier: &envoy_config_core_v3.DataSource_InlineBytes{InlineBytes: []byte(value)}},
+			},
+		},
+	}
+}
+
 // NewSecretFromPath returns an envoy secret that uses path sds to get the certificate from
 // a path and reload it whenever the certificate files change
-func (g Generator) NewSecretFromPath(name, certificateChainPath, privateKeyPath string) envoy.Resource {
+func (g Generator) NewTlsSecretFromPath(name, certificateChainPath, privateKeyPath string) envoy.Resource {
 
 	return &envoy_extensions_transport_sockets_tls_v3.Secret{
 		Name: name,

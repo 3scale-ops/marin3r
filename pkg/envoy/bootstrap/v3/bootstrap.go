@@ -220,7 +220,7 @@ func (c *Config) GenerateStatic() (string, error) {
 func (c *Config) GenerateSdsResources() (map[string]string, error) {
 
 	generator := envoy_resources.NewGenerator(envoy.APIv3)
-	secret := generator.NewSecretFromPath("xds_client_certificate", c.Options.XdsClientCertificatePath, c.Options.XdsClientCertificateKeyPath)
+	secret := generator.NewTlsSecretFromPath("xds_client_certificate", c.Options.XdsClientCertificatePath, c.Options.XdsClientCertificateKeyPath)
 
 	a, err := anypb.New(secret)
 	if err != nil {

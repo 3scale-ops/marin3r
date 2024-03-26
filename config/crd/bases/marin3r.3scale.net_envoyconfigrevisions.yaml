@@ -350,6 +350,26 @@ spec:
                       - selector
                       - targetPort
                       type: object
+                    generateFromOpaqueSecret:
+                      description: The name of a Kubernetes Secret of type "Opaque".
+                        It will generate an envoy "generic secret" proto.
+                      properties:
+                        alias:
+                          description: A unique name to refer to the name:key combination
+                          type: string
+                        key:
+                          description: The key of the secret to select from.  Must
+                            be a valid secret key.
+                          type: string
+                        name:
+                          description: The name of the secret in the pod's namespace
+                            to select from.
+                          type: string
+                      required:
+                      - alias
+                      - key
+                      - name
+                      type: object
                     generateFromTlsSecret:
                       description: The name of a Kubernetes Secret of type "kubernetes.io/tls"
                       type: string

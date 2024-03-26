@@ -1,2 +1,4 @@
 bundle/** linguist-generated=true
 bundle.Dockerfile linguist-generated=true
+config/crd/bases/** linguist-generated=true
+docs/api-reference/reference.asciidoc linguist-generated=true

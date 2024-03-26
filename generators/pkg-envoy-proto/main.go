@@ -3,15 +3,14 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
 	. "github.com/dave/jennifer/jen"
-
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -56,46 +55,69 @@ func main() {
 }
 
 func generate() {
-	version := inspectVersion()
+	version, isPseudoVersion := inspectVersion()
 
 	log.Printf("generating for %s@%s", sourceModuleName, version)
 
-	list := listProtoPackages(version)
+	list := listProtoPackages(version, isPseudoVersion)
 
 	writePackageFile(packagFile, list)
 
 }
 
-func inspectVersion() string {
-	body, err := ioutil.ReadFile(gomodFile)
+func inspectVersion() (string, bool) {
+	body, err := os.ReadFile(gomodFile)
 	checkIfError(err)
 
 	gomod, err := modfile.Parse(gomodFile, body, nil)
 	checkIfError(err)
 
+	var present bool
+	var isPseudoVersion bool
+	var ref string
+
 	for _, m := range gomod.Require {
 		if m.Mod.Path == sourceModuleName {
-			return m.Mod.Version
+			ref = m.Mod.Version
+			present = true
 		}
 	}
 
-	log.Fatal(fmt.Sprintf("%s module not found in modules file", sourceModuleName))
-	return ""
+	if !present {
+		log.Fatalf(fmt.Sprintf("%s module not found in modules file", sourceModuleName))
+		return "", false
+	}
+
+	exp := regexp.MustCompile(`.*-([0-9a-f]{12})$`)
+	if match := exp.FindStringSubmatch(ref); len(match) != 0 {
+		// it's a pseudoversion
+		ref = match[1]
+		isPseudoVersion = true
+	}
+
+	return ref, isPseudoVersion
+
 }
 
-func listProtoPackages(version string) []string {
+func listProtoPackages(ref string, isPseudoVersion bool) []string {
 	var list []string
 
 	repo, err := git.Clone(memory.NewStorage(), nil, &git.CloneOptions{
 		URL:           "https://" + sourceModuleName,
-		Depth:         1,
-		ReferenceName: plumbing.NewTagReferenceName(version),
+		ReferenceName: plumbing.NewBranchReferenceName("main"),
 		SingleBranch:  true,
 	})
 	checkIfError(err)
 
 	// Get tree for the given tag
-	h, err := repo.ResolveRevision(plumbing.Revision(plumbing.NewTagReferenceName(version)))
+	var revision plumbing.Revision
+	if isPseudoVersion {
+		revision = plumbing.Revision(ref)
+	} else {
+		revision = plumbing.Revision(plumbing.NewTagReferenceName(ref))
+	}
+	log.Printf("revision: %s", revision.String())
+	h, err := repo.ResolveRevision(revision)
 	checkIfError(err)
 	commit, err := repo.CommitObject(*h)
 	checkIfError(err)

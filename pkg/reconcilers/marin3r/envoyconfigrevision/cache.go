@@ -10,6 +10,7 @@ import (
 	envoy_resources "github.com/3scale-ops/marin3r/pkg/envoy/resources"
 	envoy_serializer "github.com/3scale-ops/marin3r/pkg/envoy/serializer"
 	"github.com/3scale-ops/marin3r/pkg/reconcilers/marin3r/envoyconfigrevision/discover"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -157,18 +158,18 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 			listeners = append(listeners, res)
 
 		case envoy.Secret:
+			var res envoy.Resource
 			s := &corev1.Secret{}
-			// The webhook will ensure this pointer is set
-			name := *resourceDefinition.GenerateFromTlsSecret
-			key := types.NamespacedName{Name: name, Namespace: req.Namespace}
-			if err := r.client.Get(r.ctx, key, s); err != nil {
-				return nil, fmt.Errorf("%s", err.Error())
-			}
 
-			// Validate secret holds a certificate
-			if s.Type == "kubernetes.io/tls" {
-				var res envoy.Resource
-
+			if resourceDefinition.GenerateFromTlsSecret != nil {
+				name := *resourceDefinition.GenerateFromTlsSecret
+				key := types.NamespacedName{Name: name, Namespace: req.Namespace}
+				if err := r.client.Get(r.ctx, key, s); err != nil {
+					return nil, fmt.Errorf("%s", err.Error())
+				}
+				if s.Type != corev1.SecretTypeTLS {
+					return nil, fmt.Errorf("expected Secret of '%s' type", corev1.SecretTypeTLS)
+				}
 				switch resourceDefinition.GetBlueprint() {
 				case marin3rv1alpha1.TlsCertificate:
 					res = r.generator.NewTlsCertificateSecret(name, string(s.Data[secretPrivateKey]), string(s.Data[secretCertificate]))
@@ -176,16 +177,30 @@ func (r *CacheReconciler) GenerateSnapshot(req types.NamespacedName, resources [
 					res = r.generator.NewValidationContextSecret(name, string(s.Data[secretCertificate]))
 				}
 
-				secrets = append(secrets, res)
+			} else if resourceDefinition.GenerateFromOpaqueSecret != nil {
+				name := resourceDefinition.GenerateFromOpaqueSecret.Name
+				key := types.NamespacedName{Name: name, Namespace: req.Namespace}
+				if err := r.client.Get(r.ctx, key, s); err != nil {
+					return nil, fmt.Errorf("%s", err.Error())
+				}
+				if s.Type != corev1.SecretTypeOpaque {
+					return nil, fmt.Errorf("expected Secret of '%s' type", corev1.SecretTypeOpaque)
+				}
+				res = r.generator.NewGenericSecret(resourceDefinition.GenerateFromOpaqueSecret.Alias, string(s.Data[resourceDefinition.GenerateFromOpaqueSecret.Key]))
+				m := envoy_serializer.NewResourceMarshaller(envoy_serializer.YAML, envoy.APIv3)
+				yaml, _ := m.Marshal(res)
+				fmt.Println("###################################")
+				spew.Dump(yaml)
+				fmt.Println("###################################")
 
 			} else {
-				err := resourceLoaderError(
-					req, name, field.NewPath("spec", "resources").Index(idx).Child("ref"),
-					"Only 'kubernetes.io/tls' type secrets allowed",
+				return nil, resourceLoaderError(
+					req, resourceDefinition, field.NewPath("spec", "resources").Index(idx),
+					"one of 'generateFromOpaqueSecret', 'generateFromTlsSecret' must be set",
 				)
-				return nil, fmt.Errorf("%s", err.Error())
-
 			}
+
+			secrets = append(secrets, res)
 
 		case envoy.Runtime:
 			res := r.generator.New(envoy.Runtime)

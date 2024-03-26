@@ -1,0 +1,55 @@
+apiVersion: operator.marin3r.3scale.net/v1alpha1
+kind: EnvoyDeployment
+metadata:
+  name: oauth-proxy
+spec:
+  discoveryServiceRef: instance
+  envoyConfigRef: oauth-proxy
+  ports:
+    - name: https
+      port: 8443
+  extraArgs:
+    # - --component-log-level
+    # - http:debug
+    - --log-level
+    - debug
+  adminAccessLogPath: /dev/stdout
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "100m"
+    limits:
+      memory: "128Mi"
+      cpu: "500m"
+  replicas:
+    dynamic:
+      minReplicas: 1
+      maxReplicas: 10
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 50
+  podDisruptionBudget:
+    minAvailable: 1
+  shutdownManager:
+    image: quay.io/3scale/marin3r:test
+  initManager:
+    image: quay.io/3scale/marin3r:test
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth-proxy
+spec:
+  selector:
+    app.kubernetes.io/component: envoy-deployment
+    app.kubernetes.io/instance: oauth-proxy
+    app.kubernetes.io/name: marin3r
+  ports:
+    - protocol: TCP
+      port: 8443
+      targetPort: 8443

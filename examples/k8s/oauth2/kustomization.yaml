@@ -1,0 +1,48 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: default
+resources:
+  - discoveryservice.yaml
+  - discoveryservicecertificate.yaml
+  - envoyconfig.yaml
+  - envoydeployment.yaml
+  - kuard.yaml
+
+secretGenerator:
+  - name: oauth-secrets
+    behavior: create
+    options:
+      disableNameSuffixHash: true
+    type: Opaque
+    envs:
+      - oauth-secrets.env
+
+configMapGenerator:
+  - name: oauth-config
+    behavior: create
+    options:
+      disableNameSuffixHash: true
+    envs:
+      - oauth-config.env
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: oauth-config
+      fieldPath: data.client_id
+    targets:
+      - select:
+          kind: EnvoyConfig
+          name: oauth-proxy
+        fieldPaths:
+          - spec.resources.0.value.filter_chains.0.filters.0.typed_config.http_filters.0.typed_config.config.credentials.client_id
+  - source:
+      kind: ConfigMap
+      name: oauth-config
+      fieldPath: data.redirect_uri
+    targets:
+      - select:
+          kind: EnvoyConfig
+          name: oauth-proxy
+        fieldPaths:
+          - spec.resources.0.value.filter_chains.0.filters.0.typed_config.http_filters.0.typed_config.config.redirect_uri
