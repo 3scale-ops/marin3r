@@ -25,6 +25,8 @@ entries:
       - marin3r.v0.12.1
       # bundle v0.12.2 is skipped due to CVE-2023-39325
       - marin3r.v0.12.2
+  - name: marin3r.v0.13.0
+    replaces: marin3r.v0.12.3
 name: stable
 package: marin3r
 schema: olm.channel
