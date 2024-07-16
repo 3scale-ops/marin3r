@@ -90,4 +90,11 @@ func init() {
 				"subjects",
 			},
 		})
+	config.SetDefaultReconcileConfigForGVK(
+		schema.FromAPIVersionAndKind("v1", "ServiceAccount"),
+		config.ReconcileConfigForGVK{
+			EnsureProperties: []string{
+				"metadata.labels",
+			},
+		})
 }
