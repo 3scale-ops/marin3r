@@ -10,7 +10,7 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/3scale/marin3r
-  newTag: v0.13.0
+  newTag: v0.13.1
 
 # [CUSTOM: pod mutating webhook config] This patch adds a label selector to the MutatingWebhookConfig
 patchesStrategicMerge:
