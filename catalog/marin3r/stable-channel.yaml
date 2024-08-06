@@ -27,6 +27,8 @@ entries:
       - marin3r.v0.12.2
   - name: marin3r.v0.13.0
     replaces: marin3r.v0.12.3
+  - name: marin3r.v0.13.1
+    replaces: marin3r.v0.13.0
 name: stable
 package: marin3r
 schema: olm.channel
