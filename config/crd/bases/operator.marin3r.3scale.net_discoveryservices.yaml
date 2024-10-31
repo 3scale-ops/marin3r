@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.3
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: discoveryservices.operator.marin3r.3scale.net
 spec:
   group: operator.marin3r.3scale.net
@@ -18,18 +17,24 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: DiscoveryService represents an envoy discovery service server.
-          Only one instance per namespace is currently supported.
+        description: |-
+          DiscoveryService represents an envoy discovery service server. Only one
+          instance per namespace is currently supported.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -37,9 +42,9 @@ spec:
             description: DiscoveryServiceSpec defines the desired state of DiscoveryService
             properties:
               debug:
-                description: Debug enables debugging log level for the discovery service
-                  controllers. It is safe to use since secret data is never shown
-                  in the logs.
+                description: |-
+                  Debug enables debugging log level for the discovery service controllers. It is safe to
+                  use since secret data is never shown in the logs.
                 type: boolean
               image:
                 description: Image holds the image to use for the discovery service
@@ -51,13 +56,14 @@ spec:
                 format: int32
                 type: integer
               pkiConfg:
-                description: PKIConfig has configuration for the PKI that marin3r
-                  manages for the different certificates it requires
+                description: |-
+                  PKIConfig has configuration for the PKI that marin3r manages for the
+                  different certificates it requires
                 properties:
                   rootCertificateAuthority:
-                    description: CertificateOptions specifies options to generate
-                      the server certificate used both for the xDS server and the
-                      mutating webhook server.
+                    description: |-
+                      CertificateOptions specifies options to generate the server certificate used both
+                      for the xDS server and the mutating webhook server.
                     properties:
                       duration:
                         type: string
@@ -68,9 +74,9 @@ spec:
                     - secretName
                     type: object
                   serverCertificate:
-                    description: CertificateOptions specifies options to generate
-                      the server certificate used both for the xDS server and the
-                      mutating webhook server.
+                    description: |-
+                      CertificateOptions specifies options to generate the server certificate used both
+                      for the xDS server and the mutating webhook server.
                     properties:
                       duration:
                         type: string
@@ -93,23 +99,30 @@ spec:
                 format: int32
                 type: integer
               resources:
-                description: Resources holds the Resource Requirements to use for
-                  the discovery service Deployment. When not set it defaults to no
-                  resource requests nor limits. CPU and Memory resources are supported.
+                description: |-
+                  Resources holds the Resource Requirements to use for the discovery service
+                  Deployment. When not set it defaults to no resource requests nor limits.
+                  CPU and Memory resources are supported.
                 properties:
                   claims:
-                    description: "Claims lists the names of resources, defined in
-                      spec.resourceClaims, that are used by this container. \n This
-                      is an alpha field and requires enabling the DynamicResourceAllocation
-                      feature gate. \n This field is immutable. It can only be set
-                      for containers."
+                    description: |-
+                      Claims lists the names of resources, defined in spec.resourceClaims,
+                      that are used by this container.
+
+
+                      This is an alpha field and requires enabling the
+                      DynamicResourceAllocation feature gate.
+
+
+                      This field is immutable. It can only be set for containers.
                     items:
                       description: ResourceClaim references one entry in PodSpec.ResourceClaims.
                       properties:
                         name:
-                          description: Name must match the name of one entry in pod.spec.resourceClaims
-                            of the Pod where this field is used. It makes that resource
-                            available inside a container.
+                          description: |-
+                            Name must match the name of one entry in pod.spec.resourceClaims of
+                            the Pod where this field is used. It makes that resource available
+                            inside a container.
                           type: string
                       required:
                       - name
@@ -125,8 +138,9 @@ spec:
                       - type: string
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       x-kubernetes-int-or-string: true
-                    description: 'Limits describes the maximum amount of compute resources
-                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                    description: |-
+                      Limits describes the maximum amount of compute resources allowed.
+                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                   requests:
                     additionalProperties:
@@ -135,11 +149,11 @@ spec:
                       - type: string
                       pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                       x-kubernetes-int-or-string: true
-                    description: 'Requests describes the minimum amount of compute
-                      resources required. If Requests is omitted for a container,
-                      it defaults to Limits if that is explicitly specified, otherwise
-                      to an implementation-defined value. Requests cannot exceed Limits.
-                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                    description: |-
+                      Requests describes the minimum amount of compute resources required.
+                      If Requests is omitted for a container, it defaults to Limits if that is explicitly specified,
+                      otherwise to an implementation-defined value. Requests cannot exceed Limits.
+                      More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                     type: object
                 type: object
               serviceConfig:
@@ -174,9 +188,10 @@ spec:
                     format: int32
                     type: integer
                   collisionCount:
-                    description: Count of hash collisions for the Deployment. The
-                      Deployment controller uses this field as a collision avoidance
-                      mechanism when it needs to create the name for the newest ReplicaSet.
+                    description: |-
+                      Count of hash collisions for the Deployment. The Deployment controller uses this
+                      field as a collision avoidance mechanism when it needs to create the name for the
+                      newest ReplicaSet.
                     format: int32
                     type: integer
                   conditions:
@@ -229,11 +244,10 @@ spec:
                     format: int32
                     type: integer
                   unavailableReplicas:
-                    description: Total number of unavailable pods targeted by this
-                      deployment. This is the total number of pods that are still
-                      required for the deployment to have 100% available capacity.
-                      They may either be pods that are running but not yet available
-                      or pods that still have not been created.
+                    description: |-
+                      Total number of unavailable pods targeted by this deployment. This is the total number of
+                      pods that are still required for the deployment to have 100% available capacity. They may
+                      either be pods that are running but not yet available or pods that still have not been created.
                     format: int32
                     type: integer
                   updatedReplicas:
