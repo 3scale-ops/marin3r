@@ -73,7 +73,13 @@ func (c *Config) GenerateStatic() (string, error) {
 		UpstreamProtocolOptions: &envoy_extensions_upstreams_http_v3.HttpProtocolOptions_ExplicitHttpConfig_{
 			ExplicitHttpConfig: &envoy_extensions_upstreams_http_v3.HttpProtocolOptions_ExplicitHttpConfig{
 				ProtocolConfig: &envoy_extensions_upstreams_http_v3.HttpProtocolOptions_ExplicitHttpConfig_Http2ProtocolOptions{
-					Http2ProtocolOptions: &envoy_config_core_v3.Http2ProtocolOptions{},
+					Http2ProtocolOptions: &envoy_config_core_v3.Http2ProtocolOptions{
+						ConnectionKeepalive: &envoy_config_core_v3.KeepaliveSettings{
+							Interval:               durationpb.New(30 * time.Second),
+							Timeout:                durationpb.New(10 * time.Second),
+							ConnectionIdleInterval: durationpb.New(60 * time.Second),
+						},
+					},
 				},
 			},
 		},
