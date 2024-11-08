@@ -100,7 +100,7 @@ func runDiscoveryService(cmd *cobra.Command, args []string) {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: dsScheme,
 		Metrics: metricsserver.Options{
-			BindAddress: "0",
+			BindAddress: metricsAddr,
 		},
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElectionID:           "2cfbe7d6.marin3r.3scale.net",
