@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.13.2-alpha.1
+VERSION ?= 0.13.2-alpha.2
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -272,7 +272,7 @@ bundle-push: ## Push the bundle image.
 	$(MAKE) docker-push IMG=$(BUNDLE_IMG)
 
 .PHONY: opm
-OPM = ./bin/opm
+OPM = $(LOCALBIN)/opm
 opm: ## Download opm locally if necessary.
 ifeq (,$(wildcard $(OPM)))
 ifeq (,$(shell which opm 2>/dev/null))
@@ -395,6 +395,7 @@ run-ds: manifests generate fmt vet go-generate tmp/certs
 		--server-certificate-path tmp/certs/server \
 		--ca-certificate-path tmp/certs/ca \
 		--client-certificate-path tmp/certs/client \
+		--metrics-bind-address :8383
 		--debug
 
 run-envoy: ## runs an envoy process in a container that will try to connect to a local discovery service
