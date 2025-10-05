@@ -1370,6 +1370,7 @@ spec:
   maturity: alpha
   provider:
     name: Red Hat
+  replaces: marin3r.v0.13.2
   version: 0.13.3
   webhookdefinitions:
   - admissionReviewVersions:
