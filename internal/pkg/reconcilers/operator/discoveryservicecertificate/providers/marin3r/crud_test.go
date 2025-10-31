@@ -442,6 +442,38 @@ func TestCertificateProvider_VerifyCertificate(t *testing.T) {
 					}}},
 			wantErr: true,
 		},
+		{
+			name: "Verify returns an error when issuer is in different namespace",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "other-namespace"},
+						Data: map[string][]byte{
+							tlsCertificateKey: test.TestIssuerCertificate(),
+							tlsPrivateKeyKey:  test.TestIssuerKey(),
+						}},
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "secret", Namespace: "test"},
+						Data: map[string][]byte{
+							tlsCertificateKey: test.TestValidCertificate(),
+							tlsPrivateKeyKey:  []byte("xxxx"),
+						}},
+				).Build(),
+				scheme: s,
+				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
+					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
+					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
+						Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+							CASigned: &operatorv1alpha1.CASignedConfig{
+								SecretRef: corev1.SecretReference{Name: "issuer", Namespace: "other-namespace"},
+							},
+						},
+						SecretRef: corev1.SecretReference{Name: "secret"},
+					}}},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -537,6 +569,78 @@ func TestCertificateProvider_getIssuerCertificate(t *testing.T) {
 			want:    nil,
 			want1:   nil,
 			wantErr: true,
+		},
+		{
+			name: "Returns an error when attempting to access Secret in different namespace",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "other-namespace"},
+						Type:       corev1.SecretTypeTLS,
+						Data: map[string][]byte{
+							tlsCertificateKey: test.TestIssuerCertificate(),
+							tlsPrivateKeyKey:  test.TestIssuerKey(),
+						},
+					}).Build(),
+				scheme: s,
+				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
+					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
+					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
+						CommonName: "test",
+						ValidFor:   3600,
+						Hosts:      []string{"example.test"},
+						Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+							CASigned: &operatorv1alpha1.CASignedConfig{
+								SecretRef: corev1.SecretReference{Name: "issuer", Namespace: "other-namespace"},
+							},
+						},
+						SecretRef: corev1.SecretReference{Name: "secret"},
+					}}},
+			want:    nil,
+			want1:   nil,
+			wantErr: true,
+		},
+		{
+			name: "Allows access when caSecretRef namespace is empty (defaults to same namespace)",
+			fields: fields{
+				ctx:    context.TODO(),
+				logger: ctrl.Log.WithName("test"),
+				client: fake.NewClientBuilder().WithScheme(s).WithObjects(
+					&corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{Name: "issuer", Namespace: "test"},
+						Type:       corev1.SecretTypeTLS,
+						Data: map[string][]byte{
+							tlsCertificateKey: test.TestIssuerCertificate(),
+							tlsPrivateKeyKey:  test.TestIssuerKey(),
+						},
+					}).Build(),
+				scheme: s,
+				dsc: &operatorv1alpha1.DiscoveryServiceCertificate{
+					ObjectMeta: metav1.ObjectMeta{Name: "dsc", Namespace: "test"},
+					Spec: operatorv1alpha1.DiscoveryServiceCertificateSpec{
+						CommonName: "test",
+						ValidFor:   3600,
+						Hosts:      []string{"example.test"},
+						Signer: operatorv1alpha1.DiscoveryServiceCertificateSigner{
+							CASigned: &operatorv1alpha1.CASignedConfig{
+								SecretRef: corev1.SecretReference{Name: "issuer", Namespace: ""},
+							},
+						},
+						SecretRef: corev1.SecretReference{Name: "secret"},
+					}}},
+			want: func() *x509.Certificate {
+				cert, _ := pki.LoadX509Certificate(test.TestIssuerCertificate())
+
+				return cert
+			}(),
+			want1: func() interface{} {
+				signer, _ := pki.DecodePrivateKeyBytes(test.TestIssuerKey())
+
+				return signer
+			}(),
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
