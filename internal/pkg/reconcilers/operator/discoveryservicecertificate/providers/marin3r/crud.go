@@ -210,10 +210,26 @@ func (cp *CertificateProvider) VerifyCertificate(ctx context.Context) error {
 // getIssuerCertificate returns the issuer certificate for a DiscoveryServiceCertificate resource
 func (cp *CertificateProvider) getIssuerCertificate(ctx context.Context) (*x509.Certificate, interface{}, error) {
 	if cp.dsc.Spec.Signer.CASigned != nil {
+		caNamespace := cp.dsc.Spec.Signer.CASigned.SecretRef.Namespace
+		dscNamespace := cp.dsc.GetNamespace()
+
+		// Default to current namespace if not specified
+		if caNamespace == "" {
+			caNamespace = dscNamespace
+		}
+
+		// Enforce same-namespace requirement for security
+		if caNamespace != dscNamespace {
+			return nil, nil, fmt.Errorf(
+				"DiscoveryServiceCertificate cannot reference Secrets in other namespaces: "+
+					"caSecretRef is in namespace '%s' but DiscoveryServiceCertificate is in '%s'",
+				caNamespace, dscNamespace)
+		}
+
 		secret := &corev1.Secret{}
 		key := types.NamespacedName{
 			Name:      cp.dsc.Spec.Signer.CASigned.SecretRef.Name,
-			Namespace: cp.dsc.Spec.Signer.CASigned.SecretRef.Namespace,
+			Namespace: caNamespace,
 		}
 
 		if err := cp.client.Get(ctx, key, secret); err != nil {
